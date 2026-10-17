@@ -1,0 +1,20 @@
+{
+  "name": "verify402",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A machine-payable truth service: AI agents pay per call via x402 for a rigorous verdict on whether an arbitrage opportunity is real.",
+  "scripts": {
+    "start": "node src/server.mjs",
+    "test": "node test/measure.test.mjs"
+  },
+  "dependencies": {
+    "@x402/core": "^2.28.0",
+    "@x402/evm": "^2.28.0",
+    "@x402/express": "^2.28.0",
+    "@x402/extensions": "^2.28.0",
+    "@x402/svm": "^2.28.0",
+    "express": "^5.3.0",
+    "viem": "^2.57.7"
+  }
+}
