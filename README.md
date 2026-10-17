@@ -137,6 +137,12 @@ A request without payment gets `402Payment Required` with instructions in the
 `PAYMENT-REQUIRED` header; the client pays and retries with proof — that is the
 entire x402 flow, and it is what makes the caller a program rather than a person.
 
+## Deploying
+
+See `DEPLOY.md` — free-tier container deployment, ERC-8004 identity mint
+(`npm run register`, owner's key, on-chain data URI), mainnet facilitator
+wiring, and the distribution order.
+
 ## MCP: how AI agents consume this
 
 `mcp-bridge/` exposes the paid endpoints as native MCP tools
