@@ -19,9 +19,11 @@ curl -s -X POST localhost:4021/safety \
 
 ## 1. Free deployment (testnet)
 
-Render's Hobby tier is $0 (512 MB, 25 services - sufficient; this service idles
-cheap since it makes no background scans). Alternatives: Fly.io, Railway, any
-container host - the Dockerfile is standard.
+Render's Hobby tier is $0 (512 MB). Fastest path: the repo already contains
+`render.yaml`, so on render.com → New Blueprint → point at the GitHub repo
+→ it reads the blueprint and deploys. Two clicks, `FACILITATOR_URL` already
+defaulted. Alternatives: Fly.io, Railway, any container host - the
+Dockerfile is standard.
 
 1. Push this repo to GitHub.
 2. On Render: New → Web Service → the repo → it detects the Dockerfile.

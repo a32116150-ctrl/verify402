@@ -124,6 +124,95 @@ if (!BYPASS_PAYMENT) app.use(
 );
 
 // ------------------------------------------------------------- free routes --
+// Well-known agent discovery files. These are the two surfaces agents and
+// indexers actually look for when they meet an unfamiliar service: the A2A
+// agent card and the ERC-8004 domain-verification file. Both derive from one
+// registration file so they can never disagree.
+function registrationFile(req) {
+  const base = process.env.AGENT_URL || `${req.protocol}://${req.get("host")}`;
+  const file = {
+    type: "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
+    name: "verify402",
+    description:
+      "Machine-payable truth service for AI agents. POST /verify measures whether a claimed " +
+      "cross-venue arbitrage is real (pinned-block quotes from Uniswap QuoterV2 and each " +
+      "router's own math; the honest answer is usually no_edge). POST /safety is a pre-trade " +
+      "gate: contract facts, market liquidity and scam signals, a USD-sized sell probe across " +
+      "every venue, round-trip cost at the intended size, and phantom-price detection. " +
+      "TRUST / CAUTION / AVOID with evidence. Per-call x402 payment, USDC on Base or Solana. " +
+      "No profitability is ever promised; the service reports what it measured.",
+    image: `${base}/agent-icon.svg`,
+    services: [
+      { name: "web", endpoint: base },
+      { name: "x402", endpoint: `${base}/verify`, version: "x402" },
+      { name: "x402", endpoint: `${base}/safety`, version: "x402" },
+    ],
+    x402Support: true,
+    active: true,
+    supportedTrust: ["reputation"],
+  };
+  // Once the owner mints the identity (npm run register), set AGENT_ID and
+  // IDENTITY_REGISTRY and the file binds back to the on-chain agent.
+  if (process.env.AGENT_ID && process.env.IDENTITY_REGISTRY) {
+    file.registrations = [{
+      agentId: Number(process.env.AGENT_ID),
+      agentRegistry: `eip155:${String(process.env.CHAIN_ID || 84532)}:${process.env.IDENTITY_REGISTRY}`,
+    }];
+  }
+  return file;
+}
+
+app.get(["/.well-known/agent-registration.json", "/.well-known/agent-card.json"], (req, res) => {
+  res.set("Cache-Control", "public, max-age=3600");
+  res.json(registrationFile(req));
+});
+
+// Hero verdicts, FREE. Ethereum majors at one size - the boring part of the
+// market, and almost always no_edge. That is the point: an agent (or a
+// human) can validate that this service tells reproducible truth before
+// paying for a long-tail token. First call after a new block costs a few
+// RPC round trips; cached per block after that.
+app.get("/findings", async (_req, res) => {
+  try {
+    const client = clientFor(1);
+    const blockNumber = await client.getBlockNumber();
+    const size = 100000;
+    const baseTok = CHAINS[1].tokens.USDC;
+    const targets = Object.keys(CHAINS[1].tokens).filter((t) => t !== "USDC");
+
+    const results = await Promise.all(
+      targets.map((target) => {
+        const key = `1:USDC:${target}:${size}:0:${blockNumber}`;
+        const cached = cache.get(key);
+        if (cached) return Promise.resolve(cached);
+        return measureRoundTrip(1, {
+          baseSymbol: "USDC",
+          targetSymbol: target,
+          size: BigInt(Math.round(size * 10 ** baseTok.decimals)),
+          minNet: 0n,
+        }).then((result) => {
+          cachePut(key, result);
+          return result;
+        });
+      }),
+    );
+
+    res.json({
+      explanation:
+        "Free showcase: Ethereum majors, $100k round trips, this block. The honest answer is normally no_edge - that is the market's fee boundary, not a failure. Arbitrary tokens and live sizes are the paid routes POST /verify and POST /safety.",
+      blockNumber: Number(blockNumber),
+      results: results.map((r) => ({
+        target: r.target.symbol,
+        verdict: r.verdict,
+        grossBps: r.gross.bps,
+        netBps: r.net.bps,
+      })),
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get("/", (_req, res) => {
   res.type("text/plain").send(
     [
@@ -131,8 +220,10 @@ app.get("/", (_req, res) => {
       "",
       `  POST /verify   ${PRICE} per call        is this arbitrage opportunity real?`,
       `  POST /safety   ${SAFETY_PRICE} per call        is this token safe to buy? (pre-trade gate)`,
-      "  GET  /info     free                    machine-readable service description",
+      "  GET  /findings free                 live verdicts on Ethereum majors, free",
+      "  GET  /info     free                 machine-readable service description",
       "  GET  /health   free",
+      "  GET  /.well-known/agent-registration.json   free   agent identity file",
       "",
       "Call a paid route with no payment to receive HTTP 402 and payment instructions.",
       "",
@@ -319,5 +410,5 @@ app.listen(PORT, () => {
   console.log(`  pay to EVM  : ${PAY_TO_EVM}`);
   console.log(`  pay to SVM  : ${PAY_TO_SVM}`);
   console.log(`  facilitator : ${FACILITATOR_URL}`);
-  console.log(`  free        : GET / , /info , /health\n`);
+  console.log(`  free        : GET / , /info , /health , /.well-known/*.json\n`);
 });

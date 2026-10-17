@@ -1,0 +1,19 @@
+# Render Blueprint: one-click deploy.
+#
+# Node runtime, free plan, testnet by default. The only required env var is
+# already defaulted; mainnet config comes later per DEPLOY.md.
+services:
+  - type: web
+    name: verify402
+    runtime: node
+    plan: free
+    buildCommand: npm ci
+    startCommand: node src/server.mjs
+    healthCheckPath: /health
+    envVars:
+      - key: X402_MODE
+        value: testnet
+      - key: FACILITATOR_URL
+        value: https://x402.org/facilitator
+      - key: NODE_VERSION
+        value: "22"
