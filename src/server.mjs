@@ -20,6 +20,7 @@ import { declareDiscoveryExtension } from "@x402/extensions/bazaar";
 import { measureRoundTrip, clientFor } from "./measure.mjs";
 import { preTradeCheck } from "./safety.mjs";
 import { fairQuoteCheck, bestRouteBook } from "./quotecheck.mjs";
+import { depthProfile } from "./depth.mjs";
 import { CHAINS, DEFAULT_SIZE, chain, resolveToken } from "./config.mjs";
 
 // ---------------------------------------------------------------- config ----
@@ -40,6 +41,8 @@ const SAFETY_PRICE = process.env.SAFETY_PRICE || "$0.10";
 // Fairness audit: cheap enough to run before every single swap.
 const ROUTE_PRICE = process.env.ROUTE_PRICE || "$0.03";
 const QUOTECHECK_PRICE = process.env.QUOTECHECK_PRICE || "$0.05";
+// Sizing: the decision that happens BEFORE every trade after a route is known.
+const DEPTH_PRICE = process.env.DEPTH_PRICE || "$0.05";
 
 // The public x402.org facilitator is testnet-only. Mainnet needs a real one.
 const FACILITATOR_URL =
@@ -140,6 +143,27 @@ if (!BYPASS_PAYMENT) app.use(
           }),
         },
       },
+      "POST /depth": {
+        accepts: accepts(DEPTH_PRICE),
+        description:
+          "Position sizing as a service. For a ladder of USD sizes, measure what the chain ACTUALLY pays: entry via the best route, immediate exit of the exact position, per-size impact %, round-trip cost %, and the largest size that stays under your cost tolerance. This is what pool-reserve-dollar figures cannot tell you: what a real block gives you for YOUR size.",
+        mimeType: "application/json",
+        extensions: {
+          ...declareDiscoveryExtension({
+            input: { chainId: 1, tokenAddress: "WETH", baseSymbol: "USDC", sizesUsd: [100, 1000, 10000, 100000] },
+            inputSchema: {
+              properties: {
+                chainId: { type: "integer", description: "1 Ethereum, 42161 Arbitrum, 8453 Base" },
+                tokenAddress: { type: "string", description: "Target token symbol or 0x address (the thing you plan to buy)" },
+                baseSymbol: { type: "string", description: "What you pay with, default USDC" },
+                sizesUsd: { type: "array", description: "Ladder of sizes in USD, max 6, each <= 1,000,000", items: { type: "number" } },
+                maxRoundTripPct: { type: "number", description: "Your cost tolerance, default 1%" },
+              },
+              required: ["tokenAddress"],
+            },
+          }),
+        },
+      },
       "POST /quotecheck": {
         accepts: accepts(QUOTECHECK_PRICE),
         description:
@@ -199,6 +223,7 @@ function registrationFile(req) {
       { name: "x402", endpoint: `${base}/safety`, version: "x402" },
       { name: "x402", endpoint: `${base}/route`, version: "x402" },
       { name: "x402", endpoint: `${base}/quotecheck`, version: "x402" },
+      { name: "x402", endpoint: `${base}/depth`, version: "x402" },
     ],
     x402Support: true,
     active: true,
@@ -275,6 +300,7 @@ app.get("/", (_req, res) => {
       `  POST /safety   ${SAFETY_PRICE} per call        is this token safe to buy? (pre-trade gate)`,
       `  POST /route    ${ROUTE_PRICE} per call        what would the chain actually pay for this swap?`,
       `  POST /quotecheck ${QUOTECHECK_PRICE} per call      audit a quote someone else gave you`,
+      `  POST /depth    ${DEPTH_PRICE} per call        how big can I trade before cost eats me?`,
       "  GET  /findings free                 live verdicts on Ethereum majors, free",
       "  GET  /info     free                 machine-readable service description",
       "  GET  /health   free",
@@ -295,7 +321,7 @@ app.get("/info", (_req, res) => {
     name: "verify402",
     description:
       "Machine-payable truth service. /verify measures whether a cross-venue arbitrage round trip is profitable; /safety is a pre-trade gate that tells an agent whether a token is safe to buy before it risks capital. All quotes come from Uniswap's canonical QuoterV2 and each venue's own router, never from our own reimplementation of venue mathematics.",
-    prices: { verify: PRICE, safety: SAFETY_PRICE, route: ROUTE_PRICE, quotecheck: QUOTECHECK_PRICE },
+    prices: { verify: PRICE, safety: SAFETY_PRICE, route: ROUTE_PRICE, quotecheck: QUOTECHECK_PRICE, depth: DEPTH_PRICE },
     payment: { protocol: "x402", scheme: "exact", acceptsExample: accepts(PRICE)[0] },
     chains: Object.entries(CHAINS).map(([id, c]) => ({
       chainId: Number(id),
@@ -355,6 +381,18 @@ app.get("/info", (_req, res) => {
           evidence: "offered quote, chain best, full venue book, ratio, shortfallBps",
         },
         use_when: "an agent was OFFERED a quote by a broker/aggregator/bot and is about to sign it",
+      },
+      {
+        method: "POST",
+        path: "/depth",
+        price: DEPTH_PRICE,
+        body: { chainId: 1, tokenAddress: "WETH", baseSymbol: "USDC", sizesUsd: [100, 1000, 10000, 100000], maxRoundTripPct: 1 },
+        response: {
+          capacityUsd: "largest rung with round-trip cost <= maxRoundTripPct",
+          ladder: "per size: impactPct, roundTripCostPct, buyVenue, sellVenue, impliedPriceUsd",
+          notes: ["the honest caveats, block-pinned"],
+        },
+        use_when: "an agent is ABOUT TO CHOOSE A SIZE and needs to know what the pool will really give it",
       },
     ],
     unpayable: "A request without payment returns HTTP 402 with instructions in the payment-required header.",
@@ -574,6 +612,43 @@ app.post("/quotecheck", async (req, res) => {
 
     cachePut(key, result);
     res.json({ ...result, cache: { hit: false, pinnedBlock: Number(blockNumber) }, elapsedMs: Date.now() - started });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Position sizing: the ladder scan.
+app.post("/depth", async (req, res) => {
+  const started = Date.now();
+  try {
+    const body = req.body || {};
+    const chainId = Number(body.chainId ?? 1);
+    if (!CHAINS[chainId]) {
+      return res.status(400).json({ error: `unsupported chainId ${chainId}`, supported: Object.keys(CHAINS).map(Number) });
+    }
+    const token = String(body.tokenAddress ?? "").trim();
+    if (!token) return res.status(400).json({ error: 'tokenAddress is required, e.g. {"tokenAddress":"WETH"}' });
+    const baseSymbol = String(body.baseSymbol ?? "USDC").toUpperCase();
+    const maxRoundTripPct = body.maxRoundTripPct != null ? Number(body.maxRoundTripPct) : 1.0;
+    if (!Number.isFinite(maxRoundTripPct) || maxRoundTripPct <= 0 || maxRoundTripPct > 100) {
+      return res.status(400).json({ error: "maxRoundTripPct must be a number in (0, 100]" });
+    }
+    let sizesUsd = null;
+    if (Array.isArray(body.sizesUsd) && body.sizesUsd.length) sizesUsd = body.sizesUsd.map(Number);
+
+    const blockNumber = await clientFor(chainId).getBlockNumber();
+    const key = `depth:${chainId}:${token.toLowerCase()}:${baseSymbol}:${JSON.stringify(sizesUsd)}:${maxRoundTripPct}:${blockNumber}`;
+    if (cache.has(key)) {
+      return res.json({ ...cache.get(key), cache: { hit: true, pinnedBlock: Number(blockNumber) }, elapsedMs: Date.now() - started });
+    }
+
+    const result = await depthProfile(chainId, { tokenAddress: token, baseSymbol, sizesUsd, maxRoundTripPct });
+    cachePut(key, result);
+    res.json({
+      ...result,
+      cache: { hit: false, pinnedBlock: Number(blockNumber) },
+      elapsedMs: Date.now() - started,
+    });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

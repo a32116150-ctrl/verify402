@@ -71,6 +71,11 @@ const DESCRIPTIONS = {
     "Audit a swap quote someone else gave you (aggregator, broker, bot) BEFORE signing. " +
     "Returns fair / overpaying / too_good_to_be_true with the full chain book as evidence. " +
     "Ask this before accepting ANY number you did not produce yourself. Costs $0.05 per call.",
+  get_trade_depth:
+    "Position sizing: measure how much of a token the chain ACTUALLY lets you trade - " +
+    "entry and exit across every venue at a ladder of USD sizes, per-size impact and " +
+    "round-trip cost, plus the largest size under your cost tolerance. Ask BEFORE choosing " +
+    "a position size. Costs $0.05 per call.",
 };
 
 async function main() {
@@ -157,6 +162,28 @@ async function main() {
         amountIn: args.amountIn,
         quotedOut: args.quotedOut,
         venueClaimed: args.venueClaimed ?? null,
+      });
+      return { content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }] };
+    },
+  );
+
+  server.tool(
+    "get_trade_depth",
+    DESCRIPTIONS.get_trade_depth,
+    {
+      tokenAddress: z.string().describe("Token you plan to buy (symbol or 0x address)"),
+      chainId: z.number().optional().describe("1 Ethereum, 42161 Arbitrum, 8453 Base (default 1)"),
+      baseSymbol: z.string().optional().describe("What you pay with (default USDC)"),
+      sizesUsd: z.array(z.number()).optional().describe("Ladder of sizes in USD, max 6 (default 100, 1000, 10000, 100000)"),
+      maxRoundTripPct: z.number().optional().describe("Your round-trip cost tolerance, default 1%"),
+    },
+    async (args) => {
+      const res = await paidApi.post("/depth", {
+        chainId: args.chainId ?? 1,
+        tokenAddress: args.tokenAddress,
+        baseSymbol: args.baseSymbol ?? "USDC",
+        sizesUsd: args.sizesUsd ?? null,
+        maxRoundTripPct: args.maxRoundTripPct ?? 1.0,
       });
       return { content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }] };
     },
