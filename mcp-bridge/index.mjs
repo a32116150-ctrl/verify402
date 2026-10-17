@@ -64,6 +64,13 @@ const DESCRIPTIONS = {
     "Returns TRUST/CAUTION/AVOID with evidence: live contract facts, market liquidity, " +
     "a USD-sized sell probe against every venue (honeypot test), round-trip cost at your " +
     "intended size, and phantom-price detection. Costs $0.10 per call.",
+  get_best_route:
+    "Ask verify402 what the chain would ACTUALLY pay for a swap: the full execution book " +
+    "(every venue, direct and WETH-routed) at one pinned block, best first. Costs $0.03 per call.",
+  verify_quote_fairness:
+    "Audit a swap quote someone else gave you (aggregator, broker, bot) BEFORE signing. " +
+    "Returns fair / overpaying / too_good_to_be_true with the full chain book as evidence. " +
+    "Ask this before accepting ANY number you did not produce yourself. Costs $0.05 per call.",
 };
 
 async function main() {
@@ -106,6 +113,50 @@ async function main() {
         tokenAddress: String(args.tokenAddress ?? "").trim(),
         intendedUsd: args.intendedUsd ?? 500,
         offeredPriceUsd: args.offeredPriceUsd ?? null,
+      });
+      return { content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }] };
+    },
+  );
+
+  server.tool(
+    "get_best_route",
+    DESCRIPTIONS.get_best_route,
+    {
+      tokenIn: z.string().describe("Token symbol (e.g. USDC) or 0x address"),
+      tokenOut: z.string().describe("Token symbol (e.g. WETH) or 0x address"),
+      amountIn: z.string().describe("RAW base units of tokenIn, wei-scale, as a string"),
+      chainId: z.number().optional().describe("1 Ethereum, 42161 Arbitrum, 8453 Base (default 1)"),
+    },
+    async (args) => {
+      const res = await paidApi.post("/route", {
+        chainId: args.chainId ?? 1,
+        tokenIn: args.tokenIn,
+        tokenOut: args.tokenOut,
+        amountIn: args.amountIn,
+      });
+      return { content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }] };
+    },
+  );
+
+  server.tool(
+    "verify_quote_fairness",
+    DESCRIPTIONS.verify_quote_fairness,
+    {
+      tokenIn: z.string().describe("Token you are selling (symbol or 0x address)"),
+      tokenOut: z.string().describe("Token you would receive (symbol or 0x address)"),
+      amountIn: z.string().describe("RAW units of tokenIn, as in the offer"),
+      quotedOut: z.string().describe("RAW units of tokenOut you were OFFERED"),
+      venueClaimed: z.string().optional().describe("Optional: who gave you the offer"),
+      chainId: z.number().optional().describe("1 Ethereum, 42161 Arbitrum, 8453 Base (default 1)"),
+    },
+    async (args) => {
+      const res = await paidApi.post("/quotecheck", {
+        chainId: args.chainId ?? 1,
+        tokenIn: args.tokenIn,
+        tokenOut: args.tokenOut,
+        amountIn: args.amountIn,
+        quotedOut: args.quotedOut,
+        venueClaimed: args.venueClaimed ?? null,
       });
       return { content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }] };
     },

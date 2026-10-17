@@ -19,7 +19,8 @@ import { declareDiscoveryExtension } from "@x402/extensions/bazaar";
 
 import { measureRoundTrip, clientFor } from "./measure.mjs";
 import { preTradeCheck } from "./safety.mjs";
-import { CHAINS, DEFAULT_SIZE } from "./config.mjs";
+import { fairQuoteCheck, bestRouteBook } from "./quotecheck.mjs";
+import { CHAINS, DEFAULT_SIZE, chain, resolveToken } from "./config.mjs";
 
 // ---------------------------------------------------------------- config ----
 const MODE = process.env.X402_MODE === "mainnet" ? "mainnet" : "testnet";
@@ -36,6 +37,9 @@ const PRICE = process.env.PRICE || "$0.05";
 // it is priced above /verify because it does strictly more work:
 // contract facts, market data, a USD-sized sell probe and a full round trip.
 const SAFETY_PRICE = process.env.SAFETY_PRICE || "$0.10";
+// Fairness audit: cheap enough to run before every single swap.
+const ROUTE_PRICE = process.env.ROUTE_PRICE || "$0.03";
+const QUOTECHECK_PRICE = process.env.QUOTECHECK_PRICE || "$0.05";
 
 // The public x402.org facilitator is testnet-only. Mainnet needs a real one.
 const FACILITATOR_URL =
@@ -116,6 +120,53 @@ if (!BYPASS_PAYMENT) app.use(
           }),
         },
       },
+      "POST /route": {
+        accepts: accepts(ROUTE_PRICE),
+        description:
+          "The full execution book right now: every venue (direct and WETH-routed) quoting tokenIn -> tokenOut at one pinned block, best first. Verdict-free evidence; pair it with /quotecheck to audit someone else's number.",
+        mimeType: "application/json",
+        extensions: {
+          ...declareDiscoveryExtension({
+            input: { chainId: 1, tokenIn: "USDC", tokenOut: "WETH", amountIn: "1000000000" },
+            inputSchema: {
+              properties: {
+                chainId: { type: "integer", description: "1 Ethereum, 42161 Arbitrum, 8453 Base" },
+                tokenIn: { type: "string", description: "Token symbol or 0x address" },
+                tokenOut: { type: "string", description: "Token symbol or 0x address" },
+                amountIn: { type: "string", description: "Amount in RAW base units of tokenIn (wei-scale)" },
+              },
+              required: ["tokenIn", "tokenOut", "amountIn"],
+            },
+          }),
+        },
+      },
+      "POST /quotecheck": {
+        accepts: accepts(QUOTECHECK_PRICE),
+        description:
+          "Fairness audit of a quote someone else gave you. Returns fair / overpaying / too_good_to_be_true / unknown, with the full venue book at one pinned block as evidence. Ask this BEFORE signing any swap whose number you did not produce yourself.",
+        mimeType: "application/json",
+        extensions: {
+          ...declareDiscoveryExtension({
+            input: {
+              chainId: 1, tokenIn: "USDC", tokenOut: "WETH",
+              amountIn: "1000000000",
+              quotedOut: "326259300000000000",
+              venueClaimed: "some-router.example",
+            },
+            inputSchema: {
+              properties: {
+                chainId: { type: "integer", description: "1 Ethereum, 42161 Arbitrum, 8453 Base" },
+                tokenIn: { type: "string", description: "Token symbol or 0x address" },
+                tokenOut: { type: "string", description: "Token symbol or 0x address" },
+                amountIn: { type: "string", description: "RAW units of tokenIn (wei-scale)" },
+                quotedOut: { type: "string", description: "The RAW units of tokenOut you were offered" },
+                venueClaimed: { type: "string", description: "Optional: who gave you this quote" },
+              },
+              required: ["tokenIn", "tokenOut", "amountIn", "quotedOut"],
+            },
+          }),
+        },
+      },
     },
     new x402ResourceServer(facilitatorClient)
       .register(NETWORKS.evm, new ExactEvmScheme())
@@ -146,6 +197,8 @@ function registrationFile(req) {
       { name: "web", endpoint: base },
       { name: "x402", endpoint: `${base}/verify`, version: "x402" },
       { name: "x402", endpoint: `${base}/safety`, version: "x402" },
+      { name: "x402", endpoint: `${base}/route`, version: "x402" },
+      { name: "x402", endpoint: `${base}/quotecheck`, version: "x402" },
     ],
     x402Support: true,
     active: true,
@@ -220,6 +273,8 @@ app.get("/", (_req, res) => {
       "",
       `  POST /verify   ${PRICE} per call        is this arbitrage opportunity real?`,
       `  POST /safety   ${SAFETY_PRICE} per call        is this token safe to buy? (pre-trade gate)`,
+      `  POST /route    ${ROUTE_PRICE} per call        what would the chain actually pay for this swap?`,
+      `  POST /quotecheck ${QUOTECHECK_PRICE} per call      audit a quote someone else gave you`,
       "  GET  /findings free                 live verdicts on Ethereum majors, free",
       "  GET  /info     free                 machine-readable service description",
       "  GET  /health   free",
@@ -240,7 +295,7 @@ app.get("/info", (_req, res) => {
     name: "verify402",
     description:
       "Machine-payable truth service. /verify measures whether a cross-venue arbitrage round trip is profitable; /safety is a pre-trade gate that tells an agent whether a token is safe to buy before it risks capital. All quotes come from Uniswap's canonical QuoterV2 and each venue's own router, never from our own reimplementation of venue mathematics.",
-    prices: { verify: PRICE, safety: SAFETY_PRICE },
+    prices: { verify: PRICE, safety: SAFETY_PRICE, route: ROUTE_PRICE, quotecheck: QUOTECHECK_PRICE },
     payment: { protocol: "x402", scheme: "exact", acceptsExample: accepts(PRICE)[0] },
     chains: Object.entries(CHAINS).map(([id, c]) => ({
       chainId: Number(id),
@@ -276,6 +331,30 @@ app.get("/info", (_req, res) => {
           evidence: "contract facts, market data, sell-probe venues, round-trip cost, price comparison",
         },
         use_when: "an agent is about to BUY a token and needs to know it can exit and the price is real",
+      },
+      {
+        method: "POST",
+        path: "/route",
+        price: ROUTE_PRICE,
+        body: { chainId: 1, tokenIn: "USDC", tokenOut: "WETH", amountIn: "1000000000" },
+        response: {
+          best: "{ venue, kind, amountOut(raw) } | null",
+          book: "every venue (direct + WETH-routed), best first, one pinned block",
+          unavailable: ["venues that could not quote the size"],
+        },
+        use_when: "an agent wants the chain's own answer for what a swap should pay, before trusting any counterparty's number",
+      },
+      {
+        method: "POST",
+        path: "/quotecheck",
+        price: QUOTECHECK_PRICE,
+        body: { chainId: 1, tokenIn: "USDC", tokenOut: "WETH", amountIn: "1000000000", quotedOut: "326259300000000000", venueClaimed: "who-gave-you-this" },
+        response: {
+          verdict: "fair | overpaying | too_good_to_be_true | unknown",
+          notes: ["why"],
+          evidence: "offered quote, chain best, full venue book, ratio, shortfallBps",
+        },
+        use_when: "an agent was OFFERED a quote by a broker/aggregator/bot and is about to sign it",
       },
     ],
     unpayable: "A request without payment returns HTTP 402 with instructions in the payment-required header.",
@@ -402,11 +481,111 @@ app.post("/safety", async (req, res) => {
   }
 });
 
+// Route book + fairness audit: the two calls that bracket every swap.
+app.post("/route", async (req, res) => {
+  const started = Date.now();
+  try {
+    const body = req.body || {};
+    const chainId = Number(body.chainId ?? 1);
+    if (!CHAINS[chainId]) {
+      return res.status(400).json({ error: `unsupported chainId ${chainId}`, supported: Object.keys(CHAINS).map(Number) });
+    }
+    let addrIn; let addrOut; let amountIn;
+    try {
+      addrIn = resolveToken(chainId, String(body.tokenIn ?? "").trim()).address;
+    } catch {
+      addrIn = String(body.tokenIn ?? "").trim();
+    }
+    try {
+      addrOut = resolveToken(chainId, String(body.tokenOut ?? "").trim()).address;
+    } catch {
+      addrOut = String(body.tokenOut ?? "").trim();
+    }
+    if (!/^0x[0-9a-fA-F]{40}$/.test(addrIn) || !/^0x[0-9a-fA-F]{40}$/.test(addrOut)) {
+      return res.status(400).json({ error: "tokenIn/tokenOut must be a known symbol or a 0x address" });
+    }
+    if (addrIn.toLowerCase() === addrOut.toLowerCase()) {
+      return res.status(400).json({ error: "tokenIn and tokenOut must differ" });
+    }
+    try {
+      amountIn = BigInt(body.amountIn);
+      if (amountIn <= 0n) throw new Error();
+    } catch {
+      return res.status(400).json({ error: "amountIn must be a positive integer string in RAW units of tokenIn" });
+    }
+
+    const client = clientFor(chainId);
+    const blockNumber = await client.getBlockNumber();
+    const key = `route:${chainId}:${addrIn.toLowerCase()}:${addrOut.toLowerCase()}:${amountIn.toString()}:${blockNumber}`;
+    if (cache.has(key)) {
+      return res.json({ ...cache.get(key), cache: { hit: true, pinnedBlock: Number(blockNumber) }, elapsedMs: Date.now() - started });
+    }
+
+    const book = await bestRouteBook(client, chainId, { tokenIn: addrIn, tokenOut: addrOut, amountIn, blockNumber });
+    const best = book.quoted[0] ?? null;
+    const result = {
+      ok: true,
+      chainId,
+      chainName: CHAINS[chainId].name,
+      blockNumber: Number(blockNumber),
+      amountIn: amountIn.toString(),
+      best: best ? { venue: best.venue, kind: best.kind, amountOut: best.amountOut.toString() } : null,
+      book: book.quoted.map((q) => ({ venue: q.venue, kind: q.kind, amountOut: q.amountOut.toString() })),
+      unavailable: book.unavailable.map((u) => u.venue),
+      note: best ? null : "no venue quoted this pair at this size",
+    };
+    cachePut(key, result);
+    res.json({ ...result, cache: { hit: false, pinnedBlock: Number(blockNumber) }, elapsedMs: Date.now() - started });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post("/quotecheck", async (req, res) => {
+  const started = Date.now();
+  try {
+    const body = req.body || {};
+    const chainId = Number(body.chainId ?? 1);
+    if (!CHAINS[chainId]) {
+      return res.status(400).json({ error: `unsupported chainId ${chainId}`, supported: Object.keys(CHAINS).map(Number) });
+    }
+    const required = ["tokenIn", "tokenOut", "amountIn", "quotedOut"];
+    const missing = required.filter((k) => body[k] === undefined || body[k] === null || body[k] === "");
+    if (missing.length) {
+      return res.status(400).json({ error: `missing fields: ${missing.join(", ")}`, example: required.map((k) => ({ [k]: "..." })).reduce((a, b) => ({ ...a, ...b })) });
+    }
+
+    // Cache by offered number: two agents auditing the same offer in the same
+    // block share one book.
+    const blockNumber = await clientFor(chainId).getBlockNumber();
+    const key = `qc:${chainId}:${String(body.tokenIn).toLowerCase()}:${String(body.tokenOut).toLowerCase()}:${String(body.amountIn)}:${String(body.quotedOut)}:${blockNumber}`;
+    if (cache.has(key)) {
+      return res.json({ ...cache.get(key), cache: { hit: true, pinnedBlock: Number(blockNumber) }, elapsedMs: Date.now() - started });
+    }
+
+    const result = await fairQuoteCheck(chainId, {
+      tokenIn: body.tokenIn,
+      tokenOut: body.tokenOut,
+      amountIn: body.amountIn,
+      quotedOut: body.quotedOut,
+      venueClaimed: body.venueClaimed ?? null,
+      chainIn: body.chainIn ?? null,
+    });
+
+    cachePut(key, result);
+    res.json({ ...result, cache: { hit: false, pinnedBlock: Number(blockNumber) }, elapsedMs: Date.now() - started });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`\nverify402 listening on http://localhost:${PORT}`);
   console.log(`  mode        : ${MODE}  (${NETWORKS.label})`);
   console.log(`  /verify     : ${PRICE}   (is this arbitrage real?)`);
   console.log(`  /safety     : ${SAFETY_PRICE}   (is this token safe to buy?)`);
+  console.log(`  /route      : ${ROUTE_PRICE}   (what would the chain actually pay?)`);
+  console.log(`  /quotecheck : ${QUOTECHECK_PRICE}   (is someone else's quote honest?)`);
   console.log(`  pay to EVM  : ${PAY_TO_EVM}`);
   console.log(`  pay to SVM  : ${PAY_TO_SVM}`);
   console.log(`  facilitator : ${FACILITATOR_URL}`);
