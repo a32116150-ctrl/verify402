@@ -1,12 +1,21 @@
 # verify402
 
-A machine-payable truth service: **AI agents pay per call, via x402, to find out
-whether an arbitrage opportunity is real.**
+A machine-payable truth service for AI agents. Two questions an agent cannot
+answer honestly by itself:
 
-`POST /verify` measures a cross-venue round trip (buy `target` with `base` on the
-best venue, sell it back on the best venue) at one pinned block, nets off flash-loan
-premium and gas, and returns a verdict with full evidence. Payment is a flat $0.05
-per call in USDC, on Base or Solana — no account, no API key.
+1. **"Is this arbitrage opportunity real?"** — `POST /verify` measures a
+   cross-venue round trip (buy `target` with `base` on the best venue, sell it
+   back on the best venue) at one pinned block, nets off flash-loan premium and
+   gas, and returns a verdict with full evidence. $0.05 per call.
+2. **"Is this token safe to buy?"** — `POST /safety` is a pre-trade gate the
+   agent runs *before* risking capital on any token: live contract facts,
+   market liquidity and scam signals, a USD-sized sell probe against every
+   venue (the honeypot test, answered by actually quoting the exit — direct
+   and WETH-routed), a full round-trip cost at the intended size, and
+   phantom-price detection. Returns `TRUST` / `CAUTION` / `AVOID` with the
+   evidence. $0.10 per call.
+
+Payment is x402 in USDC, on Base or Solana — no account, no API key.
 
 ## Why an agent would pay for this
 
@@ -61,10 +70,11 @@ X402_MODE=mainnet FACILITATOR_URL=... node src/server.mjs
 | Route | Price | What it does |
 |---|---|---|
 | `POST /verify` | $0.05 (x402) | the measurement, with verdict + evidence |
+| `POST /safety` | $0.10 (x402) | pre-trade gate: TRUST / CAUTION / AVOID + evidence |
 | `GET /info` | free | machine-readable service description |
 | `GET /health` | free | liveness |
 
-Request:
+`POST /verify` request:
 
 ```json
 { "chainId": 1, "target": "WETH", "base": "USDC", "size": 100000, "minNet": 0 }
@@ -89,9 +99,50 @@ Response (abridged):
 `verdict` is one of `edge` (net cleared `minNet`), `no_edge_costs_ate_it` (gross
 positive, costs larger), or `no_edge` (unprofitable before costs).
 
+`POST /safety` request (accepts any ERC-20 address, not just registry symbols):
+
+```json
+{ "chainId": 1, "tokenAddress": "0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE", "intendedUsd": 500 }
+```
+
+Response (abridged):
+
+```json
+{
+  "verdict": "TRUST",
+  "checked": ["contract", "market", "sellability", "liquidity"],
+  "notes": ["sellable via uni-v3-0.3% via hop, uniswap-v2 via hop, ...",
+            "round trip in and out of $500 costs 1.42%"],
+  "evidence": { "contract": {...}, "market": {...},
+                "sellability": { "canSell": true, "probedInUsd": 25 },
+                "liquidity": { "roundTripCostPct": 1.42 } },
+  "elapsedMs": 1434
+}
+```
+
+`verdict` is one of:
+- `AVOID` — positively dangerous: cannot be exited at a realistic size, or the
+  contract is not a token at all
+- `CAUTION` — tradable, but with a stated cost or problem (thin pool,
+  manufactured price, expensive round trip)
+- `TRUST` — every check passed; still not a promise of profit, only a record
+  that nothing measured was wrong
+
+Probes are USD-sized on purpose: an earlier version probed "half a token" and
+flagged SHIB — a $1B token — as a honeypot, because half a SHIB is dust no pool
+can quote. The test suite and live calls caught that before it launched; every
+future verdict change must be explainable, not silent.
+
 A request without payment gets `402Payment Required` with instructions in the
 `PAYMENT-REQUIRED` header; the client pays and retries with proof — that is the
 entire x402 flow, and it is what makes the caller a program rather than a person.
+
+## MCP: how AI agents consume this
+
+`mcp-bridge/` exposes the paid endpoints as native MCP tools
+(`verify_arbitrage`, `check_token_safety`) for Claude Desktop, OpenCode, or any
+MCP client, paying per call via x402 with a hard pre-sign spend cap
+(`MAX_PAYMENT_USD`, default $0.25). See `mcp-bridge/README.md`.
 
 ## Honesty
 

@@ -98,12 +98,16 @@ export async function quoteV3(client, { quoter, tokenIn, tokenOut, amountIn, fee
 }
 
 /** Quote an exact-input V2 swap through the router itself. */
-export async function quoteV2(client, { router, tokenIn, tokenOut, amountIn, blockNumber }) {
+export async function quoteV2(client, { router, tokenIn, tokenOut, amountIn, blockNumber, path = null }) {
   try {
+    // Multi-hop paths are the router's own math; we only build the address
+    // array. The direct path label (tokenIn/tokenOut) is used for the decode
+    // guard below, which does not depend on path shape.
+    const route = path ?? [tokenIn, tokenOut];
     const data = encodeFunctionData({
       abi: V2_ROUTER_ABI,
       functionName: "getAmountsOut",
-      args: [amountIn, [tokenIn, tokenOut]],
+      args: [amountIn, route],
     });
     const raw = await client.call({ to: router, data, blockNumber });
     if (!raw.data) return null;
@@ -146,8 +150,48 @@ function findUintArray(res) {
 }
 
 /** Every venue this chain knows about, quoted for one direction, at one block. */
-export async function quoteAllVenues(client, chainId, { tokenIn, tokenOut, amountIn, blockNumber }) {
+/**
+ * Quote an exact-input V3 swap across a multi-hop path, leg by leg through
+ * QuoterV2 itself, with every leg pinned to ONE block so the quote is
+ * internally consistent. No tick math is implemented here.
+ */
+export async function quoteV3Path(client, { quoter, path, amountIn, fee, blockNumber = null }) {
+  try {
+    const bn = blockNumber ?? (await client.getBlockNumber());
+    let amount = amountIn;
+    for (let i = 0; i < path.length - 1; i++) {
+      const out = await quoteV3(client, {
+        quoter,
+        tokenIn: path[i],
+        tokenOut: path[i + 1],
+        amountIn: amount,
+        fee,
+        blockNumber: bn,
+      });
+      if (out === null || !(out > 0n)) return null;
+      amount = out;
+    }
+    return amount;
+  } catch {
+    return null;
+  }
+}
+
+export async function quoteAllVenues(client, chainId, { tokenIn, tokenOut, amountIn, blockNumber, intermediates = [] }) {
   const c = chain(chainId);
+
+  // Direct pairs miss most real liquidity: a token's deep pool is frequently
+  // VS WETH (or another major), not vs the caller's base. Routed jobs use the
+  // router's OWN path math (getAmountsOut accepts a full path; QuoterV2 is
+  // chained leg by leg), so no pricing is ever implemented locally.
+  const viaTokens = intermediates
+    .filter((sym) => {
+      const t = c.tokens[sym];
+      if (!t) return false;
+      const addr = t.address.toLowerCase();
+      return addr !== tokenIn.toLowerCase() && addr !== tokenOut.toLowerCase();
+    })
+    .map((sym) => c.tokens[sym]);
 
   const jobs = [
     ...c.v3Fees.map((fee) => ({
@@ -162,6 +206,22 @@ export async function quoteAllVenues(client, chainId, { tokenIn, tokenOut, amoun
       fee: r.feeBps * 100,
       run: () => quoteV2(client, { router: r.address, tokenIn, tokenOut, amountIn, blockNumber }),
     })),
+    // Routed variants, clearly labeled so the caller knows the price came via
+    // a hop and not a direct pair.
+    ...viaTokens.flatMap((v) => [
+      ...c.v2Routers.map((r) => ({
+        venue: `${r.label} via ${v.symbol ?? "hop"}`,
+        kind: "v2",
+        fee: r.feeBps * 100,
+        run: () => quoteV2(client, { router: r.address, tokenIn, tokenOut: tokenOut, amountIn, blockNumber, path: [tokenIn, v.address, tokenOut] }),
+      })),
+      ...c.v3Fees.map((fee) => ({
+        venue: `uni-v3-${fee / 10_000}% via ${v.symbol ?? "hop"}`,
+        kind: "v3-path",
+        fee,
+        run: () => quoteV3Path(client, { quoter: c.quoterV2, path: [tokenIn, v.address, tokenOut], amountIn, fee, blockNumber }),
+      })),
+    ]),
   ];
 
   const settled = await Promise.allSettled(jobs.map((j) => j.run()));

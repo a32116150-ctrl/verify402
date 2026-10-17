@@ -1,0 +1,20 @@
+{
+  "name": "verify402-mcp-bridge",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MCP bridge exposing verify402's paid tools (verify_arbitrage, check_token_safety) to any MCP client, paying per call via x402.",
+  "type": "module",
+  "main": "index.mjs",
+  "scripts": {
+    "start": "node index.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "@x402/axios": "^2.28.0",
+    "@x402/evm": "^2.28.0",
+    "axios": "^1.13.2",
+    "dotenv": "^16.4.5",
+    "viem": "^2.39.0",
+    "zod": "^4.6.7"
+  }
+}

@@ -12,8 +12,11 @@ export const CHAINS = {
     viemChain: "mainnet",
     rpcEnv: "ETH_RPC_URL",
     rpcDefault: "https://ethereum-rpc.publicnode.com",
-    // Canonical Uniswap V3 quoter. Quotes come from here, not from our own
-    // tick math - see measure.mjs for why that matters.
+    // Canonical Uniswap V3 QuoterV2 on mainnet. An earlier edit swapped this
+    // for 0x59b670e9... believing it was V2 - the all-venues-exist test then
+    // showed THAT address has no bytecode and this one does. Verified live:
+    // this is the deployed QuoterV2; do not "correct" it without on-chain
+    // bytecode evidence.
     quoterV2: "0x61fFE014bA17989E743c5F6cB21bF9697530B21e",
     // V2-style routers: getAmountsOut is exact and needs no reimplementation.
     v2Routers: [
@@ -65,9 +68,7 @@ export const CHAINS = {
     rpcEnv: "BASE_RPC_URL",
     rpcDefault: "https://mainnet.base.org",
     quoterV2: "0x3d4e44Eb1374240CE5F1B871ab261CD16335B76a",
-    v2Routers: [
-      { label: "uniswap-v2", address: "0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24", feeBps: 30 },
-    ],
+    v2Routers: [],
     v3Fees: [100, 500, 3000, 10000],
     tokens: {
       USDC: { address: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", decimals: 6 },
