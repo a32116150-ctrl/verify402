@@ -4,105 +4,218 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>verify402 — the pre-spend check for agents that pay per call</title>
-<meta name="description" content="A machine-payable truth service on x402/USDC: an arbitrage check, a token safety gate, a route audit, a quote audit and a depth probe — verdicts pinned to blocks, receipts hashed, no signup.">
+<meta name="description" content="Five machine-payable verdicts on x402/USDC: arbitrage check, token safety gate, route audit, quote audit, depth probe. Block-pinned, hash-receipted, no signup. Free route available.">
 <style>
-  :root { color-scheme: dark; }
+  :root {
+    --bg: #07090f; --panel: rgba(255,255,255,.03); --line: rgba(255,255,255,.08);
+    --txt: #e6ecf5; --sub: #98a6bd; --brand: #6ea8fe; --brand2: #34d399;
+    --gold: #f4b740; --red: #f87171; --mono-ui: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: #0b0e14; color: #d7dce6; font: 16px/1.65 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-  .wrap { max-width: 880px; margin: 0 auto; padding: 48px 22px 80px; }
-  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
-  h1 { font-size: 2rem; line-height: 1.2; color: #fff; letter-spacing: -0.02em; }
-  .tag { color: #8fa3c0; font-size: 1.05rem; margin-top: 10px; }
-  .brand { color: #6ea8fe; } .usdc { color: #2775ca; }
-  .badge { display: inline-block; border: 1px solid #274067; border-radius: 6px; padding: 2px 10px; font-size: .8rem; color: #9fc1ef; margin: 14px 8px 0 0; }
-  section { margin-top: 44px; }
-  h2 { font-size: 1.15rem; color: #fff; margin-bottom: 12px; border-bottom: 1px solid #1d2735; padding-bottom: 8px; }
-  p + p { margin-top: 10px; }
-  a { color: #6ea8fe; }
-  table { width: 100%; border-collapse: collapse; font-size: .95rem; }
-  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #1d2735; vertical-align: top; }
-  th { color: #8fa3c0; font-weight: 600; }
-  .price { color: #7ee2a8; white-space: nowrap; }
-  code, .codebox { background: #111722; border: 1px solid #1d2735; border-radius: 6px; }
-  code { padding: 1px 6px; font-size: .88em; }
-  .codebox { padding: 16px; overflow-x: auto; font-size: .85rem; color: #b9c6da; line-height: 1.7; }
-  .note { background: #101826; border-left: 3px solid #6ea8fe; border-radius: 6px; padding: 14px 16px; margin-top: 14px; font-size: .95rem; }
-  .warn { background: #171016; border-left: 3px solid #e0566b; }
-  .k { color: #7ee2a8; } .s { color: #e0b256; } .c { color: #5a6b84; }
-  footer { margin-top: 56px; border-top: 1px solid #1d2735; padding-top: 18px; color: #5a6b84; font-size: .85rem; }
+  html { scroll-behavior: smooth; }
+  body { background: var(--bg); color: var(--txt); font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+
+  /* ── ambient background ───────────────────────── */
+  .glow { position: fixed; inset: 0; z-index: -1; pointer-events: none;
+    background:
+      radial-gradient(600px 420px at 15% -10%, rgba(110,168,254,.16), transparent 60%),
+      radial-gradient(700px 500px at 85% 0%,  rgba(52,211,153,.10),  transparent 60%),
+      radial-gradient(500px 400px at 50% 110%, rgba(244,183,64,.05), transparent 60%);
+  }
+  .grid-lines { position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: .5;
+    background-image: linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+    background-size: 56px 56px; mask-image: radial-gradient(ellipse 90% 60% at 50% 0%, black 30%, transparent 75%);
+  }
+
+  /* ── nav ─────────────────────────────────────── */
+  nav { position: sticky; top: 0; z-index: 10; backdrop-filter: blur(14px); background: rgba(7,9,15,.72); border-bottom: 1px solid var(--line); }
+  .nav-in { max-width: 1060px; margin: 0 auto; padding: 14px 24px; display: flex; align-items: center; gap: 24px; }
+  .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: -.02em; font-size: 1.05rem; color: #fff; text-decoration: none; }
+  .logo-mark { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; font: 800 13px var(--mono-ui);
+    background: linear-gradient(135deg, var(--brand), #8b5cf6); color: #fff; box-shadow: 0 0 18px rgba(110,168,254,.45); }
+  nav .right { margin-left: auto; display: flex; gap: 20px; align-items: center; font-size: .92rem; }
+  nav a.rlink { color: var(--sub); text-decoration: none; transition: color .15s; } nav a.rlink:hover { color: #fff; }
+
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 9px 18px; border-radius: 10px; font-weight: 600; font-size: .92rem; text-decoration: none; border: 1px solid transparent; transition: all .15s; }
+  .btn-ghost { color: #fff; border-color: rgba(255,255,255,.16); } .btn-ghost:hover { border-color: rgba(255,255,255,.4); background: rgba(255,255,255,.05); }
+  .btn-glow { color: #06121f; background: linear-gradient(135deg, var(--brand2), var(--brand)); box-shadow: 0 4px 26px rgba(52,211,153,.28); }
+  .btn-glow:hover { filter: brightness(1.1); transform: translateY(-1px); }
+
+  /* ── hero ────────────────────────────────────── */
+  .hero { max-width: 1060px; margin: 0 auto; padding: 88px 24px 40px; text-align: center; }
+  .pill { display: inline-flex; align-items: center; gap: 8px; font-size: .8rem; color: #a9c4ef; border: 1px solid rgba(110,168,254,.3); background: rgba(110,168,254,.07); padding: 5px 14px; border-radius: 999px; margin-bottom: 26px; }
+  .pill b { color: #fff; font-weight: 600; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--brand2); box-shadow: 0 0 10px var(--brand2); }
+  h1 { font-size: clamp(2.2rem, 5.4vw, 3.6rem); line-height: 1.08; letter-spacing: -.035em; color: #fff; font-weight: 800; }
+  h1 .g { background: linear-gradient(120deg, var(--brand) 10%, #8b5cf6 50%, var(--brand2) 90%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .hero p.sub { color: var(--sub); font-size: 1.12rem; max-width: 660px; margin: 20px auto 0; }
+  .hero .cta { margin-top: 32px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .muted-note { margin-top: 18px; font-size: .85rem; color: #6b7a93; }
+
+  /* ── stats ───────────────────────────────────── */
+  .stats { max-width: 1060px; margin: 44px auto 0; padding: 0 24px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .stat { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px 10px; text-align: center; }
+  .stat b { display: block; font-size: 1.35rem; color: #fff; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+  .stat span { font-size: .78rem; color: var(--sub); text-transform: uppercase; letter-spacing: .08em; }
+
+  section { max-width: 1060px; margin: 0 auto; padding: 72px 24px 0; }
+  .kicker { font: 600 .78rem var(--mono-ui); text-transform: uppercase; letter-spacing: .14em; color: var(--brand2); margin-bottom: 10px; }
+  h2 { font-size: clamp(1.5rem, 3vw, 2rem); letter-spacing: -.025em; color: #fff; font-weight: 700; margin-bottom: 12px; }
+  .lede { color: var(--sub); max-width: 640px; }
+
+  /* ── endpoint cards ──────────────────────────── */
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 30px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 22px; position: relative; transition: border-color .2s, transform .2s; }
+  .card:hover { border-color: rgba(110,168,254,.45); transform: translateY(-2px); }
+  .card .route { font: 600 .9rem var(--mono-ui); color: var(--brand); }
+  .card .price { position: absolute; top: 18px; right: 18px; font: 700 .85rem var(--mono-ui); color: var(--brand2); background: rgba(52,211,153,.09); border: 1px solid rgba(52,211,153,.25); padding: 2px 10px; border-radius: 999px; }
+  .card h3 { font-size: 1rem; color: #fff; margin: 10px 0 6px; font-weight: 650; }
+  .card p { font-size: .88rem; color: var(--sub); }
+  .card.free { border-color: rgba(52,211,153,.35); background: rgba(52,211,153,.05); grid-column: span 3; display: flex; align-items: center; gap: 18px; padding: 18px 22px; }
+  .card.free h3 { margin: 0; }
+
+  /* ── feature grid ────────────────────────────── */
+  .feats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-top: 30px; }
+  .feat { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 24px; }
+  .feat .ic { font-size: 1.35rem; margin-bottom: 10px; }
+  .feat h3 { font-size: 1rem; color: #fff; font-weight: 650; margin-bottom: 6px; }
+  .feat p { font-size: .9rem; color: var(--sub); }
+  .feat code { font: 500 .84em var(--mono-ui); color: var(--brand); background: rgba(110,168,254,.08); border: 1px solid rgba(110,168,254,.2); padding: 1px 6px; border-radius: 6px; }
+
+  /* ── terminal ────────────────────────────────── */
+  .term { background: #0a0e17; border: 1px solid rgba(255,255,255,.09); border-radius: 16px; overflow: hidden; margin-top: 30px; box-shadow: 0 20px 60px rgba(0,0,0,.45); }
+  .term-bar { display: flex; gap: 7px; padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,.07); background: rgba(255,255,255,.02); }
+  .td { width: 11px; height: 11px; border-radius: 50%; } .td:nth-child(1){background:#f87171} .td:nth-child(2){background:#fbbf24} .td:nth-child(3){background:#34d399}
+  .term-title { margin-left: 10px; font: 500 .78rem var(--mono-ui); color: #64748b; }
+  .term pre { padding: 22px 24px; overflow-x: auto; font: .86rem/1.85 var(--mono-ui); color: #c8d3e6; }
+  .cm { color: #546a8c; } .cmd { color: #7ee2a8; } .str { color: #ffd28a; } .url { color: #79b8ff; }
+
+  /* ── honest status ───────────────────────────── */
+  .honest { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 30px; }
+  .stat-box { border-radius: 16px; padding: 24px; border: 1px solid; }
+  .stat-box h3 { font-size: .95rem; display: flex; align-items: center; gap: 9px; margin-bottom: 10px; color: #fff; }
+  .tick, .cross { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: .72rem; font-weight: 800; flex-shrink: 0; }
+  .tick { background: rgba(52,211,153,.15); color: var(--brand2); border: 1px solid rgba(52,211,153,.4); }
+  .cross { background: rgba(248,113,113,.13); color: var(--red); border: 1px solid rgba(248,113,113,.4); }
+  .stat-box p { font-size: .88rem; color: var(--sub); }
+  .stat-box .mono { font: .82em var(--mono-ui); color: #cbd5e1; }
+  .ok { border-color: rgba(52,211,153,.3); background: rgba(52,211,153,.045); }
+  .no { border-color: rgba(248,113,113,.3); background: rgba(248,113,113,.045); }
+
+  /* ── footer ──────────────────────────────────── */
+  footer { max-width: 1060px; margin: 84px auto 0; padding: 26px 24px 40px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; gap: 18px; flex-wrap: wrap; color: #6b7a93; font-size: .85rem; }
+  footer a { color: var(--sub); }
+
+  @media (max-width: 860px) {
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .cards { grid-template-columns: 1fr 1fr; }
+    .card.free { grid-column: span 2; flex-direction: column; align-items: flex-start; gap: 8px; }
+    .feats { grid-template-columns: 1fr; }
+    .honest { grid-template-columns: 1fr; }
+    nav .rlink.hide-m { display: none; }
+  }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } .card.free { grid-column: span 1; } .stat b { font-size: 1.1rem; } }
 </style>
 </head>
 <body>
-<div class="wrap">
+<div class="glow"></div><div class="grid-lines"></div>
 
-  <h1><span class="brand">verify402</span> — the pre-spend check for agents that pay per call</h1>
-  <p class="tag">Five machine-payable verdicts over <span class="usdc">USDC</span> on the x402 rail. No signup, no API key, no subscription — the payment <em>is</em> the authentication. Every verdict is pinned to a block, hashed, and carries its fee assumptions in the response.</p>
-  <div>
-    <span class="badge">x402 · USDC · Base</span>
-    <span class="badge">open-source</span>
-    <span class="badge">free route available</span>
-    <span class="badge">idempotent recovery</span>
+<nav>
+  <div class="nav-in">
+    <a class="logo" href="/"><span class="logo-mark">v4</span>verify<span style="color:var(--brand)">402</span></a>
+    <div class="right">
+      <a class="rlink hide-m" href="#checks">Checks</a>
+      <a class="rlink hide-m" href="#proof">Proof</a>
+      <a class="rlink hide-m" href="https://github.com/a32116150-ctrl/verify402" rel="noopener">GitHub</a>
+      <a class="btn btn-glow" href="/findings">Try free</a>
+    </div>
   </div>
+</nav>
 
-  <section>
-    <h2>The five checks</h2>
-    <table>
-      <tr><th>Route</th><th>Price</th><th>Question it answers</th></tr>
-      <tr><td><code>POST /verify</code></td><td class="price">$0.05</td><td>Is this arbitrage opportunity real? (flash-loan premium + gas netted out)</td></tr>
-      <tr><td><code>POST /safety</code></td><td class="price">$0.10</td><td>Is this token safe to buy? (honeypot / can't-exit / tax traps, pre-trade)</td></tr>
-      <tr><td><code>POST /route</code></td><td class="price">$0.03</td><td>What would the chain actually pay for this swap?</td></tr>
-      <tr><td><code>POST /quotecheck</code></td><td class="price">$0.05</td><td>Audit a quote someone handed you against the pinned source.</td></tr>
-      <tr><td><code>POST /depth</code></td><td class="price">$0.05</td><td>How deep can I actually trade before cost eats the edge?</td></tr>
-      <tr><td><code>GET /findings</code></td><td class="price">free</td><td>Live verdicts on Ethereum majors — zero cost, same rig.</td></tr>
-    </table>
-  </section>
+<header class="hero">
+  <div class="pill"><span class="dot"></span> Live on <b>x402</b> · paid in <b>USDC</b> · the payment is the key</div>
+  <h1>Agents shouldn't pay for <span class="g">hallucinated profit.</span></h1>
+  <p class="sub">verify402 is a machine-payable truth service: five fixed-price checks that measure the claim <em>before</em> money moves — pinned to blocks, hashed, and reproducible.</p>
+  <div class="cta">
+    <a class="btn btn-glow" href="/findings">▶ Run the free route</a>
+    <a class="btn btn-ghost" href="https://github.com/a32116150-ctrl/verify402" rel="noopener">Read the code</a>
+  </div>
+  <p class="muted-note">No signup. No API key. An unpaid call gets HTTP 402 — and the response carries payment instructions.</p>
+</header>
 
-  <section>
-    <h2>"no_edge" is the product</h2>
-    <p>Most measurement sellers get paid when the answer is yes. This service is built to be paid when the honest answer is <strong>no</strong> — a pinned-block verdict that says the edge is gone once flash-loan premiums and gas are netted out. In live measurement, mainstream pairs mostly resolve to <code>no_edge</code>. A negative result that survives an independent reproduction is worth more to an agent's budget than any bullish dashboard.</p>
-    <p>Every paid response ships an <code>evidence_bundle</code>: a hash of the canonical request, a hash of the response, the pinned block and the mode — so any claim made with this tool can be re-derived from the recipe in the repo README, byte for byte.</p>
-  </section>
+<div class="stats">
+  <div class="stat"><b>5</b><span>paid checks</span></div>
+  <div class="stat"><b>$0.03+</b><span>per call, fixed</span></div>
+  <div class="stat"><b>1</b><span>free route</span></div>
+  <div class="stat"><b>100%</b><span>responses hash-receipted</span></div>
+</div>
 
-  <section>
-    <h2>Try the free route right now</h2>
-    <div class="codebox mono"><span class="c"># live verdicts on Ethereum majors — no payment, no key</span>
-curl https://verify402.onrender.com/findings
+<section id="checks">
+  <p class="kicker">The five checks</p>
+  <h2>Fixed prices. Messaged verdicts. No subscriptions.</h2>
+  <p class="lede">Each route answers one bounded question, and pays off in the same currency agents think in: crypto-money, mindful of a budget, deciding whether a claim is worth trusting.</p>
+  <div class="cards">
+    <div class="card"><span class="route">POST /verify</span><span class="price">$0.05</span><h3>Arbitrage check</h3><p>Is this round trip real? Flash-loan premium and gas are netted out before the verdict — most mainstream pairs resolve to <b style="color:#e6ecf5">no_edge</b>.</p></div>
+    <div class="card"><span class="route">POST /safety</span><span class="price">$0.10</span><h3>Token safety gate</h3><p>Honeypot, can't-exit, tax traps — measured pre-trade, before the agent is trapped, not after.</p></div>
+    <div class="card"><span class="route">POST /route</span><span class="price">$0.03</span><h3>Real route value</h3><p>What would the chain actually pay for this swap? Not what a dashboard imagines it pays.</p></div>
+    <div class="card"><span class="route">POST /quotecheck</span><span class="price">$0.05</span><h3>Quote audit</h3><p>Someone handed your agent a quote. We check it against the pinned source, on the block the claim was made at.</p></div>
+    <div class="card"><span class="route">POST /depth</span><span class="price">$0.05</span><h3>Executable depth</h3><p>How deep can you actually trade before cost eats the edge? Claimed liquidity is not executable liquidity.</p></div>
+    <div class="card free"><div><span class="route">GET /findings</span>&nbsp;&nbsp;<span class="price">free</span></div><h3>Try before any spend — live verdicts on Ethereum majors</h3><p style="max-width:520px">The same measurement rig, at zero cost. Recompute the hashes yourself and verify that what we claim matches what we serve.</p></div>
+  </div>
+</section>
 
-<span class="c"># a paid call: no payment → HTTP 402 with payment instructions</span>
-curl -X POST https://verify402.onrender.com/verify \
-  -H "Content-Type: application/json" \
-  -d '{"pair":"USDC/WETH","dex":"uniswap-v3"}'</div>
-    <p style="margin-top:12px">Machine-readable description of the whole service: <a href="/info">/info</a> · agent identity file: <a href="/.well-known/agent-registration.json">agent-registration.json</a></p>
-  </section>
+<section id="how">
+  <p class="kicker">Under the hood</p>
+  <h2>Built like the receipts matter — because they do.</h2>
+  <div class="feats">
+    <div class="feat"><div class="ic">🧾</div><h3>Every paid answer carries its evidence</h3><p>An <code>evidence_bundle</code> rides on every response: hash of the canonical request, hash of the response, the pinned block, the mode. The recompute recipe is documented, byte for byte.</p></div>
+    <div class="feat"><div class="ic">🔁</div><h3>Settled but reply lost? You replay free.</h3><p>Send <code>x-idempotency-key</code> once per operation: within 10 minutes a retry returns the same verdict with no second charge. Double-keyed under the request content too — a fresh key still replays.</p></div>
+    <div class="feat"><div class="ic">⏱️</div><h3>Window expired? Typed, not silent.</h3><p>After the window closes, a retry re-measures with the paywall re-armed and comes back flagged <code>recovery.remeasured</code> with the previous verdict's hash — an agent can branch on it, never guess.</p></div>
+    <div class="feat"><div class="ic">🛡️</div><h3>Spend caps with a stated boundary</h3><p>The MCP bridge enforces a hard per-call ceiling and an optional per-day ledger. Stated plainly: the caps live in the signer process and don't travel to delegated wallets.</p></div>
+  </div>
+</section>
 
-  <section>
-    <h2>Recovery, caps, receipts — the honest contract</h2>
-    <table>
-      <tr><th>Concern</th><th>What actually ships</th></tr>
-      <tr><td>Payment settled, response lost?</td><td>Send <code>x-idempotency-key</code> on the first call: the same verdict replays free within 10 minutes (3 replays max). Verdicts are double-keyed — also recorded under a hash of the request content — so a retry with a fresh key is still covered.</td></tr>
-      <tr><td>Replay window expired?</td><td>The retry re-measures with the paywall re-armed, and the response carries <code>recovery.remeasured</code> plus the previous response hash — a typed signal, never a silent double charge.</td></tr>
-      <tr><td>Runaway spending?</td><td>The companion MCP bridge enforces a hard per-call ceiling and an optional per-day ledger persisted locally; it counts attempted charges, not confirmed settlements, so it errs on the safe side.</td></tr>
-      <tr><td>Delegated wallets?</td><td>Stated plainly: the caps live in the signer process. They <strong>do not travel</strong> with wallets delegated to other agents — mitigation belongs to the delegating owner.</td></tr>
-    </table>
-  </section>
-
-  <section>
-    <h2>Honest status</h2>
-    <div class="note">
-      <strong>Proven with real settlement:</strong> a testnet transfer of the owner's own funds along the full x402 flow — buyer paid, seller received, verdict delivered inside the paid response, transaction <span class="mono">0x11121007…9324a</span> on Base Sepolia. Facts, no embellishment.
+<section id="proof">
+  <p class="kicker">Honest status</p>
+  <h2>What is proven, and what is not — side by side.</h2>
+  <div class="honest">
+    <div class="stat-box ok">
+      <h3><span class="tick">✓</span> Mechanism, proven with a real settlement</h3>
+      <p>A full x402 flow on Base Sepolia: a buyer address paid a seller address in USDC, and the verdict arrived inside the paid response. Transaction <span class="mono">0x11121007…9324a</span>. Testnet, operator's own funds, receipts reproducible per the public recipe. Every "no_edge" measurement on the free route is a live, independent fact.</p>
     </div>
-    <div class="note warn">
-      <strong>Not yet proven:</strong> a first <em>external</em> buyer. The only settled transaction to date was made by the operator to prove the mechanism. Any "revenue" stories you may hear elsewhere are not from here. If you are reading this and have paid externally — that has not happened yet.
+    <div class="stat-box no">
+      <h3><span class="cross">✗</span> External revenue: none. Claimed: zero.</h3>
+      <p>No outside party has paid yet — the only settled transaction was the operator proving the mechanism. Where most launches say "growing revenue 🔥" this one says the opposite, on purpose: an honesty service whose page lies would be worthless. If you ever pay externally, you'd be the first.</p>
     </div>
-  </section>
+  </div>
+</section>
 
-  <section>
-    <h2>Open source</h2>
-    <p>Server, quickstart (first paid call in ten lines), test suite, MCP bridge and this service's own receipts live in the public repository:<br>
-    <a href="https://github.com/a32116150-ctrl/verify402">github.com/a32116150-ctrl/verify402</a></p>
-  </section>
+<section>
+  <p class="kicker">First call in seconds</p>
+  <h2>Two commands — one free, one paid.</h2>
+  <div class="term">
+    <div class="term-bar"><span class="td"></span><span class="td"></span><span class="td"></span><span class="term-title">agent — bash</span></div>
+<pre><span class="cm"># 1 — free, no key, no purchase: current honest verdicts</span>
+<span class="cmd">curl</span> <span class="url">https://verify402.onrender.com/findings</span>
 
-  <footer class="mono">verify402 · built by agents, for agents · the payment is the key · prices are fixed and worded honestly · no profit claims are made anywhere on this site</footer>
+<span class="cm"># 2 — paid call: empty wallet gets HTTP 402 + payment instructions</span>
+<span class="cmd">curl</span> -X POST <span class="url">https://verify402.onrender.com/verify</span> \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -H <span class="str">"x-idempotency-key: my-operation-1"</span> \
+  -d <span class="str">'{"pair":"USDC/WETH","dex":"uniswap-v3"}'</span>
+
+<span class="cm"># → {"verdict":"no_edge", "evidence_bundle":{...}, "recovery":{...}}</span></pre>
+  </div>
+</section>
+
+<footer>
+  <div>verify402 · built by agents, for agents <br>No profit claims anywhere on this page. Negative results welcome.</div>
+  <div style="text-align:right">
+    <a href="/info">/info (machine-readable)</a> · <a href="/.well-known/agent-registration.json">agent card</a><br>
+    <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">github.com/a32116150-ctrl/verify402</a>
+  </div>
+</footer>
 
 </div>
 </body>
