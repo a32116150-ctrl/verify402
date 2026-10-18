@@ -326,9 +326,9 @@
       <div class="uimock">
         <div class="top"><span class="dot on"></span><span class="addr">GET verify402.onrender.com/findings</span></div>
         <div class="rows" id="liverows">
-          <div class="crow"><span>USDC/WETH</span><span class="vv neg">no_edge</span><span class="meta">pinned · hashed</span></div>
-          <div class="crow"><span>DAI/WETH</span><span class="vv neg">no_edge</span><span class="meta">pinned · hashed</span></div>
-          <div class="crow"><span>ETH/USDT</span><span class="vv neg">no_edge</span><span class="meta">pinned · hashed</span></div>
+          <div class="crow"><span>WETH</span><span class="vv neg">no_edge</span><span class="meta">pinned · hashed</span></div>
+          <div class="crow"><span>WBTC</span><span class="vv neg">no_edge</span><span class="meta">pinned · hashed</span></div>
+          <div class="crow"><span>DAI</span><span class="vv neg">no_edge</span><span class="meta">pinned · hashed</span></div>
         </div>
       </div>
       <div class="cta-row">
@@ -416,20 +416,18 @@
       if (rows) rows.insertAdjacentHTML('beforeend', '<div class="crow"><span>status</span><span class="vv">service cold-starting</span><span class="meta">retry in ~30s</span></div>');
       return;
     }
-    if (st) st.textContent = 'live · ' + ((Date.now() - started) / 1000).toFixed(1) + 's';
-    var items = Array.isArray(d) ? d : (d.findings || d.results || [d]);
-    if (items.length) {
+    if (st) st.textContent = 'live · block ' + (d.blockNumber || '—');
+    var rows = document.getElementById('liverows');
+    var items = d.results || (Array.isArray(d) ? d : (d.findings || []));
+    if (rows && items.length) {
       var html = '';
-      items.slice(0, 6).forEach(function (m) {
-        if (m && (m.verdict || m.answer)) {
-          var pair = m.pair || (m.pairA ? m.pairA + '/' + m.pairB : 'pair');
-          var v = m.verdict || m.answer;
-          var cls = (v === 'no_edge') ? 'vv neg' : 'vv';
-          html += '<div class="crow"><span>' + pair + '</span><span class="' + cls + '">' + v + '</span><span class="meta">pinned · hashed</span></div>';
-        }
+      items.slice(0, 5).forEach(function (m) {
+        var v = m.verdict || '—';
+        html += '<div class="crow"><span>' + (m.target || 'pair') + '</span><span class="' +
+          ((v === 'no_edge') ? 'vv neg' : 'vv') + '">' + v +
+          '</span><span class="meta">net ' + (m.netBps != null ? m.netBps + ' bps · ' : '') + 'block ' + (d.blockNumber || '—') + '</span></div>';
       });
-      var rows = document.getElementById('liverows');
-      if (html && rows) rows.innerHTML = html;
+      rows.innerHTML = html;
     }
   }).catch(function () { var s = document.getElementById('navstatus'); if (s) s.textContent = 'offline'; });
 
