@@ -1,2 +1,4 @@
+.spend-ledger.json
+.spend-ledger-test.json
 node_modules/
 .env

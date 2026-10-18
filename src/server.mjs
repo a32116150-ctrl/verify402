@@ -23,6 +23,10 @@ import { preTradeCheck } from "./safety.mjs";
 import { fairQuoteCheck, bestRouteBook } from "./quotecheck.mjs";
 import { depthProfile } from "./depth.mjs";
 import { CHAINS, DEFAULT_SIZE, chain, resolveToken } from "./config.mjs";
+import {
+  IDEMPOTENCY_TTL_MS, IDEMPOTENCY_MAX_REPLAYS,
+  replayFor, recordSettlement, evidenceBundle,
+} from "./recovery.mjs";
 
 // ---------------------------------------------------------------- config ----
 const MODE = process.env.X402_MODE === "mainnet" ? "mainnet" : "testnet";
@@ -73,6 +77,9 @@ const PORT = Number(process.env.PORT || 4021);
 
 // ----------------------------------------------------------------- app -----
 const app = express();
+// We run behind a proxy (Render): without this, req.protocol reports http and
+// the agent-registration file would advertise the wrong scheme.
+app.set("trust proxy", 1);
 app.use(express.json({ limit: "64kb" }));
 
 // Same price on both rails, so an agent can pay on whichever chain it already
@@ -95,6 +102,50 @@ const facilitatorClient = MODE === "mainnet" && process.env.CDP_API_KEY_ID
 const BYPASS_PAYMENT = process.env.BYPASS_PAYMENT === "1";
 if (BYPASS_PAYMENT) {
   console.warn("\n  *** BYPASS_PAYMENT=1 : paid routes are UNPROTECTED. Local testing only. ***\n");
+}
+
+// ---------------------------------------------------------------- recovery --
+// The recovery contract (see src/recovery.mjs): a caller that sends
+// x-idempotency-key on its first call can replay that settled verdict —
+// same bytes, no second charge — within the TTL, capped at MAX_REPLAYS.
+// This middleware runs BEFORE the payment wall, which is the entire point:
+// by the time paymentMiddleware inspects the request, a legitimate replay has
+// already been answered.
+app.use((req, res, next) => {
+  const key = String(req.get("x-idempotency-key") || req.get("idempotency-key") || "").trim();
+  if (key && req.method === "POST" && !req.path.startsWith("/.well-known")) {
+    const hit = replayFor(key);
+    if (hit) {
+      return res.json({
+        ...hit.payload,
+        recovery: {
+          replayed: true,
+          responseHash: hit.responseHash,
+          replays: hit.replays,
+          ttlMinutes: IDEMPOTENCY_TTL_MS / 60000,
+          maxReplays: IDEMPOTENCY_MAX_REPLAYS,
+        },
+      });
+    }
+    req.idempotencyKey = key;
+  }
+  next();
+});
+
+// Shared exit path for the paid handlers: attach the standard evidence bundle,
+// remember the settlement under the caller's idempotency key (if provided),
+// then send. `core` is the handler's result; cache/elapsedMs may already be on it.
+function emitPaid(req, res, core) {
+  const body = req.body || {};
+  const bundle = evidenceBundle({
+    route: req.path,
+    body,
+    pinnedBlock: core?.cache?.pinnedBlock ?? core?.blockNumber ?? null,
+    payload: core,
+  });
+  const full = { ...core, evidence_bundle: bundle };
+  if (req.idempotencyKey) recordSettlement(req.idempotencyKey, full);
+  res.json(full);
 }
 
 // Middleware stays compiled but UNMOUNTED in bypass mode: one loud warning,
@@ -329,6 +380,9 @@ app.get("/", (_req, res) => {
       "  GET  /.well-known/agent-registration.json   free   agent identity file",
       "",
       "Call a paid route with no payment to receive HTTP 402 and payment instructions.",
+      "Send x-idempotency-key on the first call: within 10 min a retry of a paid call",
+      "replays the SAME verdict with no second charge (3 replays max).",
+      "Every paid response carries an evidence_bundle (requestHash/responseHash/pinnedBlock).",
       "",
     ].join("\n"),
   );
@@ -418,6 +472,20 @@ app.get("/info", (_req, res) => {
       },
     ],
     unpayable: "A request without payment returns HTTP 402 with instructions in the payment-required header.",
+    recovery: {
+      header: "x-idempotency-key",
+      behavior: "Send this header on the FIRST call of an operation. If the response is lost after settlement, retrying with the same header returns the SAME verdict within the TTL without requiring payment again.",
+      ttlMinutes: 10,
+      maxReplays: 3,
+      warn: "The key is the caller's secret: whoever presents it can replay the verdict for free. Do not log it publicly.",
+    },
+    evidence_bundle: {
+      spec: "verify402/evidence-bundle@1",
+      included: "evidence_bundle: { requestHash, responseHash, pinnedBlock, mode, createdAt, payment.in }",
+      requestHash: "sha256 of the canonical JSON { route, body } (keys sorted recursively, no whitespace)",
+      responseHash: "sha256 of the canonical JSON of the response body excluding evidence_bundle, recovery, cache, elapsedMs",
+      verifier: "use src/recovery.mjs canonicalStable() as reference, or key-sort and stringify with no whitespace, then sha256",
+    },
     honesty: [
       "No profit is promised. The measured answer for mainstream pairs is usually no_edge.",
       "If a response says edge, verify before acting; the service reports what it measured, not what it guarantees.",
@@ -465,7 +533,7 @@ app.post("/verify", async (req, res) => {
     const key = `${chainId}:${base}:${target}:${size}:${minNet}:${blockNumber}`;
 
     if (cache.has(key)) {
-      return res.json({ ...cache.get(key), cache: { hit: true, pinnedBlock: Number(blockNumber) }, elapsedMs: Date.now() - started });
+      return emitPaid(req, res, { ...cache.get(key), cache: { hit: true, pinnedBlock: Number(blockNumber) }, elapsedMs: Date.now() - started });
     }
 
     const raw = BigInt(Math.round(size * 10 ** baseTok.decimals));
@@ -477,7 +545,7 @@ app.post("/verify", async (req, res) => {
     });
 
     cachePut(key, result);
-    res.json({
+    emitPaid(req, res, {
       ...result,
       cache: { hit: false, pinnedBlock: Number(blockNumber) },
       elapsedMs: Date.now() - started,
@@ -516,7 +584,7 @@ app.post("/safety", async (req, res) => {
     const key = `safety:${chainId}:${tokenAddress.toLowerCase()}:${intendedUsd}:${offeredPriceUsd ?? ""}:${blockNumber}`;
 
     if (cache.has(key)) {
-      return res.json({
+      return emitPaid(req, res, {
         ...cache.get(key),
         cache: { hit: true, pinnedBlock: Number(blockNumber) },
         elapsedMs: Date.now() - started,
@@ -531,7 +599,7 @@ app.post("/safety", async (req, res) => {
     });
 
     cachePut(key, result);
-    res.json({
+    emitPaid(req, res, {
       ...result,
       cache: { hit: false, pinnedBlock: Number(blockNumber) },
       elapsedMs: Date.now() - started,
@@ -578,7 +646,7 @@ app.post("/route", async (req, res) => {
     const blockNumber = await client.getBlockNumber();
     const key = `route:${chainId}:${addrIn.toLowerCase()}:${addrOut.toLowerCase()}:${amountIn.toString()}:${blockNumber}`;
     if (cache.has(key)) {
-      return res.json({ ...cache.get(key), cache: { hit: true, pinnedBlock: Number(blockNumber) }, elapsedMs: Date.now() - started });
+      return emitPaid(req, res, { ...cache.get(key), cache: { hit: true, pinnedBlock: Number(blockNumber) }, elapsedMs: Date.now() - started });
     }
 
     const book = await bestRouteBook(client, chainId, { tokenIn: addrIn, tokenOut: addrOut, amountIn, blockNumber });
@@ -595,7 +663,7 @@ app.post("/route", async (req, res) => {
       note: best ? null : "no venue quoted this pair at this size",
     };
     cachePut(key, result);
-    res.json({ ...result, cache: { hit: false, pinnedBlock: Number(blockNumber) }, elapsedMs: Date.now() - started });
+    emitPaid(req, res, { ...result, cache: { hit: false, pinnedBlock: Number(blockNumber) }, elapsedMs: Date.now() - started });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -620,7 +688,7 @@ app.post("/quotecheck", async (req, res) => {
     const blockNumber = await clientFor(chainId).getBlockNumber();
     const key = `qc:${chainId}:${String(body.tokenIn).toLowerCase()}:${String(body.tokenOut).toLowerCase()}:${String(body.amountIn)}:${String(body.quotedOut)}:${blockNumber}`;
     if (cache.has(key)) {
-      return res.json({ ...cache.get(key), cache: { hit: true, pinnedBlock: Number(blockNumber) }, elapsedMs: Date.now() - started });
+      return emitPaid(req, res, { ...cache.get(key), cache: { hit: true, pinnedBlock: Number(blockNumber) }, elapsedMs: Date.now() - started });
     }
 
     const result = await fairQuoteCheck(chainId, {
@@ -633,7 +701,7 @@ app.post("/quotecheck", async (req, res) => {
     });
 
     cachePut(key, result);
-    res.json({ ...result, cache: { hit: false, pinnedBlock: Number(blockNumber) }, elapsedMs: Date.now() - started });
+    emitPaid(req, res, { ...result, cache: { hit: false, pinnedBlock: Number(blockNumber) }, elapsedMs: Date.now() - started });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -661,12 +729,12 @@ app.post("/depth", async (req, res) => {
     const blockNumber = await clientFor(chainId).getBlockNumber();
     const key = `depth:${chainId}:${token.toLowerCase()}:${baseSymbol}:${JSON.stringify(sizesUsd)}:${maxRoundTripPct}:${blockNumber}`;
     if (cache.has(key)) {
-      return res.json({ ...cache.get(key), cache: { hit: true, pinnedBlock: Number(blockNumber) }, elapsedMs: Date.now() - started });
+      return emitPaid(req, res, { ...cache.get(key), cache: { hit: true, pinnedBlock: Number(blockNumber) }, elapsedMs: Date.now() - started });
     }
 
     const result = await depthProfile(chainId, { tokenAddress: token, baseSymbol, sizesUsd, maxRoundTripPct });
     cachePut(key, result);
-    res.json({
+    emitPaid(req, res, {
       ...result,
       cache: { hit: false, pinnedBlock: Number(blockNumber) },
       elapsedMs: Date.now() - started,

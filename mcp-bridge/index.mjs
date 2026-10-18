@@ -54,6 +54,20 @@ async function createPaidClient() {
   return wrapAxiosWithPayment(axiosInstance, client);
 }
 
+// ------------------------------------------------------------------ budget --
+// The second, broader guard: MAX_PAYMENT_USD caps ONE payment; MAX_DAILY_USD
+// (optional) caps the whole UTC day across restarts, persisted in a tiny
+// ledger file. Attempted charges are counted conservatively (before payment).
+import { createDailyBudget } from "./budget.mjs";
+const dailyBudget = createDailyBudget({
+  maxDailyUsd: process.env.MAX_DAILY_USD,
+});
+
+async function guardedPaidCall(route, run) {
+  if (dailyBudget.enabled) dailyBudget.assert(route);
+  return run();
+}
+
 // ------------------------------------------------------------------ tools ---
 const DESCRIPTIONS = {
   verify_arbitrage:
@@ -94,12 +108,12 @@ async function main() {
       size: z.number().optional().describe("Trade size in whole base units, e.g. 100000 (default 100000)"),
     },
     async (args) => {
-      const res = await paidApi.post("/verify", {
+      const res = await guardedPaidCall("/verify", () => paidApi.post("/verify", {
         chainId: args.chainId ?? 1,
         target: String(args.target ?? "WETH").toUpperCase(),
         base: String(args.base ?? "USDC").toUpperCase(),
         size: args.size ?? 100000,
-      });
+      }));
       return { content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }] };
     },
   );
@@ -114,12 +128,12 @@ async function main() {
       offeredPriceUsd: z.number().optional().describe("Optional price per token someone offered you"),
     },
     async (args) => {
-      const res = await paidApi.post("/safety", {
+      const res = await guardedPaidCall("/safety", () => paidApi.post("/safety", {
         chainId: args.chainId ?? 1,
         tokenAddress: String(args.tokenAddress ?? "").trim(),
         intendedUsd: args.intendedUsd ?? 500,
         offeredPriceUsd: args.offeredPriceUsd ?? null,
-      });
+      }));
       return { content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }] };
     },
   );
@@ -134,12 +148,12 @@ async function main() {
       chainId: z.number().optional().describe("1 Ethereum, 42161 Arbitrum, 8453 Base (default 1)"),
     },
     async (args) => {
-      const res = await paidApi.post("/route", {
+      const res = await guardedPaidCall("/route", () => paidApi.post("/route", {
         chainId: args.chainId ?? 1,
         tokenIn: args.tokenIn,
         tokenOut: args.tokenOut,
         amountIn: args.amountIn,
-      });
+      }));
       return { content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }] };
     },
   );
@@ -156,14 +170,14 @@ async function main() {
       chainId: z.number().optional().describe("1 Ethereum, 42161 Arbitrum, 8453 Base (default 1)"),
     },
     async (args) => {
-      const res = await paidApi.post("/quotecheck", {
+      const res = await guardedPaidCall("/quotecheck", () => paidApi.post("/quotecheck", {
         chainId: args.chainId ?? 1,
         tokenIn: args.tokenIn,
         tokenOut: args.tokenOut,
         amountIn: args.amountIn,
         quotedOut: args.quotedOut,
         venueClaimed: args.venueClaimed ?? null,
-      });
+      }));
       return { content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }] };
     },
   );
@@ -179,13 +193,13 @@ async function main() {
       maxRoundTripPct: z.number().optional().describe("Your round-trip cost tolerance, default 1%"),
     },
     async (args) => {
-      const res = await paidApi.post("/depth", {
+      const res = await guardedPaidCall("/depth", () => paidApi.post("/depth", {
         chainId: args.chainId ?? 1,
         tokenAddress: args.tokenAddress,
         baseSymbol: args.baseSymbol ?? "USDC",
         sizesUsd: args.sizesUsd ?? null,
         maxRoundTripPct: args.maxRoundTripPct ?? 1.0,
-      });
+      }));
       return { content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }] };
     },
   );

@@ -163,19 +163,41 @@ wiring, and the distribution order.
 MCP client, paying per call via x402 with a hard pre-sign spend cap
 (`MAX_PAYMENT_USD`, default $0.25). See `mcp-bridge/README.md`.
 
-## Settlement, response delivery, and recovery (honest state)
+## Settlement, response delivery, and recovery (honest contract)
 
 - **Delivery:** the verdict is returned inside the settlement response — the paid answer
   arrives together with the payment confirmation (testnet receipt: tx
   `0x11121007bafec47f132763f42e2f58af6ebba7fba9c7ed1b5980d3f595a9324a`).
-- **Recovery — none today.** There is no idempotency key or replay mechanism: if a response
-  is lost after successful settlement, a retry is a **second paid call**. We will not
-  dress that up. Client-side mitigation is a conservative `MAX_PAYMENT_USD` cap and
-  logging request+response locally (see `mcp-bridge/`).
-- **Evidence bundle — not yet a public contract.** What one call can reconstruct today:
-  the request, the pinned block used by the check, the fee/gas assumptions netted into the
-  verdict, and the settlement hash. Standardizing those into one artifact is on the
-  documentation list; until then, treat each receipt as described above, not more.
+- **Recovery — implemented (`x-idempotency-key`):** send the header on the FIRST call of an
+  operation. If the response is lost after settlement, retrying with the same key within
+  10 minutes (max 3 replays) returns the SAME verdict without requiring payment again.
+  Caveats, stated plainly: the key is the caller's secret (whoever presents it replays for
+  free), the window is short by design so the 402 paywall stays intact, and the replayed
+  response includes `recovery: { replayed: true, responseHash, replays }`.
+- **Evidence bundle — implemented (`verify402/evidence-bundle@1`):** every paid response
+  carries `evidence_bundle: { requestHash, responseHash, pinnedBlock, mode, createdAt,
+  payment.in }`. Both hashes are sha256 over canonical JSON (keys sorted recursively, no
+  whitespace). `requestHash` covers `{ route, body }`; `responseHash` covers the response
+  body excluding `evidence_bundle`, `recovery`, `cache`, `elapsedMs`. Reference
+  implementation of the canonical form: `src/recovery.mjs` (`canonicalStable`), tests in
+  `test/recovery.test.mjs`.
+- **Payment caps (bridge/client):** `MAX_PAYMENT_USD` caps one payment at signature time;
+  `MAX_DAILY_USD` (optional, `mcp-bridge/budget.mjs`) caps the whole UTC day across
+  restarts via a local ledger. Attempted charges are counted before the payment is built —
+  a spending guard should over-count, never under-count.
+
+## First paid call, in ten lines
+
+1. `GET  https://verify402.onrender.com/info` — prices, endpoints, recovery contract.
+2. `GET  https://verify402.onrender.com/findings` — free verdicts on majors; see the honest `no_edge` baseline.
+3. `POST /verify` with your question (`{"chainId":1,"target":"WETH","size":100000}`) and no payment → HTTP 402.
+4. Read the payment instructions from the `payment-required` response header.
+5. Build an x402 payment for ≤ the stated price (Node example: `mcp-bridge/first-payment.mjs`; MCP users: `mcp-bridge/`).
+6. Re-send the same request with the `payment` header. The verdict arrives with the settlement response.
+7. On a retry/restart, add `x-idempotency-key: <random-32-hex>` to step 3 so lost responses replay free instead of paying twice.
+8. Verify the receipt: `evidence_bundle.responseHash` must equal sha256(canonical JSON of the body minus `evidence_bundle`, `recovery`, `cache`, `elapsedMs`).
+9. Cap your own wallet: `MAX_PAYMENT_USD` (per call) and `MAX_DAILY_USD` (per day) in the bridge `.env`.
+10. Repeat the call in the same block and compare `evidence_bundle.responseHash` — determinism of the measurement. An `edge` verdict should be raced, not trusted.
 
 ## Honesty
 
