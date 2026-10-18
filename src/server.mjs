@@ -15,6 +15,7 @@ import { paymentMiddleware, x402ResourceServer } from "@x402/express";
 import { ExactEvmScheme } from "@x402/evm/exact/server";
 import { ExactSvmScheme } from "@x402/svm/exact/server";
 import { HTTPFacilitatorClient } from "@x402/core/server";
+import { createCdpFacilitatorClient } from "@coinbase/cdp-sdk/x402";
 import { declareDiscoveryExtension } from "@x402/extensions/bazaar";
 
 import { measureRoundTrip, clientFor } from "./measure.mjs";
@@ -45,11 +46,19 @@ const QUOTECHECK_PRICE = process.env.QUOTECHECK_PRICE || "$0.05";
 const DEPTH_PRICE = process.env.DEPTH_PRICE || "$0.05";
 
 // The public x402.org facilitator is testnet-only. Mainnet needs a real one.
+// Mainnet: Coinbase's CDP facilitator. createCdpFacilitatorClient() reads
+// CDP_API_KEY_ID / CDP_API_KEY_SECRET from the environment itself. It is a
+// *settlement service*: it never holds the money — signed payments go
+// straight to the payTo addresses.
 const FACILITATOR_URL =
   process.env.FACILITATOR_URL || (MODE === "mainnet" ? "" : "https://x402.org/facilitator");
 
 if (MODE === "mainnet" && !FACILITATOR_URL) {
   console.error("REFUSING TO START: mainnet mode needs FACILITATOR_URL (e.g. https://api.cdp.coinbase.com/platform/v2/x402).");
+  process.exit(1);
+}
+if (MODE === "mainnet" && !process.env.CDP_API_KEY_ID) {
+  console.error("REFUSING TO START: mainnet mode needs CDP_API_KEY_ID (create free at cdp.coinbase.com).");
   process.exit(1);
 }
 
@@ -66,7 +75,13 @@ const accepts = (price) => [
   { scheme: "exact", price, network: NETWORKS.svm, payTo: PAY_TO_SVM },
 ];
 
-const facilitatorClient = new HTTPFacilitatorClient({ url: FACILITATOR_URL });
+// Testnet: the free x402.org facilitator.
+// Mainnet: Coinbase's hosted settlement service, authenticated by the CDP API
+// key the CDP SDK reads from the environment. Same interface, zero changes
+// downstream.
+const facilitatorClient = MODE === "mainnet"
+  ? createCdpFacilitatorClient()
+  : new HTTPFacilitatorClient({ url: FACILITATOR_URL });
 
 // Local development escape hatch. Loud on purpose: a service that believes it
 // is charging when it is not is worse than one that is plainly down.
