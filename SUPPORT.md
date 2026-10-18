@@ -22,6 +22,22 @@ verify402 runs on a free-tier deployment today, so sponsorships would go to, in 
 No promise of returns of any kind is attached. Sponsors fund honest measurement
 infrastructure; the product stays exactly as open and as skeptical as today.
 
+## Donate in crypto (voluntary, no perks)
+
+You can fund continued development directly, in crypto, to the same public
+wallets the service settles to in its x402 payment metadata. No accounts, no
+forms, no perks — a donation buys nothing, changes no verdict, and carries no
+promise of returns (same rule as above, in dollars or cents).
+
+| Network | Address | What it receives |
+|---|---|---|
+| **EVM — Base** (and friends) | `0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb` | USDC, ETH |
+| **Solana** | `BdcsYodhwWUhLTuL5FJ3m8D4u4wVy8KMw7vAvPVucAbJ` | USDC, SOL |
+
+Every donation received is acknowledged publicly in this repo the same way
+settlement receipts are — tx hash optional at the donor's choice, thanks
+mandatory.
+
 ## Other ways to support
 
 - **Use the service**: free verdicts at `GET /findings`, paid checks via x402 —

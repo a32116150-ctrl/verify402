@@ -144,6 +144,14 @@
 
   /* receipts on navy */
   .receipts { margin-top: 36px; display: grid; gap: 16px; max-width: 760px; }
+  .donate { margin-top: 28px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,.12); max-width: 760px; }
+  .donate .addr-row { display: flex; flex-wrap: wrap; gap: 12px; }
+  .donate .addr { display: grid; gap: 6px; min-width: 0; max-width: 100%; }
+  .donate .addr .net { font: 500 12px/1 "Inter", system-ui, sans-serif; letter-spacing: .6px; text-transform: uppercase; color: #9fb3c8; }
+  .donate .addr code { display: block; max-width: 100%; padding: 10px 12px; border: 1px solid rgba(255,255,255,.25); border-radius: 10px;
+    font: 500 12.5px/1.4 ui-monospace, "SF Mono", Menlo, monospace; color: #eef4fb; background: rgba(255,255,255,.06);
+    overflow-wrap: anywhere; word-break: break-all; cursor: pointer; user-select: all; }
+  .donate .small-note { margin-top: 10px; font: 330 14px/1.6 "Inter", system-ui, sans-serif; color: #a7b8cb; }
   .rline { display: flex; gap: 16px; align-items: flex-start; background: rgba(255,255,255,.07); border-radius: var(--r-md); padding: 18px 20px; }
   .rline .mark { flex-shrink: 0; width: 24px; height: 24px; border-radius: 9999px; display: grid; place-items: center;
     font: 700 14px/1 "Inter", system-ui, sans-serif; background: var(--success); color: #fff; }
@@ -369,12 +377,30 @@
           <p><b>Proposed, not decided:</b> our recovery contract is up as an official x402 protocol extension proposal — <a href="https://github.com/x402-foundation/x402/issues/3847">issue #3847</a>, <a href="https://github.com/x402-foundation/x402/pull/3848">spec PR #3848</a> — pending maintainer review. Nothing is adopted yet; this line will say so until it is.</p>
         </div>
         <div class="rline">
+          <span class="mark">!</span>
+          <p><b>Funding, stated plainly:</b> nobody funds this project. No grants, no revenue yet — the operator runs it on free tiers and their own wallet. If a check saved your agent money, you can fund continued development directly, in crypto, to the same wallets the service settles to. A donation buys nothing: it doesn't change or pre-buy a verdict. Amounts are voluntary.</p>
+        </div>
+        <div class="rline">
           <span class="mark">✓</span>
           <p><b>Open source:</b> server, tests and the bridge — <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">github.com/a32116150-ctrl/verify402</a> — the README gets an agent from zero to a settled verdict in ten numbered lines.</p>
         </div>
       </div>
       <div class="cta-row">
         <a class="pill promo" href="mailto:a32116150@gmail.com?subject=verify402%20question%20before%20first%20payment">Ask before you pay</a>
+      </div>
+      <div class="donate" id="donate">
+        <p class="eyebrow" style="margin-bottom:10px;">Fund the work directly — voluntary, no perks, no promises</p>
+        <div class="addr-row">
+          <div class="addr">
+            <span class="net">EVM / Base (USDC, ETH)</span>
+            <code>0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb</code>
+          </div>
+          <div class="addr">
+            <span class="net">Solana (USDC, SOL)</span>
+            <code>BdcsYodhwWUhLTuL5FJ3m8D4u4wVy8KMw7vAvPVucAbJ</code>
+          </div>
+        </div>
+        <p class="small-note">These are the same public settlement addresses the service publishes in its x402 payment metadata — send from any wallet, no account, no form. Any donation is recorded here the same way receipts are: thanks + tx link if you say ok.</p>
       </div>
     </div>
   </section>
