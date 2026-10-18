@@ -16,7 +16,7 @@
 // measured against the same instant. A round trip assembled from two different
 // blocks can show profit that never coexisted.
 
-import { createPublicClient, http, decodeFunctionResult, encodeFunctionData } from "viem";
+import { createPublicClient, http, fallback, decodeFunctionResult, encodeFunctionData } from "viem";
 import * as viemChains from "viem/chains";
 import { chain, resolveToken, DEFAULT_GAS_UNITS } from "./config.mjs";
 
@@ -65,12 +65,20 @@ const clients = new Map();
 export function clientFor(chainId) {
   if (clients.has(chainId)) return clients.get(chainId);
   const c = chain(chainId);
-  const url = process.env[c.rpcEnv] || c.rpcDefault;
+  const configured = process.env[c.rpcEnv];
+  // A single free endpoint can throttle a cloud instance's egress IP, which is
+  // how a correct measurement becomes a 90-second "loading" spinner. When no
+  // paid endpoint is configured, fail over across independent public ones
+  // instead of trusting any single provider.
+  const urls = configured ? [configured] : [c.rpcDefault, ...(c.rpcFallbacks || [])];
   const viemChain = viemChains[c.viemChain];
-  const client = createPublicClient({
-    chain: viemChain,
-    transport: http(url, { retryCount: 2, timeout: 15_000 }),
-  });
+  const transport = urls.length === 1
+    ? http(urls[0], { retryCount: 2, timeout: 15_000 })
+    : fallback(
+        urls.map((url) => http(url, { retryCount: 0, timeout: 8_000 })),
+        { rank: false },
+      );
+  const client = createPublicClient({ chain: viemChain, transport });
   clients.set(chainId, client);
   return client;
 }
