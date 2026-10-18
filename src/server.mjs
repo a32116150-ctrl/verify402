@@ -394,7 +394,7 @@ app.get("/", (req, res) => {
   // Humans get the landing page; machine clients keep the plain menu.
   const wantsHtml = String(req.headers.accept || "").includes("text/html");
   if (wantsHtml) {
-    res.set("Cache-Control", "s-maxage=600");
+    res.set("Cache-Control", "no-store");
     return res.type("text/html").send(LANDING_HTML);
   }
   res.type("text/plain").send(
