@@ -36,6 +36,7 @@
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html { scroll-behavior: smooth; }
+  html, body { overflow-x: clip; }
   body {
     background: var(--canvas); color: var(--ink);
     font: 330 18px/1.45 Inter, system-ui, helvetica, sans-serif;
@@ -50,7 +51,7 @@
   /* pills — the only button shape */
   .pill { display: inline-flex; align-items: center; justify-content: center; border: 0; cursor: pointer;
     font: 480 20px "Inter", system-ui, sans-serif; letter-spacing: -.1px; color: var(--ink);
-    background: var(--canvas); border-radius: var(--r-pill); padding: 8px 18px 10px; min-height: 44px;
+    background: var(--canvas); border-radius: var(--r-pill); padding: 8px 18px 10px; min-height: 44px; white-space: nowrap;
     text-decoration: none; transition: transform .12s ease; }
   .pill:active { transform: scale(.97); }
   .pill.primary { background: var(--ink); color: #fff; padding: 10px 20px; }
@@ -185,6 +186,7 @@
   }
   @media (max-width: 560px) {
     .hero h1 { font-size: 48px; letter-spacing: -1.2px; }
+    .topnav .end .mono { display: none; }
     .hero .actions .pill { width: 100%; }
     footer .cols { grid-template-columns: 1fr; }
     .topnav .end .pill.secondary { display: none; }
@@ -360,7 +362,7 @@
         </div>
       </div>
       <div class="cta-row">
-        <a class="pill promo" href="mailto:a32116150@gmail.com?subject=verify402%20question%20before%20first%20payment">Ask a question before your first payment</a>
+        <a class="pill promo" href="mailto:a32116150@gmail.com?subject=verify402%20question%20before%20first%20payment">Ask before you pay</a>
       </div>
     </div>
   </section>
