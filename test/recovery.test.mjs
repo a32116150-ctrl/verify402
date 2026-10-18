@@ -6,7 +6,8 @@
 
 import {
   canonicalStable, requestHash, recordSettlement, replayFor,
-  evidenceBundle, IDEMPOTENCY_TTL_MS, IDEMPOTENCY_MAX_REPLAYS, sha256Hex,
+  evidenceBundle, expiredRecoveryInfo, IDEMPOTENCY_TTL_MS, IDEMPOTENCY_MAX_REPLAYS,
+  sha256Hex, _setNow,
 } from "../src/recovery.mjs";
 
 let passed = 0;
@@ -63,6 +64,40 @@ check("responseHash is recomputable from the stored payload by the documented re
   delete core.elapsedMs;
   delete core.cache;
   assert(sha256Hex(canonicalStable(core)) === responseHash, "a receiver following the docs must get the same hash");
+});
+
+// TTL expiry + tombstone + remeasure + companion-key behavior
+let T0 = 1_000_000;
+_setNow(() => T0);
+check("companion key replays when the caller mints a fresh id (double-keying)", () => {
+  const payload = { verdict: "edge", net: { bps: 7.5 } };
+  recordSettlement("op-key-1", payload, "request-hash-1");
+  const h = replayFor("request-hash-1");                 // fresh id would miss; companion hit
+  assert(h && h.payload.verdict === "edge", "companion key must carry the verdict");
+  assert(replayFor("op-key-1") !== null, "explicit key still works too");
+});
+
+check("expired verdict is typed, not silent: tombstone returns the lost hash", () => {
+  recordSettlement("op-key-2", { verdict: "no_edge" }, "request-hash-2");
+  T0 += IDEMPOTENCY_TTL_MS + 1;                          // past the replay window
+  assert(replayFor("op-key-2") === null, "past TTL there is no free replay");
+  assert(replayFor("request-hash-2") === null, "past TTL there is no free replay (companion too)");
+  const info = expiredRecoveryInfo("op-key-2") || expiredRecoveryInfo("request-hash-2");
+  assert(info && info.previousResponseHash && info.expiredAt, "the tombstone must tell the caller what it lost");
+});
+
+check("a fresh settlement re-opens the window and clears the tombstone", () => {
+  const { responseHash: freshHash } = recordSettlement("op-key-2", { verdict: "no_edge", n: 2 }, "request-hash-2");
+  assert(expiredRecoveryInfo("op-key-2") === null, "tombstone must clear on re-settlement");
+  const h = replayFor("op-key-2");
+  assert(h && h.payload.n === 2, "fresh verdict is replayable again");
+});
+
+check("tombstone itself expires after REMEASURE window", () => {
+  recordSettlement("op-key-3", { v: 1 });
+  T0 += IDEMPOTENCY_TTL_MS + 1 + (6 * 60 * 60 * 1000);   // replay window + remeasure window
+  assert(expiredRecoveryInfo("op-key-3") === null, "old tombstones vanish; recovery contract has limits and says so");
+  _setNow(() => Date.now());
 });
 
 check("evidenceBundle has the promised fields and hashes tie out", () => {

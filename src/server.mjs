@@ -25,7 +25,7 @@ import { depthProfile } from "./depth.mjs";
 import { CHAINS, DEFAULT_SIZE, chain, resolveToken } from "./config.mjs";
 import {
   IDEMPOTENCY_TTL_MS, IDEMPOTENCY_MAX_REPLAYS,
-  replayFor, recordSettlement, evidenceBundle,
+  replayFor, recordSettlement, evidenceBundle, requestHash, expiredRecoveryInfo,
 } from "./recovery.mjs";
 
 // ---------------------------------------------------------------- config ----
@@ -114,7 +114,11 @@ if (BYPASS_PAYMENT) {
 app.use((req, res, next) => {
   const key = String(req.get("x-idempotency-key") || req.get("idempotency-key") || "").trim();
   if (key && req.method === "POST" && !req.path.startsWith("/.well-known")) {
-    const hit = replayFor(key);
+    // Double-keying (feedback: prismdeadlines): the verdict is recoverable by
+    // the caller's own key AND by a hash of the canonical request content —
+    // so a caller that mints a fresh id on each retry still replays free.
+    const companion = requestHash(req.path, req.body || {});
+    const hit = replayFor(key) || replayFor(companion);
     if (hit) {
       return res.json({
         ...hit.payload,
@@ -127,7 +131,12 @@ app.use((req, res, next) => {
         },
       });
     }
+    // Post-window typed signal: expired verdicts leave a tombstone; a retry
+    // now re-measures with the paywall re-armed (no free measures), and the
+    // response below will carry recovery.remeasured instead of being silent.
+    req.expiredRecovery = expiredRecoveryInfo(key) || expiredRecoveryInfo(companion);
     req.idempotencyKey = key;
+    req.recoveryCompanionKey = companion;
   }
   next();
 });
@@ -144,7 +153,21 @@ function emitPaid(req, res, core) {
     payload: core,
   });
   const full = { ...core, evidence_bundle: bundle };
-  if (req.idempotencyKey) recordSettlement(req.idempotencyKey, full);
+  if (req.expiredRecovery) {
+    // Typed signal (prismdeadlines): the caller can branch on this instead of
+    // guessing whether it paid twice for one answer. The paywall re-armed for
+    // this call; the flag makes the double charge visible, and hands back the
+    // hash of the verdict they lost so the two measurements can be compared.
+    full.recovery = {
+      remeasured: true,
+      previousResponseHash: req.expiredRecovery.previousResponseHash,
+      expiredAt: req.expiredRecovery.expiredAt,
+      note: "an earlier settlement of this operation existed but its replay window expired; this is a fresh measurement charged normally",
+    };
+  }
+  if (req.idempotencyKey) {
+    recordSettlement(req.idempotencyKey, full, req.recoveryCompanionKey || null);
+  }
   res.json(full);
 }
 
@@ -477,6 +500,9 @@ app.get("/info", (_req, res) => {
       behavior: "Send this header on the FIRST call of an operation. If the response is lost after settlement, retrying with the same header returns the SAME verdict within the TTL without requiring payment again.",
       ttlMinutes: 10,
       maxReplays: 3,
+      doubleKeying: "verdicts are also recorded under a hash of the canonical request content, so a retry that mints a fresh id still replays free within the window",
+      afterWindow: "expired verdicts leave a tombstone holding the previous responseHash for 6 hours; a retry re-measures with the paywall re-armed and the response carries recovery.remeasured + previousResponseHash so agents can branch instead of guessing",
+      delegatedSpend: "the caps here are client-side for the signer that constructs the payment; spend through wallets delegated to OTHER agents is outside this contract and governed by the delegating owner's own controls",
       warn: "The key is the caller's secret: whoever presents it can replay the verdict for free. Do not log it publicly.",
     },
     evidence_bundle: {

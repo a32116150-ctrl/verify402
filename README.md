@@ -169,11 +169,22 @@ MCP client, paying per call via x402 with a hard pre-sign spend cap
   arrives together with the payment confirmation (testnet receipt: tx
   `0x11121007bafec47f132763f42e2f58af6ebba7fba9c7ed1b5980d3f595a9324a`).
 - **Recovery — implemented (`x-idempotency-key`):** send the header on the FIRST call of an
-  operation. If the response is lost after settlement, retrying with the same key within
-  10 minutes (max 3 replays) returns the SAME verdict without requiring payment again.
-  Caveats, stated plainly: the key is the caller's secret (whoever presents it replays for
-  free), the window is short by design so the 402 paywall stays intact, and the replayed
-  response includes `recovery: { replayed: true, responseHash, replays }`.
+  operation, minting ONE key per operation (not per retry — though with double-keying even
+  fresh ids per retry are protected, see below). If the response is lost after settlement,
+  retrying returns the SAME verdict without requiring payment again, under two locks:
+  10 minutes (max 3 replays). Caveats stated plainly: the key is the caller's secret
+  (whoever presents it replays for free), the window is short by design so the 402 paywall
+  stays intact, and replayed responses carry `recovery: { replayed: true, responseHash, replays }`.
+  - **Double-keying:** the verdict is recorded under the caller's key *and* an implicit key
+    derived from the canonical request content. A caller that mints a fresh id on each retry
+    still replays free under the content hash. Two distinct asks that canonicalise identically
+    are the same question — sharing one verdict inside the window is determinism, not a bug.
+  - **After the window (typed, not silent):** expired verdicts leave a tombstone carrying the
+    previous `responseHash` for 6 hours. A retry within the tombstone window re-measures with
+    the paywall re-armed (there is no free measure after the window — anything else would be a
+    loophole), but the response carries `recovery: { remeasured: true, previousResponseHash,
+    expiredAt }`, so the calling agent can branch on "this operation was charged before and
+    could not be replayed" instead of guessing.
 - **Evidence bundle — implemented (`verify402/evidence-bundle@1`):** every paid response
   carries `evidence_bundle: { requestHash, responseHash, pinnedBlock, mode, createdAt,
   payment.in }`. Both hashes are sha256 over canonical JSON (keys sorted recursively, no
