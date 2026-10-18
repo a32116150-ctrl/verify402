@@ -50,15 +50,22 @@ const DEPTH_PRICE = process.env.DEPTH_PRICE || "$0.05";
 // CDP_API_KEY_ID / CDP_API_KEY_SECRET from the environment itself. It is a
 // *settlement service*: it never holds the money — signed payments go
 // straight to the payTo addresses.
+// The public x402.org facilitator is testnet-only. Mainnet options:
+//   * a keyless hosted facilitator via FACILITATOR_URL — verified live:
+//     PayAI (https://facilitator.payai.network) serves x402 v2 exact on
+//     Base mainnet AND Solana mainnet, no account, no region lock.
+//   * Coinbase CDP — used automatically when CDP_API_KEY_ID/SECRET are set
+//     (region-restricted availability; kept as the upgrade path).
+// The guard stands: no configured mainnet facilitator, no server.
 const FACILITATOR_URL =
   process.env.FACILITATOR_URL || (MODE === "mainnet" ? "" : "https://x402.org/facilitator");
 
 if (MODE === "mainnet" && !FACILITATOR_URL) {
-  console.error("REFUSING TO START: mainnet mode needs FACILITATOR_URL (e.g. https://api.cdp.coinbase.com/platform/v2/x402).");
+  console.error("REFUSING TO START: mainnet mode needs FACILITATOR_URL (e.g. https://facilitator.payai.network) or a CDP API key.");
   process.exit(1);
 }
-if (MODE === "mainnet" && !process.env.CDP_API_KEY_ID) {
-  console.error("REFUSING TO START: mainnet mode needs CDP_API_KEY_ID (create free at cdp.coinbase.com).");
+if (MODE === "mainnet" && process.env.FACILITATOR_URL?.includes("api.cdp.coinbase.com") && !process.env.CDP_API_KEY_ID) {
+  console.error("REFUSING TO START: pointing at the CDP facilitator needs CDP_API_KEY_ID + CDP_API_KEY_SECRET (or switch FACILITATOR_URL to a keyless mainnet facilitator).");
   process.exit(1);
 }
 
@@ -76,10 +83,10 @@ const accepts = (price) => [
 ];
 
 // Testnet: the free x402.org facilitator.
-// Mainnet: Coinbase's hosted settlement service, authenticated by the CDP API
-// key the CDP SDK reads from the environment. Same interface, zero changes
-// downstream.
-const facilitatorClient = MODE === "mainnet"
+// Mainnet: CDP when CDP_API_KEY_ID is present; otherwise the plain HTTP
+// facilitator named by FACILITATOR_URL (e.g. PayAI, keyless). Same interface,
+// zero changes downstream.
+const facilitatorClient = MODE === "mainnet" && process.env.CDP_API_KEY_ID
   ? createCdpFacilitatorClient()
   : new HTTPFacilitatorClient({ url: FACILITATOR_URL });
 
