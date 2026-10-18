@@ -10,6 +10,9 @@
 // account, no API key, no signup - which is the entire point, because the
 // intended caller is a program.
 
+import { readFileSync } from "node:fs";
+const LANDING_HTML = readFileSync(new URL("./landing.html", import.meta.url), "utf8");
+
 import express from "express";
 import { paymentMiddleware, x402ResourceServer } from "@x402/express";
 import { ExactEvmScheme } from "@x402/evm/exact/server";
@@ -392,7 +395,7 @@ app.get("/", (req, res) => {
   const wantsHtml = String(req.headers.accept || "").includes("text/html");
   if (wantsHtml) {
     res.set("Cache-Control", "s-maxage=600");
-    return res.sendFile(new URL("./landing.html", import.meta.url));
+    return res.type("text/html").send(LANDING_HTML);
   }
   res.type("text/plain").send(
     [
