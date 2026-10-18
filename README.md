@@ -17,6 +17,13 @@ answer honestly by itself:
 
 Payment is x402 in USDC, on Base or Solana — no account, no API key.
 
+**Human pages:** [home](https://verify402.onrender.com/) ·
+[the five checks](https://verify402.onrender.com/checks) ·
+[live findings](https://verify402.onrender.com/live) ·
+[proof &amp; receipts](https://verify402.onrender.com/proof) ·
+[docs](https://verify402.onrender.com/docs) ·
+[donate](https://verify402.onrender.com/donate)
+
 ## Why an agent would pay for this
 
 Models hallucinate profit. Most arb "opportunities" an LLM surfaces are stale, ignore
