@@ -163,6 +163,20 @@ wiring, and the distribution order.
 MCP client, paying per call via x402 with a hard pre-sign spend cap
 (`MAX_PAYMENT_USD`, default $0.25). See `mcp-bridge/README.md`.
 
+## Settlement, response delivery, and recovery (honest state)
+
+- **Delivery:** the verdict is returned inside the settlement response — the paid answer
+  arrives together with the payment confirmation (testnet receipt: tx
+  `0x11121007bafec47f132763f42e2f58af6ebba7fba9c7ed1b5980d3f595a9324a`).
+- **Recovery — none today.** There is no idempotency key or replay mechanism: if a response
+  is lost after successful settlement, a retry is a **second paid call**. We will not
+  dress that up. Client-side mitigation is a conservative `MAX_PAYMENT_USD` cap and
+  logging request+response locally (see `mcp-bridge/`).
+- **Evidence bundle — not yet a public contract.** What one call can reconstruct today:
+  the request, the pinned block used by the check, the fee/gas assumptions netted into the
+  verdict, and the settlement hash. Standardizing those into one artifact is on the
+  documentation list; until then, treat each receipt as described above, not more.
+
 ## Honesty
 
 - No profit is promised. The measured answer for mainstream pairs is almost always
