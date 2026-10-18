@@ -386,11 +386,17 @@ app.get(["/.well-known/agent-registration.json", "/.well-known/agent-card.json"]
 // The showcase does not need a fresh block for every visitor. It needs an
 // honest snapshot, a timestamp, and a bound on how long a slow pair may hold
 // the answer. So: one snapshot, served while a refresh runs in the background,
-// with a hard per-pair budget that reports `unavailable` instead of hanging.
+// measurements limited to two in flight (a burst of four gets throttled by
+// public RPCs), each success cached for five minutes, and a hard per-pair
+// budget that reports `unavailable` instead of hanging.
 const FINDINGS_TTL_MS = 120_000;
-const FINDINGS_PAIR_BUDGET_MS = 22_000;
+const FINDINGS_PAIR_BUDGET_MS = 26_000;
+const FINDINGS_PAIR_TTL_MS = 5 * 60_000;
+const FINDINGS_CONCURRENCY = 2;
+const findingsPairs = new Map(); // target -> { at, row }
 let findingsSnap = null; // { payload, at }
 let findingsRefresh = null;
+let findingsFill = null;
 
 const withTimeout = (promise, ms, label) =>
   Promise.race([
@@ -400,39 +406,56 @@ const withTimeout = (promise, ms, label) =>
     ),
   ]);
 
-async function computeFindings() {
-  const size = 100000;
-  const baseTok = CHAINS[1].tokens.USDC;
-  const targets = Object.keys(CHAINS[1].tokens).filter((t) => t !== "USDC");
+// Small pool: enough concurrency to be quick, little enough not to trip the
+// public RPC's rate limiter. Kept local so the endpoint has no new dependency.
+async function mapLimit(items, limit, fn) {
+  const out = new Array(items.length);
+  let next = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (next < items.length) {
+      const i = next++;
+      out[i] = await fn(items[i]);
+    }
+  });
+  await Promise.all(workers);
+  return out;
+}
 
-  const results = await Promise.all(
-    targets.map(async (target) => {
-      try {
-        const r = await withTimeout(
-          measureRoundTrip(1, {
-            baseSymbol: "USDC",
-            targetSymbol: target,
-            size: BigInt(Math.round(size * 10 ** baseTok.decimals)),
-            minNet: 0n,
-          }),
-          FINDINGS_PAIR_BUDGET_MS,
-          target,
-        );
-        if (!r.ok) {
-          return { target, verdict: "unavailable", reason: r.reason, blockNumber: r.blockNumber ?? null };
-        }
-        return {
-          target: r.target.symbol,
-          verdict: r.verdict,
-          grossBps: r.gross.bps,
-          netBps: r.net.bps,
-          blockNumber: r.blockNumber,
-        };
-      } catch (e) {
-        return { target, verdict: "unavailable", reason: e.message, blockNumber: null };
-      }
-    }),
-  );
+async function measureFindingPair(target) {
+  const hit = findingsPairs.get(target);
+  if (hit && Date.now() - hit.at < FINDINGS_PAIR_TTL_MS) return hit.row;
+  const baseTok = CHAINS[1].tokens.USDC;
+  try {
+    const r = await withTimeout(
+      measureRoundTrip(1, {
+        baseSymbol: "USDC",
+        targetSymbol: target,
+        size: BigInt(Math.round(100000 * 10 ** baseTok.decimals)),
+        minNet: 0n,
+      }),
+      FINDINGS_PAIR_BUDGET_MS,
+      target,
+    );
+    if (!r.ok) {
+      return { target, verdict: "unavailable", reason: r.reason, blockNumber: r.blockNumber ?? null };
+    }
+    const row = {
+      target: r.target.symbol,
+      verdict: r.verdict,
+      grossBps: r.gross.bps,
+      netBps: r.net.bps,
+      blockNumber: r.blockNumber,
+    };
+    findingsPairs.set(target, { at: Date.now(), row });
+    return row;
+  } catch (e) {
+    return { target, verdict: "unavailable", reason: e.message, blockNumber: null };
+  }
+}
+
+async function computeFindings() {
+  const targets = Object.keys(CHAINS[1].tokens).filter((t) => t !== "USDC");
+  const results = await mapLimit(targets, FINDINGS_CONCURRENCY, measureFindingPair);
 
   const blocks = results.map((r) => r.blockNumber).filter((n) => Number.isFinite(n));
   let blockNumber = blocks.length ? Math.max(...blocks) : null;
@@ -449,11 +472,34 @@ async function computeFindings() {
   };
 }
 
+// A pair that timed out is retried once, alone, after the snapshot is already
+// being served. The result is a complete snapshot within a minute or so without
+// ever making a visitor wait for the retry.
+function fillMissingFindings() {
+  if (findingsFill) return;
+  const missing = (findingsSnap?.payload.results || [])
+    .filter((r) => r.verdict === "unavailable")
+    .map((r) => r.target);
+  if (!missing.length) return;
+  findingsFill = new Promise((resolve) => setTimeout(resolve, 4000))
+    .then(async () => {
+      for (const target of missing) {
+        findingsPairs.delete(target);
+        await measureFindingPair(target);
+      }
+      const payload = await computeFindings();
+      findingsSnap = { payload, at: Date.now() };
+    })
+    .catch((e) => console.warn("findings retry failed:", e.message))
+    .finally(() => { findingsFill = null; });
+}
+
 function refreshFindings() {
   if (!findingsRefresh) {
     findingsRefresh = computeFindings()
       .then((payload) => {
         findingsSnap = { payload, at: Date.now() };
+        fillMissingFindings();
         return payload;
       })
       .finally(() => { findingsRefresh = null; });
