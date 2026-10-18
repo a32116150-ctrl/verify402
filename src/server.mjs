@@ -345,6 +345,17 @@ function registrationFile(req) {
     x402Support: true,
     active: true,
     supportedTrust: ["reputation"],
+    url: base,
+    defaultInputModes: ["application/json"],
+    defaultOutputModes: ["application/json"],
+    capabilities: { transports: ["http"], x402: { supported: true, network: "base", asset: "USDC" } },
+    skills: [
+      { id: "verify", name: "verify", description: "Cross-venue arbitrage truth check: pinned-block quotes from both sides, three-state verdict (edge / no_edge / no_edge_costs_ate_it), evidence included." },
+      { id: "safety", name: "safety", description: "Pre-trade gate: contract facts, market liquidity, scam signals, a USD-sized sell probe, round-trip cost at the intended size, TRUST / CAUTION / AVOID with evidence." },
+      { id: "route", name: "route", description: "What the chain would actually pay for a swap: best route plus every quoted venue at a USD size." },
+      { id: "quotecheck", name: "quotecheck", description: "Audit a quote someone else gave you: fair / overpaying / too_good_to_be_true, re-measured at a pinned block." },
+      { id: "depth", name: "depth", description: "Position sizing: how big can I trade before the round trip eats me? Capacity ladder across sizes." },
+    ],
   };
   // Once the owner mints the identity (npm run register), set AGENT_ID and
   // IDENTITY_REGISTRY and the file binds back to the on-chain agent.
