@@ -34,7 +34,8 @@ if (!process.env.EVM_PRIVATE_KEY) {
   process.exit(1);
 }
 
-const client = new x402Client({
+const client = x402Client.fromConfig({
+  schemes: [], // registered below — the 402 itself decides the network
   spendControls: { maxAmountPerPayment: `$${MAX_PAYMENT_USD}` },
 });
 client.register("eip155:*", new ExactEvmScheme(privateKeyToAccount(process.env.EVM_PRIVATE_KEY)));
@@ -60,10 +61,8 @@ const settle = res.headers["payment-response"];
 if (settle) {
   try {
     const s = JSON.parse(Buffer.from(String(settle), "base64").toString());
-    console.log("\n=== SETTLEMENT RECEIPT ===");
-    console.log("network :", s.network ?? "(see success)");
-    console.log("amount  :", s.amount ?? s.settlement?.amount ?? "(in accepted payment)");
-    console.log("tx      :", s.transaction ?? s.settlement?.transaction ?? JSON.stringify(s).slice(0, 300));
+    console.log("\n=== SETTLEMENT RECEIPT (full) ===");
+    console.log(JSON.stringify(s, null, 2));
   } catch {
     console.log("\nraw payment-response header (base64):", String(settle).slice(0, 120));
   }

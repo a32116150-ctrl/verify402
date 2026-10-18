@@ -45,7 +45,8 @@ if (!EVM_PRIVATE_KEY) {
 
 // ---------------------------------------------------------------- payment ---
 async function createPaidClient() {
-  const client = new x402Client({
+  const client = x402Client.fromConfig({
+    schemes: [], // registered below — the 402 itself decides the network
     spendControls: { maxAmountPerPayment: `$${MAX_PAYMENT_USD}` },
   });
   client.register("eip155:*", new ExactEvmScheme(privateKeyToAccount(EVM_PRIVATE_KEY)));
