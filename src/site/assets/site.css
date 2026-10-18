@@ -113,6 +113,7 @@ h3 { font-size: 21px; letter-spacing: -0.02em; }
 /* ── hero ─────────────────────────────────────────── */
 .hero { padding: 84px 0 64px; }
 .hero-grid { display: grid; grid-template-columns: 1.15fr .85fr; gap: 64px; align-items: center; }
+.hero-grid > * { min-width: 0; }
 .hero h1 { margin-top: 18px; max-width: 13ch; }
 .hero .lead { margin-top: 22px; max-width: 54ch; }
 .hero .btn-row { margin-top: 30px; }
