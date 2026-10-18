@@ -11,12 +11,13 @@ export const CHAINS = {
     name: "ethereum",
     viemChain: "mainnet",
     rpcEnv: "ETH_RPC_URL",
-    rpcDefault: "https://ethereum-rpc.publicnode.com",
-    // Used round-robin by the fallback transport when no paid endpoint is set.
+    rpcDefault: "https://eth.llamarpc.com",
+    // Tried in order when no paid endpoint is configured. Failover is cheap on
+    // purpose: a throttled first provider must not eat the whole pair budget.
     rpcFallbacks: [
-      "https://eth.llamarpc.com",
       "https://eth.drpc.org",
       "https://eth.merkle.io",
+      "https://ethereum-rpc.publicnode.com",
     ],
     // Canonical Uniswap V3 QuoterV2 on mainnet. An earlier edit swapped this
     // for 0x59b670e9... believing it was V2 - the all-venues-exist test then

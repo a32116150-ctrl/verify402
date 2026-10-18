@@ -75,7 +75,7 @@ export function clientFor(chainId) {
   const transport = urls.length === 1
     ? http(urls[0], { retryCount: 2, timeout: 15_000 })
     : fallback(
-        urls.map((url) => http(url, { retryCount: 0, timeout: 8_000 })),
+        urls.map((url) => http(url, { retryCount: 0, timeout: 5_000 })),
         { rank: false },
       );
   const client = createPublicClient({ chain: viemChain, transport });
