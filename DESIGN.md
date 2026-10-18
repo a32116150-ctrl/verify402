@@ -1,479 +1,399 @@
 ---
 version: alpha
-name: Dell 1996 Analysis
-description: An inspired interpretation of Dell.com's 1996 design language — a catalog-era enterprise web design built around a literal black page frame, vivid flat color-block "ribbon cards" tinted in sage, salmon, periwinkle, sky, peach and lime, chunky Helvetica-Black display titles, Times Roman body copy, and an entire visual vocabulary of pre-Photoshop hand-cut GIF stickers (NEW! bursts, award seals, beveled product photos).
+name: Figma-design-analysis
+description: "A confident black-and-white editorial frame interrupted by oversized, hand-cut pastel color blocks. The marketing canvas is rigorously monochrome — figmaSans variable type, pure white surfaces, pure black ink, pill-shaped CTAs — while each story section drops the page into a saturated lime, lavender, cream, mint, or pink panel that reads like a sticky note placed on a clean desk. The result is a design system that feels both technical and joyful — a tool for serious work, made by people who like color."
 
 colors:
-  primary: "#e91d2a"
+  primary: "#000000"
   on-primary: "#ffffff"
-  canvas: "#ffffff"
-  surface: "#ffffff"
   ink: "#000000"
-  frame-ink: "#000000"
-  yellow-sticker: "#fcc20f"
-  purple-stripe: "#6a26a4"
-  link: "#0000ee"
-
-  # Ribbon-card tint family (one per product line)
-  tint-olive: "#8e8a25"
-  tint-sage: "#b3bd95"
-  tint-salmon: "#d77a7a"
-  tint-peach: "#e6915d"
-  tint-lime: "#c0d4a7"
-  tint-sky: "#9ab6c8"
-  tint-steel: "#a5b8c0"
-  tint-periwinkle: "#8c9ae0"
+  canvas: "#ffffff"
+  inverse-canvas: "#000000"
+  inverse-ink: "#ffffff"
+  on-inverse-soft: "#ffffff"
+  hairline: "#e6e6e6"
+  hairline-soft: "#f1f1f1"
+  surface-soft: "#f7f7f5"
+  block-lime: "#dceeb1"
+  block-lilac: "#c5b0f4"
+  block-cream: "#f4ecd6"
+  block-pink: "#efd4d4"
+  block-mint: "#c8e6cd"
+  block-coral: "#f3c9b6"
+  block-navy: "#1f1d3d"
+  accent-magenta: "#ff3d8b"
+  semantic-success: "#1ea64a"
+  overlay-scrim: "#000000"
 
 typography:
-  display:
-    fontFamily: Arial Black
-    fontSize: 36px
-    fontWeight: 900
-    lineHeight: 1.0
-    letterSpacing: 0
-  heading-1:
-    fontFamily: Arial Black
-    fontSize: 24px
-    fontWeight: 900
-    lineHeight: 1.05
-    letterSpacing: 0
-  heading-2:
-    fontFamily: Helvetica
-    fontSize: 16px
-    fontWeight: 700
-    lineHeight: 1.2
-    letterSpacing: 0
-  heading-3:
-    fontFamily: Helvetica
-    fontSize: 14px
-    fontWeight: 700
-    lineHeight: 1.2
-    letterSpacing: 0
-  body:
-    fontFamily: Times New Roman
-    fontSize: 14px
-    fontWeight: 400
-    lineHeight: 1.4
-    letterSpacing: 0
-  body-sm:
-    fontFamily: Times New Roman
-    fontSize: 12px
-    fontWeight: 400
-    lineHeight: 1.4
-    letterSpacing: 0
-  caption:
-    fontFamily: Times New Roman
-    fontSize: 11px
-    fontWeight: 400
+  display-xl:
+    fontFamily: figmaSans
+    fontSize: 86px
+    fontWeight: 340
+    lineHeight: 1.00
+    letterSpacing: -1.72px
+    fontFeature: kern
+  display-lg:
+    fontFamily: figmaSans
+    fontSize: 64px
+    fontWeight: 340
+    lineHeight: 1.10
+    letterSpacing: -0.96px
+    fontFeature: kern
+  headline:
+    fontFamily: figmaSans
+    fontSize: 26px
+    fontWeight: 540
     lineHeight: 1.35
-    letterSpacing: 0
-  button:
-    fontFamily: Helvetica
-    fontSize: 12px
+    letterSpacing: -0.26px
+    fontFeature: kern
+  subhead:
+    fontFamily: figmaSans
+    fontSize: 26px
+    fontWeight: 340
+    lineHeight: 1.35
+    letterSpacing: -0.26px
+    fontFeature: kern
+  card-title:
+    fontFamily: figmaSans
+    fontSize: 24px
     fontWeight: 700
-    lineHeight: 1.0
+    lineHeight: 1.45
     letterSpacing: 0
+    fontFeature: kern
+  body-lg:
+    fontFamily: figmaSans
+    fontSize: 20px
+    fontWeight: 330
+    lineHeight: 1.40
+    letterSpacing: -0.14px
+    fontFeature: kern
+  body:
+    fontFamily: figmaSans
+    fontSize: 18px
+    fontWeight: 320
+    lineHeight: 1.45
+    letterSpacing: -0.26px
+    fontFeature: kern
+  body-sm:
+    fontFamily: figmaSans
+    fontSize: 16px
+    fontWeight: 330
+    lineHeight: 1.45
+    letterSpacing: -0.14px
+    fontFeature: kern
   link:
-    fontFamily: Times New Roman
-    fontSize: 14px
+    fontFamily: figmaSans
+    fontSize: 20px
+    fontWeight: 480
+    lineHeight: 1.40
+    letterSpacing: -0.10px
+    fontFeature: kern
+  button:
+    fontFamily: figmaSans
+    fontSize: 20px
+    fontWeight: 480
+    lineHeight: 1.40
+    letterSpacing: -0.10px
+    fontFeature: kern
+  eyebrow:
+    fontFamily: figmaMono
+    fontSize: 18px
     fontWeight: 400
-    lineHeight: 1.4
-    letterSpacing: 0
-  ui-label:
-    fontFamily: Helvetica
+    lineHeight: 1.30
+    letterSpacing: 0.54px
+    fontFeature: kern
+  caption:
+    fontFamily: figmaMono
     fontSize: 12px
-    fontWeight: 700
-    lineHeight: 1.0
-    letterSpacing: 0
+    fontWeight: 400
+    lineHeight: 1.00
+    letterSpacing: 0.60px
+    fontFeature: kern
 
 rounded:
-  none: 0px
+  xs: 2px
+  sm: 6px
+  md: 8px
+  lg: 24px
+  xl: 32px
+  pill: 50px
   full: 9999px
 
 spacing:
-  xxs: 2px
-  xs: 4px
-  s: 6px
-  sm: 8px
-  m: 10px
-  md: 12px
-  lg: 16px
-  xl: 20px
-  xxl: 24px
-  section-sm: 32px
-  section: 40px
-  section-lg: 48px
+  hair: 1px
+  xxs: 4px
+  xs: 8px
+  sm: 12px
+  md: 16px
+  lg: 24px
+  xl: 32px
+  xxl: 48px
+  section: 96px
 
 components:
-  # ─── Brand-native components ───
-  page-frame:
-    backgroundColor: "{colors.frame-ink}"
-    textColor: "{colors.canvas}"
-    rounded: "{rounded.none}"
-    padding: 8px
-
-  top-banner:
-    backgroundColor: "{colors.frame-ink}"
-    textColor: "{colors.canvas}"
-    typography: "{typography.heading-2}"
-    rounded: "{rounded.none}"
-    padding: 12px 16px
-
-  section-eyebrow-olive:
-    backgroundColor: "{colors.tint-olive}"
-    textColor: "{colors.ink}"
-    typography: "{typography.display}"
-    rounded: "{rounded.none}"
-    padding: 24px 16px
-
-  section-eyebrow-salmon:
-    backgroundColor: "{colors.tint-salmon}"
-    textColor: "{colors.ink}"
-    typography: "{typography.display}"
-    rounded: "{rounded.none}"
-    padding: 24px 16px
-
-  ribbon-card-title:
-    backgroundColor: "{colors.canvas}"
-    textColor: "{colors.ink}"
-    borderColor: "{colors.frame-ink}"
-    typography: "{typography.heading-3}"
-    rounded: "{rounded.none}"
-    padding: 6px 12px
-
-  ribbon-card-body-sage:
-    backgroundColor: "{colors.tint-sage}"
-    textColor: "{colors.ink}"
-    borderColor: "{colors.frame-ink}"
-    typography: "{typography.body}"
-    rounded: "{rounded.none}"
-    padding: 12px 16px
-
-  ribbon-card-body-salmon:
-    backgroundColor: "{colors.tint-salmon}"
-    textColor: "{colors.ink}"
-    borderColor: "{colors.frame-ink}"
-    typography: "{typography.body}"
-    rounded: "{rounded.none}"
-    padding: 12px 16px
-
-  ribbon-card-body-peach:
-    backgroundColor: "{colors.tint-peach}"
-    textColor: "{colors.ink}"
-    borderColor: "{colors.frame-ink}"
-    typography: "{typography.body}"
-    rounded: "{rounded.none}"
-    padding: 12px 16px
-
-  ribbon-card-body-lime:
-    backgroundColor: "{colors.tint-lime}"
-    textColor: "{colors.ink}"
-    borderColor: "{colors.frame-ink}"
-    typography: "{typography.body}"
-    rounded: "{rounded.none}"
-    padding: 12px 16px
-
-  ribbon-card-body-sky:
-    backgroundColor: "{colors.tint-sky}"
-    textColor: "{colors.ink}"
-    borderColor: "{colors.frame-ink}"
-    typography: "{typography.body}"
-    rounded: "{rounded.none}"
-    padding: 12px 16px
-
-  ribbon-card-body-steel:
-    backgroundColor: "{colors.tint-steel}"
-    textColor: "{colors.ink}"
-    borderColor: "{colors.frame-ink}"
-    typography: "{typography.body}"
-    rounded: "{rounded.none}"
-    padding: 12px 16px
-
-  ribbon-card-body-periwinkle:
-    backgroundColor: "{colors.tint-periwinkle}"
-    textColor: "{colors.ink}"
-    borderColor: "{colors.frame-ink}"
-    typography: "{typography.body}"
-    rounded: "{rounded.none}"
-    padding: 12px 16px
-
-  cta-block-red:
-    backgroundColor: "{colors.primary}"
-    textColor: "{colors.on-primary}"
-    borderColor: "{colors.frame-ink}"
-    typography: "{typography.body}"
-    rounded: "{rounded.none}"
-    padding: 16px
-
-  phone-callout:
-    backgroundColor: "{colors.frame-ink}"
-    textColor: "{colors.primary}"
-    typography: "{typography.heading-2}"
-    rounded: "{rounded.none}"
-    padding: 4px 8px
-
-  buy-a-dell-sticker:
-    backgroundColor: "{colors.yellow-sticker}"
-    textColor: "{colors.ink}"
-    borderColor: "{colors.frame-ink}"
-    typography: "{typography.button}"
-    rounded: "{rounded.none}"
-    padding: 4px 8px
-
-  new-burst-sticker:
-    backgroundColor: "{colors.yellow-sticker}"
-    textColor: "{colors.ink}"
-    typography: "{typography.button}"
-    rounded: "{rounded.none}"
-    padding: 4px 8px
-
-  cert-seal:
-    backgroundColor: "{colors.primary}"
-    textColor: "{colors.canvas}"
-    typography: "{typography.button}"
-    rounded: "{rounded.full}"
-    size: 64px
-
-  icon-label-nav:
-    backgroundColor: "{colors.canvas}"
-    textColor: "{colors.ink}"
-    typography: "{typography.ui-label}"
-    rounded: "{rounded.none}"
-    padding: 8px
-
-  text-input:
-    backgroundColor: "{colors.canvas}"
-    textColor: "{colors.ink}"
-    borderColor: "{colors.frame-ink}"
-    typography: "{typography.body}"
-    rounded: "{rounded.none}"
-    padding: 4px 6px
-
   button-primary:
-    backgroundColor: "{colors.frame-ink}"
+    backgroundColor: "{colors.primary}"
     textColor: "{colors.on-primary}"
-    borderColor: "{colors.frame-ink}"
     typography: "{typography.button}"
-    rounded: "{rounded.none}"
-    padding: 6px 16px
-
+    rounded: "{rounded.pill}"
+    padding: 10px 20px
+  button-primary-pressed:
+    backgroundColor: "{colors.primary}"
+    textColor: "{colors.on-primary}"
+    typography: "{typography.button}"
+    rounded: "{rounded.pill}"
   button-secondary:
     backgroundColor: "{colors.canvas}"
     textColor: "{colors.ink}"
-    borderColor: "{colors.frame-ink}"
     typography: "{typography.button}"
-    rounded: "{rounded.none}"
-    padding: 6px 16px
-
-  button-text-link:
+    rounded: "{rounded.pill}"
+    padding: 8px 18px 10px
+  button-tertiary-text:
     backgroundColor: "{colors.canvas}"
-    textColor: "{colors.link}"
+    textColor: "{colors.ink}"
     typography: "{typography.link}"
-    rounded: "{rounded.none}"
-
-  footer-band:
-    backgroundColor: "{colors.canvas}"
+    rounded: "{rounded.full}"
+    padding: 8px 12px
+  button-icon-circular:
+    backgroundColor: "{colors.surface-soft}"
     textColor: "{colors.ink}"
-    borderColor: "{colors.frame-ink}"
-    typography: "{typography.body-sm}"
-    padding: 16px
-
-  # ─── Examples (illustrative, kit-mirror) — injected by derive-examples-block.mjs ───
-
-  # ─── Examples (illustrative) — auto-derived; resolve any TO_FILL markers below ───
-  ex-pricing-tier:
-    description: "Default Pricing tier card. Re-uses feature-card chrome with the base white surface."
-    backgroundColor: "{colors.surface}"
-    textColor: "{colors.ink}"
-    borderColor: "{colors.frame-ink}"
-    rounded: "{rounded.none}"
-    padding: "{spacing.lg}"
-  ex-pricing-tier-featured:
-    description: "Featured/highlighted tier — polarity-flipped surface (dark fill + light text in light mode, light fill + dark text in dark mode)."
-    backgroundColor: "{colors.ink}"
+    typography: "{typography.button}"
+    rounded: "{rounded.full}"
+    size: 40px
+  button-icon-circular-inverse:
+    backgroundColor: "{colors.on-inverse-soft}"
+    textColor: "{colors.inverse-ink}"
+    typography: "{typography.button}"
+    rounded: "{rounded.full}"
+    size: 40px
+  button-magenta-promo:
+    backgroundColor: "{colors.accent-magenta}"
     textColor: "{colors.on-primary}"
-    rounded: "{rounded.none}"
-    padding: "{spacing.lg}"
-  ex-product-selector:
-    description: "What's Included summary card — re-purposed for SaaS / B2B verticals (NOT a literal product gallery)."
-    backgroundColor: "{colors.surface}"
-    rounded: "{rounded.none}"
-    padding: "{spacing.lg}"
-  ex-cart-drawer:
-    description: "Subscription summary — re-purposed for SaaS / B2B (line items per add-on, not literal cart)."
-    backgroundColor: "{colors.surface}"
-    rounded: "{rounded.none}"
-    padding: "{spacing.lg}"
-    item-divider: "{colors.frame-ink}"
-  ex-app-shell-row:
-    description: "Sidebar nav row inside the App Shell example. Active state uses brand primary as the indicator."
+    typography: "{typography.button}"
+    rounded: "{rounded.pill}"
+    padding: 10px 18px
+  pricing-tab-default:
     backgroundColor: "{colors.canvas}"
-    activeIndicator: "{colors.primary}"
-    rounded: "{rounded.none}"
-    padding: "{spacing.sm} {spacing.md}"
-  ex-data-table-cell:
-    description: "Default data-table th + td chrome. Header uses mono-caps eyebrow typography; body uses body-sm."
-    headerBackground: "{colors.surface}"
-    headerTypography: "{typography.caption}"
-    bodyTypography: "{typography.body-sm}"
-    cellPadding: "{spacing.s} {spacing.md}"
-    rowBorder: "{colors.frame-ink}"
-  ex-auth-form-card:
-    description: "Sign-in / sign-up card. Re-uses feature-card chrome with text-input primitives inside."
-    backgroundColor: "{colors.surface}"
-    rounded: "{rounded.none}"
-    padding: "{spacing.lg}"
-  ex-modal-card:
-    description: "Modal dialog surface — same chrome as feature-card with elevated shadow."
-    backgroundColor: "{colors.surface}"
-    rounded: "{rounded.none}"
-    padding: "{spacing.lg}"
-  ex-empty-state-card:
-    description: "Empty-state illustration frame."
-    backgroundColor: "{colors.surface}"
-    rounded: "{rounded.none}"
-    padding: "{spacing.xl}"
-    captionTypography: "{typography.body}"
-  ex-toast:
-    description: "Toast notification surface — feature-card shape + medium shadow."
-    backgroundColor: "{colors.surface}"
-    rounded: "{rounded.none}"
-    padding: "{spacing.md} {spacing.lg}"
+    textColor: "{colors.ink}"
+    typography: "{typography.button}"
+    rounded: "{rounded.pill}"
+    padding: 8px 18px
+  pricing-tab-selected:
+    backgroundColor: "{colors.primary}"
+    textColor: "{colors.on-primary}"
+    typography: "{typography.button}"
+    rounded: "{rounded.pill}"
+    padding: 8px 18px
+  text-input:
+    backgroundColor: "{colors.canvas}"
+    textColor: "{colors.ink}"
+    typography: "{typography.body}"
+    rounded: "{rounded.md}"
+    padding: 12px 14px
+  text-input-focused:
+    backgroundColor: "{colors.canvas}"
+    textColor: "{colors.ink}"
+    typography: "{typography.body}"
+    rounded: "{rounded.md}"
+    padding: 12px 14px
+  pricing-card:
+    backgroundColor: "{colors.canvas}"
+    textColor: "{colors.ink}"
+    typography: "{typography.body}"
+    rounded: "{rounded.lg}"
+    padding: 24px
+  pricing-card-feature-row:
+    backgroundColor: "{colors.canvas}"
+    textColor: "{colors.ink}"
     typography: "{typography.body-sm}"
-
+    rounded: "{rounded.xs}"
+  color-block-section:
+    backgroundColor: "{colors.block-lime}"
+    textColor: "{colors.ink}"
+    typography: "{typography.subhead}"
+    rounded: "{rounded.lg}"
+    padding: 48px
+  color-block-section-lilac:
+    backgroundColor: "{colors.block-lilac}"
+    textColor: "{colors.ink}"
+    typography: "{typography.subhead}"
+    rounded: "{rounded.lg}"
+    padding: 48px
+  color-block-section-navy:
+    backgroundColor: "{colors.block-navy}"
+    textColor: "{colors.inverse-ink}"
+    typography: "{typography.subhead}"
+    rounded: "{rounded.lg}"
+    padding: 48px
+  promo-banner-lilac:
+    backgroundColor: "{colors.block-lilac}"
+    textColor: "{colors.ink}"
+    typography: "{typography.body-sm}"
+    rounded: "{rounded.md}"
+    padding: 16px 24px
+  template-card:
+    backgroundColor: "{colors.surface-soft}"
+    textColor: "{colors.ink}"
+    typography: "{typography.body-sm}"
+    rounded: "{rounded.md}"
+    padding: 16px
+  feature-illustration-tile:
+    backgroundColor: "{colors.surface-soft}"
+    textColor: "{colors.ink}"
+    typography: "{typography.eyebrow}"
+    rounded: "{rounded.md}"
+    padding: 24px
+  top-nav:
+    backgroundColor: "{colors.canvas}"
+    textColor: "{colors.ink}"
+    typography: "{typography.body-sm}"
+    rounded: "{rounded.xs}"
+    height: 56px
+  marquee-strip:
+    backgroundColor: "{colors.inverse-canvas}"
+    textColor: "{colors.inverse-ink}"
+    typography: "{typography.body-sm}"
+    rounded: "{rounded.xs}"
+    height: 36px
+  comparison-checkmark:
+    backgroundColor: "{colors.canvas}"
+    textColor: "{colors.semantic-success}"
+    typography: "{typography.body-sm}"
+    rounded: "{rounded.full}"
+    size: 16px
+  footer:
+    backgroundColor: "{colors.canvas}"
+    textColor: "{colors.ink}"
+    typography: "{typography.caption}"
+    rounded: "{rounded.xs}"
+    padding: 64px 32px
 ---
-
 
 ## Overview
 
-Dell's December 1996 home page is a perfectly preserved fossil of catalog-era enterprise web design — the moment when a Fortune-100 brand decided the web was *important enough* to invest in, but two years before CSS would be widely adopted and three years before "design system" was a phrase anyone used. Every visual choice on the page is a downstream consequence of that constraint: layout via HTML tables, type via the browser's built-in font stack (Arial Black / Helvetica / Times Roman), color via 8-bit-safe flat fills, and decoration via hand-cut GIF "stickers" (the NEW! burst, the round PC Magazine Readers' Choice seal, the beveled "BUY a DELL" yellow tab). The page is bordered — literally bordered, in a 1-cell-wide black HTML table — and inside that frame, every product line gets a "ribbon card": a white title bar with a sharp black underline, a tinted body block in one of eight catalog colors (sage, salmon, peach, lime, sky, steel, periwinkle, olive), and a beveled product photograph notched into the right edge of the card.
+Figma's marketing canvas is, at the system level, an editor-clean black-and-white frame. The chrome — top nav, body type, footer, primary CTA — is monochrome. Headlines are oversized `{typography.display-xl}` set in `figmaSans` with aggressive negative tracking, body copy hovers around weight 320–340 of the same variable family, and small mono `{typography.eyebrow}` and `{typography.caption}` labels (figmaMono, all-caps, positive tracking) act as section markers. Every CTA is a pill — `{rounded.pill}` — and the primary action across the entire site is the same black `{components.button-primary}` paired with the same white `{components.button-secondary}`.
 
-The brand voice carries through in two anchors: a vivid Dell-red CTA panel on the left of the homepage (cream-yellow Times Roman copy on a `{colors.primary}` fill, set inside the black frame) and a screaming red phone number — `1-800-213-DELL` — pinned to the top-right of every page, because in 1996 the website was a brochure that ended with a phone call. The footer is a row of four hand-drawn icon-labels (FIND / HOME / ONLINE STORE / SERVICE & SUPPORT) linked by a thin green horizontal rule, and a single classic-Mosaic-blue underlined "Copyright" link sitting above the legal small print in Times Roman.
+What makes the design unique is what happens **between** those monochrome bookends: the page repeatedly drops into oversized pastel **color-block sections** — lime, lavender, cream, mint, pink, coral, and a deep navy — that span the full content width with `{rounded.lg}` corners and `{spacing.xxl}` interior padding. These blocks are where the storytelling lives. They aren't accents tucked into a card; they take over a whole viewport's worth of vertical space, like a designer arranging giant sticky notes on a clean wall. FigJam is the most pastel-saturated, the home page rotates through the full set, and the pricing page ends with a lime FAQ panel — same vocabulary, different rhythm per route.
+
+This is a system built on contrast: the monochrome chrome makes the color blocks feel intentional rather than decorative, and the color blocks make the monochrome chrome feel like editorial paper rather than enterprise SaaS. Density is generous, line-heights are tight on display sizes, and the interface never reaches for shadows or gradients to do the work that color blocks and confident typography already do.
 
 **Key Characteristics:**
-- Literal page frame: every page sits inside a `{colors.frame-ink}` (black) outer border ~8 px thick — the design treats the browser window as a printed picture frame
-- Flat color-block "ribbon cards" tint each product family with a dedicated catalog color (`{colors.tint-sage}` Latitude, `{colors.tint-salmon}` OptiPlex GX, `{colors.tint-periwinkle}` PowerEdge, `{colors.tint-sky}` Dellware, etc.) — no gradients, no shadows, no opacity
-- Chunky display typography in `{typography.display}` (Arial Black 36 / weight 900) for section title blocks; `{typography.heading-2}` (Helvetica Bold 16) for product row titles; `{typography.body}` Times Roman 14 for everything else
-- Hand-cut GIF "stickers" overlay the layout: yellow "BUY a DELL" tab in the top right, angled "NEW!" bursts on new product rows, round red PC Magazine Readers' Choice seals
-- `{colors.primary}` (Dell red) reserved for two things only: the homepage CTA panel and the top-right phone number — never decorative
-- Footer icon-nav with classic-blue (`{colors.link}` #0000ee) anchor underlines — the unmistakable Netscape 3.x link colour
+- Monochrome system core: `{colors.primary}` (black) and `{colors.canvas}` (white) carry every CTA, every body line, every footer link.
+- Oversized pastel **color-block sections** (`{colors.block-lime}`, `{colors.block-lilac}`, `{colors.block-cream}`, `{colors.block-mint}`, `{colors.block-pink}`, `{colors.block-coral}`, `{colors.block-navy}`) define the narrative rhythm of every long-form page.
+- Pill is the only button shape — `{rounded.pill}` for text CTAs, `{rounded.full}` for icon buttons. No square buttons anywhere.
+- `figmaSans` variable typeface used at unusually fine weight increments (320, 330, 340, 450, 480, 540) — the type system reads as a single voice that flexes rather than a multi-weight family.
+- Tight negative letter-spacing on display sizes (-1.72px at 86px, -0.96px at 64px) creates a confident editorial cadence.
+- `figmaMono` reserved for category labels, eyebrows, and captions — always uppercase, positive tracking — to flag taxonomy without competing with display type.
+- Color-block page rhythm (home): white hero → marquee strip → white feature → lime systems block → navy ship-products block → coral developer block → white template grid → white footer.
 
 ## Colors
 
+> Source pages: figma.com (home), /design/, /figjam/brainstorming-tool/, /pricing/, /contact/.
+
 ### Brand & Accent
-- **Dell Red** (`{colors.primary}` — #e91d2a): The brand's signature red. Reserved for the homepage CTA panel ("At Dell.com, we'll help you find the right system…"), the top-right phone number, and the PC Magazine Readers' Choice seal ring. Never used as a card body fill.
-- **Dell Yellow** (`{colors.yellow-sticker}` — #fcc20f): Sticker yellow — the "BUY a DELL" tab in the top banner, and the angled "NEW!" bursts overlapping new product rows.
-- **Dell Purple** (`{colors.purple-stripe}` — #6a26a4): The accent stripe behind the lowercase ".com" / "DELL" wordmark text — appears inside the "BUY a DELL" sticker chrome only.
+- **Black** ({colors.primary}): The system primary. Every primary CTA, every headline, every body line, the marquee strip, the inverse canvas of dark sections.
+- **White** ({colors.on-primary}): Inverse text on black surfaces; also the canvas color used as the foreground of secondary pill buttons (`{components.button-secondary}`).
+- **Magenta Promo** ({colors.accent-magenta}): A single saturated CTA pink reserved for promotional inline buttons — appears, for example, on the lilac "Save your spot" Release Notes banner. Use scarcely; it is not a section color.
 
 ### Surface
-- **Frame Ink** (`{colors.frame-ink}` — #000000): Pure black. The page frame, the top banner background, button fills, and all 1 px ribbon-card hairlines.
-- **Canvas** (`{colors.canvas}` — #ffffff): True white inside the frame. The page surface, the ribbon-card title-bar fill, and the icon-label nav backdrop.
+- **Canvas** ({colors.canvas}): Default page background and the body of every white card.
+- **Inverse Canvas** ({colors.inverse-canvas}): Footer, marquee strip, and a subset of "ship products"-style story sections.
+- **Surface Soft** ({colors.surface-soft}): Off-white tile background used for icon buttons, template cards, and feature illustration tiles when they sit on the white canvas.
+- **Hairline** ({colors.hairline}): 1px borders on form inputs, pricing cards, and table dividers.
+- **Hairline Soft** ({colors.hairline-soft}): Even subtler dividers — comparison-table row separators and footer column rules.
+- **Block Lime** ({colors.block-lime}): The signature **systems / FAQ / contact-form** color block. Recurs across home, pricing, contact.
+- **Block Lilac** ({colors.block-lilac}): Hero block on `/design/`; also the inline Release Notes promo banner.
+- **Block Cream** ({colors.block-cream}): Soft warm background — FigJam hero strip, template-grid section.
+- **Block Mint** ({colors.block-mint}): FigJam pastel section.
+- **Block Pink** ({colors.block-pink}): FigJam pastel section.
+- **Block Coral** ({colors.block-coral}): "Ship products" coral story block on home.
+- **Block Navy** ({colors.block-navy}): Deep indigo story block — only place dark surfaces appear above the footer.
 
 ### Text
-- **Ink** (`{colors.ink}` — #000000): Body text, headings, link copy before visit. Pure black; no warm-near-black softening in 1996.
-- **Link** (`{colors.link}` — #0000ee): Classic Mosaic / Netscape 3.x default link blue. Underlined inline anchors ("Copyright", "(Terms of Use)", inline "from Dell's award-winning service and support teams").
+- **Ink** ({colors.ink}): All headline, body, and caption type on light surfaces. There is no softer mid-gray text role on marketing — body copy is always black at weight 320–340, and weight (not opacity) carries the hierarchy.
+- **Inverse Ink** ({colors.inverse-ink}): Type on inverse-canvas surfaces (footer, marquee strip, navy color block).
+- **On-Inverse Soft** ({colors.on-inverse-soft}): White used at ~16% opacity for circular icon-button surfaces against dark sections (token captures the base color; the translucency is applied at render time).
 
-### Ribbon-Card Tint Family
-Eight catalog colors, one per product line — these are the page's chromatic personality:
-- **Olive** (`{colors.tint-olive}` — #8e8a25): "DIMENSION DESKTOPS" eyebrow block
-- **Sage** (`{colors.tint-sage}` — #b3bd95): Latitude Notebooks ribbon body
-- **Salmon** (`{colors.tint-salmon}` — #d77a7a): "OPTIPLEX DESKTOP SYSTEMS" eyebrow + GX Series body
-- **Peach** (`{colors.tint-peach}` — #e6915d): Dimension card body + OptiPlex Gs body
-- **Lime** (`{colors.tint-lime}` — #c0d4a7): OptiPlex G Series body
-- **Sky** (`{colors.tint-sky}` — #9ab6c8): Dellware ribbon body
-- **Steel** (`{colors.tint-steel}` — #a5b8c0): Dimension XPS Pro ribbon body
-- **Periwinkle** (`{colors.tint-periwinkle}` — #8c9ae0): PowerEdge ribbon body
-
-The tints are saturated but not vivid — they sit just below true neutral chroma, the signature of GIF-era web-safe-palette quantization.
+### Semantic
+- **Success Green** ({colors.semantic-success}): Comparison-table checkmarks on pricing. Used as a glyph fill, not a surface.
+- **Overlay Scrim** ({colors.overlay-scrim}): Black used at ~60% opacity behind modal / video-overlay surfaces (token captures the base; opacity applied at render time).
 
 ## Typography
 
 ### Font Family
 
-Three system-stack families, no webfonts (webfonts didn't exist yet):
+- **figmaSans** — Figma's proprietary variable typeface; fallback stack `figmaSans Fallback, SF Pro Display, system-ui, helvetica`. Variable weight axis is exercised at unusually fine increments (320, 330, 340, 450, 480, 540, 700) — the design system reads as a single voice modulating rather than a stepped weight family.
+- **figmaMono** — Proprietary monospace; fallback `figmaMono Fallback, SF Mono, menlo`. Used exclusively for eyebrow labels and captions, always uppercase with positive letter-spacing.
 
-- **Arial Black** (fallback: Helvetica, system-ui sans) — display headings only. The chunky stenciled section eyebrows ("DIMENSION DESKTOPS", "OPTIPLEX DESKTOP SYSTEMS") are Arial Black at weight 900, set in all-caps with normal tracking.
-- **Helvetica** (fallback: Arial, system-ui sans) — product-row titles, button labels, the top banner's "BUILD YOUR OWN COMPUTER. ONLINE." headline. Always bold (700), always all-caps.
-- **Times New Roman** (fallback: Times, serif) — body copy. Every paragraph, every caption, every inline anchor sits in default-rendered Times Roman. The serifs date the design instantly — body text on the modern web is almost never serif.
+OpenType `kern` is enabled across every role.
 
 ### Hierarchy
 
-| Token | Size | Weight | Line Height | Use |
-|---|---|---|---|---|
-| `{typography.display}` | 36px | 900 | 1.0 | Section eyebrow titles ("DIMENSION DESKTOPS", "OPTIPLEX DESKTOP SYSTEMS") |
-| `{typography.heading-1}` | 24px | 900 | 1.05 | Sub-page hero headlines |
-| `{typography.heading-2}` | 16px | 700 | 1.2 | Top banner copy, product-line H1 ("Reliable PC's for High-Performance Computing.") |
-| `{typography.heading-3}` | 14px | 700 | 1.2 | Ribbon-card title bar ("OPTIPLEX GX PRO", "DIMENSION XPS") |
-| `{typography.body}` | 14px | 400 | 1.4 | Default paragraph copy, ribbon-card body, CTA-panel copy |
-| `{typography.body-sm}` | 12px | 400 | 1.4 | "This site is best viewed with browser versions 3.0 and higher." |
-| `{typography.caption}` | 11px | 400 | 1.35 | Footer copyright text |
-| `{typography.button}` | 12px | 700 | 1.0 | Button labels, "NEW!" sticker, BUY-a-DELL sticker |
-| `{typography.ui-label}` | 12px | 700 | 1.0 | Icon-label nav uppercase labels ("FIND", "HOME", "ONLINE STORE", "SERVICE & SUPPORT") |
+| Token | Size | Weight | Line Height | Letter Spacing | Use |
+|---|---|---|---|---|---|
+| `{typography.display-xl}` | 86px | 340 | 1.00 | -1.72px | Hero headlines (home, FigJam) |
+| `{typography.display-lg}` | 64px | 340 | 1.10 | -0.96px | Section opener headlines |
+| `{typography.headline}` | 26px | 540 | 1.35 | -0.26px | Story-block titles inside color blocks |
+| `{typography.subhead}` | 26px | 340 | 1.35 | -0.26px | Long-form intro paragraphs that sit at near-headline scale |
+| `{typography.card-title}` | 24px | 700 | 1.45 | 0 | Pricing-tier titles, feature card titles |
+| `{typography.body-lg}` | 20px | 330 | 1.40 | -0.14px | Lead body copy on hero, contact form labels |
+| `{typography.body}` | 18px | 320 | 1.45 | -0.26px | Default body |
+| `{typography.body-sm}` | 16px | 330 | 1.45 | -0.14px | Card body, footer link list |
+| `{typography.link}` | 20px | 480 | 1.40 | -0.10px | Inline link emphasis |
+| `{typography.button}` | 20px | 480 | 1.40 | -0.10px | All pill buttons, primary and secondary |
+| `{typography.eyebrow}` | 18px | 400 | 1.30 | 0.54px | figmaMono uppercase section eyebrows |
+| `{typography.caption}` | 12px | 400 | 1.00 | 0.60px | figmaMono uppercase captions, footer column heads |
 
 ### Principles
-- Sans for UI, serif for body — the inverse of the modern convention, and a dead giveaway of mid-90s typography.
-- Display weights are extreme (900 / Black) and never softer. The "Dimension" / "OptiPlex" eyebrow blocks lean on the heaviest weight the font ships.
-- No letter-spacing tracking adjustments — pixel-fonts in 1996 didn't reward it. Everything is set at the browser's default kern.
-- Line-height is tight on display (1.0) and conventional on body (1.4) — a holdover from print-magazine catalog layout.
+
+- **Weight, not size, carries hierarchy on body copy.** A 20px paragraph at weight 330 sits next to a 20px link at weight 480 — the eye reads emphasis without scale change.
+- **Negative letter-spacing scales with size.** Display-xl pulls -1.72px; subhead pulls only -0.26px. Body copy stays near-zero. The result is editorial-feeling display type without sacrificing readability at body size.
+- **Mono is taxonomy, not body.** figmaMono is reserved for eyebrows and captions — never used to set a paragraph.
+- **Tight line-heights on display, generous on body.** Display sizes run 1.00–1.10; body runs 1.40–1.45. The contrast reinforces that headlines are graphics and body copy is for reading.
 
 ### Note on Font Substitutes
-All three families are operating-system defaults on every consumer OS shipped in 1996 (Windows 95: Arial / Times New Roman; Mac OS 7.5+: Helvetica / Times). The brand had no fallback strategy because no fallback was needed — the fonts were always present. Modern reproductions can stay on this exact stack (Arial Black / Helvetica / Times New Roman) for authenticity.
+
+If implementing without access to figmaSans / figmaMono, suitable open-source substitutes are **Inter** (or **Geist**) for the sans, and **JetBrains Mono** (or **Geist Mono**) for the mono. Inter at variable weights closely matches the fine-grained weight axis figmaSans uses; expect to manually adjust line-heights down by ~0.02 to compensate for Inter's slightly taller x-height.
 
 ## Layout
 
 ### Spacing System
 
-- **Base unit**: 4 px (with 2 / 6 / 10 intermediates). 1996 page layout was driven by HTML table cell padding (`cellpadding="4"` / `cellspacing="0"`) rather than a designed scale.
-- **Tokens**: `{spacing.xxs}` 2px · `{spacing.xs}` 4px · `{spacing.s}` 6px · `{spacing.sm}` 8px · `{spacing.m}` 10px · `{spacing.md}` 12px · `{spacing.lg}` 16px · `{spacing.xl}` 20px · `{spacing.xxl}` 24px · `{spacing.section-sm}` 32px · `{spacing.section}` 40px · `{spacing.section-lg}` 48px.
-- **Card interior padding**: `{spacing.md}` 12 px vertical / `{spacing.lg}` 16 px horizontal on ribbon-card bodies.
-- **Section vertical rhythm**: `{spacing.section}` 40 px between product-ribbon stacks; `{spacing.section-sm}` 32 px between the eyebrow color block and its first ribbon-card.
+- **Base unit**: 8px.
+- **Tokens (front matter)**: `{spacing.hair}` 1px · `{spacing.xxs}` 4px · `{spacing.xs}` 8px · `{spacing.sm}` 12px · `{spacing.md}` 16px · `{spacing.lg}` 24px · `{spacing.xl}` 32px · `{spacing.xxl}` 48px · `{spacing.section}` 96px.
+- Section interior padding: `{spacing.xxl}` (48px) on color-block sections.
+- Card interior padding: `{spacing.lg}` (24px) on pricing cards and template tiles.
+- Form input padding: `{spacing.sm}` 12px vertical · 14px horizontal.
+- Button padding: `{spacing.xs}` 8px vertical · `{spacing.lg}` 24px horizontal for pill buttons (the asymmetric `8px 18px 10px` extracted on `button-secondary` nudges the type optically inside the pill).
+- Universal rhythm constant: `{spacing.section}` (96px) — the vertical gap between major content sections holds across home, pricing, and FigJam pages.
 
 ### Grid & Container
-- Fixed-width table layout pinned around 760 px wide — the de facto 1996 standard targeting 800×600 monitors with a small scrollbar gutter.
-- Two-column outer structure: left rail (~28 %) carries the homepage icon-link grid + CTA red panel; right column (~72 %) carries the product ribbon stack.
-- No grid system in the modern sense — every section is its own `<table>` declaration with hard-coded column widths.
+
+- Max content width sits around 1280px (one of the explicit breakpoints), with side gutters that scale from `{spacing.xxl}` on desktop down to `{spacing.lg}` on mobile.
+- Three- and four-column grids on the desktop pricing comparison and FigJam template galleries.
+- Color-block sections break the column grid — they span content width with full bleed inside the rounded `{rounded.lg}` corners, then place a single editorial column of headline + body inside.
 
 ### Whitespace Philosophy
-Tight by modern standards. Catalog density wins over editorial breath — every pixel inside the black frame is doing work (illustration, color block, headline, body). The compensating decompression happens *inside* each ribbon card: white title bar + tinted body block + product photo notch creates internal breathing room without enlarging the overall page.
 
-### Responsive Strategy
-
-#### Breakpoints
-| Name | Width | Key Changes |
-|---|---|---|
-| Period default | 800 × 600 | Fixed 760 px layout, designed for the era's standard monitor |
-| Modern desktop | 1280+ px | Layout sits centered with generous side gutters — emulates "magazine spread in the middle of the screen" |
-| Tablet | 768 px | Black frame compresses to 4 px; ribbon-cards stack at full width inside |
-| Mobile | < 480 px | Black frame to 2 px; two-column structure collapses to single column; left rail icon grid stacks above the right-column product stack |
-
-#### Touch Targets
-1996 had no notion of touch — the original designs assume mouse-only. Modern reproductions need to widen the icon-label nav targets to 44 × 44 px minimum at mobile (the 1996 icons sat at ~24 × 24 with 8 px label below, well under modern guidelines).
-
-#### Collapsing Strategy
-- At ≤ 768 px, the homepage's left-rail icon-link grid (Online Store / Service / Why Dell? / Government / Worldwide / Order Status / Company Info / U.S. Careers) collapses from a 2 × 4 grid to a single-column stack
-- Ribbon-card right-edge product photo notch becomes a top-aligned full-width image at mobile
-- The top banner's tagline ("BUILD YOUR OWN COMPUTER. ONLINE.") shrinks one type tier; the phone number wraps below the BUY-a-DELL sticker
-- Footer icon-label nav stays 4-up at all widths — the icons are small enough to survive
-
-#### Image Behavior
-Product photos are bitmap GIFs with hand-applied bevel shadows — they were authored at fixed pixel widths (typically 80–120 px wide). The right-edge notch effect was achieved by table-cell negative spacing. Modern reproductions should keep the bevel shadow effect (it's signature) but use SVG drop-shadow or CSS `filter: drop-shadow(2px 2px 0 #000)` to recreate it crisply at high-DPI.
+White space is used to make the color blocks feel deliberate. Between every colored panel and the next, the page returns to white canvas with `{spacing.section}` of breathing room. Inside a color block, the type itself is given generous side margins (often more than 1/4 of the block's width on each side) so the panel reads as a poster, not a wall of copy.
 
 ## Elevation & Depth
 
 | Level | Treatment | Use |
 |---|---|---|
-| 0 — Flush | No shadow, no border | Body text, copyright row, footer band background |
-| 1 — Hairline | `1px solid {colors.frame-ink}` | Ribbon-card outer edge, table-cell dividers |
-| 2 — Frame | `8px solid {colors.frame-ink}` | The page-frame border around the entire viewport |
-| 3 — Bevel | Hard-edge 1 px highlight + 1 px shadow on GIF stickers and product photos | "BUY a DELL" yellow sticker, NEW! bursts, award seals, product photographs |
+| 0 (flat) | No shadow, no border | Default for color-block sections, inverse-canvas footer, hero |
+| 1 (hairline) | 1px `{colors.hairline}` border on `{colors.canvas}` | Pricing cards, form inputs, comparison table cells |
+| 2 (soft elevation) | Subtle drop shadow approx 0 4px 16px rgba(0,0,0,0.06) | Floating template tiles, dropdown menus |
+| 3 (modal) | Stronger shadow + `{colors.overlay-scrim}` behind | Video / image lightbox overlays |
 
-There are **no soft shadows** in the 1996 design — every depth cue is either a hard 1 px border or a hand-painted bevel inside a GIF. Modern reproductions that need to feel period-accurate must resist the urge to add Material-style elevation or atmospheric drop shadows.
+Figma's marketing system is shadow-light by design — the color blocks substitute for traditional elevation. Where most SaaS sites use a shadowed white card to draw attention, Figma uses a saturated background panel. This makes the rare actual shadow (e.g., a floating template card hovering over a cream section) feel like an exception worth noticing.
 
 ### Decorative Depth
-Bevels and frames carry the entire depth vocabulary:
-- The **page frame** is the strongest depth cue — it tells the viewer "this is a contained document, not a continuous canvas."
-- **Bevels on stickers** (BUY a DELL, NEW!, PC Magazine Readers' Choice) push them forward off the page surface as if pinned on with thumbtacks.
-- **Product photographs** carry their own hand-painted bevel + drop-shadow, baked into the GIF itself.
+
+- **Color-block sections** are the primary depth device. The change from white canvas to lime / lavender / cream is the section break.
+- **Sticky-note style component thumbnails** in FigJam — slightly off-axis pastel rectangles arranged like notes on a board — read as collage, not card-stack.
+- **Embedded product UI mocks** (Figma Design panels, FigJam canvas snippets) appear as flat compositions on color blocks; their internal shadows are subtle and stay within the mock.
 
 ## Shapes
 
@@ -481,152 +401,178 @@ Bevels and frames carry the entire depth vocabulary:
 
 | Token | Value | Use |
 |---|---|---|
-| `{rounded.none}` | 0px | Universal default — buttons, cards, inputs, banners, page frame, ribbon-card bodies, eyebrow blocks |
-| `{rounded.full}` | 9999px | Circular award seals (PC Magazine Readers' Choice), the round "h" sticker on the HOME icon |
+| `{rounded.xs}` | 2px | Anchor / link decoration corners |
+| `{rounded.sm}` | 6px | Small chips, sub-nav tabs |
+| `{rounded.md}` | 8px | Form inputs, list items, image frames |
+| `{rounded.lg}` | 24px | Pricing cards, color-block sections, large image containers |
+| `{rounded.xl}` | 32px | Hero feature panels, oversized callouts |
+| `{rounded.pill}` | 50px | All text CTAs (primary, secondary, tab toggles) |
+| `{rounded.full}` | 9999px | Circular icon buttons, comparison-table checkmark glyphs |
 
-The 1996 design has effectively **two** radius modes: square (everything) and round (decorative seal stickers). No 4 / 8 / 12 px subtle radius tier — that vocabulary belongs to the post-Bootstrap web.
+### Photography & Illustration Geometry
 
-### Photography Geometry
-Product photos are rectangular GIFs with their own internal beveled "monitor" framing — they sit at native pixel dimensions, never scaled. Aspect ratios cluster around 4:3 (the era's standard CRT shape). Avatars don't exist on this site — staff photography was reserved for "About Dell" pages not captured in these snapshots.
+- Image frames use `{rounded.md}` (8px) — generous enough to feel friendly, conservative enough to read as editorial.
+- Template thumbnails on the home grid sit in `{rounded.md}` tiles with `{spacing.md}` interior padding around the embedded preview.
+- FigJam pastel sticky-note component thumbnails preserve a small `{rounded.sm}` corner that mimics actual sticky paper.
+- No avatar circles appear in marketing surfaces — Figma's marketing avoids personification.
 
 ## Components
 
-> **No hover states documented.** Per the global no-hover policy, every component below documents Default state only.
+### Buttons
 
-### Frame & Banner
+**`button-primary`** — The black "Get started for free" pill that appears in the top nav, every hero, and every closing CTA.
+- Background `{colors.primary}`, text `{colors.on-primary}`, type `{typography.button}`, padding 10px 20px, rounded `{rounded.pill}`.
+- Pressed state lives in `button-primary-pressed` (same surface; the live site relies on micro-scale rather than a darkened fill).
 
-**`page-frame`** — the literal black border around the entire viewport.
-- Background `{colors.frame-ink}`, padding `{spacing.sm}` 8 px on every side, no radius.
-- The page sits *inside* this border. Treat it as a non-negotiable container chrome; collapsing it on mobile is acceptable (to ~4 px), but removing it entirely loses the brand.
+**`button-secondary`** — White pill with black text. Used for tertiary navigation actions ("Contact sales") and as the visual counterpart to the primary pill.
+- Background `{colors.canvas}`, text `{colors.ink}`, type `{typography.button}`, padding 8px 18px 10px (asymmetric vertical to optically center the type), rounded `{rounded.pill}`. No border.
 
-**`top-banner`** — pure-black strip running across the top with white "BUILD YOUR OWN COMPUTER. ONLINE." headline + sub-tagline, the yellow "BUY a DELL" sticker pinned at right, and the red "1-800-213-DELL" phone number.
-- Background `{colors.frame-ink}`, text `{colors.canvas}`, type `{typography.heading-2}`, padding 12 px vertical / 16 px horizontal, no radius.
+**`button-tertiary-text`** — Plain text link styled as a button hit target inside top nav and footer.
+- Background `{colors.canvas}`, text `{colors.ink}`, type `{typography.link}`, rounded `{rounded.full}` (hit target only), padding `{spacing.xs}` `{spacing.sm}`.
 
-### Section Eyebrow Blocks
+**`button-icon-circular`** — 40px circular icon button used for carousel controls, social links, and inline actions on light surfaces.
+- Background `{colors.surface-soft}`, text `{colors.ink}`, rounded `{rounded.full}`, size 40px.
 
-**`section-eyebrow-olive`** — large tinted color block holding the chunky stenciled section title ("DIMENSION DESKTOPS"). Used at the top of the Dimension product page.
-- Background `{colors.tint-olive}`, text `{colors.ink}`, type `{typography.display}` (Arial Black 36 / 900), padding 24 × 16, no radius.
+**`button-icon-circular-inverse`** — Same shape, used on inverse-canvas / dark color blocks.
+- Background `{colors.on-inverse-soft}` (translucent white), text `{colors.inverse-ink}`, rounded `{rounded.full}`, size 40px.
 
-**`section-eyebrow-salmon`** — same chrome with the OptiPlex line's salmon-pink fill ("OPTIPLEX DESKTOP SYSTEMS").
-- Background `{colors.tint-salmon}`, otherwise identical to the olive variant.
+**`button-magenta-promo`** — Saturated pink pill used only inside promotional surfaces such as the lilac "Save your spot" Release Notes banner. Reserved for moments where Figma's product team wants the CTA to pop against an already-colored panel.
+- Background `{colors.accent-magenta}`, text `{colors.on-primary}`, type `{typography.button}`, rounded `{rounded.pill}`, padding 10px 18px.
 
-### Ribbon Cards
+### Pricing Tabs
 
-The brand's signature component. Each product-row "card" is a stack of three pieces:
-1. **`ribbon-card-title`** — white horizontal title bar with the product variant name in Helvetica Bold all-caps (e.g. "OPTIPLEX GX PRO", "DIMENSION XPS", "POWEREDGE SERVERS"). 1 px bottom border in `{colors.frame-ink}`.
-   - Background `{colors.canvas}`, text `{colors.ink}`, type `{typography.heading-3}`, padding 6 × 12, no radius.
-2. **`ribbon-card-body-<tint>`** — color-block body in one of eight tints, holding the short marketing pitch in `{typography.body}` (Times Roman 14). Padding 12 × 16. The product photograph notches into the right edge with a transparent GIF cutout.
-3. **Photo notch** — the GIF sits in the rightmost ~25 % of the row, hanging slightly above and below the body bar like a card pinned to a corkboard.
+**`pricing-tab-default`** + **`pricing-tab-selected`** — The pill-toggle that switches between Starter / Professional / Organization / Enterprise on `/pricing/`.
+- Default: `{colors.canvas}` background, `{colors.ink}` text, rounded `{rounded.pill}`.
+- Selected: `{colors.primary}` background, `{colors.on-primary}` text — exactly the same surface as `button-primary`, which makes the selected tab feel like an active CTA, not a passive state.
 
-Each tint variant is its own component entry. Pick the one that matches the product family:
+### Inputs & Forms
 
-- **`ribbon-card-body-sage`** — `{colors.tint-sage}` fill, used for Latitude Notebooks rows
-- **`ribbon-card-body-salmon`** — `{colors.tint-salmon}` fill, used for OptiPlex GX Series rows
-- **`ribbon-card-body-peach`** — `{colors.tint-peach}` fill, used for Dimension rows and OptiPlex Gs
-- **`ribbon-card-body-lime`** — `{colors.tint-lime}` fill, used for OptiPlex G Series rows
-- **`ribbon-card-body-sky`** — `{colors.tint-sky}` fill, used for Dellware rows
-- **`ribbon-card-body-steel`** — `{colors.tint-steel}` fill, used for Dimension XPS Pro rows
-- **`ribbon-card-body-periwinkle`** — `{colors.tint-periwinkle}` fill, used for PowerEdge Server rows
+**`text-input`** + **`text-input-focused`** — Form fields on `/contact/` and pricing seat-count steppers.
+- Background `{colors.canvas}`, text `{colors.ink}`, type `{typography.body}`, rounded `{rounded.md}`, padding 12px 14px.
+- Focused state retains the same surface — focus is communicated via ring, not via fill change.
 
-All seven share identical chrome: 1 px solid `{colors.frame-ink}` border, `{spacing.md}` × `{spacing.lg}` (12 × 16) padding, `{rounded.none}` (sharp corners), `{typography.body}` Times Roman 14 inside. Only the fill color changes per product family.
+### Cards & Containers
 
-### Call-to-Action
+**`pricing-card`** — Each tier on `/pricing/`.
+- Background `{colors.canvas}`, text `{colors.ink}`, type `{typography.body}`, rounded `{rounded.lg}`, padding `{spacing.lg}`. Stroked with `{colors.hairline}` rather than shadowed.
 
-**`cta-block-red`** — the homepage's vivid Dell-red panel ("At Dell.com, we'll help you find the right system, configure it, price it, and order it…").
-- Background `{colors.primary}`, text `{colors.on-primary}` (white), 1 px solid frame-ink border, type `{typography.body}` (Times Roman 14), padding 16 px, no radius.
-- One per page maximum. The brand's most aggressive attention-grab — never use it for anything except a top-tier sales message.
+**`pricing-card-feature-row`** — Single row inside the comparison table.
+- Background `{colors.canvas}`, text `{colors.ink}`, type `{typography.body-sm}`. Row separator is `{colors.hairline-soft}`.
 
-**`phone-callout`** — top-right phone number ("1-800-213-DELL") rendered as red on the black banner.
-- Background `{colors.frame-ink}`, text `{colors.primary}`, type `{typography.heading-2}` Helvetica Bold 16, padding 4 × 8, no radius. Pinned to the right of the top banner on every page.
+**`template-card`** — Thumbnail tile in the home "Explore what people are making" grid and the FigJam template gallery.
+- Background `{colors.surface-soft}`, text `{colors.ink}`, type `{typography.body-sm}`, rounded `{rounded.md}`, padding `{spacing.md}`.
 
-### Stickers (GIF-style overlays)
+**`feature-illustration-tile`** — Larger composition tile that holds a product UI mock or pastel illustration.
+- Background `{colors.surface-soft}`, text `{colors.ink}`, type `{typography.eyebrow}`, rounded `{rounded.md}`, padding `{spacing.lg}`.
 
-**`buy-a-dell-sticker`** — yellow rectangular sticker with "BUY a DELL" in Helvetica Bold, the "a" set in a small purple stripe, the "DELL" wordmark in black. Pinned to the top-right of every page.
-- Background `{colors.yellow-sticker}`, text `{colors.ink}`, 1 px black border, type `{typography.button}`, padding 4 × 8, no radius.
+### Color-Block Sections (signature)
 
-**`new-burst-sticker`** — angled yellow burst with "NEW!" in Helvetica Bold black, overlapping the right side of new product ribbon-cards. Slight rotation (~15°) gives it the pinned-on-with-tape feel.
-- Background `{colors.yellow-sticker}`, text `{colors.ink}`, type `{typography.button}`, padding 4 × 8, no radius (rotation applied separately).
+The defining surface of Figma's marketing. Each is a full-content-width panel with `{rounded.lg}` corners and `{spacing.xxl}` interior padding. Variants:
 
-**`cert-seal`** — round red award seal: center reads "PC MAGAZINE", ringed by "SERVICE · RELIABILITY · READERS' CHOICE", with an inner white field and red bordered ring. Sits on the right rail of product pages.
-- Background `{colors.primary}`, text `{colors.canvas}`, type `{typography.button}`, rounded `{rounded.full}`, 64 px size.
+**`color-block-section`** — lime ground for "systems" stories (home), pricing FAQ, and the contact form.
+- Background `{colors.block-lime}`, text `{colors.ink}`, type `{typography.subhead}`, rounded `{rounded.lg}`, padding `{spacing.xxl}`.
+
+**`color-block-section-lilac`** — lavender ground for `/design/` hero and FigJam highlight sections.
+- Background `{colors.block-lilac}`, otherwise identical structure.
+
+**`color-block-section-navy`** — deep indigo ground for the home "Ship products" story block. The only inverse color-block surface above the footer.
+- Background `{colors.block-navy}`, text `{colors.inverse-ink}`, otherwise identical structure.
+
+(Cream, mint, pink, and coral block variants follow the same shape with their respective `{colors.block-*}` surface.)
+
+### Promo Banner
+
+**`promo-banner-lilac`** — The Release Notes / "Save your spot" inline banner that floats above the contact form.
+- Background `{colors.block-lilac}`, text `{colors.ink}`, type `{typography.body-sm}`, rounded `{rounded.md}`, padding `{spacing.md}` `{spacing.lg}`. Carries a `button-magenta-promo` on the right edge.
 
 ### Navigation
 
-**`icon-label-nav`** — bottom-of-page navigation row: four hand-drawn icons (eyeglasses-FIND / house-HOME / yellow-sticker-ONLINE STORE / wrench-SERVICE & SUPPORT) connected by a thin green horizontal rule, each with an uppercase Helvetica label beneath.
-- Background `{colors.canvas}`, text `{colors.ink}`, type `{typography.ui-label}`, padding 8 px around each icon-label pair, no radius.
-- The connecting green rule is part of the GIF imagery, not a CSS border.
+**`top-nav`** — Sticky white bar with logo, primary nav links, sign-in link, and the right-anchored `button-secondary` ("Contact sales") + `button-primary` ("Get started for free") pair.
+- Background `{colors.canvas}`, text `{colors.ink}`, type `{typography.body-sm}`, height 56px.
+- Mobile: collapses primary links into a hamburger that opens a full-canvas overlay; the two pill CTAs remain visible on the bar.
 
-### Inputs & Buttons
+**`marquee-strip`** — Thin black ribbon directly under the nav that scrolls through customer logos in white.
+- Background `{colors.inverse-canvas}`, text `{colors.inverse-ink}`, type `{typography.body-sm}`, height 36px.
 
-**`text-input`** — bordered HTML input. White fill, 1 px solid black border, Times Roman 14 inside.
-- Background `{colors.canvas}`, text `{colors.ink}`, 1 px solid frame-ink, type `{typography.body}`, padding 4 × 6, no radius.
-- Used on the Search and "Configure & Buy" forms (not visible in these three captures but consistent with the era's HTML 3.2 form widgets).
+### Comparison Glyphs
 
-**`button-primary`** — black filled button with white Helvetica Bold uppercase label.
-- Background `{colors.frame-ink}`, text `{colors.on-primary}`, 1 px solid frame-ink, type `{typography.button}`, padding 6 × 16, no radius.
-
-**`button-secondary`** — white filled outlined button. Same chrome with inverted colours.
-- Background `{colors.canvas}`, text `{colors.ink}`, 1 px solid frame-ink, type `{typography.button}`, padding 6 × 16, no radius.
-
-**`button-text-link`** — bare underlined anchor in classic-Mosaic blue.
-- Text `{colors.link}` #0000ee, type `{typography.link}` Times Roman 14, underline on default. No padding, no radius.
+**`comparison-checkmark`** — Green check used in the pricing comparison matrix.
+- Background `{colors.canvas}`, glyph color `{colors.semantic-success}`, rounded `{rounded.full}`, size 16px.
 
 ### Footer
 
-**`footer-band`** — the bottom of every page: icon-label nav row, classic-blue Copyright link, "(Terms of Use)" parenthetical, browser-compatibility small print, and the Microsoft BackOffice / Internet Explorer logo banners.
-- Background `{colors.canvas}`, text `{colors.ink}`, 1 px top border in frame-ink, type `{typography.body-sm}`, padding 16 px.
-
-### Examples (illustrative)
-
-> Auto-derived kit-mirror demonstration surfaces (`scripts/derive-examples-block.mjs`). Each `ex-*` entry references brand-native primitives so downstream consumers (`/preview-design`, `/generate-kit`) re-skin the same 10 surfaces consistently. `TO_FILL` markers indicate missing primitives — resolve in the LLM judgment pass.
-
-**`ex-pricing-tier`** — Default Pricing tier card. Re-uses feature-card chrome with the base white surface.
-- Properties: `backgroundColor`, `textColor`, `borderColor`, `rounded`, `padding`
-
-**`ex-pricing-tier-featured`** — Featured/highlighted tier — polarity-flipped surface (dark fill + light text in light mode, light fill + dark text in dark mode).
-- Properties: `backgroundColor`, `textColor`, `rounded`, `padding`
-
-**`ex-product-selector`** — What's Included summary card — re-purposed for SaaS / B2B verticals (NOT a literal product gallery).
-- Properties: `backgroundColor`, `rounded`, `padding`
-
-**`ex-cart-drawer`** — Subscription summary — re-purposed for SaaS / B2B (line items per add-on, not literal cart).
-- Properties: `backgroundColor`, `rounded`, `padding`, `item-divider`
-
-**`ex-app-shell-row`** — Sidebar nav row inside the App Shell example. Active state uses brand primary as the indicator.
-- Properties: `backgroundColor`, `activeIndicator`, `rounded`, `padding`
-
-**`ex-data-table-cell`** — Default data-table th + td chrome. Header uses mono-caps eyebrow typography; body uses body-sm.
-- Properties: `headerBackground`, `headerTypography`, `bodyTypography`, `cellPadding`, `rowBorder`
-
-**`ex-auth-form-card`** — Sign-in / sign-up card. Re-uses feature-card chrome with text-input primitives inside.
-- Properties: `backgroundColor`, `rounded`, `padding`
-
-**`ex-modal-card`** — Modal dialog surface — same chrome as feature-card with elevated shadow.
-- Properties: `backgroundColor`, `rounded`, `padding`
-
-**`ex-empty-state-card`** — Empty-state illustration frame.
-- Properties: `backgroundColor`, `rounded`, `padding`, `captionTypography`
-
-**`ex-toast`** — Toast notification surface — feature-card shape + medium shadow.
-- Properties: `backgroundColor`, `rounded`, `padding`, `typography`
-
+**`footer`** — Dense link grid on white canvas with the wordmark "Figma" set in display weight at the top-left.
+- Background `{colors.canvas}`, text `{colors.ink}`, type `{typography.caption}` for column headings and small links, padding `{spacing.section}` top/bottom · `{spacing.xl}` sides.
 
 ## Do's and Don'ts
 
 ### Do
-- Keep the literal `{components.page-frame}` black border on every page — this is the brand's single most identifiable container chrome.
-- Reserve `{colors.primary}` (Dell red) for the `{components.cta-block-red}` panel and the `{components.phone-callout}` only. Every other use dilutes the urgency signal.
-- Use the eight ribbon-card tint colors (`{colors.tint-olive}` / sage / salmon / peach / lime / sky / steel / periwinkle) as a *family* — pick one per product line and stay with it across the line's marketing surfaces.
-- Set every display headline in `{typography.display}` (Arial Black 36 / weight 900). The brand's typographic register depends on extreme weight against flat color.
-- Keep body copy in `{typography.body}` Times Roman 14 — substituting a modern sans loses the catalog feel entirely.
-- Render every CTA / button at `{rounded.none}` (0 px). Modern soft-radius buttons betray the era.
-- Use hand-painted bevels / hard-edge GIF shadows on stickers and product photos. Never substitute a soft CSS shadow.
+
+- Reserve `{colors.primary}` for genuine primary CTAs and selected states (e.g., `pricing-tab-selected`). Don't use it as a decorative accent.
+- When introducing a story section, choose **one** color block from the `{colors.block-*}` family and let it span full content width with `{rounded.lg}` corners and `{spacing.xxl}` interior padding.
+- Keep type in `figmaSans` at variable weights — pick from 320, 330, 340, 480, 540, 700 to express hierarchy. Avoid intermediate weights outside this set.
+- Use `figmaMono` only for eyebrows and captions, always uppercase, with the documented positive letter-spacing.
+- Compose every CTA as a pill (`{rounded.pill}`) and every icon button as a circle (`{rounded.full}`).
+- Allow the page to **return to white canvas** between every two color blocks so each block reads as deliberate.
+- Pair `button-primary` and `button-secondary` whenever a section needs both a primary action and a sales / secondary action — the black-and-white pair is the brand signature.
 
 ### Don't
-- Don't introduce a chromatic accent outside the eight catalog tints + Dell red + Dell yellow + classic link blue. The palette is closed by design.
-- Don't soften any corner. `{rounded.none}` is the universal modifier; only award seals get `{rounded.full}`.
-- Don't replace Times Roman body with Arial / Helvetica / Inter / a webfont — the serif body is the era's signature.
-- Don't add soft drop-shadows or atmospheric gradients. The brand has hard borders and flat fills; everything else reads as anachronism.
-- Don't crop or "tuck" product photos with `border-radius` or `clip-path`. The notch into the ribbon-card right edge is the framing — the photo itself stays a hard rectangle.
-- Don't pair two `{components.cta-block-red}` panels on the same page. The red fill is meant to be the singular attention pole.
-- Don't strip the `{components.phone-callout}` from the top banner. In 1996 the website existed to drive phone-call orders; the phone number IS the navigation.
+
+- Don't introduce mid-gray text. Body hierarchy comes from `figmaSans` weight, not from opacity.
+- Don't add drop shadows to color-block sections — the color is the depth device.
+- Don't introduce new accent colors outside the documented `{colors.block-*}` palette and `{colors.accent-magenta}`. Adding, e.g., a saturated brand orange would break the system.
+- Don't combine more than one color block visible inside a single viewport — Figma's pacing always lets the white canvas separate them.
+- Don't square off CTAs. Square buttons read as a different brand.
+- Don't put `figmaMono` in body copy — it's a taxonomy tool, not a reading typeface.
+- Don't replace the `pricing-tab-selected` black fill with a colored tab; the brand pattern is "selected = primary surface".
+
+## Responsive Behavior
+
+### Breakpoints
+
+| Name | Width | Key Changes |
+|---|---|---|
+| 4k | 1920px | Max content width holds at 1280px; gutters expand |
+| Desktop-XL | 1440px | Default desktop layout |
+| Desktop | 1400px | Comparison table column widths normalize |
+| Desktop-S | 1280px | Pricing 4-up tier grid maintained |
+| Tablet | 960px | Pricing collapses 4-up → 2-up; nav becomes hamburger |
+| Mobile-L | 768px | Color-block sections become full-bleed (no rounded corners on edges) |
+| Mobile | 560px | Display-xl reduces from 86px to ~48px; pill CTAs go full-width |
+| Mobile-XS | 559px | Two-column footer collapses to single column |
+
+### Touch Targets
+
+- Pill buttons (`button-primary`, `button-secondary`) maintain a minimum 44px tap height across all viewports — achieved by combining `{typography.button}` 20px line-height with the documented vertical padding.
+- Circular icon buttons (`button-icon-circular`) are 40px on desktop and grow to 44px on touch viewports.
+- Form input minimum tap target on `/contact/` is 48px high.
+
+### Collapsing Strategy
+
+- **Nav**: desktop horizontal nav with two right-anchored pills collapses to a hamburger overlay below 960px. The two pills (`Contact sales`, `Get started for free`) stay visible on the bar above 560px and stack in the overlay below.
+- **Pricing tier grid**: 4-up → 2-up at 960px → 1-up below 768px. The pill toggle stays horizontal and scrolls horizontally if needed below 560px.
+- **Color-block sections**: above 768px the section keeps `{spacing.xxl}` of canvas around it so the rounded corners read; below 768px the corners are removed and the block bleeds to viewport edge for a poster effect.
+- **Comparison table**: below 960px the matrix collapses into per-tier accordions to avoid horizontal scroll.
+
+### Image Behavior
+
+- Product UI mocks inside color blocks scale proportionally and never crop. Below 768px they shrink rather than reflow.
+- Template thumbnails in the home grid use lazy loading and animate in on scroll.
+- Sticky-note style FigJam thumbnails maintain their slight off-axis rotation across breakpoints — the rotation is a brand signal, not a desktop-only flourish.
+
+## Iteration Guide
+
+1. Focus on ONE component at a time and reference it by its `components:` token name (e.g., `{components.button-primary}`, `{components.color-block-section}`).
+2. When introducing a new section, decide **first** which `{colors.block-*}` token it sits on; the surface choice is the most consequential decision.
+3. Default body type to `{typography.body}`; reach for `{typography.subhead}` or `{typography.headline}` only inside a color block.
+4. Run `npx @google/design.md lint DESIGN.md` after edits — `broken-ref`, `contrast-ratio`, and `orphaned-tokens` warnings flag issues automatically.
+5. Add new variants as separate component entries (`-pressed`, `-selected`) — do not bury them in prose.
+6. Keep `{colors.primary}` scarce. If two `button-primary` instances appear in the same viewport, the section is doing too much — neutralize one to `button-secondary`.
+7. Treat `{colors.accent-magenta}` as a single-shot color: one promo CTA per page, never two.
+
+## Known Gaps
+
+- The exact pastel hex values of `{colors.block-*}` are derived from screenshot pixels; the production source likely uses named tokens that aren't exposed via CSS variables. Treat the documented hex values as faithful approximations rather than exact brand specs.
+- Dark mode is not documented because the marketing site does not ship a dark theme — the closest analog is the navy color-block (`color-block-section-navy`) and the inverse-canvas footer.
+- Form-field error and validation styling is not visible on `/contact/` because no error states render in the static screenshot. Inputs have hairline borders and rounded `{rounded.md}` corners; error treatment is not documented.
+- The animated marquee-strip and color-block reveal animations are not documented (per the no-interaction policy).
