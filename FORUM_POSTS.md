@@ -4,6 +4,16 @@ Every post follows the same rule: the hook is that the service's most common
 answer is "no, this has no edge" - and it sells that answer. No profit
 promises anywhere. The credibility IS the negative result.
 
+## Proof stamps (attach to any post)
+
+> live URL: https://verify402.onrender.com (real-money mode: USDC on Base/Solana mainnet)
+> code: https://github.com/a32116150-ctrl/verify402 (public - run the tests yourself)
+> settlement receipt (end-to-end payment proven): buyer wallet signed,
+> facilitator settled on-chain: tx 0x11121007bafec47f132763f42e2f58af6ebba7fba9c7ed1b5980d3f595a9324a
+> (Base Sepolia / testnet USDC), buyer −$0.03, seller +$0.03, answer returned.
+> Free forever: /findings live on Ethereum majors, /info, /health,
+> /.well-known/agent-registration.json.
+
 ## 1. x402 Slack (`https://slack.x402.org`, join → post in showcase channel)
 
 **Show & tell:**
