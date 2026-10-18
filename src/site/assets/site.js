@@ -25,31 +25,47 @@
   });
 
   // Live free verdicts: fill any [data-findings] list from GET /findings.
+  // One retry covers a cold free-tier instance; after that, say so honestly.
   var lists = document.querySelectorAll("[data-findings]");
   var statuses = document.querySelectorAll("[data-block]");
   if (!lists.length) return;
-  fetch("/findings", { headers: { accept: "application/json" } })
-    .then(function (r) { return r.ok ? r.json() : null; })
-    .then(function (d) {
-      if (!d) throw new Error("offline");
-      var block = d.blockNumber || "—";
-      statuses.forEach(function (s) { s.textContent = "block " + block; });
-      var items = d.results || [];
-      lists.forEach(function (list) {
-        list.innerHTML = items.slice(0, 6).map(function (m) {
-          var v = m.verdict || "—";
-          var cls = v === "no_edge" ? "verdict" : "verdict warn";
-          return '<div class="vrow"><span class="pair">' + (m.target || "pair") +
-            '</span><span class="' + cls + '">' + v +
-            '</span><span class="meta">net ' + (m.netBps != null ? m.netBps + " bps" : "—") + "</span></div>";
-        }).join("");
-      });
-    })
-    .catch(function () {
-      lists.forEach(function (list) {
-        list.innerHTML = '<div class="vrow"><span class="pair">status</span>' +
-          '<span class="verdict warn">cold start</span>' +
-          '<span class="meta">free tier wakes in ~30s — reload</span></div>';
-      });
+
+  function render(d) {
+    var block = d.blockNumber || "—";
+    var label = "block " + block;
+    if (d.ageSeconds > 90) label += " · cached";
+    statuses.forEach(function (s) { s.textContent = label; });
+    var items = d.results || [];
+    lists.forEach(function (list) {
+      list.innerHTML = items.slice(0, 6).map(function (m) {
+        var v = m.verdict || "—";
+        var cls = v === "no_edge" ? "verdict" : "verdict warn";
+        var meta = v === "unavailable"
+          ? "no quote this pass"
+          : "net " + (m.netBps != null ? m.netBps + " bps" : "—");
+        return '<div class="vrow"><span class="pair">' + (m.target || "pair") +
+          '</span><span class="' + cls + '">' + v +
+          '</span><span class="meta">' + meta + "</span></div>";
+      }).join("");
     });
+  }
+
+  function offline() {
+    lists.forEach(function (list) {
+      list.innerHTML = '<div class="vrow"><span class="pair">status</span>' +
+        '<span class="verdict warn">cold start</span>' +
+        '<span class="meta">free tier is waking — reload in ~20s</span></div>';
+    });
+  }
+
+  function load(attempt) {
+    fetch("/findings", { headers: { accept: "application/json" } })
+      .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error("http " + r.status)); })
+      .then(render)
+      .catch(function () {
+        if (attempt < 1) { setTimeout(function () { load(attempt + 1); }, 4000); return; }
+        offline();
+      });
+  }
+  load(0);
 })();

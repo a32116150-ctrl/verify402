@@ -378,46 +378,110 @@ app.get(["/.well-known/agent-registration.json", "/.well-known/agent-card.json"]
 // Hero verdicts, FREE. Ethereum majors at one size - the boring part of the
 // market, and almost always no_edge. That is the point: an agent (or a
 // human) can validate that this service tells reproducible truth before
-// paying for a long-tail token. First call after a new block costs a few
-// RPC round trips; cached per block after that.
+// paying for a long-tail token.
+//
+// The first version recomputed every pair on every new block. That is correct
+// and unusable: on a public RPC a full set can take 90-160 seconds, so the
+// free "live" page - the one thing meant to earn trust - sat at "loading".
+// The showcase does not need a fresh block for every visitor. It needs an
+// honest snapshot, a timestamp, and a bound on how long a slow pair may hold
+// the answer. So: one snapshot, served while a refresh runs in the background,
+// with a hard per-pair budget that reports `unavailable` instead of hanging.
+const FINDINGS_TTL_MS = 120_000;
+const FINDINGS_PAIR_BUDGET_MS = 22_000;
+let findingsSnap = null; // { payload, at }
+let findingsRefresh = null;
+
+const withTimeout = (promise, ms, label) =>
+  Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error(`${label}: no quote within ${Math.round(ms / 1000)}s`)), ms),
+    ),
+  ]);
+
+async function computeFindings() {
+  const size = 100000;
+  const baseTok = CHAINS[1].tokens.USDC;
+  const targets = Object.keys(CHAINS[1].tokens).filter((t) => t !== "USDC");
+
+  const results = await Promise.all(
+    targets.map(async (target) => {
+      try {
+        const r = await withTimeout(
+          measureRoundTrip(1, {
+            baseSymbol: "USDC",
+            targetSymbol: target,
+            size: BigInt(Math.round(size * 10 ** baseTok.decimals)),
+            minNet: 0n,
+          }),
+          FINDINGS_PAIR_BUDGET_MS,
+          target,
+        );
+        if (!r.ok) {
+          return { target, verdict: "unavailable", reason: r.reason, blockNumber: r.blockNumber ?? null };
+        }
+        return {
+          target: r.target.symbol,
+          verdict: r.verdict,
+          grossBps: r.gross.bps,
+          netBps: r.net.bps,
+          blockNumber: r.blockNumber,
+        };
+      } catch (e) {
+        return { target, verdict: "unavailable", reason: e.message, blockNumber: null };
+      }
+    }),
+  );
+
+  const blocks = results.map((r) => r.blockNumber).filter((n) => Number.isFinite(n));
+  let blockNumber = blocks.length ? Math.max(...blocks) : null;
+  if (blockNumber == null) {
+    try { blockNumber = Number(await clientFor(1).getBlockNumber()); } catch { /* reported as null */ }
+  }
+
+  return {
+    explanation:
+      "Free showcase: Ethereum majors, $100k round trips, each pair pinned to the latest block it was measured at. The honest answer is normally no_edge - that is the market's fee boundary, not a failure. Arbitrary tokens and live sizes are the paid routes POST /verify and POST /safety.",
+    blockNumber,
+    measuredAt: new Date().toISOString(),
+    results,
+  };
+}
+
+function refreshFindings() {
+  if (!findingsRefresh) {
+    findingsRefresh = computeFindings()
+      .then((payload) => {
+        findingsSnap = { payload, at: Date.now() };
+        return payload;
+      })
+      .finally(() => { findingsRefresh = null; });
+  }
+  return findingsRefresh;
+}
+
+const findingsAge = () => Math.round((Date.now() - findingsSnap.at) / 1000);
+
 app.get("/findings", async (_req, res) => {
+  if (findingsSnap && Date.now() - findingsSnap.at < FINDINGS_TTL_MS) {
+    res.set("Cache-Control", "public, max-age=30");
+    return res.json({ ...findingsSnap.payload, ageSeconds: findingsAge() });
+  }
+  if (findingsSnap) {
+    // Stale-while-revalidate: the visitor gets the last honest snapshot now,
+    // clearly marked with its age, while a fresh one is measured behind it.
+    refreshFindings().catch(() => {});
+    res.set("Cache-Control", "no-store");
+    return res.json({ ...findingsSnap.payload, stale: true, ageSeconds: findingsAge() });
+  }
   try {
-    const client = clientFor(1);
-    const blockNumber = await client.getBlockNumber();
-    const size = 100000;
-    const baseTok = CHAINS[1].tokens.USDC;
-    const targets = Object.keys(CHAINS[1].tokens).filter((t) => t !== "USDC");
-
-    const results = await Promise.all(
-      targets.map((target) => {
-        const key = `1:USDC:${target}:${size}:0:${blockNumber}`;
-        const cached = cache.get(key);
-        if (cached) return Promise.resolve(cached);
-        return measureRoundTrip(1, {
-          baseSymbol: "USDC",
-          targetSymbol: target,
-          size: BigInt(Math.round(size * 10 ** baseTok.decimals)),
-          minNet: 0n,
-        }).then((result) => {
-          cachePut(key, result);
-          return result;
-        });
-      }),
-    );
-
-    res.json({
-      explanation:
-        "Free showcase: Ethereum majors, $100k round trips, this block. The honest answer is normally no_edge - that is the market's fee boundary, not a failure. Arbitrary tokens and live sizes are the paid routes POST /verify and POST /safety.",
-      blockNumber: Number(blockNumber),
-      results: results.map((r) => ({
-        target: r.target.symbol,
-        verdict: r.verdict,
-        grossBps: r.gross.bps,
-        netBps: r.net.bps,
-      })),
-    });
+    // Cold: bounded by the per-pair budget, so this cannot hang for minutes.
+    const payload = await refreshFindings();
+    res.set("Cache-Control", "public, max-age=30");
+    return res.json({ ...payload, ageSeconds: 0 });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    res.status(503).json({ error: e.message, hint: "The measurement pass failed; retry in a few seconds." });
   }
 });
 
@@ -832,5 +896,9 @@ app.listen(PORT, () => {
   console.log(`  pay to EVM  : ${PAY_TO_EVM}`);
   console.log(`  pay to SVM  : ${PAY_TO_SVM}`);
   console.log(`  facilitator : ${FACILITATOR_URL}`);
-  console.log(`  free        : GET / , /info , /health , /.well-known/*.json\n`);
+  console.log(`  free        : GET / , /info , /health , /findings , /.well-known/*.json\n`);
+
+  // Warm the free snapshot as soon as the process is up: a cold Render instance
+  // should spend its boot time measuring, not making the first visitor wait.
+  refreshFindings().catch((e) => console.warn("findings prewarm failed:", e.message));
 });
