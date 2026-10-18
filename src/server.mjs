@@ -11,7 +11,9 @@
 // intended caller is a program.
 
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 const LANDING_HTML = readFileSync(new URL("./landing.html", import.meta.url), "utf8");
+const SITE_DIR = fileURLToPath(new URL("./site", import.meta.url));
 
 import express from "express";
 import { paymentMiddleware, x402ResourceServer } from "@x402/express";
@@ -418,6 +420,17 @@ app.get("/findings", async (_req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
+
+// Static pages for humans: /checks, /live, /proof, /docs, /donate (+ /assets).
+// Clean URLs via the html extension; HTML is no-store so edits go live at once.
+app.use(express.static(SITE_DIR, {
+  index: false,
+  extensions: ["html"],
+  setHeaders(res, filePath) {
+    if (filePath.endsWith(".html")) res.setHeader("Cache-Control", "no-store");
+    else res.setHeader("Cache-Control", "public, max-age=300");
+  },
+}));
 
 app.get("/", (req, res) => {
   // Humans get the landing page; machine clients keep the plain menu.

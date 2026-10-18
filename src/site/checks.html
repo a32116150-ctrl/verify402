@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Checks — verify402</title>
+<meta name="description" content="Five fixed-price checks for AI agents: verify an arbitrage, gate a token, compare a route, audit a quote, size a trade. USDC over x402 on Base or Solana.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;560;640;750&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap nav-in">
+    <a class="logo" href="/">verify40<i>2</i></a>
+    <nav class="nav-links">
+      <a href="/checks" aria-current="page">Checks</a>
+      <a href="/live">Live</a>
+      <a href="/proof">Proof</a>
+      <a href="/docs">Docs</a>
+      <a href="/donate">Donate</a>
+    </nav>
+    <div class="nav-cta">
+      <span class="nav-live"><span class="dot"></span>live · <span data-block>block —</span></span>
+      <a class="btn sm" href="/live">Free findings</a>
+    </div>
+    <details class="menu">
+      <summary>Menu</summary>
+      <nav>
+        <a href="/checks">Checks</a>
+        <a href="/live">Live findings</a>
+        <a href="/proof">Proof &amp; receipts</a>
+        <a href="/docs">Docs</a>
+        <a href="/donate">Donate</a>
+      </nav>
+    </details>
+  </div>
+</header>
+
+<main>
+  <div class="wrap page-head">
+    <p class="eyebrow">The catalog</p>
+    <h1>Five checks, five prices, no subscription.</h1>
+    <p class="lead">Each call measures one claim against the chain at a pinned block and returns a verdict with evidence. Pay per call in USDC; no account, no minimum, no monthly bill.</p>
+    <p class="small muted" style="margin-top:18px">Looking for the free tier? <a class="textlink" href="/live">Live findings</a> is free and needs no payment. Machine-readable spec: <a class="textlink" href="/info">/info</a>.</p>
+  </div>
+
+  <section>
+    <div class="wrap stack">
+
+      <article id="verify">
+        <p class="eyebrow">01 · $0.05 per call</p>
+        <h2 style="margin-top:14px">/verify — is this arbitrage real?</h2>
+        <p class="lead" style="margin-top:14px">Takes a claimed cross-venue opportunity and measures it at a pinned block: Uniswap's own QuoterV2 on one side, each router's own math on the other, flash-loan premium and gas subtracted before any verdict is printed.</p>
+        <div class="proof-grid" style="margin-top:26px">
+          <div class="pcard2">
+            <p class="tag">You get</p>
+            <h3>Three honest states</h3>
+            <p><b>edge</b> — profit survives measured costs. <b>no_edge</b> — it doesn't exist at this block. <b>no_edge_costs_ate_it</b> — a gross spread existed; costs ate it. The verdict names which.</p>
+          </div>
+          <div class="pcard2">
+            <p class="tag">Receipt</p>
+            <h3>Recomputable by anyone</h3>
+            <p>request hash, response hash, pinned block, and the numbers behind the verdict — enough for a third party to redo the check without trusting us.</p>
+          </div>
+        </div>
+        <div style="margin-top:26px">
+          <p class="code-cap">Request</p>
+<pre><span class="c">POST</span> /verify
+{ <span class="y">"pair"</span>: <span class="g">"USDC/WETH"</span>, <span class="y">"dex"</span>: <span class="g">"uniswap-v3"</span>, <span class="y">"sizeUsd"</span>: 100000 }</pre>
+        </div>
+      </article>
+
+      <hr class="divider" style="margin:44px 0">
+
+      <article id="safety">
+        <p class="eyebrow">02 · $0.10 per call</p>
+        <h2 style="margin-top:14px">/safety — is this token safe to buy?</h2>
+        <p class="lead" style="margin-top:14px">A pre-trade gate. Contract facts, market liquidity, scam signals, a USD-sized sell probe across every venue, round-trip cost at your intended size, and phantom-price detection — then TRUST, CAUTION or AVOID, with the evidence named.</p>
+        <div style="margin-top:26px">
+          <p class="code-cap">Request</p>
+<pre><span class="c">POST</span> /safety
+{ <span class="y">"tokenAddress"</span>: <span class="g">"0x…"</span>, <span class="y">"chainId"</span>: 1, <span class="y">"intendedUsd"</span>: 500 }</pre>
+        </div>
+        <p class="small muted" style="margin-top:14px">Most calls land on CAUTION or AVOID. A gate that only said yes would be a marketing page, not a gate.</p>
+      </article>
+
+      <hr class="divider" style="margin:44px 0">
+
+      <article id="route">
+        <p class="eyebrow">03 · $0.03 per call</p>
+        <h2 style="margin-top:14px">/route — what would the chain actually pay?</h2>
+        <p class="lead" style="margin-top:14px">Best execution route for a swap, plus every quoted venue at your size. Useful when a UI shows one price and the chain would pay another.</p>
+        <div style="margin-top:26px">
+          <p class="code-cap">Request</p>
+<pre><span class="c">POST</span> /route
+{ <span class="y">"tokenAddress"</span>: <span class="g">"WETH"</span>, <span class="y">"intendedUsd"</span>: 500 }</pre>
+        </div>
+      </article>
+
+      <hr class="divider" style="margin:44px 0">
+
+      <article id="quotecheck">
+        <p class="eyebrow">04 · $0.05 per call</p>
+        <h2 style="margin-top:14px">/quotecheck — is this quote honest?</h2>
+        <p class="lead" style="margin-top:14px">Someone — a broker, a bot, another agent — gave you a number. This re-measures it at a pinned block and answers: fair, overpaying, or too good to be true.</p>
+        <div style="margin-top:26px">
+          <p class="code-cap">Request</p>
+<pre><span class="c">POST</span> /quotecheck
+{ <span class="y">"tokenAddress"</span>: <span class="g">"0x…"</span>, <span class="y">"intendedUsd"</span>: 500, <span class="y">"offeredPriceUsd"</span>: 0.000021 }</pre>
+        </div>
+      </article>
+
+      <hr class="divider" style="margin:44px 0">
+
+      <article id="depth">
+        <p class="eyebrow">05 · $0.05 per call</p>
+        <h2 style="margin-top:14px">/depth — how big can this trade be?</h2>
+        <p class="lead" style="margin-top:14px">Position sizing: a capacity ladder across USD sizes, with the realizable impact and round-trip cost at each rung. Pool-reserve headlines tell an agent nothing about the block it will actually trade in.</p>
+        <div style="margin-top:26px">
+          <p class="code-cap">Request</p>
+<pre><span class="c">POST</span> /depth
+{ <span class="y">"tokenAddress"</span>: <span class="g">"WETH"</span>, <span class="y">"baseSymbol"</span>: <span class="g">"USDC"</span>, <span class="y">"sizesUsd"</span>: [100, 1000, 10000, 100000] }</pre>
+        </div>
+      </article>
+
+    </div>
+  </section>
+
+  <section class="soft">
+    <div class="wrap">
+      <div class="sec-head">
+        <p class="eyebrow">Prices &amp; limits</p>
+        <h2>Fixed, exact, on the rail.</h2>
+      </div>
+      <div class="table-wrap" style="margin-top:32px">
+        <table class="table">
+          <thead><tr><th>Route</th><th>Question</th><th>Price</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">/verify</td><td>Is the arbitrage real?</td><td class="mono">$0.05</td><td>Three-state verdict with evidence</td></tr>
+            <tr><td class="mono">/safety</td><td>Is the token safe?</td><td class="mono">$0.10</td><td>Pre-trade gate · TRUST / CAUTION / AVOID</td></tr>
+            <tr><td class="mono">/route</td><td>What would the chain pay?</td><td class="mono">$0.03</td><td>Every quoted venue at your size</td></tr>
+            <tr><td class="mono">/quotecheck</td><td>Is the quote honest?</td><td class="mono">$0.05</td><td>fair / overpaying / too_good_to_be_true</td></tr>
+            <tr><td class="mono">/depth</td><td>How big can I trade?</td><td class="mono">$0.05</td><td>Capacity ladder across sizes</td></tr>
+            <tr><td class="mono">/findings</td><td>Show me honest verdicts</td><td class="mono">free</td><td>Ethereum majors, pinned block</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout" style="margin-top:28px">
+        <h3>Caps and safety</h3>
+        <p>Per-call cap: <code class="inline">$0.25</code>. An optional daily spend cap exists and is off by default. A caller that sends <code class="inline">x-idempotency-key</code> gets a free replay of a settled answer within ten minutes if the reply is lost — capped, and only after settlement confirms.</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div class="foot-brand">
+        <a class="logo" href="/">verify40<i>2</i></a>
+        <p>Machine-payable truth for agents. A negative result, delivered with receipts.</p>
+      </div>
+      <div class="foot-col">
+        <p class="cap">Product</p>
+        <a href="/checks">The five checks</a>
+        <a href="/live">Live findings</a>
+        <a href="/docs">Documentation</a>
+        <a href="/donate">Donate</a>
+      </div>
+      <div class="foot-col">
+        <p class="cap">Project</p>
+        <a href="/proof">Proof &amp; receipts</a>
+        <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">Source code</a>
+        <a href="https://github.com/x402-foundation/x402/issues/3847" rel="noopener">x402 proposal</a>
+      </div>
+      <div class="foot-col">
+        <p class="cap">For machines</p>
+        <a href="/info">/info</a>
+        <a href="/health">/health</a>
+        <a href="/.well-known/agent-card.json">agent card</a>
+        <a href="/findings">/findings</a>
+      </div>
+    </div>
+    <p class="legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Mainnet-armed; the only settlement ever recorded is the operator's own testnet transaction. No external buyer yet. Prices are per call, paid in USDC over x402.</p>
+  </div>
+</footer>
+
+<script src="/assets/site.js"></script>
+</body>
+</html>

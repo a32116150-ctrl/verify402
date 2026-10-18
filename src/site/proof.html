@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Proof & receipts — verify402</title>
+<meta name="description" content="What verify402 has proven, what it has not, and the public traces behind both: a testnet settlement, an independent audit, and an x402 extension proposal.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;560;640;750&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap nav-in">
+    <a class="logo" href="/">verify40<i>2</i></a>
+    <nav class="nav-links">
+      <a href="/checks">Checks</a>
+      <a href="/live">Live</a>
+      <a href="/proof" aria-current="page">Proof</a>
+      <a href="/docs">Docs</a>
+      <a href="/donate">Donate</a>
+    </nav>
+    <div class="nav-cta">
+      <span class="nav-live"><span class="dot"></span>live · <span data-block>block —</span></span>
+      <a class="btn sm" href="/live">Free findings</a>
+    </div>
+    <details class="menu">
+      <summary>Menu</summary>
+      <nav>
+        <a href="/checks">Checks</a>
+        <a href="/live">Live findings</a>
+        <a href="/proof">Proof &amp; receipts</a>
+        <a href="/docs">Docs</a>
+        <a href="/donate">Donate</a>
+      </nav>
+    </details>
+  </div>
+</header>
+
+<main>
+  <div class="wrap page-head">
+    <p class="eyebrow">Receipts, not promises</p>
+    <h1>What is proven, what is not.</h1>
+    <p class="lead">A truth service has to apply its own standard to itself. This page lists every claim the project makes and the public evidence behind it — including the claims that are still false.</p>
+  </div>
+
+  <section>
+    <div class="wrap">
+
+      <article>
+        <p class="tag" style="font:500 11px/1 var(--mono); letter-spacing:.1em; text-transform:uppercase; color:var(--muted)">Proven · on-chain</p>
+        <h2 style="margin-top:14px">One full settlement</h2>
+        <p class="lead" style="margin-top:14px">A buyer paid, the seller received, and the verdict travelled inside the settlement receipt. It was the operator's own funds on the testnet — the honest scope of the proof.</p>
+        <div class="callout good" style="margin-top:22px">
+          <h3>Receipt</h3>
+          <p><a href="https://sepolia.basescan.org/tx/0x11121007bafec47f132763f42e2f58af6ebba7fba9c7ed1b5980d3f595a9324a" rel="noopener">0x11121007bafec47f132763f42e2f58af6ebba7fba9c7ed1b5980d3f595a9324a</a><br>
+          Base Sepolia · payTo <code class="inline">0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb</code></p>
+        </div>
+      </article>
+
+      <hr class="divider" style="margin:44px 0">
+
+      <article>
+        <p class="tag" style="font:500 11px/1 var(--mono); letter-spacing:.1em; text-transform:uppercase; color:var(--muted)">Proven · external audit</p>
+        <h2 style="margin-top:14px">It was audited, and it lost</h2>
+        <p class="lead" style="margin-top:14px">An independent agent built a harness against the source and publicly reproduced two defects in the paid-recovery contract: recovery was recorded before settlement success, and a companion alias could borrow a second budget. Both were verified against the source, fixed the same day, and re-tested.</p>
+        <div class="proof-grid" style="margin-top:24px">
+          <div class="pcard2">
+            <p class="tag">The audit trace</p>
+            <h3>Public harness, public failure</h3>
+            <p><a href="https://gist.github.com/epistemedeus/e08c29a2dbf0ba67cb8777315c979e29" rel="noopener">The gist</a> runs against commit <code class="inline">cd59b105</code> and shows the naive contract returning 200 where it should have stopped at the paywall.</p>
+          </div>
+          <div class="pcard2">
+            <p class="tag">The fix</p>
+            <h3>Fail-closed, then re-tested</h3>
+            <p>Commit <a href="https://github.com/a32116150-ctrl/verify402/commit/4bf3c9c" rel="noopener">4bf3c9c</a>: settlement stages inert, promotion only on the official <code class="inline">onAfterSettle</code> hook matched on the actual response bytes; one projection everywhere; per-operation replay cap. Suite 34/34.</p>
+          </div>
+        </div>
+      </article>
+
+      <hr class="divider" style="margin:44px 0">
+
+      <article>
+        <p class="tag" style="font:500 11px/1 var(--mono); letter-spacing:.1em; text-transform:uppercase; color:var(--muted)">Proposed · not adopted</p>
+        <h2 style="margin-top:14px">An x402 protocol extension</h2>
+        <p class="lead" style="margin-top:14px">The recovery contract was written up as an optional extension to the x402 spec: declared evidence projection plus settled-response retry recovery, with the fail-closed rule as the normative core. It is a proposal, not a standard.</p>
+        <p class="small muted" style="margin-top:16px"><a class="textlink" href="https://github.com/x402-foundation/x402/issues/3847" rel="noopener">Issue #3847</a> · <a class="textlink" href="https://github.com/x402-foundation/x402/pull/3848" rel="noopener">Draft spec PR #3848</a> — pending maintainer review. If it is rejected, this page will say so.</p>
+      </article>
+
+      <hr class="divider" style="margin:44px 0">
+
+      <article>
+        <p class="tag" style="font:500 11px/1 var(--mono); letter-spacing:.1em; text-transform:uppercase; color:var(--muted)">Not proven · stated plainly</p>
+        <h2 style="margin-top:14px">No external buyer. No funding.</h2>
+        <p class="lead" style="margin-top:14px">Nobody outside the operator has paid for a call yet. There are no grants, no revenue, and no sponsors. The free tier and the RPC calls come out of the operator's own pocket. When the first external payment lands, this page changes the same day — with the transaction.</p>
+        <div class="callout warn" style="margin-top:22px">
+          <h3>Donation ledger</h3>
+          <p><b>No donations received yet.</b> Every donation will be acknowledged here with a transaction link, if the donor wants it named. <a href="/donate">Donation options</a>.</p>
+        </div>
+      </article>
+
+      <hr class="divider" style="margin:44px 0">
+
+      <article id="recompute">
+        <p class="tag" style="font:500 11px/1 var(--mono); letter-spacing:.1em; text-transform:uppercase; color:var(--muted)">Reproduce it</p>
+        <h2 style="margin-top:14px">Don't trust this page — check it.</h2>
+        <p class="lead" style="margin-top:14px">Everything here is public: the source, the tests, the chain. The suite runs offline against recorded fixtures, and the settlement is on a public explorer.</p>
+        <div class="btn-row" style="margin-top:22px">
+          <a class="btn" href="https://github.com/a32116150-ctrl/verify402" rel="noopener">Open the source</a>
+          <a class="btn ghost" href="/live">Watch it answer live</a>
+        </div>
+      </article>
+
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div class="foot-brand">
+        <a class="logo" href="/">verify40<i>2</i></a>
+        <p>Machine-payable truth for agents. A negative result, delivered with receipts.</p>
+      </div>
+      <div class="foot-col">
+        <p class="cap">Product</p>
+        <a href="/checks">The five checks</a>
+        <a href="/live">Live findings</a>
+        <a href="/docs">Documentation</a>
+        <a href="/donate">Donate</a>
+      </div>
+      <div class="foot-col">
+        <p class="cap">Project</p>
+        <a href="/proof">Proof &amp; receipts</a>
+        <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">Source code</a>
+        <a href="https://github.com/x402-foundation/x402/issues/3847" rel="noopener">x402 proposal</a>
+      </div>
+      <div class="foot-col">
+        <p class="cap">For machines</p>
+        <a href="/info">/info</a>
+        <a href="/health">/health</a>
+        <a href="/.well-known/agent-card.json">agent card</a>
+        <a href="/findings">/findings</a>
+      </div>
+    </div>
+    <p class="legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Mainnet-armed; the only settlement ever recorded is the operator's own testnet transaction. No external buyer yet. Prices are per call, paid in USDC over x402.</p>
+  </div>
+</footer>
+
+<script src="/assets/site.js"></script>
+</body>
+</html>

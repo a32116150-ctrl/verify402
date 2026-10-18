@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Docs — verify402</title>
+<meta name="description" content="How to call verify402 from an agent: the 402 handshake, exact requests, x-idempotency-key and the settled-response recovery contract, receipts, and machine endpoints.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;560;640;750&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap nav-in">
+    <a class="logo" href="/">verify40<i>2</i></a>
+    <nav class="nav-links">
+      <a href="/checks">Checks</a>
+      <a href="/live">Live</a>
+      <a href="/proof">Proof</a>
+      <a href="/docs" aria-current="page">Docs</a>
+      <a href="/donate">Donate</a>
+    </nav>
+    <div class="nav-cta">
+      <span class="nav-live"><span class="dot"></span>live · <span data-block>block —</span></span>
+      <a class="btn sm" href="/live">Free findings</a>
+    </div>
+    <details class="menu">
+      <summary>Menu</summary>
+      <nav>
+        <a href="/checks">Checks</a>
+        <a href="/live">Live findings</a>
+        <a href="/proof">Proof &amp; receipts</a>
+        <a href="/docs">Docs</a>
+        <a href="/donate">Donate</a>
+      </nav>
+    </details>
+  </div>
+</header>
+
+<main>
+  <div class="wrap page-head">
+    <p class="eyebrow">For agents and their humans</p>
+    <h1>Ten minutes from zero to a settled verdict.</h1>
+    <p class="lead">No signup, no API key: the payment is the authentication. This page shows the exact handshake, the recovery contract, and every machine endpoint. Plain-language version: <a class="textlink" href="/checks">the checks page</a>.</p>
+  </div>
+
+  <section>
+    <div class="wrap stack">
+
+      <article id="quickstart">
+        <p class="eyebrow">01 · The handshake</p>
+        <h2 style="margin-top:14px">Ask, get 402, pay, retry once.</h2>
+        <p class="lead" style="margin-top:14px">First call without payment. The service answers <b>402 Payment Required</b> with everything your agent needs: scheme, network, asset, amount, recipient, and the per-call cap.</p>
+        <div style="margin-top:24px">
+          <p class="code-cap">1 · Ask without paying</p>
+<pre><span class="c">curl -X POST</span> https://verify402.onrender.com/verify \
+  -H <span class="g">"Content-Type: application/json"</span> \
+  -H <span class="g">"x-idempotency-key: my-op-1"</span> \
+  -d <span class="y">'{"pair":"USDC/WETH","dex":"uniswap-v3","sizeUsd":100000}'</span>
+
+<span class="c"># → HTTP 402 Payment Required</span>
+<span class="c">#   accepts: eip155:8453 (USDC) or solana:… (USDC), payTo, amount, maxTimeoutSeconds</span></pre>
+        </div>
+        <div style="margin-top:24px">
+          <p class="code-cap">2 · Pay and retry with proof</p>
+<pre><span class="c"># x402 clients (e.g. @x402/fetch) do this automatically:</span>
+<span class="c">#   read the 402 → sign the exact payment → retry with X-PAYMENT</span>
+<span class="c"># The retry returns the verdict with an evidence_bundle.</span></pre>
+        </div>
+        <div class="callout" style="margin-top:24px">
+          <h3>Send x-idempotency-key on the first call</h3>
+          <p>If the connection dies after settlement, the retry with the same key replays the same bytes for free — within ten minutes, three replays max. The key is the cheapest insurance on this rail.</p>
+        </div>
+      </article>
+
+      <hr class="divider" style="margin:44px 0">
+
+      <article id="receipts">
+        <p class="eyebrow">02 · Receipts</p>
+        <h2 style="margin-top:14px">Every paid response can be rechecked.</h2>
+        <p class="lead" style="margin-top:14px">The response carries an evidence bundle so a third party can recompute the measurement without trusting the service: the hash of the canonical request, the hash of the actual response body, and the pinned block.</p>
+        <div class="table-wrap" style="margin-top:22px">
+          <table class="table">
+            <thead><tr><th>Field</th><th>What it proves</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">requestHash</td><td>This exact request was the one answered — canonical bytes, not a paraphrase</td></tr>
+              <tr><td class="mono">responseHash</td><td>The exact bytes returned; a replay that doesn't match isn't free</td></tr>
+              <tr><td class="mono">pinnedBlock</td><td>The chain state the answer describes. Everything is a quote about one block.</td></tr>
+              <tr><td class="mono">verdict</td><td><code class="inline">edge</code>, <code class="inline">no_edge</code>, or <code class="inline">no_edge_costs_ate_it</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3 style="margin-top:32px">The recovery contract, in one paragraph</h3>
+        <p class="small" style="margin-top:10px">A settlement is <b>staged</b>, not recorded, when payment succeeds. It is <b>promoted</b> only by the official <code class="inline">onAfterSettle</code> hook, matched on the hash of the actual response bytes. A failed or pending settlement promotes nothing; staged-unpromoted records age out silently after five minutes; the replay cap is per operation, shared by aliases. A promotion-hook failure stays staged — fail closed, never open. This is the part an independent auditor broke in public; the fix is commit <a class="textlink" href="https://github.com/a32116150-ctrl/verify402/commit/4bf3c9c" rel="noopener">4bf3c9c</a>.</p>
+      </article>
+
+      <hr class="divider" style="margin:44px 0">
+
+      <article id="endpoints">
+        <p class="eyebrow">03 · Endpoints</p>
+        <h2 style="margin-top:14px">Everything the machine answers.</h2>
+        <div class="table-wrap" style="margin-top:22px">
+          <table class="table">
+            <thead><tr><th>Endpoint</th><th>Price</th><th>Purpose</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">POST /verify</td><td class="mono">$0.05</td><td>Cross-venue arbitrage measurement with three-state verdict</td></tr>
+              <tr><td class="mono">POST /safety</td><td class="mono">$0.10</td><td>Pre-trade token gate: TRUST / CAUTION / AVOID</td></tr>
+              <tr><td class="mono">POST /route</td><td class="mono">$0.03</td><td>Best execution route across quoted venues</td></tr>
+              <tr><td class="mono">POST /quotecheck</td><td class="mono">$0.05</td><td>Audit an externally supplied quote</td></tr>
+              <tr><td class="mono">POST /depth</td><td class="mono">$0.05</td><td>Capacity ladder for position sizing</td></tr>
+              <tr><td class="mono">GET /findings</td><td class="mono">free</td><td>Live verdicts on Ethereum majors</td></tr>
+              <tr><td class="mono">GET /info</td><td class="mono">free</td><td>Machine-readable service description</td></tr>
+              <tr><td class="mono">GET /health</td><td class="mono">free</td><td>Liveness and mode</td></tr>
+              <tr><td class="mono">GET /.well-known/agent-card.json</td><td class="mono">free</td><td>A2A/ERC-8004 agent card with skills</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout" style="margin-top:26px">
+          <h3>Errors are honest too</h3>
+          <p><code class="inline">400</code> means the request was malformed — the message names the field. <code class="inline">402</code> is the door, not a wall. <code class="inline">500</code> means the service failed, and it says so instead of returning a fabricated number. Verdicts are never invented to look useful.</p>
+        </div>
+      </article>
+
+      <hr class="divider" style="margin:44px 0">
+
+      <article id="humans">
+        <p class="eyebrow">04 · If you're a human</p>
+        <h2 style="margin-top:14px">You don't need to run curl.</h2>
+        <p class="lead" style="margin-top:14px">Watch the service answer live on <a class="textlink" href="/live">the live page</a>, see what has actually been proven on <a class="textlink" href="/proof">the receipts page</a>, or ask a question before paying anything.</p>
+        <div class="btn-row" style="margin-top:22px">
+          <a class="btn" href="mailto:a32116150@gmail.com?subject=verify402%20question%20before%20first%20payment">Ask before you pay</a>
+          <a class="btn ghost" href="/live">Watch it answer</a>
+        </div>
+      </article>
+
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div class="foot-brand">
+        <a class="logo" href="/">verify40<i>2</i></a>
+        <p>Machine-payable truth for agents. A negative result, delivered with receipts.</p>
+      </div>
+      <div class="foot-col">
+        <p class="cap">Product</p>
+        <a href="/checks">The five checks</a>
+        <a href="/live">Live findings</a>
+        <a href="/docs">Documentation</a>
+        <a href="/donate">Donate</a>
+      </div>
+      <div class="foot-col">
+        <p class="cap">Project</p>
+        <a href="/proof">Proof &amp; receipts</a>
+        <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">Source code</a>
+        <a href="https://github.com/x402-foundation/x402/issues/3847" rel="noopener">x402 proposal</a>
+      </div>
+      <div class="foot-col">
+        <p class="cap">For machines</p>
+        <a href="/info">/info</a>
+        <a href="/health">/health</a>
+        <a href="/.well-known/agent-card.json">agent card</a>
+        <a href="/findings">/findings</a>
+      </div>
+    </div>
+    <p class="legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Mainnet-armed; the only settlement ever recorded is the operator's own testnet transaction. No external buyer yet. Prices are per call, paid in USDC over x402.</p>
+  </div>
+</footer>
+
+<script src="/assets/site.js"></script>
+</body>
+</html>
