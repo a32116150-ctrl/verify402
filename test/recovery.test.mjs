@@ -3,9 +3,14 @@
 // and the paid path is already covered by the engine tests.
 //
 //   node test/recovery.test.mjs
+//
+// v3 (post-SameDayDesk): recordSettlement STAGES; records become replayable
+// only after promoteSettlement() — which server.mjs wires to the official
+// x402 `onAfterSettle` hook, i.e. ONLY after the facilitator confirms the
+// settle. A failed/pending settlement must never leave a free replay.
 
 import {
-  canonicalStable, requestHash, recordSettlement, replayFor,
+  canonicalStable, requestHash, recordSettlement, promoteSettlement, replayFor,
   evidenceBundle, expiredRecoveryInfo, IDEMPOTENCY_TTL_MS, IDEMPOTENCY_MAX_REPLAYS,
   sha256Hex, _setNow,
 } from "../src/recovery.mjs";
@@ -17,6 +22,18 @@ const check = (name, fn) => {
   catch (e) { failed++; console.log(`  ${name} ... FAIL\n      ${e.message}`); }
 };
 const assert = (cond, msg) => { if (!cond) throw new Error(msg); };
+
+// simulates the effective response: stage under a key, then settle-confirm via
+// the bytes the caller would receive (this is exactly what the onAfterSettle
+// hook does with transportContext.responseBody).
+const affirm = (key, payload, companion = null) => {
+  recordSettlement(key, payload, companion);                  // stage
+  promoteSettlement(JSON.stringify(payload));                 // settle confirmed
+};
+const affirmNow = (key, payload, companion = null) => {
+  const r = recordSettlement(key, payload, companion, { settledNow: true });
+  return r;
+};
 
 console.log("\nrecovery contract");
 
@@ -33,32 +50,83 @@ check("requestHash differs across route or body", () => {
   assert(requestHash("/verify", { target: "WETH" }) !== requestHash("/verify", { target: "USDC" }));
 });
 
+// --- SameDayDesk trace, claim 1: settlement gating -------------------------
+
+check("STAGED record is NOT replayable — a failed settlement leaves nothing free", () => {
+  recordSettlement("fail-key", { verdict: "no_edge", n: 1 }, "fail-companion");
+  assert(replayFor("fail-key") === null, "unpromoted key must be inert");
+  assert(replayFor("fail-companion") === null, "unpromoted companion must be inert");
+  assert(expiredRecoveryInfo("fail-key") === null, "nothing settled -> no tombstone");
+});
+
+check("promotion keyed on the ACTUAL response bytes unlocks the replay", () => {
+  const payload = { verdict: "edge", net: { bps: 7.5 } };
+  recordSettlement("ok-key", payload, "ok-companion");
+  const n = promoteSettlement(Buffer.from(JSON.stringify(payload)));  // Buffer, like the middleware
+  assert(n === 1, "one operation (two aliases, one entry) promoted");
+  const h = replayFor("ok-key");
+  assert(h && h.payload.verdict === "edge" && h.replays === 1, "promoted entry replays");
+});
+
+check("promotion of an unrelated/mismatched body promotes nothing", () => {
+  recordSettlement("mm-key", { verdict: "no_edge" });
+  assert(promoteSettlement(JSON.stringify({ verdict: "no_edge", net: { bps: 999 } })) === 0, "bytes must match");
+  assert(replayFor("mm-key") === null, "still inert");
+});
+
+check("staged entries age out silently: no tombstone, no free anything", () => {
+  let T = 5_000_000;
+  _setNow(() => T);
+  recordSettlement("stale-staged", { verdict: "no_edge" });
+  T += 5 * 60 * 1000 + 1;                                     // past IDEMPOTENCY_STAGE_TTL_MS
+  replayFor("stale-staged");                                  // triggers the silent sweep
+  assert(expiredRecoveryInfo("stale-staged") === null, "an unsettled verdict is not a lost verdict");
+  _setNow(() => Date.now());
+});
+
+// --- replay mechanics (settled entries) -----------------------------------
+
 check("replay returns the same payload and counts replays", () => {
   const payload = { verdict: "no_edge", net: { bps: -24.7 } };
-  const { responseHash } = recordSettlement("k1", payload);
+  affirmNow("k1", payload);
   const h1 = replayFor("k1");
   const h2 = replayFor("k1");
   assert(h1 && h2, "replays should be returned");
-  assert(h1.responseHash === responseHash && h2.responseHash === responseHash, "hash must match recorded");
+  assert(h1.responseHash === h2.responseHash, "hash must match recorded");
   assert(JSON.stringify(h1.payload) === JSON.stringify(payload), "payload must be the settled verdict, unchanged");
   assert(h2.replays === 2, "replay counter must increment");
 });
 
 check("replay cap deletes the key after MAX_REPLAYS", () => {
-  recordSettlement("k2", { n: 1 });
+  affirmNow("k2", { n: 1 });
   for (let i = 0; i < IDEMPOTENCY_MAX_REPLAYS; i++) assert(replayFor("k2"), `replay ${i + 1} allowed`);
   assert(replayFor("k2") === null, "after the cap the replay must stop (charge the next call normally)");
+});
+
+check("companion alias SHARES the operation's replay cap (3 total, not 3+3)", () => {
+  affirmNow("cap-key", { verdict: "edge" }, "cap-companion");
+  let reads = 0;
+  while (replayFor("cap-key") !== null) reads++;
+  while (replayFor("cap-companion") !== null) reads++;        // fresh-id retry path
+  assert(reads === IDEMPOTENCY_MAX_REPLAYS, `one operation, one cap: reads=${reads}`);
 });
 
 check("unknown or unknown-format keys return null without throwing", () => {
   assert(replayFor("never-set") === null);
 });
 
-check("responseHash is recomputable from the stored payload by the documented recipe", () => {
-  const payload = { verdict: "no_edge", cache: { hit: false, pinnedBlock: 42 }, elapsedMs: 12, evidence_bundle: { junk: true }, recovery: { replayed: false } };
-  const { responseHash } = recordSettlement("k3", payload);
-  const hit = replayFor("k3");
-  const core = { ...hit.payload };
+// --- hash projection (SameDayDesk, claim 2) -------------------------------
+
+check("responseHash is recomputable from the RAW response bytes by the documented recipe", () => {
+  // a full paid response exactly as the wire sees it (as JSON bytes)
+  const body = {
+    verdict: "no_edge", answer: "test-correct",
+    cache: { hit: false, pinnedBlock: 42 }, elapsedMs: 12,
+    evidence_bundle: { junk: true }, recovery: { remeasured: false },
+  };
+  const { responseHash } = recordSettlement("k3", JSON.parse(JSON.stringify(body)));
+  // receiver recipe from the docs: strip the four projected keys, canonicalize, sha256
+  const core = JSON.parse(JSON.stringify(body));
   delete core.evidence_bundle;
   delete core.recovery;
   delete core.elapsedMs;
@@ -66,19 +134,27 @@ check("responseHash is recomputable from the stored payload by the documented re
   assert(sha256Hex(canonicalStable(core)) === responseHash, "a receiver following the docs must get the same hash");
 });
 
-// TTL expiry + tombstone + remeasure + companion-key behavior
+check("ONE projection everywhere: evidenceBundle.responseHash == recordSettlement.responseHash", () => {
+  const payload = { verdict: "no_edge", net: { bps: -1.2 }, cache: { hit: false, pinnedBlock: 7 }, elapsedMs: 8 };
+  const bundle = evidenceBundle({ route: "/verify", body: { target: "WETH" }, pinnedBlock: 7, payload });
+  const { responseHash } = recordSettlement("k-proj", { ...payload, evidence_bundle: bundle });
+  assert(bundle.responseHash === responseHash, "first response, replay and ledger must agree on one number");
+});
+
+// --- TTL expiry + tombstone + remeasure + companion-key behavior -----------
+
 let T0 = 1_000_000;
 _setNow(() => T0);
+
 check("companion key replays when the caller mints a fresh id (double-keying)", () => {
-  const payload = { verdict: "edge", net: { bps: 7.5 } };
-  recordSettlement("op-key-1", payload, "request-hash-1");
+  affirmNow("op-key-1", { verdict: "edge", net: { bps: 7.5 } }, "request-hash-1");
   const h = replayFor("request-hash-1");                 // fresh id would miss; companion hit
   assert(h && h.payload.verdict === "edge", "companion key must carry the verdict");
   assert(replayFor("op-key-1") !== null, "explicit key still works too");
 });
 
 check("expired verdict is typed, not silent: tombstone returns the lost hash", () => {
-  recordSettlement("op-key-2", { verdict: "no_edge" }, "request-hash-2");
+  affirmNow("op-key-2", { verdict: "no_edge" }, "request-hash-2");
   T0 += IDEMPOTENCY_TTL_MS + 1;                          // past the replay window
   assert(replayFor("op-key-2") === null, "past TTL there is no free replay");
   assert(replayFor("request-hash-2") === null, "past TTL there is no free replay (companion too)");
@@ -87,18 +163,20 @@ check("expired verdict is typed, not silent: tombstone returns the lost hash", (
 });
 
 check("a fresh settlement re-opens the window and clears the tombstone", () => {
-  const { responseHash: freshHash } = recordSettlement("op-key-2", { verdict: "no_edge", n: 2 }, "request-hash-2");
+  affirmNow("op-key-2", { verdict: "no_edge", n: 2 }, "request-hash-2");
   assert(expiredRecoveryInfo("op-key-2") === null, "tombstone must clear on re-settlement");
   const h = replayFor("op-key-2");
   assert(h && h.payload.n === 2, "fresh verdict is replayable again");
 });
 
 check("tombstone itself expires after REMEASURE window", () => {
-  recordSettlement("op-key-3", { v: 1 });
+  affirmNow("op-key-3", { v: 1 });
   T0 += IDEMPOTENCY_TTL_MS + 1 + (6 * 60 * 60 * 1000);   // replay window + remeasure window
   assert(expiredRecoveryInfo("op-key-3") === null, "old tombstones vanish; recovery contract has limits and says so");
   _setNow(() => Date.now());
 });
+
+// --- evidence bundle ------------------------------------------------------
 
 check("evidenceBundle has the promised fields and hashes tie out", () => {
   const payload = { verdict: "no_edge", net: { bps: -1.2 } };

@@ -28,7 +28,8 @@ import { depthProfile } from "./depth.mjs";
 import { CHAINS, DEFAULT_SIZE, chain, resolveToken } from "./config.mjs";
 import {
   IDEMPOTENCY_TTL_MS, IDEMPOTENCY_MAX_REPLAYS,
-  replayFor, recordSettlement, evidenceBundle, requestHash, expiredRecoveryInfo,
+  replayFor, recordSettlement, promoteSettlement,
+  evidenceBundle, requestHash, expiredRecoveryInfo,
 } from "./recovery.mjs";
 
 // ---------------------------------------------------------------- config ----
@@ -169,7 +170,11 @@ function emitPaid(req, res, core) {
     };
   }
   if (req.idempotencyKey) {
-    recordSettlement(req.idempotencyKey, full, req.recoveryCompanionKey || null);
+    // STAGED, not settled: the x402 onAfterSettle hook (above) promotes this
+    // record only after the settlement actually succeeds. In local bypass mode
+    // there is no settlement to wait for, so the record promotes immediately
+    // (same loud warning as the paywall bypass: local testing only).
+    recordSettlement(req.idempotencyKey, full, req.recoveryCompanionKey || null, { settledNow: BYPASS_PAYMENT });
   }
   res.json(full);
 }
@@ -293,7 +298,20 @@ if (!BYPASS_PAYMENT) app.use(
     },
     new x402ResourceServer(facilitatorClient)
       .register(NETWORKS.evm, new ExactEvmScheme())
-      .register(NETWORKS.svm, new ExactSvmScheme()),
+      .register(NETWORKS.svm, new ExactSvmScheme())
+      .onAfterSettle(async (ctx) => {
+        // THE settlement gate for recovery: a staged verdict only becomes
+        // replayable here — after the facilitator confirms this settle, and
+        // only the staged entries whose projection matches the bytes we are
+        // about to flush to the caller. Failed/pending settle promotes
+        // nothing (recovery entries are inert until this hook runs).
+        if (ctx?.phase !== "after-handler") return;
+        try {
+          promoteSettlement(ctx?.transportContext?.responseBody ?? null);
+        } catch (e) {
+          console.error("[recovery] promotion failed:", e && e.message);
+        }
+      }),
   ),
 );
 
@@ -506,9 +524,10 @@ app.get("/info", (_req, res) => {
     unpayable: "A request without payment returns HTTP 402 with instructions in the payment-required header.",
     recovery: {
       header: "x-idempotency-key",
-      behavior: "Send this header on the FIRST call of an operation. If the response is lost after settlement, retrying with the same header returns the SAME verdict within the TTL without requiring payment again.",
+      behavior: "Send this header on the FIRST call of an operation. If the response is lost after settlement, retrying with the same header returns the SAME verdict within the TTL without requiring payment again. Records are promoted to replayable ONLY after your settlement is confirmed by the facilitator: a failed or pending settlement leaves no free replay (fail-closed).",
       ttlMinutes: 10,
       maxReplays: 3,
+      maxReplaysNote: "the cap is per operation, shared between the caller key and the content-hash companion key",
       doubleKeying: "verdicts are also recorded under a hash of the canonical request content, so a retry that mints a fresh id still replays free within the window",
       afterWindow: "expired verdicts leave a tombstone holding the previous responseHash for 6 hours; a retry re-measures with the paywall re-armed and the response carries recovery.remeasured + previousResponseHash so agents can branch instead of guessing",
       delegatedSpend: "the caps here are client-side for the signer that constructs the payment; spend through wallets delegated to OTHER agents is outside this contract and governed by the delegating owner's own controls",

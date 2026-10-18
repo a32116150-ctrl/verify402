@@ -32,8 +32,22 @@ export const IDEMPOTENCY_MAX_KEYS = 1000;
 // silently pretending nothing happened. Feedback: prismdeadlines, Oct 2026.
 export const IDEMPOTENCY_REMEASURE_MS = 6 * 60 * 60 * 1000;  // 6 hours
 
-const settled = new Map();    // key -> { payload, responseHash, settledAt, replays }
+const settled = new Map();    // key -> entry (shared between aliases; settled flag gates replayability)
 const tombstones = new Map(); // key -> { responseHash, settledAt, expiredAt }
+
+// Staged entries live at most this long before being silently dropped. A
+// staged record was never settled — if the settle outcome is lost (SettleError,
+// transport loss in our own tests, facilitator outage), the record MUST NOT
+// become replayable: fail closed, not free. Feedback: SameDayDesk trace against
+// cd59b105 (recovery recorded before settlement success), Oct 2026.
+export const IDEMPOTENCY_STAGE_TTL_MS = 5 * 60 * 1000;
+const PROJECTED_KEYS = ["evidence_bundle", "recovery", "elapsedMs", "cache"];
+
+function projectionHash(payload) {
+  const core = { ...payload };
+  for (const k of PROJECTED_KEYS) delete core[k];
+  return sha256Hex(canonicalStable(core));
+}
 
 // Injectable clock for tests.
 let nowFn = () => Date.now();
@@ -58,43 +72,96 @@ export function requestHash(route, body) {
   return sha256Hex(canonicalStable({ route, body: body ?? {} }));
 }
 
-// Record a settled verdict for a key. Removes any tombstone for the same key
-// (a fresh settlement re-opens the window). Records under BOTH keys when the
-// caller supplied an id: the caller's key AND a hash-derived companion key
-// (see note on double-keying below).
-export function recordSettlement(key, payload, companionKey = null) {
-  const core = { ...payload };
-  delete core.evidence_bundle;
-  delete core.recovery;
-  delete core.elapsedMs;
-  delete core.cache;
-  const responseHash = sha256Hex(canonicalStable(core));
-  for (const k of [key, companionKey]) {
-    if (!k) continue;
-    if (settled.size >= IDEMPOTENCY_MAX_KEYS) {
-      // drop the oldest entry; the store is a cache, not a ledger
-      settled.delete(settled.keys().next().value);
+// Stage a verdict under a caller key. THE RECORD IS NOT REPLAYABLE YET: the
+// caller must either pay through x402 (the `onAfterSettle` hook in server.mjs
+// promotes the entry once the facilitator confirms the settlement), or run in
+// BYPASS mode (settledNow: true, local testing only — loud warnings upstream).
+// Two aliases share ONE entry object (caller key + content-hash companion), so
+// the replay cap is per operation, not per alias (SameDayDesk: two aliases
+// must not mean six free reads).
+export function recordSettlement(key, payload, companionKey = null, { settledNow = false } = {}) {
+  const responseHash = projectionHash(payload);
+  const t = nowFn();
+  const entry = {
+    payload, responseHash,
+    settled: settledNow ? true : false,
+    stagedAt: t,
+    settledAt: settledNow ? t : null,
+    replays: 0,
+    aliases: [key, companionKey].filter(Boolean),
+  };
+  // staged-entry GC: drop staged records that were never promoted
+  for (const [k, e] of settled) {
+    if (!e.settled && t - e.stagedAt > IDEMPOTENCY_STAGE_TTL_MS) {
+      for (const a of e.aliases) if (settled.get(a) === e) settled.delete(a);
     }
-    tombstones.delete(k);
-    settled.set(k, { payload, responseHash, settledAt: nowFn(), replays: 0 });
+  }
+  if (settled.size >= IDEMPOTENCY_MAX_KEYS && !settled.has(key)) {
+    // drop the oldest entry; the store is a cache, not a ledger
+    const oldest = settled.keys().next().value;
+    const oe = settled.get(oldest);
+    for (const a of oe.aliases) if (settled.get(a) === oe) settled.delete(a);
+  }
+  for (const k of entry.aliases) {
+    tombstones.delete(k); // a fresh settlement re-opens the window
+    settled.set(k, entry);
   }
   return { responseHash };
 }
 
-// Look up a replayable verdict. Applies TTL, replay cap and companion-key
-// fallback; expired keys move to the tombstone map instead of vanishing.
+// Promote staged records to settled. Called from the x402 `onAfterSettle` hook
+// with the transport response body (Buffer or JSON string): we recompute the
+// documented projection hash from the bytes the caller actually receives and
+// promote every staged entry whose projection matches. Nothing settled, no
+// replay — a failed or pending settlement leaves nothing reusable.
+export function promoteSettlement(body) {
+  let obj = null;
+  if (body && typeof Buffer !== "undefined" && Buffer.isBuffer(body)) {
+    try { obj = JSON.parse(body.toString("utf8")); } catch { return 0; }
+  } else if (typeof body === "string") {
+    try { obj = JSON.parse(body); } catch { return 0; }
+  } else if (body && typeof body === "object") {
+    obj = body;
+  }
+  if (!obj) return 0;
+  const h = projectionHash(obj);
+  const t = nowFn();
+  const promoted = new Set(); // aliases share one entry object: count operations, not keys
+  for (const e of settled.values()) {
+    if (e.settled || e.responseHash !== h) continue;
+    e.settled = true;
+    e.settledAt = t;
+    for (const a of e.aliases) tombstones.delete(a);
+    promoted.add(e);
+  }
+  return promoted.size;
+}
+
+// Look up a replayable verdict. Applies the settled gate, TTL, replay cap and
+// companion-key fallback; expired SETTLED keys move to the tombstone map
+// instead of vanishing. Staged-but-unpromoted entries are invisible here.
 export function replayFor(key) {
   const entry = settled.get(key);
-  if (!entry) return null;
+  if (!entry || !entry.settled) {
+    // staged entries that aged out silently leave no tombstone: nothing
+    // was ever settled, so there is no "lost verdict" to report.
+    if (entry && !entry.settled && nowFn() - entry.stagedAt > IDEMPOTENCY_STAGE_TTL_MS) {
+      for (const a of entry.aliases) if (settled.get(a) === entry) settled.delete(a);
+    }
+    if (!entry) return null;
+    if (!entry.settled) return null;
+  }
   if (nowFn() - entry.settledAt > IDEMPOTENCY_TTL_MS) {
-    settled.delete(key);
-    if (settled.size + tombstones.size < 4000) {
-      tombstones.set(key, { responseHash: entry.responseHash, settledAt: entry.settledAt, expiredAt: nowFn() });
+    for (const a of entry.aliases) {
+      if (settled.get(a) === entry) settled.delete(a);
+      if (settled.size + tombstones.size < 4000) {
+        tombstones.set(a, { responseHash: entry.responseHash, settledAt: entry.settledAt, expiredAt: nowFn() });
+      }
     }
     return null;
   }
   if (entry.replays >= IDEMPOTENCY_MAX_REPLAYS) {
-    settled.delete(key);
+    for (const a of entry.aliases) if (settled.get(a) === entry) settled.delete(a);
     return null;
   }
   entry.replays += 1;
@@ -114,11 +181,18 @@ export function expiredRecoveryInfo(key) {
   return { previousResponseHash: t.responseHash, expiredAt: new Date(t.expiredAt).toISOString() };
 }
 
-// Standard evidence bundle on every paid response.
+// Standard evidence bundle on every paid response. responseHash uses the SAME
+// projection as recordSettlement (evidence_bundle, recovery, cache, elapsedMs
+// excluded) — one projection everywhere, so any receiver recomputing per the
+// documented recipe gets the same number from the first paid response, the
+// replayed response and every response in between. (SameDayDesk: the two
+// projections previously disagreed and the advertised hash was ambiguous.)
 export function evidenceBundle({ route, body, pinnedBlock, payload }) {
   const core = { ...payload };
   delete core.evidence_bundle;
   delete core.recovery;
+  delete core.elapsedMs;
+  delete core.cache;
   return {
     spec: "verify402/evidence-bundle@1",
     route,

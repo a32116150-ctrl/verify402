@@ -175,6 +175,12 @@ MCP client, paying per call via x402 with a hard pre-sign spend cap
   10 minutes (max 3 replays). Caveats stated plainly: the key is the caller's secret
   (whoever presents it replays for free), the window is short by design so the 402 paywall
   stays intact, and replayed responses carry `recovery: { replayed: true, responseHash, replays }`.
+  - **Settlement-gated (fail-closed):** a verdict record only becomes replayable
+    **after the facilitator confirms the settlement** (official x402 `onAfterSettle`
+    hook, promoted against the actual response bytes). A failed, aborted or pending
+    settlement promotes nothing — there is no free replay keyed to a payment that did
+    not happen. The replay cap (3) is per operation, shared between the caller key
+    and the content-hash companion key — two aliases are ONE budget, not two.
   - **Double-keying:** the verdict is recorded under the caller's key *and* an implicit key
     derived from the canonical request content. A caller that mints a fresh id on each retry
     still replays free under the content hash. Two distinct asks that canonicalise identically
