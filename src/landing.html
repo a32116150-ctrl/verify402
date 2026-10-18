@@ -103,8 +103,9 @@
 
   /* pricing cards on the lilac block */
   .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 40px; }
-  .pcard { background: var(--canvas); border: 1px solid var(--hairline); border-radius: var(--r-lg); padding: 24px; }
+  .pcard { background: var(--canvas); border: 1px solid var(--hairline); border-radius: var(--r-lg); padding: 24px; min-width: 0; }
   .pcard .row-top { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+  .pcard .row-top > * { min-width: 0; }
   .pcard h3 { font: 700 24px/1.45 "Inter", system-ui, sans-serif; letter-spacing: 0; }
   .pcard .price { font: 400 12px/1 "JetBrains Mono", menlo, monospace; letter-spacing: .6px; text-transform: uppercase;
     white-space: nowrap; background: var(--soft); border-radius: 9999px; padding: 8px 14px; }
@@ -133,12 +134,12 @@
   .uimock .top .dot.on { background: var(--success); }
   .uimock .top .addr { font: 400 12px/1 "JetBrains Mono", menlo, monospace; color: #666; }
   .uimock .rows { padding: 8px 16px 12px; }
-  .uimock .crow { display: grid; grid-template-columns: 150px 1fr auto; gap: 16px; align-items: baseline;
+  .uimock .crow { display: grid; grid-template-columns: auto 1fr auto; gap: 14px; align-items: baseline;
     padding: 10px 0; font: 400 13px/1.5 "JetBrains Mono", menlo, monospace; border-bottom: 1px solid var(--hairline-soft); }
   .uimock .crow:last-child { border-bottom: 0; }
   .uimock .crow .vv { font-weight: 700; }
   .uimock .crow .vv.neg { color: #000; }
-  .uimock .crow .meta { color: #666; text-align: right; }
+  .uimock .crow .meta { color: #666; text-align: right; min-width: 0; overflow-wrap: anywhere; }
   .block .cta-row { margin-top: 24px; display: flex; gap: 12px; flex-wrap: wrap; }
 
   /* receipts on navy */
@@ -181,6 +182,9 @@
   }
   @media (max-width: 768px) {
     .wrap { padding: 0 24px; }
+    .pcard .row-top { flex-wrap: wrap; row-gap: 8px; }
+    .uimock .crow { gap: 10px; }
+    .uimock .crow .meta { font-size: 11px; }
     .block { border-radius: 0; padding: 32px 24px; }   /* full-bleed poster mode */
     .gap { height: 64px; }
   }
