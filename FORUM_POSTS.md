@@ -8,7 +8,7 @@ promises anywhere. The credibility IS the negative result.
 
 **Show & tell:**
 > Built a first version of an x402 service agents can actually use more than
-> once: **verify402** — a per-call oracle for two questions agents routinely
+> once: **verify402** — a per-call oracle for the questions agents routinely
 > guess at:
 >
 > - `verify_arbitrage` ($0.05): is this claimed cross-venue arb real *right
@@ -19,6 +19,14 @@ promises anywhere. The credibility IS the negative result.
 >   TRUST/CAUTION/AVOID with evidence: live contract calls, a USD-sized sell
 >   probe against every venue (honeypot test done by actually quoting the
 >   exit), round-trip cost at the intended size, phantom-price detection.
+> - `get_best_route` ($0.03) / `verify_quote_fairness` ($0.05): what the
+>   chain actually pays for a swap, and whether a number someone *offered*
+>   the agent is honest (fair / overpaying / too_good_to_be_true).
+> - `get_trade_depth` ($0.05): position sizing. "This pool has $2.7M
+>   liquidity" is marketing; the depth ladder measures what a real block
+>   gives you per size, entry AND exit, and returns the largest size that
+>   stays under your cost tolerance. Example: SHIB's real capacity is
+>   ~$1,000, not $2.7M.
 >
 > Free endpoints to evaluate it without paying: `/findings` (live verdicts on
 > ETH majors, always `no_edge`, fully reproducible against the venues'
@@ -89,3 +97,8 @@ promises anywhere. The credibility IS the negative result.
 - Never add guaranteed/implied profit language. The negative result is the brand.
 - Post where the audience is builders (HN, r/ethdev, x402 slack), not traders.
 - Answer every reply — 90% of Show HN traction is the comment feed, first hour.
+- Depth-led variant (use if the arb angle feels stale in the current cycle):
+  the hook "your bot's dashboard said liquidity: $2.7M. The chain will only
+  give your $10k swap ~$1,000 of real capacity before the round trip eats
+  it." Same rules apply — the depth ladder's honest verdicts (small numbers)
+  ARE the credibility.

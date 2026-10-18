@@ -71,8 +71,21 @@ X402_MODE=mainnet FACILITATOR_URL=... node src/server.mjs
 |---|---|---|
 | `POST /verify` | $0.05 (x402) | the measurement, with verdict + evidence |
 | `POST /safety` | $0.10 (x402) | pre-trade gate: TRUST / CAUTION / AVOID + evidence |
+| `POST /route` | $0.03 (x402) | what would the chain ACTUALLY pay for this swap? best route + every quoted venue |
+| `POST /quotecheck` | $0.05 (x402) | audit a quote someone else gave you: fair / overpaying / too_good_to_be_true |
+| `POST /depth` | $0.05 (x402) | position sizing: how big can I trade before the round trip eats me? |
+| `GET /findings` | free | live no_edge verdicts on Ethereum majors |
 | `GET /info` | free | machine-readable service description |
 | `GET /health` | free | liveness |
+
+`POST /depth` is the pre-trade sizing question nothing on-chain answers.
+Pool-reserve "liquidity: $2.7M" tells an agent nothing about the block it
+will actually trade in. The depth engine buys the target with the best route
+at each rung of a USD ladder, immediately sells the exact position back, and
+reports per-rung impact %, round-trip cost %, and `capacityUsd` — the largest
+size that stays under the caller's cost tolerance. Live example (SHIB,
+2.5% tolerance): "$2.7M liquidity" resolves to a real capacity of **$1,000**
+($100 → 1.20% round trip, $10k → 6.57%). The ladder is the honest answer.
 
 `POST /verify` request:
 
