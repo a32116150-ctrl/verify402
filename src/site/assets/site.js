@@ -25,10 +25,11 @@
   });
 
   // Live free verdicts: fill any [data-findings] list from GET /findings.
+  // The nav block label is updated on every page, with or without a card.
   // One retry covers a cold free-tier instance; after that, say so honestly.
   var lists = document.querySelectorAll("[data-findings]");
   var statuses = document.querySelectorAll("[data-block]");
-  if (!lists.length) return;
+  if (!lists.length && !statuses.length) return;
 
   function render(d) {
     var block = d.blockNumber || "—";
