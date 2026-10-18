@@ -387,7 +387,13 @@ app.get("/findings", async (_req, res) => {
   }
 });
 
-app.get("/", (_req, res) => {
+app.get("/", (req, res) => {
+  // Humans get the landing page; machine clients keep the plain menu.
+  const wantsHtml = String(req.headers.accept || "").includes("text/html");
+  if (wantsHtml) {
+    res.set("Cache-Control", "s-maxage=600");
+    return res.sendFile(new URL("./landing.html", import.meta.url));
+  }
   res.type("text/plain").send(
     [
       "verify402 - a machine-payable truth service",
