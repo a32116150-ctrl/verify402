@@ -26,7 +26,7 @@
       <a href="/donate">Donate</a>
     </nav>
     <div class="nav-cta">
-      <span class="nav-live"><span class="dot"></span>free gate · <span data-block>block —</span></span>
+      <span class="nav-live"><span class="dot"></span>free gate · no wallet</span>
       <a class="btn sm" href="#install">Install</a>
     </div>
     <details class="menu">
@@ -51,7 +51,7 @@
       <div>
         <p class="eyebrow">MCP · stdio · free gate</p>
         <h1>Put the gate inside the bot.</h1>
-        <p class="lead">One MCP server gives Claude Desktop, Cursor, OpenCode, or any agent the <b>free preflight gate</b> plus five paid on-chain checks. The bot calls a tool; x402 pays per call; the verdict comes back with a receipt.</p>
+        <p class="lead">One MCP server gives Claude Desktop, Cursor, OpenCode, or any agent the <b>free preflight gate</b> plus five paid on-chain checks. The free gate answers with a receipt; the paid checks settle per call over x402.</p>
         <div class="btn-row">
           <a class="btn" href="#install">Install it</a>
           <a class="btn ghost" href="#tools">See the tools</a>
@@ -64,7 +64,7 @@
       </div>
       <aside>
         <div class="vcard">
-          <div class="vcard-head"><span>MCP · verify402</span><span class="ok">● connected</span></div>
+          <div class="vcard-head"><span>MCP · verify402</span><span class="ok">● example</span></div>
           <div class="vcard-body">
             <div class="vrow"><span class="pair">preflight_gate</span><span class="verdict">free</span><span class="meta">before the signature</span></div>
             <div class="vrow"><span class="pair">verify_arbitrage</span><span class="verdict">$0.05</span><span class="meta">is it real?</span></div>
@@ -100,7 +100,7 @@
           </tbody>
         </table>
       </div>
-      <p class="small muted" style="margin-top:20px">Paid calls are USDC over x402. The bridge signs the payment only — it never signs or sends a trade.</p>
+      <p class="small muted" style="margin-top:20px">Paid calls are USDC over x402. The bridge signs the payment only — it never signs or sends a trade — and it only pays a 402 from the configured server, on an allowlisted network, to the verify402 payee.</p>
     </div>
   </section>
 
@@ -128,7 +128,7 @@
       <div style="margin-top:32px">
         <p class="code-cap">Warm the npx cache · no key needed</p>
 <pre>npx -y \
-  --package=https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.0/verify402-mcp-1.0.0.tgz \
+  --package=https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.1/verify402-mcp-1.0.1.tgz \
   verify402-mcp --help</pre>
       </div>
 
@@ -149,7 +149,7 @@
       <span class="y">"command"</span>: <span class="g">"npx"</span>,
       <span class="y">"args"</span>: [
         <span class="g">"-y"</span>,
-        <span class="g">"--package=https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.0/verify402-mcp-1.0.0.tgz"</span>,
+        <span class="g">"--package=https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.1/verify402-mcp-1.0.1.tgz"</span>,
         <span class="g">"verify402-mcp"</span>
       ],
       <span class="y">"env"</span>: {
@@ -178,7 +178,7 @@
         <span class="y">"command"</span>: [
           <span class="g">"npx"</span>,
           <span class="g">"-y"</span>,
-          <span class="g">"--package=https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.0/verify402-mcp-1.0.0.tgz"</span>,
+          <span class="g">"--package=https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.1/verify402-mcp-1.0.1.tgz"</span>,
           <span class="g">"verify402-mcp"</span>
         ],
         <span class="y">"environment"</span>: {
@@ -212,7 +212,7 @@
             <tr><td>A swapped payee, a lookalike asset, a wrong amount, a bad network, an expired authorization</td><td>Whether the recipient is a scammer or a sanctioned address</td></tr>
             <tr><td>Decoded calldata: transfers, approvals, permits, common V2/V3 swaps; unlimited approvals and spenders</td><td>Contract audits, proxy upgrades, owner privileges, or a token's intent</td></tr>
             <tr><td>Contract bytecode, swap deadline, minimum output, output recipient, and an <code class="inline">eth_call</code> simulation from your wallet</td><td>Full balance-delta / state-change simulation; MEV and sandwich protection</td></tr>
-            <tr><td>The x402 payment itself: price, network, asset, payee, facilitator, before the bridge signs</td><td>Off-chain promises: “the seller will deliver after you pay”</td></tr>
+            <tr><td>The x402 payment itself: price, network, asset, payee, facilitator, before the caller signs</td><td>Off-chain promises: “the seller will deliver after you pay”</td></tr>
             <tr><td>Receipt integrity: HMAC, intent hash, pinned block, expiry</td><td>The agent ignoring the tool, or a signer that does not verify the receipt</td></tr>
           </tbody>
         </table>
