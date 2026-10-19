@@ -33,6 +33,10 @@ config();
 
 const EVM_PRIVATE_KEY = process.env.EVM_PRIVATE_KEY;
 const SERVER_URL = process.env.VERIFY402_URL || "http://localhost:4021";
+// Preflight is free, so it does not go through the paying client. Keeping the
+// two clients separate means a misconfigured 402 on a free route can never
+// turn into a signature.
+const freeApi = axios.create({ baseURL: SERVER_URL, timeout: 30_000 });
 // Spend guard: the x402 client refuses to SIGN any payment above this, before
 // a signature exists. Enforced inside x402Client (applySpendControls), not by
 // our own request code - so it cannot be bypassed by a caller.
@@ -70,6 +74,13 @@ async function guardedPaidCall(route, run) {
 
 // ------------------------------------------------------------------ tools ---
 const DESCRIPTIONS = {
+  preflight_gate:
+    "Call this BEFORE signing any crypto transaction or x402 payment request. " +
+    "Returns PASS / CAUTION / BLOCK with typed reasons, the checks that actually ran, " +
+    "the checks that did not, and a short-lived receipt bound to the exact intent + block. " +
+    "If sign_allowed is false, DO NOT SIGN. If requires_ack is true, surface the reasons to the " +
+    "operator before signing. The receipt expires (default 90s): call again rather than reuse it. " +
+    "Free. Pass `from` (the wallet that will sign) to enable simulation and balance checks.",
   verify_arbitrage:
     "Ask verify402 whether a cross-venue arbitrage opportunity is REAL, right now. " +
     "Quotes come from Uniswap's canonical QuoterV2 and each DEX router at one pinned block. " +
@@ -97,6 +108,75 @@ async function main() {
   const paidApi = await createPaidClient();
 
   const server = new McpServer({ name: "verify402", version: "1.0.0" });
+
+  server.tool(
+    "preflight_gate",
+    DESCRIPTIONS.preflight_gate,
+    {
+      kind: z.enum(["payment", "transaction"]).describe("payment = an x402 402 challenge; transaction = a chain transaction"),
+      chainId: z.number().optional().describe("EVM chain id: 1 Ethereum, 42161 Arbitrum, 8453 Base. For payment, cross-checks the network."),
+      from: z.string().optional().describe("The wallet that will sign. Strongly recommended: enables simulation and balance checks."),
+      payment: z.object({
+        scheme: z.string().optional().describe('x402 scheme, normally "exact"'),
+        network: z.string().describe('CAIP-2 network, e.g. "eip155:8453" or "solana:..."'),
+        asset: z.string().describe("Token address or mint, e.g. canonical USDC on that network"),
+        amount: z.string().describe("RAW amount in the asset's smallest unit, as a string"),
+        payTo: z.string().describe("Recipient address from the 402 challenge"),
+        resource: z.string().optional().describe("The resource URL the payment is for"),
+        maxTimeoutSeconds: z.number().optional().describe("maxTimeoutSeconds from the 402 challenge"),
+        extra: z.object({
+          validAfter: z.number().optional(),
+          validBefore: z.number().optional(),
+          facilitator: z.string().optional(),
+        }).optional().describe("x402 extra fields: validAfter / validBefore / facilitator"),
+      }).optional().describe("Required when kind=payment"),
+      to: z.string().optional().describe("Transaction target (required when kind=transaction)"),
+      data: z.string().optional().describe("0x calldata for the transaction"),
+      value: z.string().optional().describe("Native value in wei, as a decimal string"),
+      policy: z.object({
+        maxAmountUsd: z.number().optional().describe("Reject payments above this USD value"),
+        maxValueWei: z.string().optional().describe("Reject native value above this wei amount"),
+        maxValueEth: z.number().optional().describe("Reject native value above this ETH amount"),
+        allowedNetworks: z.array(z.string()).optional().describe("Allowlist of CAIP-2 networks"),
+        allowedPayTo: z.array(z.string()).optional().describe("Allowlist of payment recipients"),
+        allowedTo: z.array(z.string()).optional().describe("Allowlist of transaction targets"),
+        allowedSpenders: z.array(z.string()).optional().describe("Allowlist of approval spenders"),
+        allowedAssets: z.array(z.string()).optional().describe("Allowlist of payment assets"),
+        allowedFacilitators: z.array(z.string()).optional().describe("Allowlist of x402 facilitators"),
+        expectedResource: z.string().optional().describe("The exact resource URL the agent intends to pay for"),
+        forbidUnlimitedApproval: z.boolean().optional().describe("Turn an unlimited approve into a BLOCK"),
+        maxTimeoutSeconds: z.number().optional().describe("Reject challenges with a longer timeout"),
+      }).optional().describe("Operator policy. Omit for structural checks only."),
+      ttlSeconds: z.number().optional().describe("Receipt lifetime in seconds, 15-300 (default 90)"),
+    },
+    async (args) => {
+      const payload = {
+        kind: args.kind,
+        chainId: args.chainId,
+        from: args.from,
+        payment: args.payment,
+        to: args.to,
+        data: args.data,
+        value: args.value,
+        policy: args.policy,
+        ttlSeconds: args.ttlSeconds,
+      };
+      try {
+        const res = await freeApi.post("/preflight", payload);
+        return { content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }] };
+      } catch (e) {
+        const status = e.response?.status;
+        const body = e.response?.data;
+        return {
+          isError: true,
+          content: [{
+            type: "text",
+            text: `preflight failed${status ? ` (${status})` : ""}: ${JSON.stringify(body ?? e.message)}. Do not sign without a verifiable receipt.`,
+          }],
+        };
+      }
+    },
+  );
 
   server.tool(
     "verify_arbitrage",

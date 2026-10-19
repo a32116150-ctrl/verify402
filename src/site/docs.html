@@ -18,6 +18,7 @@
     <a class="logo" href="/">verify40<i>2</i></a>
     <nav class="nav-links">
       <a href="/checks">Checks</a>
+      <a href="/preflight">Preflight</a>
       <a href="/live">Live</a>
       <a href="/proof">Proof</a>
       <a href="/docs" aria-current="page">Docs</a>
@@ -31,6 +32,7 @@
       <summary>Menu</summary>
       <nav>
         <a href="/checks">Checks</a>
+        <a href="/preflight">Preflight</a>
         <a href="/live">Live findings</a>
         <a href="/proof">Proof &amp; receipts</a>
         <a href="/docs">Docs</a>
@@ -44,7 +46,7 @@
   <div class="wrap page-head">
     <p class="eyebrow">For agents and their humans</p>
     <h1>Ten minutes from zero to a settled verdict.</h1>
-    <p class="lead">No signup, no API key: the payment is the authentication. This page shows the exact handshake, the recovery contract, and every machine endpoint. Plain-language version: <a class="textlink" href="/checks">the checks page</a>.</p>
+    <p class="lead">No signup, no API key: the payment is the authentication. This page shows the free pre-signing gate, the exact handshake, the recovery contract, and every machine endpoint. Plain-language version: <a class="textlink" href="/checks">the checks page</a>.</p>
   </div>
 
   <section>
@@ -99,13 +101,62 @@
 
       <hr class="divider" style="margin:44px 0">
 
+      <article id="preflight">
+        <p class="eyebrow">03 · Before you sign</p>
+        <h2 style="margin-top:14px">One free gate, one short-lived receipt.</h2>
+        <p class="lead" style="margin-top:14px"><code class="inline">POST /preflight</code> is free. Give it an x402 payment request or a chain transaction; it returns <b>PASS / CAUTION / BLOCK</b>, typed reasons, the checks that actually ran, and the checks that did not. Every response carries an HMAC-signed receipt bound to the exact normalized intent and, where the chain is readable, a pinned block.</p>
+        <div class="table-wrap" style="margin-top:22px">
+          <table class="table">
+            <thead><tr><th>Intent</th><th>What it needs</th><th>What it checks</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">payment</td><td class="mono">network, asset, amount, payTo, resource</td><td>scheme, CAIP-2 network, canonical USDC, amount/policy cap, payee allowlist, resource match, timeout, authorization window, payer balance on EVM</td></tr>
+              <tr><td class="mono">transaction</td><td class="mono">chainId, to, data, value, from</td><td>recipient, calldata decode, contract bytecode, approval/spender policy, swap deadline/minOut/recipient, <code class="inline">eth_call</code> simulation</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div style="margin-top:24px">
+          <p class="code-cap">Payment request · abbreviated</p>
+<pre><span class="c">curl -X POST</span> https://verify402.onrender.com/preflight \
+  -H <span class="g">"Content-Type: application/json"</span> \
+  -d <span class="y">'{
+    "kind": "payment",
+    "from": "0xYourWallet",
+    "payment": {
+      "scheme": "exact",
+      "network": "eip155:8453",
+      "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "amount": "10000",
+      "payTo": "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb",
+      "resource": "https://verify402.onrender.com/verify"
+    },
+    "policy": { "maxAmountUsd": 0.25 }
+  }'</span></pre>
+        </div>
+        <div style="margin-top:24px">
+          <p class="code-cap">Response</p>
+<pre>{ <span class="y">"verdict"</span>: <span class="g">"PASS"</span>, <span class="y">"sign_allowed"</span>: <span class="g">true</span>, <span class="y">"requires_ack"</span>: <span class="g">false</span>,
+  <span class="y">"checked"</span>: [<span class="g">"scheme"</span>, <span class="g">"network"</span>, <span class="g">"asset"</span>, <span class="g">"amount"</span>, <span class="g">"payee"</span>, <span class="g">"payer_balance"</span>],
+  <span class="y">"notChecked"</span>: [<span class="g">"recipient reputation"</span>, <span class="g">"sanctions screening"</span>],
+  <span class="y">"receipt"</span>: { <span class="y">"spec"</span>: <span class="g">"verify402/preflight-receipt@1"</span>, <span class="y">"intentHash"</span>: <span class="g">"…"</span>,
+               <span class="y">"blockNumber"</span>: <span class="g">48277717</span>, <span class="y">"signature"</span>: <span class="g">"…"</span> } }</pre>
+        </div>
+        <div class="callout" style="margin-top:24px">
+          <h3>Verify before you trust the receipt</h3>
+          <p><code class="inline">POST /preflight/verify</code> with <code class="inline">{"receipt":{…}}</code> recomputes the HMAC and checks the expiry. No chain call. A <b>CAUTION</b> is an explicit decision, not a pass; a <b>BLOCK</b> is a refusal. If the chain cannot be read, <code class="inline">/preflight</code> returns <code class="inline">503</code> and issues no receipt, so the executor must fail closed.</p>
+        </div>
+      </article>
+
+      <hr class="divider" style="margin:44px 0">
+
       <article id="endpoints">
-        <p class="eyebrow">03 · Endpoints</p>
+        <p class="eyebrow">04 · Endpoints</p>
         <h2 style="margin-top:14px">Everything the machine answers.</h2>
         <div class="table-wrap" style="margin-top:22px">
           <table class="table">
             <thead><tr><th>Endpoint</th><th>Price</th><th>Purpose</th></tr></thead>
             <tbody>
+              <tr><td class="mono">POST /preflight</td><td class="mono">free</td><td>Pre-signing gate: PASS / CAUTION / BLOCK + receipt</td></tr>
+              <tr><td class="mono">POST /preflight/verify</td><td class="mono">free</td><td>Verify a preflight receipt (HMAC + expiry)</td></tr>
               <tr><td class="mono">POST /verify</td><td class="mono">$0.05</td><td>Cross-venue arbitrage measurement with three-state verdict</td></tr>
               <tr><td class="mono">POST /safety</td><td class="mono">$0.10</td><td>Pre-trade token gate: TRUST / CAUTION / AVOID</td></tr>
               <tr><td class="mono">POST /route</td><td class="mono">$0.03</td><td>Best execution route across quoted venues</td></tr>
@@ -127,7 +178,7 @@
       <hr class="divider" style="margin:44px 0">
 
       <article id="humans">
-        <p class="eyebrow">04 · If you're a human</p>
+        <p class="eyebrow">05 · If you're a human</p>
         <h2 style="margin-top:14px">You don't need to run curl.</h2>
         <p class="lead" style="margin-top:14px">Watch the service answer live on <a class="textlink" href="/live">the live page</a>, see what has actually been proven on <a class="textlink" href="/proof">the receipts page</a>, or ask a question before paying anything.</p>
         <div class="btn-row" style="margin-top:22px">
@@ -150,6 +201,7 @@
       <div class="foot-col">
         <p class="cap">Product</p>
         <a href="/checks">The five checks</a>
+        <a href="/preflight">Preflight gate</a>
         <a href="/live">Live findings</a>
         <a href="/docs">Documentation</a>
         <a href="/donate">Donate</a>

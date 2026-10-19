@@ -1,7 +1,13 @@
 # verify402
 
-A machine-payable truth service for AI agents. Two questions an agent cannot
-answer honestly by itself:
+A machine-payable truth service for AI agents. Before an agent signs anything,
+`POST /preflight` is the free gate: it takes an x402 payment request or a chain
+transaction and returns `PASS` / `CAUTION` / `BLOCK` with typed reasons, the
+checks that actually ran, the checks that did not, and a short-lived receipt
+bound to the exact intent and pinned block. It is free because it has to run
+before every signature; the deep measurements stay paid.
+
+Once the intent is clear, two questions an agent cannot answer honestly by itself:
 
 1. **"Is this arbitrage opportunity real?"** — `POST /verify` measures a
    cross-venue round trip (buy `target` with `base` on the best venue, sell it
@@ -18,6 +24,7 @@ answer honestly by itself:
 Payment is x402 in USDC, on Base or Solana — no account, no API key.
 
 **Human pages:** [home](https://verify402.onrender.com/) ·
+[preflight gate](https://verify402.onrender.com/preflight) ·
 [the five checks](https://verify402.onrender.com/checks) ·
 [live findings](https://verify402.onrender.com/live) ·
 [proof &amp; receipts](https://verify402.onrender.com/proof) ·
@@ -76,6 +83,8 @@ X402_MODE=mainnet FACILITATOR_URL=... node src/server.mjs
 
 | Route | Price | What it does |
 |---|---|---|
+| `POST /preflight` | free | pre-signing gate: validate a payment request or transaction, return PASS / CAUTION / BLOCK + a short-lived receipt |
+| `POST /preflight/verify` | free | verify a preflight receipt (HMAC, intent hash, expiry) |
 | `POST /verify` | $0.05 (x402) | the measurement, with verdict + evidence |
 | `POST /safety` | $0.10 (x402) | pre-trade gate: TRUST / CAUTION / AVOID + evidence |
 | `POST /route` | $0.03 (x402) | what would the chain ACTUALLY pay for this swap? best route + every quoted venue |
@@ -93,6 +102,51 @@ reports per-rung impact %, round-trip cost %, and `capacityUsd` — the largest
 size that stays under the caller's cost tolerance. Live example (SHIB,
 2.5% tolerance): "$2.7M liquidity" resolves to a real capacity of **$1,000**
 ($100 → 1.20% round trip, $10k → 6.57%). The ladder is the honest answer.
+
+## The preflight gate
+
+`POST /preflight` is the free control an agent runs immediately before signing.
+It accepts one of two intents:
+
+- **payment** — an x402 402 challenge: scheme, CAIP-2 network, asset, raw
+  amount, `payTo`, resource, timeout, authorization window.
+- **transaction** — `chainId`, `to`, `data`, `value`, optional `from`.
+
+Response: `PASS` / `CAUTION` / `BLOCK`, `reasons[]`, `checked[]`,
+`notChecked[]`, and a receipt:
+
+```json
+{
+  "verdict": "CAUTION",
+  "sign_allowed": true,
+  "requires_ack": true,
+  "reasons": [{ "code": "unlimited_approval", "severity": "caution", "message": "..." }],
+  "checked": ["scheme", "network", "asset", "amount", "payee", "resource", "payer_balance"],
+  "notChecked": ["recipient reputation", "sanctions screening", "off-chain promises"],
+  "receipt": {
+    "spec": "verify402/preflight-receipt@1",
+    "intentHash": "…",
+    "blockNumber": 48277717,
+    "blockHash": "0x…",
+    "expiresAt": "2026-10-19T…Z",
+    "signature": "…"
+  }
+}
+```
+
+- The receipt is HMAC-SHA256 signed, bound to the canonical normalized intent,
+  a pinned block where the chain is readable, and an expiry (default 90s, max
+  300s). `POST /preflight/verify` recomputes it.
+- **Fail-closed:** if the chain cannot be read, the endpoint returns `503` and
+  no receipt. An executor must refuse to sign without a verifiable receipt.
+- **Not checked, on purpose:** recipient reputation, sanctions, contract
+  audits, full balance-delta simulation, MEV. They are named in every response
+  instead of being implied.
+- Free is rate-limited (60/min per IP, 8 concurrent) so it cannot become a
+  public RPC proxy.
+
+The MCP bridge exposes it as `preflight_gate`. If `sign_allowed` is false, do
+not sign; if `requires_ack` is true, surface the reasons to the operator.
 
 `POST /verify` request:
 
@@ -165,10 +219,11 @@ wiring, and the distribution order.
 
 ## MCP: how AI agents consume this
 
-`mcp-bridge/` exposes the paid endpoints as native MCP tools
-(`verify_arbitrage`, `check_token_safety`) for Claude Desktop, OpenCode, or any
-MCP client, paying per call via x402 with a hard pre-sign spend cap
-(`MAX_PAYMENT_USD`, default $0.25). See `mcp-bridge/README.md`.
+`mcp-bridge/` exposes the free pre-signing gate (`preflight_gate`) and the
+paid endpoints as native MCP tools (`verify_arbitrage`, `check_token_safety`,
+`get_best_route`, `verify_quote_fairness`, `get_trade_depth`) for Claude
+Desktop, OpenCode, or any MCP client, paying per call via x402 with a hard
+pre-sign spend cap (`MAX_PAYMENT_USD`, default $0.25). See `mcp-bridge/README.md`.
 
 ## Settlement, response delivery, and recovery (honest contract)
 

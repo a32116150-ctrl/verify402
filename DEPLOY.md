@@ -32,8 +32,14 @@ Dockerfile is standard.
    X402_MODE=testnet
    # PUBLIC facilitator, testnet-only, fine for launch:
    FACILITATOR_URL=https://x402.org/facilitator
+   # Optional but recommended: stable HMAC key for /preflight receipts.
+   # Generate with `openssl rand -hex 32`; never commit it.
+   PREFLIGHT_SECRET=<32-byte hex>
    ```
    `PAY_TO_EVM` / `PAY_TO_SVM` default to the owner's wallets in code.
+   If `PREFLIGHT_SECRET` is unset, receipts use a per-process secret: they
+   verify only inside that process. That is acceptable for a single 90-second
+   gate, but set the secret before running more than one instance.
 4. Verify public behavior:
    - `curl https://<app>.onrender.com/health`
    - `curl https://<app>.onrender.com/safety` (no payment) → expect HTTP/1.1 402

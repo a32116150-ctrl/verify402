@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>verify402 — check the claim before the money moves</title>
-<meta name="description" content="Five fixed-price checks for AI agents on x402: is this arbitrage real, is this token safe, is this quote honest? Verdicts come with a hash and a pinned block. USDC on Base or Solana.">
+<meta name="description" content="A free pre-signing gate and five fixed-price checks for AI agents on x402: is this transaction safe to sign, is this arbitrage real, is this token safe, is this quote honest? Verdicts come with a hash and a pinned block. USDC on Base or Solana.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;560;640;750&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -18,6 +18,7 @@
     <a class="logo" href="/">verify40<i>2</i></a>
     <nav class="nav-links">
       <a href="/checks">Checks</a>
+      <a href="/preflight">Preflight</a>
       <a href="/live">Live</a>
       <a href="/proof">Proof</a>
       <a href="/docs">Docs</a>
@@ -31,6 +32,7 @@
       <summary>Menu</summary>
       <nav>
         <a href="/checks">Checks</a>
+        <a href="/preflight">Preflight</a>
         <a href="/live">Live findings</a>
         <a href="/proof">Proof &amp; receipts</a>
         <a href="/docs">Docs</a>
@@ -47,15 +49,15 @@
       <div>
         <p class="eyebrow">Machine-payable checks · x402 · USDC</p>
         <h1>Check the claim before the money moves.</h1>
-        <p class="lead">Five fixed-price checks tell an AI agent whether an arbitrage is real, a token is safe, or a quote is honest — before it spends. Every verdict ships with a hash and a pinned block, so anyone can recompute it. Often the honest answer is <b>no_edge</b>.</p>
+        <p class="lead">Five fixed-price checks tell an AI agent whether an arbitrage is real, a token is safe, or a quote is honest — before it spends. A <b>free preflight gate</b> checks the transaction itself: the payment request, the calldata, the simulation, and what it could not verify. Often the honest answer is <b>no_edge</b>.</p>
         <div class="btn-row">
-          <a class="btn" href="/checks">See the five checks</a>
-          <a class="btn ghost" href="/docs">How payment works</a>
+          <a class="btn" href="/preflight">Run a free preflight</a>
+          <a class="btn ghost" href="/checks">See the five checks</a>
         </div>
         <p class="hero-note">
           <span><span class="dot"></span>USDC on Base or Solana</span>
           <span>No account, no API key</span>
-          <span>Free route: /findings</span>
+          <span>Free gate: /preflight</span>
         </p>
       </div>
       <aside>
@@ -68,6 +70,29 @@
         </div>
         <p class="small muted" style="margin-top:12px">This card calls the live service. <a class="textlink" href="/live">Open the full live page</a></p>
       </aside>
+    </div>
+  </section>
+
+  <section class="soft">
+    <div class="wrap hero-grid" style="align-items:start">
+      <div>
+        <p class="eyebrow">Free · the front door</p>
+        <h2 style="margin-top:16px">Check the transaction, not just the claim.</h2>
+        <p class="lead" style="margin-top:16px">Before an agent signs a payment request or a transaction, <a class="textlink" href="/preflight">/preflight</a> returns <b>PASS / CAUTION / BLOCK</b> with the reasons, the checks it ran, and the checks it did not. A short-lived receipt binds the verdict to the exact intent and block, so an executor can refuse to sign without one.</p>
+        <div class="btn-row" style="margin-top:24px">
+          <a class="btn" href="/preflight">How the gate works</a>
+          <a class="btn ghost" href="/docs#preflight">Request shape</a>
+        </div>
+      </div>
+      <div class="vcard">
+        <div class="vcard-head"><span>POST /preflight · free</span><span class="ok">● gate</span></div>
+        <div class="vcard-body">
+          <div class="vrow"><span class="pair">payment</span><span class="verdict">PASS</span><span class="meta">canonical USDC · payee ok</span></div>
+          <div class="vrow"><span class="pair">approve</span><span class="verdict warn">CAUTION</span><span class="meta">unlimited spender</span></div>
+          <div class="vrow"><span class="pair">swap</span><span class="verdict bad">BLOCK</span><span class="meta">simulation reverted</span></div>
+        </div>
+        <div class="vcard-foot">Receipt bound to the intent + block · expires in 90s</div>
+      </div>
     </div>
   </section>
 
@@ -219,6 +244,7 @@
       <div class="foot-col">
         <p class="cap">Product</p>
         <a href="/checks">The five checks</a>
+        <a href="/preflight">Preflight gate</a>
         <a href="/live">Live findings</a>
         <a href="/docs">Documentation</a>
         <a href="/donate">Donate</a>

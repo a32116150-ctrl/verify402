@@ -18,6 +18,7 @@
     <a class="logo" href="/">verify40<i>2</i></a>
     <nav class="nav-links">
       <a href="/checks" aria-current="page">Checks</a>
+      <a href="/preflight">Preflight</a>
       <a href="/live">Live</a>
       <a href="/proof">Proof</a>
       <a href="/docs">Docs</a>
@@ -31,6 +32,7 @@
       <summary>Menu</summary>
       <nav>
         <a href="/checks">Checks</a>
+        <a href="/preflight">Preflight</a>
         <a href="/live">Live findings</a>
         <a href="/proof">Proof &amp; receipts</a>
         <a href="/docs">Docs</a>
@@ -47,6 +49,15 @@
     <p class="lead">Each call measures one claim against the chain at a pinned block and returns a verdict with evidence. Pay per call in USDC; no account, no minimum, no monthly bill.</p>
     <p class="small muted" style="margin-top:18px">Looking for the free tier? <a class="textlink" href="/live">Live findings</a> is free and needs no payment. Machine-readable spec: <a class="textlink" href="/info">/info</a>.</p>
   </div>
+
+  <section class="tight">
+    <div class="wrap">
+      <div class="callout good">
+        <h3>Before any of these: the free preflight gate</h3>
+        <p><a class="textlink" href="/preflight">/preflight</a> checks the transaction or the x402 payment request itself — <b>PASS / CAUTION / BLOCK</b>, a short-lived receipt, and an honest <code class="inline">notChecked</code> list. It is free because it has to run before every signature. These five checks are the deep measurements behind it.</p>
+      </div>
+    </div>
+  </section>
 
   <section>
     <div class="wrap stack">
@@ -140,6 +151,7 @@
         <table class="table">
           <thead><tr><th>Route</th><th>Question</th><th>Price</th><th>Notes</th></tr></thead>
           <tbody>
+            <tr><td class="mono">/preflight</td><td>Should I sign this?</td><td class="mono">free</td><td>Payment request or transaction · PASS / CAUTION / BLOCK</td></tr>
             <tr><td class="mono">/verify</td><td>Is the arbitrage real?</td><td class="mono">$0.05</td><td>Three-state verdict with evidence</td></tr>
             <tr><td class="mono">/safety</td><td>Is the token safe?</td><td class="mono">$0.10</td><td>Pre-trade gate · TRUST / CAUTION / AVOID</td></tr>
             <tr><td class="mono">/route</td><td>What would the chain pay?</td><td class="mono">$0.03</td><td>Every quoted venue at your size</td></tr>
@@ -167,6 +179,7 @@
       <div class="foot-col">
         <p class="cap">Product</p>
         <a href="/checks">The five checks</a>
+        <a href="/preflight">Preflight gate</a>
         <a href="/live">Live findings</a>
         <a href="/docs">Documentation</a>
         <a href="/donate">Donate</a>

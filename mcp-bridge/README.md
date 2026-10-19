@@ -1,18 +1,30 @@
 # verify402 MCP bridge
 
-Makes verify402's paid tools available to any MCP client (Claude Desktop,
-OpenCode, Cursor, custom agents) with per-call x402 payment handled
-automatically.
+Makes verify402's paid tools and its free pre-signing gate available to any
+MCP client (Claude Desktop, OpenCode, Cursor, custom agents) with per-call x402
+payment handled automatically.
 
 ## Tools
 
 | tool | price | what it answers |
 |---|---|---|
+| `preflight_gate` | free | "Should I sign this payment request or transaction?" — PASS / CAUTION / BLOCK with reasons and a short-lived receipt |
 | `verify_arbitrage` | $0.05 | "Is this cross-venue arbitrage opportunity real, right now?" |
 | `check_token_safety` | $0.10 | "Is this token safe to buy?" — TRUST / CAUTION / AVOID with evidence |
 | `get_best_route` | $0.03 | "What would the chain actually pay for this swap?" — best route + every quoted venue |
 | `verify_quote_fairness` | $0.05 | "A broker/bot offered me this number — is it honest?" fair / overpaying / too_good_to_be_true |
 | `get_trade_depth` | $0.05 | "How big can I trade here before the round trip eats me?" — per-size impact, round-trip cost, capacity |
+
+`preflight_gate` is the front door. Call it before signing any crypto
+transaction or x402 payment request. If `sign_allowed` is false, **do not
+sign**. If `requires_ack` is true, surface the reasons to the operator. The
+receipt expires (default 90s); call again instead of reusing it. It is free, so
+it does not go through the paying client.
+
+The gate is advisory at this layer: the bridge does not hold the agent's
+transaction key and cannot stop an agent that ignores the answer. Enforcement
+belongs in the executor that signs — verify the receipt, then sign. A tool
+description is not a security boundary.
 
 ## Setup
 

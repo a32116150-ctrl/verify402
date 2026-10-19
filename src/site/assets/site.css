@@ -16,6 +16,8 @@
   --green-soft: #ecfdf3;
   --amber: #92400e;
   --amber-soft: #fffbeb;
+  --red: #b91c1c;
+  --red-soft: #fef2f2;
   --radius: 14px;
   --radius-lg: 20px;
   --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
@@ -143,6 +145,7 @@ h3 { font-size: 21px; letter-spacing: -0.02em; }
 .vrow .pair { font: 500 14px/1.2 var(--mono); }
 .vrow .verdict { font: 500 13px/1.2 var(--mono); color: var(--green); }
 .vrow .verdict.warn { color: var(--amber); }
+.vrow .verdict.bad { color: var(--red); }
 .vrow .meta { font: 400 11.5px/1.2 var(--mono); color: var(--muted); text-align: right; }
 .vcard-foot { border-top: 1px solid var(--line); padding: 12px 18px; background: var(--soft); font: 400 11.5px/1.5 var(--mono); color: var(--muted); }
 

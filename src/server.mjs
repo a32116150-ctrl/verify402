@@ -33,6 +33,11 @@ import {
   recordSettlement, promoteSettlement, lookupRecovery,
   evidenceBundle, requestHash, expiredRecoveryInfo,
 } from "./recovery.mjs";
+import {
+  preflight, verifyReceipt, PreflightError,
+  PREFLIGHT_SPEC, RECEIPT_SPEC, RECEIPT_SECRET_SOURCE,
+  DEFAULT_TTL_SECONDS,
+} from "./preflight.mjs";
 
 // ---------------------------------------------------------------- config ----
 const MODE = process.env.X402_MODE === "mainnet" ? "mainnet" : "testnet";
@@ -135,7 +140,9 @@ function paymentScope(req) {
 // already been answered.
 app.use((req, res, next) => {
   const key = String(req.get("x-idempotency-key") || req.get("idempotency-key") || "").trim();
-  if (key && req.method === "POST" && !req.path.startsWith("/.well-known")) {
+  // /preflight is free and issues its own receipt; it does not participate in
+  // paid-settlement recovery, where a reused key would 409 the gate.
+  if (key && req.method === "POST" && !req.path.startsWith("/.well-known") && !req.path.startsWith("/preflight")) {
     // A key is bound to one operation: the canonical request content plus the
     // payer identity the payment proof names. Reuse with different content or
     // a different payer is a conflict, rejected before payment — never a wrong
@@ -371,7 +378,9 @@ function registrationFile(req) {
     type: "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
     name: "verify402",
     description:
-      "Machine-payable truth service for AI agents. POST /verify measures whether a claimed " +
+      "Machine-payable truth service for AI agents. POST /preflight is the free pre-signing " +
+      "gate: validate an x402 payment request or a chain transaction and get PASS / CAUTION / " +
+      "BLOCK with a short-lived receipt bound to the exact intent. POST /verify measures whether a claimed " +
       "cross-venue arbitrage is real (pinned-block quotes from Uniswap QuoterV2 and each " +
       "router's own math; the honest answer is usually no_edge). POST /safety is a pre-trade " +
       "gate: contract facts, market liquidity and scam signals, a USD-sized sell probe across " +
@@ -395,6 +404,7 @@ function registrationFile(req) {
     defaultOutputModes: ["application/json"],
     capabilities: { transports: ["http"], x402: { supported: true, network: "base", asset: "USDC" } },
     skills: [
+      { id: "preflight", name: "preflight", description: "Free pre-signing gate for any x402 payment request or chain transaction: PASS / CAUTION / BLOCK, typed reasons, checked/notChecked, and a short-lived receipt bound to the exact intent and pinned block. Call before signing." },
       { id: "verify", name: "verify", description: "Cross-venue arbitrage truth check: pinned-block quotes from both sides, three-state verdict (edge / no_edge / no_edge_costs_ate_it), evidence included." },
       { id: "safety", name: "safety", description: "Pre-trade gate: contract facts, market liquidity, scam signals, a USD-sized sell probe, round-trip cost at the intended size, TRUST / CAUTION / AVOID with evidence." },
       { id: "route", name: "route", description: "What the chain would actually pay for a swap: best route plus every quoted venue at a USD size." },
@@ -593,6 +603,84 @@ app.get("/findings", async (_req, res) => {
   }
 });
 
+// ---------------------------------------------------------- preflight gate --
+// The pre-signing check. FREE on purpose: a control that an agent must run
+// before every signature is infrastructure, not a toll booth. The deep
+// measurements (/verify, /safety, /depth) stay paid. Free still costs RPC, so
+// the gate is rate-limited per IP and capped in flight; otherwise a free
+// endpoint becomes a public proxy for the chain.
+const PREFLIGHT_RATE_PER_MIN = 60;
+const PREFLIGHT_MAX_IN_FLIGHT = 8;
+const preflightBuckets = new Map();
+let preflightInFlight = 0;
+
+function preflightRateLimit(req, res, next) {
+  const ip = req.ip || req.socket?.remoteAddress || "unknown";
+  const now = Date.now();
+  const bucket = preflightBuckets.get(ip);
+  if (!bucket || now - bucket.at >= 60_000) {
+    preflightBuckets.set(ip, { at: now, n: 1 });
+  } else {
+    bucket.n += 1;
+    if (bucket.n > PREFLIGHT_RATE_PER_MIN) {
+      res.set("Retry-After", "60");
+      return res.status(429).json({
+        error: "rate_limited",
+        message: `max ${PREFLIGHT_RATE_PER_MIN} preflight calls per minute per IP`,
+      });
+    }
+  }
+  if (preflightBuckets.size > 5000) {
+    for (const [k, v] of preflightBuckets) if (now - v.at > 120_000) preflightBuckets.delete(k);
+  }
+  next();
+}
+
+function preflightConcurrency(req, res, next) {
+  if (preflightInFlight >= PREFLIGHT_MAX_IN_FLIGHT) {
+    res.set("Retry-After", "2");
+    return res.status(429).json({ error: "busy", message: "too many concurrent preflights; retry shortly" });
+  }
+  preflightInFlight += 1;
+  let released = false;
+  const release = () => {
+    if (released) return;
+    released = true;
+    preflightInFlight -= 1;
+  };
+  res.on("finish", release);
+  res.on("close", release);
+  next();
+}
+
+app.post("/preflight", preflightRateLimit, preflightConcurrency, async (req, res) => {
+  res.set("Cache-Control", "no-store");
+  const started = Date.now();
+  try {
+    const result = await preflight(req.body || {});
+    res.json({ ...result, elapsedMs: Date.now() - started });
+  } catch (e) {
+    if (e instanceof PreflightError) {
+      return res.status(e.status).json({ error: e.code, message: e.message });
+    }
+    console.error("[preflight]", e);
+    // Fail closed: no receipt means an executor must refuse to sign. A 200
+    // with a guessed verdict would be the one failure mode this gate exists
+    // to prevent.
+    res.status(503).json({
+      error: "preflight_unavailable",
+      message: "the chain could not be read, so no receipt was issued; the gate must fail closed",
+      detail: e.message,
+    });
+  }
+});
+
+app.post("/preflight/verify", preflightRateLimit, (req, res) => {
+  res.set("Cache-Control", "no-store");
+  const receipt = req.body?.receipt ?? req.body;
+  res.json(verifyReceipt(receipt));
+});
+
 // Static pages for humans: /checks, /live, /proof, /docs, /donate (+ /assets).
 // Clean URLs via the html extension; HTML is no-store so edits go live at once.
 app.use(express.static(SITE_DIR, {
@@ -615,6 +703,8 @@ app.get("/", (req, res) => {
     [
       "verify402 - a machine-payable truth service",
       "",
+      "  POST /preflight free               should I sign this payment or transaction? (gate)",
+      "  POST /preflight/verify free        verify a preflight receipt (HMAC + expiry)",
       `  POST /verify   ${PRICE} per call        is this arbitrage opportunity real?`,
       `  POST /safety   ${SAFETY_PRICE} per call        is this token safe to buy? (pre-trade gate)`,
       `  POST /route    ${ROUTE_PRICE} per call        what would the chain actually pay for this swap?`,
@@ -626,6 +716,7 @@ app.get("/", (req, res) => {
       "  GET  /.well-known/agent-registration.json   free   agent identity file",
       "",
       "Call a paid route with no payment to receive HTTP 402 and payment instructions.",
+      "Preflight is free and fail-closed: if the chain cannot be read, it returns 503 and no receipt.",
       "Send x-idempotency-key on the first call: within 10 min a retry of a paid call",
       "replays the SAME verdict with no second charge (3 replays max).",
       "Every paid response carries an evidence_bundle (requestHash/responseHash/pinnedBlock).",
@@ -635,15 +726,23 @@ app.get("/", (req, res) => {
 });
 
 app.get("/health", (_req, res) => {
-  res.json({ ok: true, mode: MODE, price: PRICE, networks: NETWORKS.label });
+  res.json({ ok: true, mode: MODE, price: PRICE, preflight: "free", networks: NETWORKS.label });
 });
 
 app.get("/info", (_req, res) => {
   res.json({
     name: "verify402",
     description:
-      "Machine-payable truth service. /verify measures whether a cross-venue arbitrage round trip is profitable; /safety is a pre-trade gate that tells an agent whether a token is safe to buy before it risks capital. All quotes come from Uniswap's canonical QuoterV2 and each venue's own router, never from our own reimplementation of venue mathematics.",
-    prices: { verify: PRICE, safety: SAFETY_PRICE, route: ROUTE_PRICE, quotecheck: QUOTECHECK_PRICE, depth: DEPTH_PRICE },
+      "Machine-payable truth service. /preflight is the free pre-signing gate: validate an x402 payment request or a chain transaction and get PASS / CAUTION / BLOCK with typed reasons and a short-lived receipt. /verify measures whether a cross-venue arbitrage round trip is profitable; /safety is a pre-trade gate that tells an agent whether a token is safe to buy before it risks capital. All quotes come from Uniswap's canonical QuoterV2 and each venue's own router, never from our own reimplementation of venue mathematics.",
+    prices: {
+      preflight: "free",
+      preflight_verify: "free",
+      verify: PRICE,
+      safety: SAFETY_PRICE,
+      route: ROUTE_PRICE,
+      quotecheck: QUOTECHECK_PRICE,
+      depth: DEPTH_PRICE,
+    },
     payment: { protocol: "x402", scheme: "exact", acceptsExample: accepts(PRICE)[0] },
     chains: Object.entries(CHAINS).map(([id, c]) => ({
       chainId: Number(id),
@@ -652,6 +751,41 @@ app.get("/info", (_req, res) => {
       venues: [...c.v3Fees.map((f) => `uni-v3-${f / 10000}%`), ...c.v2Routers.map((r) => r.label)],
     })),
     endpoints: [
+      {
+        method: "POST",
+        path: "/preflight",
+        price: "free",
+        body: {
+          kind: "payment",
+          payment: {
+            scheme: "exact",
+            network: "eip155:8453",
+            asset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+            amount: "10000",
+            payTo: "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb",
+            resource: "https://verify402.onrender.com/verify",
+            maxTimeoutSeconds: 60,
+          },
+          from: "0x...",
+          policy: { maxAmountUsd: 0.25, allowedPayTo: ["0x..."] },
+        },
+        response: {
+          verdict: "PASS | CAUTION | BLOCK",
+          reasons: "[{ code, severity, message }]",
+          checked: "[what was actually checked]",
+          notChecked: "[what was deliberately not checked]",
+          receipt: "{ spec, id, verdict, intentHash, blockNumber, blockHash, issuedAt, expiresAt, signature }",
+        },
+        use_when: "an agent is about to sign ANY x402 payment request or chain transaction; free and fail-closed",
+      },
+      {
+        method: "POST",
+        path: "/preflight/verify",
+        price: "free",
+        body: { receipt: "{...the receipt returned by /preflight...}" },
+        response: { valid: "boolean", reason: "null | missing_receipt | unknown_spec | missing_signature | bad_signature | bad_expiry | expired" },
+        use_when: "an executor verifies a preflight receipt before allowing a signature",
+      },
       {
         method: "POST",
         path: "/verify",
@@ -718,6 +852,28 @@ app.get("/info", (_req, res) => {
       },
     ],
     unpayable: "A request without payment returns HTTP 402 with instructions in the payment-required header.",
+    preflight: {
+      spec: PREFLIGHT_SPEC,
+      receiptSpec: RECEIPT_SPEC,
+      price: "free",
+      defaultTtlSeconds: DEFAULT_TTL_SECONDS,
+      limits: { perMinutePerIp: PREFLIGHT_RATE_PER_MIN, maxInFlight: PREFLIGHT_MAX_IN_FLIGHT },
+      intents: ["payment", "transaction"],
+      verdicts: {
+        PASS: "every check in `checked` passed at this pinned block",
+        CAUTION: "at least one check needs a decision; read `reasons`",
+        BLOCK: "at least one hard check failed; do not sign",
+      },
+      binding: "sha256 of the canonical normalized intent, a pinned block where the chain is readable, and an expiry (default 90s, max 300s)",
+      failClosed: "if the chain cannot be read, /preflight returns 503 and issues no receipt; an executor should refuse to sign without a verifiable PASS or an explicitly acknowledged CAUTION",
+      receiptSigning: RECEIPT_SECRET_SOURCE === "env"
+        ? "hmac-sha256 with PREFLIGHT_SECRET"
+        : "hmac-sha256 with an ephemeral per-process secret; set PREFLIGHT_SECRET for multi-instance verification",
+      verify: "POST /preflight/verify",
+      mcpTool: "preflight_gate",
+      doesNotCheck: ["recipient reputation", "sanctions screening", "contract audits", "balance-delta simulation", "MEV/sandwich protection"],
+      note: "A PASS is not a guarantee. It means the listed checks passed at this block; `notChecked` lists what was not examined.",
+    },
     recovery: {
       header: "x-idempotency-key",
       behavior: "Send this header on the FIRST call of an operation. If the response is lost after settlement, retrying with the same header returns the SAME verdict within the TTL without requiring payment again. Records are promoted to replayable ONLY after your settlement is confirmed by the facilitator: a failed or pending settlement leaves no free replay (fail-closed).",
@@ -740,6 +896,7 @@ app.get("/info", (_req, res) => {
       "No profit is promised. The measured answer for mainstream pairs is usually no_edge.",
       "If a response says edge, verify before acting; the service reports what it measured, not what it guarantees.",
       "Safety verdicts are measured evidence (live contract calls, actual venue quotes, market data), not a paid audit or a score from folklore.",
+      "A preflight PASS is not a guarantee: it means the listed checks passed at that block; `notChecked` names what was not examined.",
       "Not financial advice.",
     ],
   });
@@ -997,6 +1154,7 @@ app.post("/depth", async (req, res) => {
 app.listen(PORT, () => {
   console.log(`\nverify402 listening on http://localhost:${PORT}`);
   console.log(`  mode        : ${MODE}  (${NETWORKS.label})`);
+  console.log(`  /preflight  : free   (should I sign this payment or transaction?)`);
   console.log(`  /verify     : ${PRICE}   (is this arbitrage real?)`);
   console.log(`  /safety     : ${SAFETY_PRICE}   (is this token safe to buy?)`);
   console.log(`  /route      : ${ROUTE_PRICE}   (what would the chain actually pay?)`);
