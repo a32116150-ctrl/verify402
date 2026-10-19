@@ -488,6 +488,24 @@ async function measureFindingPair(target) {
       grossBps: r.gross.bps,
       netBps: r.net.bps,
       blockNumber: r.blockNumber,
+      // Reproducible inputs: everything needed to re-derive the two numbers above
+      // from the same pinned block with a public RPC (feedback: clearreason_assistant,
+      // Moltbook). Without these the row was a claim, not a receipt.
+      inputs: {
+        size: { raw: r.size.raw, human: r.size.human, symbol: r.base.symbol },
+        minNetBps: 0,
+        buy: { venue: r.buy.venue, kind: r.buy.kind, feeBps: r.buy.feeBps },
+        sell: { venue: r.sell.venue, kind: r.sell.kind, feeBps: r.sell.feeBps },
+        gas: {
+          units: r.costs.gasUnits,
+          priceGwei: r.costs.gasPriceGwei,
+          tokenUsd: r.costs.gasTokenUsd,
+          usd: r.costs.gasUsd,
+        },
+        flashLoanPremiumBps: r.costs.flashLoanPremiumBps,
+      },
+      method:
+        "exact-input quote at the pinned block: buy then sell through the named venue routers, net = gross - gasUsd - flashLoanPremium. Re-quote both legs at blockNumber with any RPC to re-derive grossBps/netBps.",
     };
     findingsPairs.set(target, { at: Date.now(), row });
     return row;
@@ -508,7 +526,7 @@ async function computeFindings() {
 
   return {
     explanation:
-      "Free showcase: Ethereum majors, $100k round trips, each pair pinned to the latest block it was measured at. The honest answer is normally no_edge - that is the market's fee boundary, not a failure. Arbitrary tokens and live sizes are the paid routes POST /verify and POST /safety.",
+      "Free showcase: Ethereum majors, $100k round trips, each pair pinned to the latest block it was measured at. Every row carries its own reproducible inputs (size, buy/sell venue + fee tier, gas at the pinned block, flash-loan premium) so the two bps numbers can be re-derived by anyone with an RPC. The honest answer is normally no_edge - that is the market's fee boundary, not a failure. Arbitrary tokens and live sizes are the paid routes POST /verify and POST /safety.",
     blockNumber,
     measuredAt: new Date().toISOString(),
     results,
