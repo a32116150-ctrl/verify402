@@ -450,6 +450,90 @@ app.get("/.well-known/402index-verify.txt", (_req, res) => {
   res.type("text/plain").send("83f1c578d78d2b9645a4640bcc77939bdfbae84a86b7798d4d753e18085f3b14");
 });
 
+// Crawler policy. Any agent is welcome; the service is public and free to read.
+app.get("/robots.txt", (_req, res) => {
+  res.type("text/plain").send(
+    [
+      "User-agent: *",
+      "Allow: /",
+      "",
+      "User-agent: GPTBot",
+      "Allow: /",
+      "",
+      "User-agent: ClaudeBot",
+      "Allow: /",
+      "",
+      "User-agent: PerplexityBot",
+      "Allow: /",
+      "",
+      "# Machine-readable service contract: /llms.txt",
+      "",
+    ].join("\n"),
+  );
+});
+
+// llms.txt: the service contract in plain text, for LLM agents that read a
+// site before calling it. Every price here is also in the live 402 challenge,
+// which stays authoritative; this file is a map, not a quote.
+app.get("/llms.txt", (_req, res) => {
+  res.set("Cache-Control", "public, max-age=300");
+  res.type("text/plain").send(
+    [
+      "# verify402",
+      "",
+      "> Per-call truth checks for trading agents. Free pre-signing gate plus",
+      "> paid, evidence-backed verdicts: is this arbitrage real, is this token",
+      "> safe, is this quote fair, and how much can my size move.",
+      "",
+      "Live: https://verify402.onrender.com",
+      "Quickstart: https://verify402.onrender.com/start",
+      "Code: https://github.com/a32116150-ctrl/verify402",
+      "",
+      "## Free, no key, no wallet",
+      "",
+      "- POST /preflight — PASS / CAUTION / BLOCK for a payment or a chain",
+      "  transaction, with typed reasons, the checks that ran, the checks that",
+      "  did not, and a short-lived HMAC receipt (90s default).",
+      "- POST /preflight/verify — recompute a receipt. Tampered or expired",
+      "  receipts return valid: false.",
+      "- GET /findings — free published verdicts.",
+      "",
+      "## Paid, x402 exact, USDC on Base mainnet",
+      "",
+      "Each paid call returns a verdict with reproducible evidence and an",
+      "evidence_bundle (requestHash, responseHash, pinnedBlock). The 402",
+      "challenge is authoritative for price and payee.",
+      "",
+      "- POST /verify — 0.05 USDC. Is this cross-venue arbitrage real at one",
+      "  pinned block? Most common honest answer: no_edge.",
+      "- POST /safety — 0.10 USDC. Token gate: TRUST / CAUTION / AVOID, with a",
+      "  USD-sized sell probe against every venue.",
+      "- POST /route — 0.03 USDC. Every venue quoting tokenIn to tokenOut at",
+      "  one pinned block, best first.",
+      "- POST /quotecheck — 0.05 USDC. Audit someone else's quote: fair /",
+      "  overpaying / too_good_to_be_true / unknown.",
+      "- POST /depth — 0.05 USDC. Largest size that still clears your cost",
+      "  tolerance; capacityUsd.",
+      "",
+      "## Machine-readable",
+      "",
+      "- /.well-known/x402 — x402 capability manifest (draft-hawkins-x402-dns-discovery-02).",
+      "- /.well-known/agent-card.json — A2A agent card.",
+      "- /.well-known/agent-registration.json — ERC-8004 registration file.",
+      "- /info — endpoints, prices, and chains as JSON.",
+      "- MCP bridge: https://github.com/a32116150-ctrl/verify402/tree/master/mcp-bridge",
+      "",
+      "## Honest boundary",
+      "",
+      "No profit promises. The most common verdict is no_edge, and that",
+      "negative result is the product. The mechanism is proven on testnet;",
+      "external adoption is still building. Verdicts ship with the pinned",
+      "block and hashes needed to reproduce them, or refute them.",
+      "",
+    ].join("\n"),
+  );
+});
+
 // x402 capability manifest, per draft-hawkins-x402-dns-discovery-02.
 // A bare-domain crawler gets the full paid surface in one GET; each resource
 // entry is a pointer, so the 402 challenge (not this file) stays authoritative
