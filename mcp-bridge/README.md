@@ -39,7 +39,7 @@ The package is distributed as a GitHub release tarball today and as
 ```bash
 # GitHub release tarball (works today)
 npx -y \
-  --package=https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.1/verify402-mcp-1.0.1.tgz \
+  --package=https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.2/verify402-mcp-1.0.2.tgz \
   verify402-mcp --help
 
 # npm, once published
@@ -98,7 +98,7 @@ the x402 client, before a signature exists.
       "command": "npx",
       "args": [
         "-y",
-        "--package=https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.1/verify402-mcp-1.0.1.tgz",
+        "--package=https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.2/verify402-mcp-1.0.2.tgz",
         "verify402-mcp"
       ],
       "env": {
@@ -127,7 +127,7 @@ them.
         "command": [
           "npx",
           "-y",
-          "--package=https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.1/verify402-mcp-1.0.1.tgz",
+          "--package=https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.2/verify402-mcp-1.0.2.tgz",
           "verify402-mcp"
         ],
         "environment": {
@@ -169,5 +169,11 @@ npm pack --dry-run
 npm publish --access public   # requires npm login
 ```
 
-The package is marked `UNLICENSED` until the repository gets a `LICENSE` file.
-Choose a license before redistributing it.
+## License
+
+Apache License 2.0. See `LICENSE` and `NOTICE`.
+
+You may use, modify, and distribute this package, including in commercial agent
+systems and bots. If you redistribute it or a product containing it, keep the
+copyright notice, the license text, and the `NOTICE` file. The `verify402` name
+and logo are not licensed for endorsement.

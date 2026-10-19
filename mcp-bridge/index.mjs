@@ -73,7 +73,7 @@ The bridge signs x402 payments only; it never signs or sends a trade.
   process.exit(0);
 }
 if (process.argv.includes("--version") || process.argv.includes("-v")) {
-  console.log("1.0.1");
+  console.log("1.0.2");
   process.exit(0);
 }
 
@@ -157,7 +157,7 @@ const DESCRIPTIONS = {
 async function main() {
   const paidApi = PAID_ENABLED ? await createPaidClient() : null;
 
-  const server = new McpServer({ name: "verify402", version: "1.0.1" });
+  const server = new McpServer({ name: "verify402", version: "1.0.2" });
 
   server.tool(
     "preflight_gate",

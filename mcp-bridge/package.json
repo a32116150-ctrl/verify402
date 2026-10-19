@@ -1,6 +1,6 @@
 {
   "name": "verify402-mcp",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "MCP server for verify402: a free, fail-closed preflight gate before signing, plus five paid on-chain checks paid per call via x402.",
   "type": "module",
   "bin": {
@@ -12,7 +12,9 @@
     "budget.mjs",
     "payment-policy.mjs",
     "README.md",
-    ".env.example"
+    ".env.example",
+    "LICENSE",
+    "NOTICE"
   ],
   "scripts": {
     "start": "node index.mjs",
@@ -33,7 +35,8 @@
     "solana",
     "trading-bot"
   ],
-  "license": "UNLICENSED",
+  "license": "Apache-2.0",
+  "author": "verify402 (https://github.com/a32116150-ctrl/verify402)",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/a32116150-ctrl/verify402.git",

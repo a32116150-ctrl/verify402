@@ -328,3 +328,12 @@ or any MCP client.
   `no_edge` — that is the market's fee boundary, not a failure of the tool.
 - The service reports what it measured, not what it guarantees.
 - Not financial advice.
+
+## License
+
+Apache License 2.0. See `LICENSE` and `NOTICE`.
+
+You may use, modify, and distribute this software, including in commercial agent
+systems and bots. If you redistribute it or a product containing it, keep the
+copyright notice, the license text, and the `NOTICE` file. The `verify402` name
+and logo are not licensed for endorsement.
