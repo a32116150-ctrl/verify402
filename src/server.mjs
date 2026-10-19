@@ -30,7 +30,7 @@ import { depthProfile } from "./depth.mjs";
 import { CHAINS, DEFAULT_SIZE, chain, resolveToken } from "./config.mjs";
 import {
   IDEMPOTENCY_TTL_MS, IDEMPOTENCY_MAX_REPLAYS,
-  replayFor, recordSettlement, promoteSettlement,
+  recordSettlement, promoteSettlement, lookupRecovery,
   evidenceBundle, requestHash, expiredRecoveryInfo,
 } from "./recovery.mjs";
 
@@ -110,6 +110,22 @@ if (BYPASS_PAYMENT) {
   console.warn("\n  *** BYPASS_PAYMENT=1 : paid routes are UNPROTECTED. Local testing only. ***\n");
 }
 
+// The payer an x402 payment proof names, when the rail exposes one. EVM exact
+// carries it as payload.authorization.from; SVM proofs carry a transaction, so
+// no stable payer string is assumed. Unknown scope is allowed to PAY, never to
+// replay someone else's result.
+function paymentScope(req) {
+  const raw = req.get("x-payment") || req.get("payment-signature") || "";
+  if (!raw) return null;
+  try {
+    const proof = JSON.parse(Buffer.from(raw, "base64").toString("utf8"));
+    const from = proof?.payload?.authorization?.from;
+    return typeof from === "string" && /^0x[0-9a-fA-F]{40}$/.test(from) ? from.toLowerCase() : null;
+  } catch {
+    return null;
+  }
+}
+
 // ---------------------------------------------------------------- recovery --
 // The recovery contract (see src/recovery.mjs): a caller that sends
 // x-idempotency-key on its first call can replay that settled verdict —
@@ -120,12 +136,27 @@ if (BYPASS_PAYMENT) {
 app.use((req, res, next) => {
   const key = String(req.get("x-idempotency-key") || req.get("idempotency-key") || "").trim();
   if (key && req.method === "POST" && !req.path.startsWith("/.well-known")) {
-    // Double-keying (feedback: prismdeadlines): the verdict is recoverable by
-    // the caller's own key AND by a hash of the canonical request content —
-    // so a caller that mints a fresh id on each retry still replays free.
+    // A key is bound to one operation: the canonical request content plus the
+    // payer identity the payment proof names. Reuse with different content or
+    // a different payer is a conflict, rejected before payment — never a wrong
+    // answer and never a free read (review: NSPG13, x402-foundation/x402#3848).
     const companion = requestHash(req.path, req.body || {});
-    const hit = replayFor(key) || replayFor(companion);
-    if (hit) {
+    const scope = paymentScope(req);
+    const found = lookupRecovery({
+      key, companionKey: companion, requestHash: companion, scope,
+    });
+    if (found?.conflict) {
+      res.set("Cache-Control", "no-store");
+      return res.status(409).json({
+        error: "recovery_conflict",
+        conflict: found.conflict,
+        note: found.conflict === "request_mismatch"
+          ? "this idempotency key belongs to a different request; use a new key for a new operation"
+          : "this idempotency key belongs to a different payment/authorization scope",
+      });
+    }
+    if (found?.hit) {
+      const hit = found.hit;
       return res.json({
         ...hit.payload,
         recovery: {
@@ -143,6 +174,7 @@ app.use((req, res, next) => {
     req.expiredRecovery = expiredRecoveryInfo(key) || expiredRecoveryInfo(companion);
     req.idempotencyKey = key;
     req.recoveryCompanionKey = companion;
+    req.recoveryScope = scope;
   }
   next();
 });
@@ -173,10 +205,15 @@ function emitPaid(req, res, core) {
   }
   if (req.idempotencyKey) {
     // STAGED, not settled: the x402 onAfterSettle hook (above) promotes this
-    // record only after the settlement actually succeeds. In local bypass mode
-    // there is no settlement to wait for, so the record promotes immediately
-    // (same loud warning as the paywall bypass: local testing only).
-    recordSettlement(req.idempotencyKey, full, req.recoveryCompanionKey || null, { settledNow: BYPASS_PAYMENT });
+    // record only after the settlement actually succeeds, and only for this
+    // operation identity. In local bypass mode there is no settlement to wait
+    // for, so the record promotes immediately (same loud warning as the
+    // paywall bypass: local testing only).
+    recordSettlement(req.idempotencyKey, full, req.recoveryCompanionKey || null, {
+      settledNow: BYPASS_PAYMENT,
+      requestHash: bundle.requestHash,
+      scope: req.recoveryScope || null,
+    });
   }
   res.json(full);
 }
@@ -303,13 +340,19 @@ if (!BYPASS_PAYMENT) app.use(
       .register(NETWORKS.svm, new ExactSvmScheme())
       .onAfterSettle(async (ctx) => {
         // THE settlement gate for recovery: a staged verdict only becomes
-        // replayable here — after the facilitator confirms this settle, and
-        // only the staged entries whose projection matches the bytes we are
-        // about to flush to the caller. Failed/pending settle promotes
-        // nothing (recovery entries are inert until this hook runs).
+        // replayable here — after the facilitator confirms THIS settle, for the
+        // staged operation named in the response body, with the response bytes
+        // as an additional check. Failed/pending settle promotes nothing.
+        // Matching by bytes alone is not enough: two operations may return
+        // identical output, and settling one must not promote the other.
         if (ctx?.phase !== "after-handler") return;
         try {
-          promoteSettlement(ctx?.transportContext?.responseBody ?? null);
+          promoteSettlement(ctx?.transportContext?.responseBody ?? null, {
+            ok: ctx?.result?.success === true,
+            transaction: ctx?.result?.transaction ?? null,
+            network: ctx?.result?.network ?? null,
+            payer: ctx?.result?.payer ?? ctx?.paymentPayload?.payload?.authorization?.from ?? null,
+          });
         } catch (e) {
           console.error("[recovery] promotion failed:", e && e.message);
         }
