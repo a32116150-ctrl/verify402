@@ -142,7 +142,7 @@
         </div>
         <div class="callout" style="margin-top:24px">
           <h3>Verify before you trust the receipt</h3>
-          <p><code class="inline">POST /preflight/verify</code> with <code class="inline">{"receipt":{…}}</code> recomputes the HMAC and checks the expiry. No chain call. A <b>CAUTION</b> is an explicit decision, not a pass; a <b>BLOCK</b> is a refusal. If the chain cannot be read, <code class="inline">/preflight</code> returns <code class="inline">503</code> and issues no receipt, so the executor must fail closed.</p>
+          <p><code class="inline">POST /preflight/verify</code> with <code class="inline">{"receipt":{…}}</code> recomputes the HMAC and checks the expiry. No chain call. A <b>CAUTION</b> is an explicit decision, not a pass; a <b>BLOCK</b> is a refusal. If the chain cannot be read, <code class="inline">/preflight</code> returns <code class="inline">503</code> and issues no receipt, so the executor must fail closed. Reference executor: <a class="textlink" href="https://github.com/a32116150-ctrl/verify402/blob/master/examples/preflight-guard.mjs" rel="noopener">examples/preflight-guard.mjs</a> — it refuses to call your signer without a verified receipt.</p>
         </div>
       </article>
 

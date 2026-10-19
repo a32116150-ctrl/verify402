@@ -149,6 +149,15 @@ Response: `PASS` / `CAUTION` / `BLOCK`, `reasons[]`, `checked[]`,
 The MCP bridge exposes it as `preflight_gate`. If `sign_allowed` is false, do
 not sign; if `requires_ack` is true, surface the reasons to the operator.
 
+### Reference executor
+
+`examples/preflight-guard.mjs` is a dependency-free, deny-by-default wrapper:
+it calls the gate, refuses `BLOCK`, requires an explicit acknowledgement for
+`CAUTION`, verifies the receipt, and only then calls **your** signer. It holds
+no key and sends nothing itself. The intent is cloned and deep-frozen before the
+gate, and that same object is passed to the signer. If you do not want to trust
+the public instance, run your own and pin `baseUrl`.
+
 `POST /verify` request:
 
 ```json

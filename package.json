@@ -6,7 +6,7 @@
   "description": "A machine-payable truth service: AI agents pay per call via x402 for a rigorous verdict on whether an arbitrage opportunity is real.",
   "scripts": {
     "start": "node src/server.mjs",
-    "test": "node test/recovery.test.mjs && node test/measure.test.mjs && node test/quotecheck.test.mjs && node test/depth.test.mjs && node test/preflight.test.mjs",
+    "test": "node test/recovery.test.mjs && node test/measure.test.mjs && node test/quotecheck.test.mjs && node test/depth.test.mjs && node test/preflight.test.mjs && node test/preflight-guard.test.mjs",
     "register": "node scripts/register-agent.mjs"
   },
   "dependencies": {
