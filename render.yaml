@@ -17,3 +17,8 @@ services:
         value: https://x402.org/facilitator
       - key: NODE_VERSION
         value: "22"
+      # Generated once by Render and stored as an environment secret. It never
+      # enters git. Used to make /preflight receipts stable across restarts and
+      # instances.
+      - key: PREFLIGHT_SECRET
+        generateValue: true

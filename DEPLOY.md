@@ -40,6 +40,9 @@ Dockerfile is standard.
    If `PREFLIGHT_SECRET` is unset, receipts use a per-process secret: they
    verify only inside that process. That is acceptable for a single 90-second
    gate, but set the secret before running more than one instance.
+   The Blueprint in `render.yaml` generates this value once with
+   `generateValue: true`; for an existing manual service, set it in the
+   Render dashboard.
 4. Verify public behavior:
    - `curl https://<app>.onrender.com/health`
    - `curl https://<app>.onrender.com/safety` (no payment) → expect HTTP/1.1 402
