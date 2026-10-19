@@ -174,9 +174,11 @@ test("discovery: google site verification meta tag and file are present for Sear
     assert.ok(content.includes(expectedTag), `${path.basename(f)} must contain Google site verification tag`);
   }
 
-  const verifFile = path.join(ROOT, "src", "site", `google${token}.html`);
-  assert.ok(fs.existsSync(verifFile), "Google verification file must exist");
-  const fileContent = fs.readFileSync(verifFile, "utf8");
-  assert.ok(fileContent.includes(`google-site-verification: google${token}.html`));
+  for (const t of [token, "f4013a8965ac9859"]) {
+    const vf = path.join(ROOT, "src", "site", `google${t}.html`);
+    assert.ok(fs.existsSync(vf), `Google verification file google${t}.html must exist`);
+    const fc = fs.readFileSync(vf, "utf8");
+    assert.ok(fc.includes(`google-site-verification: google${t}.html`));
+  }
 });
 

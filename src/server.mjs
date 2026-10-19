@@ -1010,8 +1010,9 @@ app.use(express.static(SITE_DIR, {
 }));
 
 // Google Search Console verification file support
-app.get("/googleiGmI2QL110IkjnW0thU3DRZrdgQe_7mZsPWgkZVte7o.html", (_req, res) => {
-  res.type("text/html").send("google-site-verification: googleiGmI2QL110IkjnW0thU3DRZrdgQe_7mZsPWgkZVte7o.html");
+app.get("/google:code.html", (req, res) => {
+  const code = String(req.params.code || "").replace(/[^a-zA-Z0-9_-]/g, "");
+  res.type("text/html").send(`google-site-verification: google${code}.html\n`);
 });
 
 app.get("/", (req, res) => {
