@@ -24,7 +24,10 @@ it does not go through the paying client.
 The gate is advisory at this layer: the bridge does not hold the agent's
 transaction key and cannot stop an agent that ignores the answer. Enforcement
 belongs in the executor that signs — verify the receipt, then sign. A tool
-description is not a security boundary.
+description is not a security boundary. See
+[`examples/preflight-guard.mjs`](../examples/preflight-guard.mjs) for a
+deny-by-default reference that refuses to call the signer without a verified
+receipt.
 
 ## Setup
 
