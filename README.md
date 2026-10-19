@@ -252,8 +252,9 @@ or any MCP client.
   inside the x402 client before a signature exists. It also requires an
   allowlisted EVM network, the verify402 payee, and a known paid resource on the
   configured server, and refuses redirects. `MAX_DAILY_USD` is optional.
-- **Install:** `npx -y --package=<release-tarball> verify402-mcp` (the npm name is
-  `verify402-mcp` once published). Client configs, the exact OpenCode V2 shape,
+- **Install:** `npx -y --package=<release-tarball> verify402-mcp`. The versioned
+  GitHub release tarball is the install; no npm account is required. Client
+  configs, the exact OpenCode V2 shape,
   and the release command are at
   [`/mcp`](https://verify402.onrender.com/mcp). See also
   `mcp-bridge/README.md`.

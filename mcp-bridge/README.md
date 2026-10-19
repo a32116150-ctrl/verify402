@@ -33,17 +33,13 @@ verified receipt.
 
 ## Run
 
-The package is distributed as a GitHub release tarball today and as
-`verify402-mcp` on npm once published. Either spec works with `npx`.
+The package is distributed as a versioned GitHub release tarball. No npm
+account is required.
 
 ```bash
-# GitHub release tarball (works today)
 npx -y \
   --package=https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.2/verify402-mcp-1.0.2.tgz \
   verify402-mcp --help
-
-# npm, once published
-npx -y verify402-mcp --help
 ```
 
 **Warm the cache first.** The first `npx` run installs the MCP SDK and `viem`;
@@ -166,7 +162,6 @@ the secret out of the config file.
 
 ```bash
 npm pack --dry-run
-npm publish --access public   # requires npm login
 ```
 
 ## License
