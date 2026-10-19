@@ -1009,11 +1009,6 @@ app.use(express.static(SITE_DIR, {
   },
 }));
 
-// Google Search Console verification file support
-app.get("/google:code.html", (req, res) => {
-  const code = String(req.params.code || "").replace(/[^a-zA-Z0-9_-]/g, "");
-  res.type("text/html").send(`google-site-verification: google${code}.html\n`);
-});
 
 app.get("/", (req, res) => {
   // Humans and search/verification crawlers get the landing page; machine clients keep the plain menu.
