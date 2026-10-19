@@ -245,6 +245,25 @@ if (!BYPASS_PAYMENT) app.use(
             method: "POST",
             bodyType: "json",
             input: { chainId: 1, target: "WETH", base: "USDC", size: 100000 },
+            output: {
+              example: {
+                ok: true,
+                verdict: "no_edge",
+                chainId: 1,
+                chainName: "ethereum",
+                blockNumber: 21000000,
+                base: { symbol: "USDC", address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", decimals: 6 },
+                target: { symbol: "WETH", address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", decimals: 18 },
+                size: { raw: "100000000000", human: 100000 },
+                buy: { venue: "uniswap-v3", kind: "v3", feeBps: 5, amountOutRaw: "30000000000000000000", amountOutHuman: 30 },
+                sell: { venue: "sushiswap", kind: "v2", feeBps: 30, amountOutRaw: "99700000000", amountOutHuman: 99700 },
+                gross: { raw: "-300000000", human: -300, bps: -30 },
+                costs: { gasUsd: 2.4, flashLoanPremiumBps: 5, totalRaw: "1200000000" },
+                net: { raw: "-1500000000", human: -1500, bps: -150 },
+                method: { quoting: "V3 via Uniswap QuoterV2; V2 via router getAmountsOut", blockPinned: true, sameVenueRoundTrip: false },
+                caveats: ["Measures a cross-venue round trip at one block. It is not a forecast, and it is not financial advice."],
+              },
+            },
             inputSchema: {
               properties: {
                 chainId: { type: "integer", description: "1 Ethereum, 42161 Arbitrum, 8453 Base" },
@@ -268,7 +287,17 @@ if (!BYPASS_PAYMENT) app.use(
             method: "POST",
             bodyType: "json",
             input: { chainId: 1, tokenAddress: "0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE", intendedUsd: 500 },
-            output: { verdict: "TRUST", reasons: [], notes: [], checked: ["contract", "market", "sellability", "liquidity"] },
+            output: {
+              example: {
+                ok: true,
+                verdict: "TRUST",
+                token: { input: "0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE", address: "0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE", chainId: 1, chainName: "ethereum" },
+                reasons: [],
+                notes: ["liquidity and a USD-sized sell probe both cleared"],
+                checked: ["contract", "market", "sellability", "liquidity"],
+                evidence: { canSell: true, probedInUsd: 500, venuesThatQuote: ["uniswap-v3", "sushiswap"] },
+              },
+            },
             inputSchema: {
               properties: {
                 chainId: { type: "integer", description: "1 Ethereum, 42161 Arbitrum, 8453 Base" },
@@ -292,6 +321,22 @@ if (!BYPASS_PAYMENT) app.use(
             method: "POST",
             bodyType: "json",
             input: { chainId: 1, tokenIn: "USDC", tokenOut: "WETH", amountIn: "1000000000" },
+            output: {
+              example: {
+                ok: true,
+                chainId: 1,
+                chainName: "ethereum",
+                blockNumber: 21000000,
+                amountIn: "1000000000",
+                best: { venue: "uniswap-v3", kind: "v3", amountOut: "326259300000000000" },
+                book: [
+                  { venue: "uniswap-v3", kind: "v3", amountOut: "326259300000000000" },
+                  { venue: "sushiswap", kind: "v2", amountOut: "325001000000000000" },
+                ],
+                unavailable: ["pancakeswap-v2"],
+                note: null,
+              },
+            },
             inputSchema: {
               properties: {
                 chainId: { type: "integer", description: "1 Ethereum, 42161 Arbitrum, 8453 Base" },
@@ -314,6 +359,22 @@ if (!BYPASS_PAYMENT) app.use(
             method: "POST",
             bodyType: "json",
             input: { chainId: 1, tokenAddress: "WETH", baseSymbol: "USDC", sizesUsd: [100, 1000, 10000, 100000] },
+            output: {
+              example: {
+                ok: true,
+                token: { address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", base: "USDC", chainId: 1 },
+                blockNumber: 21000000,
+                maxRoundTripPct: 1,
+                capacityUsd: 10000,
+                ladder: [
+                  { sizeUsd: 100, fillable: true, buyVenue: "uniswap-v3", sellVenue: "uniswap-v3", gotTokens: 0.03, impliedPriceUsd: 3300.12, impactPct: 0.01, roundTripCostPct: 0.12, underTolerance: true },
+                  { sizeUsd: 10000, fillable: true, buyVenue: "uniswap-v3", sellVenue: "sushiswap", gotTokens: 3.02, impliedPriceUsd: 3310.4, impactPct: 0.3, roundTripCostPct: 0.9, underTolerance: true },
+                  { sizeUsd: 100000, fillable: false, buyVenue: null, sellVenue: null, gotTokens: null, impliedPriceUsd: null, impactPct: null, roundTripCostPct: null, underTolerance: false },
+                ],
+                checked: ["target token facts", "dexscreener liquidity", "entry via best route", "immediate exit of the exact position"],
+                notes: ["largest size with round-trip cost <= 1%: $10,000"],
+              },
+            },
             inputSchema: {
               properties: {
                 chainId: { type: "integer", description: "1 Ethereum, 42161 Arbitrum, 8453 Base" },
@@ -341,6 +402,20 @@ if (!BYPASS_PAYMENT) app.use(
               amountIn: "1000000000",
               quotedOut: "326259300000000000",
               venueClaimed: "some-router.example",
+            },
+            output: {
+              example: {
+                ok: true,
+                verdict: "fair",
+                offered: { quotedOut: "326259300000000000", claimedVenue: "some-router.example", claimedChain: null },
+                blockNumber: 21000000,
+                amountIn: "1000000000",
+                book: [{ venue: "uniswap-v3", kind: "v3", amountOut: "326259300000000000" }],
+                unavailable: [],
+                evidence: { chainBest: { venue: "uniswap-v3", amountOut: "326259300000000000" }, ratioVsChainBest: 1.0 },
+                checked: ["parsed offer", "quoted the book at the pinned block", "compared offer to chain best"],
+                notes: ["the offer is inside the noise band of what the chain pays right now"],
+              },
             },
             inputSchema: {
               properties: {
@@ -449,6 +524,13 @@ app.get(["/.well-known/agent-registration.json", "/.well-known/agent-card.json"]
 // listings. The token itself stays in ~/.config/verify402/ (mode 600).
 app.get("/.well-known/402index-verify.txt", (_req, res) => {
   res.type("text/plain").send("83f1c578d78d2b9645a4640bcc77939bdfbae84a86b7798d4d753e18085f3b14");
+});
+
+// Browsers and discovery crawlers both ask for /favicon.ico before anything
+// else. Serve the PNG mark at that exact path.
+app.get("/favicon.ico", (_req, res) => {
+  res.type("image/png");
+  res.sendFile(`${SITE_DIR}/favicon.png`);
 });
 
 // Crawler policy. Any agent is welcome; the service is public and free to read.

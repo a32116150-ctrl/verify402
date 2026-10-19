@@ -25,6 +25,9 @@ function paidOperation({ price, operationId, summary, tag, inputSchema, outputSc
     operationId,
     summary,
     ...(guidance ? { description: guidance } : {}),
+    // No API key: the x402 payment is the only gate. Declared explicitly so
+    // discovery derives auth hint "paid" instead of guessing.
+    security: [],
     "x-payment-info": {
       price: { mode: "fixed", currency: "USD", amount: price },
       protocols: [{ x402: {} }],
@@ -62,6 +65,9 @@ export function buildOpenapi(prices) {
         "Start with the free POST /preflight before signing any payment or chain transaction; it returns PASS/CAUTION/BLOCK with typed reasons and a 90-second signed receipt. When the question is market truth instead of signing safety, use the paid POST routes: /verify (is this cross-venue arbitrage real), /safety (token gate), /route (execution book), /quotecheck (audit someone else's quote), /depth (size ladder). Every paid call is x402 exact, USDC on Base, and returns an evidence_bundle with requestHash, responseHash and pinnedBlock so the result is reproducible. The most common honest verdict is no_edge; that negative result is the product. The live 402 challenge is authoritative for price and payee.",
       contact: { email: "a32116150@gmail.com" },
     },
+    "x-agentcash-guidance": {
+      llmsTxtUrl: "https://verify402.onrender.com/llms.txt",
+    },
     servers: [{ url: "https://verify402.onrender.com" }],
     tags: [
       { name: "Gate", description: "Free pre-signing checks." },
@@ -73,6 +79,7 @@ export function buildOpenapi(prices) {
           tags: ["Gate"],
           operationId: "preflightGate",
           summary: "Free PASS / CAUTION / BLOCK before signing a payment or transaction",
+          security: [],
           description:
             "Accept a payment request (kind=payment) or a raw chain transaction (kind=transaction). Returns a verdict, typed reasons, checked/notChecked, a pinned block, and a short-lived HMAC receipt.",
           requestBody: {
@@ -146,6 +153,7 @@ export function buildOpenapi(prices) {
           tags: ["Gate"],
           operationId: "preflightVerify",
           summary: "Verify a preflight receipt",
+          security: [],
           requestBody: {
             required: true,
             content: {
