@@ -62,14 +62,13 @@ const INTENT = {
   value: "0",
 };
 
-async function run(responses, options = {}) {
+async function run(responses, options = {}, state = { signed: 0 }) {
   const f = fakeFetch(...responses);
-  let signed = 0;
   let seen = null;
   const result = await guardAndSign({
     intent: INTENT,
     sign: async (intent, ctx) => {
-      signed += 1;
+      state.signed += 1;
       seen = { intent, ctx };
       return { hash: "0x" + "11".repeat(32) };
     },
@@ -77,7 +76,7 @@ async function run(responses, options = {}) {
     baseUrl: "https://verify402.test",
     ...options,
   });
-  return { result, signed, seen, calls: f.calls };
+  return { result, signed: state.signed, seen, calls: f.calls };
 }
 
 test("PASS + verified receipt calls the signer exactly once", async () => {
@@ -94,55 +93,70 @@ test("PASS + verified receipt calls the signer exactly once", async () => {
 });
 
 test("BLOCK never reaches the signer", async () => {
+  const state = { signed: 0 };
   await assert.rejects(
-    () => run([{ body: pass({ verdict: "BLOCK", sign_allowed: false, reasons: [{ code: "simulation_revert", severity: "block", message: "reverted" }] }) }]),
+    () => run([{ body: pass({ verdict: "BLOCK", sign_allowed: false, reasons: [{ code: "simulation_revert", severity: "block", message: "reverted" }] }) }], {}, state),
     (e) => e instanceof PreflightBlockedError && e.verdict === "BLOCK" && e.reasons[0].code === "simulation_revert",
   );
+  assert.equal(state.signed, 0);
 });
 
 test("CAUTION requires an explicit acknowledgement", async () => {
   const caution = pass({ verdict: "CAUTION", requires_ack: true, reasons: [{ code: "unlimited_approval", severity: "caution", message: "unlimited" }] });
   const checked = verifyOk({ verdict: "CAUTION" });
 
+  const state = { signed: 0 };
   await assert.rejects(
-    () => run([{ body: caution }, { body: checked }]),
+    () => run([{ body: caution }, { body: checked }], {}, state),
     (e) => e instanceof PreflightBlockedError && e.verdict === "CAUTION",
   );
+  assert.equal(state.signed, 0);
 
   const acknowledged = await run([{ body: caution }, { body: checked }], { acknowledgeCaution: true });
   assert.equal(acknowledged.signed, 1);
 });
 
 test("a missing or invalid receipt never reaches the signer", async () => {
+  const missing = { signed: 0 };
   await assert.rejects(
-    () => run([{ body: pass({ receipt: null }) }]),
+    () => run([{ body: pass({ receipt: null }) }], {}, missing),
     (e) => e instanceof PreflightBlockedError,
   );
+  assert.equal(missing.signed, 0);
+
+  const invalid = { signed: 0 };
   await assert.rejects(
-    () => run([{ body: pass() }, { body: verifyOk({ valid: false, reason: "bad_signature" }) }]),
+    () => run([{ body: pass() }, { body: verifyOk({ valid: false, reason: "bad_signature" }) }], {}, invalid),
     (e) => e instanceof PreflightBlockedError && /bad_signature/.test(e.message),
   );
+  assert.equal(invalid.signed, 0);
 });
 
 test("a receipt bound to a different intent never reaches the signer", async () => {
+  const state = { signed: 0 };
   await assert.rejects(
-    () => run([{ body: pass() }, { body: verifyOk({ intentHash: "intent-other" }) }]),
+    () => run([{ body: pass() }, { body: verifyOk({ intentHash: "intent-other" }) }], {}, state),
     (e) => e instanceof PreflightBlockedError && /intent hash/.test(e.message),
   );
+  assert.equal(state.signed, 0);
 });
 
 test("an expired receipt never reaches the signer", async () => {
+  const state = { signed: 0 };
   await assert.rejects(
-    () => run([{ body: pass({ receipt: { ...pass().receipt, expiresAt: new Date(Date.now() - 1000).toISOString() } }) }]),
+    () => run([{ body: pass({ receipt: { ...pass().receipt, expiresAt: new Date(Date.now() - 1000).toISOString() } }) }], {}, state),
     (e) => e instanceof PreflightBlockedError && /expired/.test(e.message),
   );
+  assert.equal(state.signed, 0);
 });
 
 test("a 503 from the gate is unavailable, not a pass", async () => {
+  const state = { signed: 0 };
   await assert.rejects(
-    () => run([{ status: 503, body: { error: "preflight_unavailable", message: "chain unreadable" } }]),
+    () => run([{ status: 503, body: { error: "preflight_unavailable", message: "chain unreadable" } }], {}, state),
     (e) => e instanceof PreflightUnavailableError && e.status === 503,
   );
+  assert.equal(state.signed, 0);
 });
 
 test("the signer sees the same frozen intent the gate saw", async () => {
