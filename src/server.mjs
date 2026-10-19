@@ -690,7 +690,7 @@ app.post("/preflight/verify", preflightRateLimit, (req, res) => {
   res.json(verifyReceipt(receipt));
 });
 
-// Static pages for humans: /checks, /live, /proof, /docs, /donate (+ /assets).
+// Static pages for humans: /start, /checks, /live, /proof, /docs, /donate (+ /assets).
 // Clean URLs via the html extension; HTML is no-store so edits go live at once.
 app.use(express.static(SITE_DIR, {
   index: false,
@@ -721,6 +721,7 @@ app.get("/", (req, res) => {
       `  POST /depth    ${DEPTH_PRICE} per call        how big can I trade before cost eats me?`,
       "  GET  /findings free                 live verdicts on Ethereum majors, free",
       "  GET  /mcp      free                 MCP server: free gate + five paid tools",
+      "  GET  /start    free                 five-minute quickstart for developers (human page)",
       "  GET  /info     free                 machine-readable service description",
       "  GET  /health   free",
       "  GET  /.well-known/agent-registration.json   free   agent identity file",

@@ -86,7 +86,7 @@ h3 { font-size: 21px; letter-spacing: -0.02em; }
 }
 .menu nav a { display: block; padding: 10px 12px; border-radius: 9px; text-decoration: none; font-size: 15px; }
 .menu nav a:hover { background: var(--soft); }
-@media (max-width: 860px) {
+@media (max-width: 1150px) {
   .nav-in { gap: 12px; }
   .nav-links, .nav-live { display: none; }
   .nav-cta .btn.sm { padding: 8px 12px; font-size: 13px; min-height: 36px; }
