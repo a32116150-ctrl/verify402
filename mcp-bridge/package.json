@@ -1,12 +1,48 @@
 {
-  "name": "verify402-mcp-bridge",
+  "name": "verify402-mcp",
   "version": "1.0.0",
-  "private": true,
-  "description": "MCP bridge exposing verify402's paid tools (verify_arbitrage, check_token_safety) to any MCP client, paying per call via x402.",
+  "description": "MCP server for verify402: a free, fail-closed preflight gate before signing, plus five paid on-chain checks paid per call via x402.",
   "type": "module",
+  "bin": {
+    "verify402-mcp": "index.mjs"
+  },
   "main": "index.mjs",
+  "files": [
+    "index.mjs",
+    "budget.mjs",
+    "README.md",
+    ".env.example"
+  ],
   "scripts": {
     "start": "node index.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "x402",
+    "ai-agents",
+    "crypto",
+    "preflight",
+    "payments",
+    "base",
+    "solana",
+    "trading-bot"
+  ],
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/a32116150-ctrl/verify402.git",
+    "directory": "mcp-bridge"
+  },
+  "homepage": "https://verify402.onrender.com/mcp",
+  "bugs": {
+    "url": "https://github.com/a32116150-ctrl/verify402/issues"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.1",

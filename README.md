@@ -25,6 +25,7 @@ Payment is x402 in USDC, on Base or Solana — no account, no API key.
 
 **Human pages:** [home](https://verify402.onrender.com/) ·
 [preflight gate](https://verify402.onrender.com/preflight) ·
+[MCP server](https://verify402.onrender.com/mcp) ·
 [the five checks](https://verify402.onrender.com/checks) ·
 [live findings](https://verify402.onrender.com/live) ·
 [proof &amp; receipts](https://verify402.onrender.com/proof) ·
@@ -146,8 +147,11 @@ Response: `PASS` / `CAUTION` / `BLOCK`, `reasons[]`, `checked[]`,
 - Free is rate-limited (60/min per IP, 8 concurrent) so it cannot become a
   public RPC proxy.
 
-The MCP bridge exposes it as `preflight_gate`. If `sign_allowed` is false, do
-not sign; if `requires_ack` is true, surface the reasons to the operator.
+The MCP server exposes it as `preflight_gate`. It runs with no wallet (free gate
+only); add `EVM_PRIVATE_KEY` for the five paid tools. If `sign_allowed` is
+false, do not sign; if `requires_ack` is true, surface the reasons to the
+operator. Client configs and the install command are at
+[`/mcp`](https://verify402.onrender.com/mcp).
 
 ### Reference executor
 
@@ -229,11 +233,22 @@ wiring, and the distribution order.
 
 ## MCP: how AI agents consume this
 
-`mcp-bridge/` exposes the free pre-signing gate (`preflight_gate`) and the
-paid endpoints as native MCP tools (`verify_arbitrage`, `check_token_safety`,
-`get_best_route`, `verify_quote_fairness`, `get_trade_depth`) for Claude
-Desktop, OpenCode, or any MCP client, paying per call via x402 with a hard
-pre-sign spend cap (`MAX_PAYMENT_USD`, default $0.25). See `mcp-bridge/README.md`.
+`mcp-bridge/` is packaged as **`verify402-mcp`** (stdio). It exposes the free
+pre-signing gate (`preflight_gate`) and the five paid endpoints
+(`verify_arbitrage`, `check_token_safety`, `get_best_route`,
+`verify_quote_fairness`, `get_trade_depth`) to Claude Desktop, Cursor, OpenCode,
+or any MCP client.
+
+- **Free gate only:** omit `EVM_PRIVATE_KEY`; the server registers only
+  `preflight_gate` and nothing can be charged.
+- **Paid tools:** add a dedicated hot wallet with USDC. The bridge signs the x402
+  payment only — never a trade — and enforces `MAX_PAYMENT_USD` (default $0.25)
+  inside the x402 client before a signature exists. `MAX_DAILY_USD` is optional.
+- **Install:** `npx -y --package=<release-tarball> verify402-mcp` (the npm name is
+  `verify402-mcp` once published). Client configs, the exact OpenCode V2 shape,
+  and the release command are at
+  [`/mcp`](https://verify402.onrender.com/mcp). See also
+  `mcp-bridge/README.md`.
 
 ## Settlement, response delivery, and recovery (honest contract)
 

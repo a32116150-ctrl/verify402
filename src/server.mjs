@@ -386,7 +386,8 @@ function registrationFile(req) {
       "gate: contract facts, market liquidity and scam signals, a USD-sized sell probe across " +
       "every venue, round-trip cost at the intended size, and phantom-price detection. " +
       "TRUST / CAUTION / AVOID with evidence. Per-call x402 payment, USDC on Base or Solana. " +
-      "No profitability is ever promised; the service reports what it measured.",
+      "An MCP server (verify402-mcp, stdio) exposes the free gate and all five checks to any " +
+      "MCP client; install at /mcp. No profitability is ever promised; the service reports what it measured.",
     image: `${base}/agent-icon.svg`,
     services: [
       { name: "web", endpoint: base },
@@ -711,6 +712,7 @@ app.get("/", (req, res) => {
       `  POST /quotecheck ${QUOTECHECK_PRICE} per call      audit a quote someone else gave you`,
       `  POST /depth    ${DEPTH_PRICE} per call        how big can I trade before cost eats me?`,
       "  GET  /findings free                 live verdicts on Ethereum majors, free",
+      "  GET  /mcp      free                 MCP server: free gate + five paid tools",
       "  GET  /info     free                 machine-readable service description",
       "  GET  /health   free",
       "  GET  /.well-known/agent-registration.json   free   agent identity file",
@@ -733,7 +735,7 @@ app.get("/info", (_req, res) => {
   res.json({
     name: "verify402",
     description:
-      "Machine-payable truth service. /preflight is the free pre-signing gate: validate an x402 payment request or a chain transaction and get PASS / CAUTION / BLOCK with typed reasons and a short-lived receipt. /verify measures whether a cross-venue arbitrage round trip is profitable; /safety is a pre-trade gate that tells an agent whether a token is safe to buy before it risks capital. All quotes come from Uniswap's canonical QuoterV2 and each venue's own router, never from our own reimplementation of venue mathematics.",
+      "Machine-payable truth service. /preflight is the free pre-signing gate: validate an x402 payment request or a chain transaction and get PASS / CAUTION / BLOCK with typed reasons and a short-lived receipt. /verify measures whether a cross-venue arbitrage round trip is profitable; /safety is a pre-trade gate that tells an agent whether a token is safe to buy before it risks capital. All quotes come from Uniswap's canonical QuoterV2 and each venue's own router, never from our own reimplementation of venue mathematics. The MCP server (verify402-mcp) exposes the gate and the five checks as native tools; install at /mcp.",
     prices: {
       preflight: "free",
       preflight_verify: "free",
@@ -875,6 +877,15 @@ app.get("/info", (_req, res) => {
       mcpTool: "preflight_gate",
       doesNotCheck: ["recipient reputation", "sanctions screening", "contract audits", "balance-delta simulation", "MEV/sandwich protection"],
       note: "A PASS is not a guarantee. It means the listed checks passed at this block; `notChecked` lists what was not examined.",
+    },
+    mcp: {
+      package: "verify402-mcp",
+      transport: "stdio",
+      install: "https://verify402.onrender.com/mcp",
+      freeTool: "preflight_gate",
+      paidTools: ["verify_arbitrage", "check_token_safety", "get_best_route", "verify_quote_fairness", "get_trade_depth"],
+      freeOnlyWithoutWallet: true,
+      note: "Start with no EVM_PRIVATE_KEY to expose only the free gate. Paid tools use a dedicated hot wallet and cap each payment at MAX_PAYMENT_USD. The bridge signs x402 payments only, never a trade.",
     },
     recovery: {
       header: "x-idempotency-key",

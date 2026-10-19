@@ -19,6 +19,7 @@
     <nav class="nav-links">
       <a href="/checks">Checks</a>
       <a href="/preflight">Preflight</a>
+      <a href="/mcp">MCP</a>
       <a href="/live">Live</a>
       <a href="/proof">Proof</a>
       <a href="/docs" aria-current="page">Docs</a>
@@ -33,6 +34,7 @@
       <nav>
         <a href="/checks">Checks</a>
         <a href="/preflight">Preflight</a>
+        <a href="/mcp">MCP server</a>
         <a href="/live">Live findings</a>
         <a href="/proof">Proof &amp; receipts</a>
         <a href="/docs">Docs</a>
@@ -105,6 +107,7 @@
         <p class="eyebrow">03 · Before you sign</p>
         <h2 style="margin-top:14px">One free gate, one short-lived receipt.</h2>
         <p class="lead" style="margin-top:14px"><code class="inline">POST /preflight</code> is free. Give it an x402 payment request or a chain transaction; it returns <b>PASS / CAUTION / BLOCK</b>, typed reasons, the checks that actually ran, and the checks that did not. Every response carries an HMAC-signed receipt bound to the exact normalized intent and, where the chain is readable, a pinned block.</p>
+        <p class="small muted" style="margin-top:12px">Use it from an agent: <a class="textlink" href="/mcp">verify402-mcp</a> exposes the gate (no wallet) and the five paid checks (hot wallet, per-call x402) over MCP.</p>
         <div class="table-wrap" style="margin-top:22px">
           <table class="table">
             <thead><tr><th>Intent</th><th>What it needs</th><th>What it checks</th></tr></thead>
@@ -202,6 +205,7 @@
         <p class="cap">Product</p>
         <a href="/checks">The five checks</a>
         <a href="/preflight">Preflight gate</a>
+        <a href="/mcp">MCP server</a>
         <a href="/live">Live findings</a>
         <a href="/docs">Documentation</a>
         <a href="/donate">Donate</a>

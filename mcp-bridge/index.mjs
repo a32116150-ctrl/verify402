@@ -1,8 +1,10 @@
+#!/usr/bin/env node
 // verify402 MCP bridge.
 //
 // Makes verify402 consumable by any MCP client (Claude Desktop, OpenCode, any
-// agent framework) as native tools. When the client calls a tool, this bridge
-// performs the x402 payment handshake automatically and returns the verdict.
+// agent framework) as native tools. The free preflight gate works with no
+// wallet. The five paid checks use an x402 payment handshake from the wallet in
+// EVM_PRIVATE_KEY and return the verdict.
 //
 // ARCHITECTURE (per docs.x402.org/guides/mcp-server-with-x402):
 //
@@ -32,7 +34,7 @@ import { z } from "zod";
 config();
 
 const EVM_PRIVATE_KEY = process.env.EVM_PRIVATE_KEY;
-const SERVER_URL = process.env.VERIFY402_URL || "http://localhost:4021";
+const SERVER_URL = process.env.VERIFY402_URL || "https://verify402.onrender.com";
 // Preflight is free, so it does not go through the paying client. Keeping the
 // two clients separate means a misconfigured 402 on a free route can never
 // turn into a signature.
@@ -42,13 +44,42 @@ const freeApi = axios.create({ baseURL: SERVER_URL, timeout: 30_000 });
 // our own request code - so it cannot be bypassed by a caller.
 const MAX_PAYMENT_USD = Number(process.env.MAX_PAYMENT_USD || 0.25);
 
-if (!EVM_PRIVATE_KEY) {
-  console.error("EVM_PRIVATE_KEY is required (pre-funded with USDC on Base Sepolia or Base Mainnet)");
-  process.exit(1);
+// Free-only mode is deliberate: an agent can install the bridge and call the
+// free preflight gate without handing it a private key. The paid tools are
+// registered only when a wallet is configured.
+const PAID_ENABLED = Boolean(EVM_PRIVATE_KEY);
+
+if (process.argv.includes("--help") || process.argv.includes("-h")) {
+  console.log(`verify402-mcp — MCP server for verify402
+
+Usage:
+  verify402-mcp                 start the stdio MCP server
+  verify402-mcp --help          show this help
+  verify402-mcp --version       print the version
+
+Environment:
+  VERIFY402_URL     verify402 base URL (default https://verify402.onrender.com)
+  EVM_PRIVATE_KEY   optional; omit for the free preflight_gate only
+  MAX_PAYMENT_USD   cap on one x402 payment (default 0.25)
+  MAX_DAILY_USD     optional cap for the UTC day, persisted in a small ledger
+  SPEND_LEDGER_PATH optional ledger path (default .spend-ledger.json)
+
+The free gate is preflight_gate. The paid tools are verify_arbitrage,
+check_token_safety, get_best_route, verify_quote_fairness and get_trade_depth.
+The bridge signs x402 payments only; it never signs or sends a trade.
+`);
+  process.exit(0);
+}
+if (process.argv.includes("--version") || process.argv.includes("-v")) {
+  console.log("1.0.0");
+  process.exit(0);
 }
 
 // ---------------------------------------------------------------- payment ---
 async function createPaidClient() {
+  if (!Number.isFinite(MAX_PAYMENT_USD) || MAX_PAYMENT_USD <= 0) {
+    throw new Error("MAX_PAYMENT_USD must be a positive number");
+  }
   const client = x402Client.fromConfig({
     schemes: [], // registered below — the 402 itself decides the network
     spendControls: { maxAmountPerPayment: `$${MAX_PAYMENT_USD}` },
@@ -105,7 +136,7 @@ const DESCRIPTIONS = {
 };
 
 async function main() {
-  const paidApi = await createPaidClient();
+  const paidApi = PAID_ENABLED ? await createPaidClient() : null;
 
   const server = new McpServer({ name: "verify402", version: "1.0.0" });
 
@@ -178,6 +209,9 @@ async function main() {
     },
   );
 
+  // Paid tools require a wallet. Without EVM_PRIVATE_KEY the server still
+  // exposes the free gate, so "install it and try it" never asks for a key.
+  if (paidApi) {
   server.tool(
     "verify_arbitrage",
     DESCRIPTIONS.verify_arbitrage,
@@ -283,10 +317,15 @@ async function main() {
       return { content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }] };
     },
   );
+  } // end paid tools
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error(`verify402 MCP bridge connected -> ${SERVER_URL} (max payment $${MAX_PAYMENT_USD})`);
+  console.error(
+    paidApi
+      ? `verify402 MCP bridge connected -> ${SERVER_URL} (paid tools on, max payment $${MAX_PAYMENT_USD})`
+      : `verify402 MCP bridge connected -> ${SERVER_URL} (free preflight_gate only; set EVM_PRIVATE_KEY for paid tools)`,
+  );
 }
 
 main().catch((e) => {
