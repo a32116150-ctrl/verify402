@@ -324,17 +324,21 @@ function normalizePolicy(p) {
     out.maxAmountUsd = n;
   }
   if (p.maxValueWei != null) {
+    let n;
     try {
-      out.maxValueWei = BigInt(String(p.maxValueWei));
+      n = BigInt(String(p.maxValueWei));
     } catch {
       throw new PreflightError(400, "invalid_policy", "policy.maxValueWei must be a non-negative integer string");
     }
-    if (out.maxValueWei < 0n) throw new PreflightError(400, "invalid_policy", "policy.maxValueWei must be non-negative");
+    if (n < 0n) throw new PreflightError(400, "invalid_policy", "policy.maxValueWei must be non-negative");
+    // Keep the normalized policy JSON-safe: a BigInt in the response would
+    // break res.json() and turn an honest BLOCK into a 503.
+    out.maxValueWei = n.toString();
   }
   if (p.maxValueEth != null) {
     const n = Number(p.maxValueEth);
     if (!Number.isFinite(n) || n < 0) throw new PreflightError(400, "invalid_policy", "policy.maxValueEth must be a non-negative number");
-    out.maxValueWei = BigInt(Math.round(n * 1e18));
+    out.maxValueWei = BigInt(Math.round(n * 1e18)).toString();
   }
   if (p.maxTimeoutSeconds != null) {
     const n = Number(p.maxTimeoutSeconds);
@@ -1011,7 +1015,7 @@ async function transactionPreflight(body, { clientFactory, now }) {
     reasons.push(block("invalid_value", e.message));
   }
   checked.push("value");
-  if (policy.maxValueWei != null && value > policy.maxValueWei) {
+  if (policy.maxValueWei != null && value > BigInt(policy.maxValueWei)) {
     reasons.push(block("value_over_policy", `value ${value} wei is above policy.maxValueWei ${policy.maxValueWei}`));
   }
 

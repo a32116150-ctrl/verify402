@@ -234,6 +234,21 @@ test("chain unavailable: the gate fails closed with no receipt", async () => {
   );
 });
 
+test("transaction: a value cap is enforced and the response stays JSON-safe", async () => {
+  const out = await run({
+    kind: "transaction",
+    chainId: 8453,
+    to: USDC,
+    data: "0x",
+    value: "1000000000000000000",
+    policy: { maxValueEth: 0.1 },
+  });
+  assert.equal(out.verdict, "BLOCK");
+  assert.ok(out.reasons.some((r) => r.code === "value_over_policy"));
+  assert.equal(typeof out.intent.policy.maxValueWei, "string");
+  assert.doesNotThrow(() => JSON.stringify(out));
+});
+
 test("transaction: a V3 exactInputSingle decodes and a 1-wei minimum is CAUTION", async () => {
   const ABI_V3 = parseAbi([
     "function exactInputSingle((address tokenIn, address tokenOut, uint24 fee, address recipient, uint256 deadline, uint256 amountIn, uint256 amountOutMinimum, uint160 sqrtPriceLimitX96) params) payable returns (uint256 amountOut)",
