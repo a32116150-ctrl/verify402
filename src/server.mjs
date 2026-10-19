@@ -1009,9 +1009,17 @@ app.use(express.static(SITE_DIR, {
   },
 }));
 
+// Google Search Console verification file support
+app.get("/googleiGmI2QL110IkjnW0thU3DRZrdgQe_7mZsPWgkZVte7o.html", (_req, res) => {
+  res.type("text/html").send("google-site-verification: googleiGmI2QL110IkjnW0thU3DRZrdgQe_7mZsPWgkZVte7o.html");
+});
+
 app.get("/", (req, res) => {
-  // Humans get the landing page; machine clients keep the plain menu.
-  const wantsHtml = String(req.headers.accept || "").includes("text/html");
+  // Humans and search/verification crawlers get the landing page; machine clients keep the plain menu.
+  const accept = String(req.headers.accept || "");
+  const ua = String(req.headers["user-agent"] || "");
+  const isCrawler = /google|bot|crawler|spider|slurp|facebookexternalhit|bingbot|yandex|duckduckbot/i.test(ua);
+  const wantsHtml = accept.includes("text/html") || isCrawler;
   if (wantsHtml) {
     res.set("Cache-Control", "no-store");
     return res.type("text/html").send(LANDING_HTML);

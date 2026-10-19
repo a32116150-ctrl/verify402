@@ -151,3 +151,32 @@ test("discovery: no secrets leaked in public discovery outputs", () => {
     assert.doesNotMatch(blob, /CDP_API_KEY_SECRET/);
   }
 });
+
+test("discovery: google site verification meta tag and file are present for Search Console", () => {
+  const token = "iGmI2QL110IkjnW0thU3DRZrdgQe_7mZsPWgkZVte7o";
+  const expectedTag = `<meta name="google-site-verification" content="${token}">`;
+
+  const htmlFiles = [
+    path.join(ROOT, "src", "landing.html"),
+    path.join(ROOT, "src", "site", "start.html"),
+    path.join(ROOT, "src", "site", "checks.html"),
+    path.join(ROOT, "src", "site", "preflight.html"),
+    path.join(ROOT, "src", "site", "live.html"),
+    path.join(ROOT, "src", "site", "proof.html"),
+    path.join(ROOT, "src", "site", "docs.html"),
+    path.join(ROOT, "src", "site", "donate.html"),
+    path.join(ROOT, "src", "site", "mcp.html"),
+  ];
+
+  for (const f of htmlFiles) {
+    assert.ok(fs.existsSync(f), `HTML file ${f} must exist`);
+    const content = fs.readFileSync(f, "utf8");
+    assert.ok(content.includes(expectedTag), `${path.basename(f)} must contain Google site verification tag`);
+  }
+
+  const verifFile = path.join(ROOT, "src", "site", `google${token}.html`);
+  assert.ok(fs.existsSync(verifFile), "Google verification file must exist");
+  const fileContent = fs.readFileSync(verifFile, "utf8");
+  assert.ok(fileContent.includes(`google-site-verification: google${token}.html`));
+});
+
