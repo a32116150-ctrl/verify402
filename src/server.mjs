@@ -450,6 +450,58 @@ app.get("/.well-known/402index-verify.txt", (_req, res) => {
   res.type("text/plain").send("83f1c578d78d2b9645a4640bcc77939bdfbae84a86b7798d4d753e18085f3b14");
 });
 
+// x402 capability manifest, per draft-hawkins-x402-dns-discovery-02.
+// A bare-domain crawler gets the full paid surface in one GET; each resource
+// entry is a pointer, so the 402 challenge (not this file) stays authoritative
+// for price and terms. Free resources are deliberately excluded.
+app.get("/.well-known/x402", (_req, res) => {
+  res.set("Access-Control-Allow-Origin", "*");
+  res.set("Cache-Control", "public, max-age=300");
+  res.json({
+    x402Version: 2,
+    kind: "resource-server",
+    name: "verify402",
+    description:
+      "Per-call truth checks for trading agents: arbitrage reality, token safety, execution book, quote fairness, and trade capacity. Free preflight gate; paid verdicts return reproducible evidence, not profit promises.",
+    resources: [
+      {
+        url: "https://verify402.onrender.com/verify",
+        method: "POST",
+        description:
+          "Is this cross-venue arbitrage real at one pinned block? Returns a verdict with full evidence; the most common honest answer is no_edge.",
+      },
+      {
+        url: "https://verify402.onrender.com/safety",
+        method: "POST",
+        description:
+          "Pre-trade token gate: TRUST / CAUTION / AVOID, with live contract facts and a USD-sized sell probe against every venue.",
+      },
+      {
+        url: "https://verify402.onrender.com/route",
+        method: "POST",
+        description:
+          "Every venue quoting tokenIn to tokenOut at one pinned block, direct and WETH-routed, best first.",
+      },
+      {
+        url: "https://verify402.onrender.com/quotecheck",
+        method: "POST",
+        description:
+          "Audit a quote someone else gave you: fair / overpaying / too_good_to_be_true / unknown, with the venue book as evidence.",
+      },
+      {
+        url: "https://verify402.onrender.com/depth",
+        method: "POST",
+        description:
+          "Largest size that still clears your cost tolerance: per-size entry and exit quotes, impact, round-trip cost, and capacityUsd.",
+      },
+    ],
+    attestation: { type: "none" },
+    docs: "https://verify402.onrender.com/start",
+    contact: "a32116150@gmail.com",
+    updated: "2026-10-19T00:00:00Z",
+  });
+});
+
 // Hero verdicts, FREE. Ethereum majors at one size - the boring part of the
 // market, and almost always no_edge. That is the point: an agent (or a
 // human) can validate that this service tells reproducible truth before
