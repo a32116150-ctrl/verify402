@@ -106,14 +106,14 @@
       <article id="preflight">
         <p class="eyebrow">03 · Before you sign</p>
         <h2 style="margin-top:14px">One free gate, one short-lived receipt.</h2>
-        <p class="lead" style="margin-top:14px"><code class="inline">POST /preflight</code> is free. Give it an x402 payment request or a chain transaction; it returns <b>PASS / CAUTION / BLOCK</b>, typed reasons, the checks that actually ran, and the checks that did not. Every response carries an HMAC-signed receipt bound to the exact normalized intent and, where the chain is readable, a pinned block.</p>
+        <p class="lead" style="margin-top:14px"><code class="inline">POST /preflight</code> is free. Give it an x402 payment request or a chain transaction; it returns <b>PASS / CAUTION / BLOCK</b>, typed reasons, the checks that actually ran, and the checks that did not. Every response carries an HMAC-signed receipt bound to the exact normalized intent and, where the chain is readable, a fresh pinned block. On EVM, a block older than 30s is CAUTION; older than 120s is BLOCK; a block with no timestamp is a 503.</p>
         <p class="small muted" style="margin-top:12px">Use it from an agent: <a class="textlink" href="/mcp">verify402-mcp</a> exposes the gate (no wallet) and the five paid checks (hot wallet, per-call x402) over MCP.</p>
         <div class="table-wrap" style="margin-top:22px">
           <table class="table">
             <thead><tr><th>Intent</th><th>What it needs</th><th>What it checks</th></tr></thead>
             <tbody>
-              <tr><td class="mono">payment</td><td class="mono">network, asset, amount, payTo, resource</td><td>scheme, CAIP-2 network, canonical USDC, amount/policy cap, payee allowlist, resource match, timeout, authorization window, payer balance on EVM</td></tr>
-              <tr><td class="mono">transaction</td><td class="mono">chainId (EVM 1/42161/8453), to, data, value, from</td><td>recipient, calldata decode, contract bytecode, approval/spender policy, swap deadline/minOut/recipient, <code class="inline">eth_call</code> simulation</td></tr>
+              <tr><td class="mono">payment</td><td class="mono">network, asset, amount, payTo, resource</td><td>scheme, CAIP-2 network, canonical USDC, amount/policy cap, payee allowlist, resource match, timeout, authorization window, payer balance on EVM, EVM block freshness</td></tr>
+              <tr><td class="mono">transaction</td><td class="mono">chainId (EVM 1/42161/8453), to, data, value, from</td><td>recipient, calldata decode, contract bytecode, approval/spender policy, swap deadline/minOut/recipient, <code class="inline">eth_call</code> simulation, EVM block freshness</td></tr>
             </tbody>
           </table>
         </div>

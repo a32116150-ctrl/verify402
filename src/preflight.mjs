@@ -40,6 +40,10 @@ export const RECEIPT_SPEC = "verify402/preflight-receipt@1";
 export const DEFAULT_TTL_SECONDS = 90;
 export const MAX_TTL_SECONDS = 300;
 export const MIN_TTL_SECONDS = 15;
+// The supported EVM chains produce blocks every ~12s or faster. A block older
+// than 30s is worth surfacing; older than 120s is not a usable "latest" block.
+export const BLOCK_AGE_CAUTION_SECONDS = 30;
+export const BLOCK_AGE_BLOCK_SECONDS = 120;
 
 const MAX_DATA_BYTES = 32 * 1024;
 const MAX_UINT256 = 2n ** 256n - 1n;
@@ -396,7 +400,9 @@ function getClient(chainId, clientFactory) {
 async function getBlockSafe(client, chainId) {
   try {
     const b = await client.getBlock({ blockTag: "latest" });
-    if (!b || b.number == null) throw new Error("no block returned");
+    if (!b || b.number == null || b.timestamp == null) {
+      throw new Error("the RPC returned a block without a number or timestamp");
+    }
     return b;
   } catch (e) {
     if (e instanceof PreflightError) throw e;
@@ -624,7 +630,18 @@ export function verifyReceipt(receipt, { now = Date.now() } = {}) {
 const NOTE = "A PASS is not a guarantee. It means the checks listed in `checked` passed at this block; `notChecked` lists what was not examined. Receipts expire and are bound to the exact intent.";
 
 function finish({ kind, reasons, checked, notChecked, intent, block: chainBlock, simulation, decoded, payerBalance, ttlSeconds, now }) {
-  const verdict = verdictOf(reasons);
+  const reasonsFinal = [...reasons];
+  let blockAgeSeconds = null;
+  if (chainBlock?.timestamp != null) {
+    blockAgeSeconds = Math.max(0, Math.floor(now / 1000) - Number(chainBlock.timestamp));
+    checked.push("block_freshness");
+    if (blockAgeSeconds > BLOCK_AGE_BLOCK_SECONDS) {
+      reasonsFinal.push(block("stale_block", `the latest readable block is ${blockAgeSeconds}s old, above the ${BLOCK_AGE_BLOCK_SECONDS}s hard limit`));
+    } else if (blockAgeSeconds > BLOCK_AGE_CAUTION_SECONDS) {
+      reasonsFinal.push(caution("stale_block", `the latest readable block is ${blockAgeSeconds}s old; state may have moved`));
+    }
+  }
+  const verdict = verdictOf(reasonsFinal);
   const checkedFinal = unique(checked);
   const notCheckedFinal = unique(notChecked);
   const intentHash = sha256Hex(canonicalStable(intent));
@@ -645,13 +662,19 @@ function finish({ kind, reasons, checked, notChecked, intent, block: chainBlock,
     verdict,
     sign_allowed: verdict !== "BLOCK",
     requires_ack: verdict === "CAUTION",
-    summary: summaryOf(verdict, reasons),
-    reasons,
+    summary: summaryOf(verdict, reasonsFinal),
+    reasons: reasonsFinal,
     checked: checkedFinal,
     notChecked: notCheckedFinal,
     intent,
     intentHash,
-    block: chainBlock ? { number: Number(chainBlock.number), hash: chainBlock.hash } : null,
+    block: chainBlock ? {
+      number: Number(chainBlock.number),
+      hash: chainBlock.hash,
+      ...(chainBlock.timestamp != null
+        ? { timestamp: Number(chainBlock.timestamp), ageSeconds: blockAgeSeconds }
+        : {}),
+    } : null,
     simulation: simulation ?? undefined,
     decoded: decoded ?? undefined,
     payerBalance: payerBalance ?? undefined,
@@ -669,7 +692,13 @@ async function paymentPreflight(body, { clientFactory, now }) {
   const policy = normalizePolicy(body.policy);
   const reasons = [];
   const checked = [];
-  const notChecked = ["recipient reputation", "sanctions screening", "off-chain promises"];
+  const notChecked = [
+    "recipient reputation",
+    "sanctions screening",
+    "payment signature / signed payload",
+    "facilitator settlement",
+    "off-chain promises",
+  ];
 
   const net = parseNetwork(raw.network);
   const chainHint = body.chainId ?? raw.chainId ?? null;
@@ -965,6 +994,8 @@ async function transactionPreflight(body, { clientFactory, now }) {
     "recipient reputation",
     "sanctions screening",
     "state-change/balance-delta simulation",
+    "gas price/limit chosen by the signer",
+    "raw signed transaction binding",
     "contract audit",
     "off-chain promises",
   ];

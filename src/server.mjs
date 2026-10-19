@@ -405,7 +405,7 @@ function registrationFile(req) {
     defaultOutputModes: ["application/json"],
     capabilities: { transports: ["http"], x402: { supported: true, network: "base", asset: "USDC" } },
     skills: [
-      { id: "preflight", name: "preflight", description: "Free pre-signing gate for any x402 payment request or chain transaction: PASS / CAUTION / BLOCK, typed reasons, checked/notChecked, and a short-lived receipt bound to the exact intent and pinned block. Call before signing." },
+      { id: "preflight", name: "preflight", description: "Free pre-signing gate for any x402 payment request or chain transaction: PASS / CAUTION / BLOCK, typed reasons, checked/notChecked, and a short-lived receipt bound to the exact intent and a fresh pinned block. Call before signing." },
       { id: "verify", name: "verify", description: "Cross-venue arbitrage truth check: pinned-block quotes from both sides, three-state verdict (edge / no_edge / no_edge_costs_ate_it), evidence included." },
       { id: "safety", name: "safety", description: "Pre-trade gate: contract facts, market liquidity, scam signals, a USD-sized sell probe, round-trip cost at the intended size, TRUST / CAUTION / AVOID with evidence." },
       { id: "route", name: "route", description: "What the chain would actually pay for a swap: best route plus every quoted venue at a USD size." },
@@ -864,18 +864,34 @@ app.get("/info", (_req, res) => {
       paymentNetworks: "EVM (1, 42161, 8453, 84532, 11155111) + Solana mainnet/devnet",
       transactionChains: Object.keys(CHAINS).map(Number),
       verdicts: {
-        PASS: "every check in `checked` passed at this pinned block",
+        PASS: "every check in `checked` passed at this fresh pinned block",
         CAUTION: "at least one check needs a decision; read `reasons`",
         BLOCK: "at least one hard check failed; do not sign",
       },
-      binding: "sha256 of the canonical normalized intent, a pinned block where the chain is readable, and an expiry (default 90s, max 300s)",
+      blockFreshness: {
+        cautionAfterSeconds: 30,
+        blockAfterSeconds: 120,
+        noTimestamp: "503, no receipt",
+        note: "EVM only; the response carries block.timestamp and block.ageSeconds",
+      },
+      binding: "sha256 of the canonical normalized intent, a fresh pinned block where the chain is readable, and an expiry (default 90s, max 300s)",
       failClosed: "if the chain cannot be read, /preflight returns 503 and issues no receipt; an executor should refuse to sign without a verifiable PASS or an explicitly acknowledged CAUTION",
       receiptSigning: RECEIPT_SECRET_SOURCE === "env"
         ? "hmac-sha256 with PREFLIGHT_SECRET"
         : "hmac-sha256 with an ephemeral per-process secret; set PREFLIGHT_SECRET for multi-instance verification",
       verify: "POST /preflight/verify",
       mcpTool: "preflight_gate",
-      doesNotCheck: ["recipient reputation", "sanctions screening", "contract audits", "balance-delta simulation", "MEV/sandwich protection"],
+      doesNotCheck: [
+        "recipient reputation",
+        "sanctions screening",
+        "contract audits",
+        "balance-delta simulation",
+        "MEV/sandwich protection",
+        "payment signature / signed payload",
+        "gas price/limit chosen by the signer",
+        "raw signed-transaction binding",
+        "facilitator settlement",
+      ],
       note: "A PASS is not a guarantee. It means the listed checks passed at this block; `notChecked` lists what was not examined.",
     },
     mcp: {

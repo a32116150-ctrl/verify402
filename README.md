@@ -4,8 +4,8 @@ A machine-payable truth service for AI agents. Before an agent signs anything,
 `POST /preflight` is the free gate: it takes an x402 payment request or a chain
 transaction and returns `PASS` / `CAUTION` / `BLOCK` with typed reasons, the
 checks that actually ran, the checks that did not, and a short-lived receipt
-bound to the exact intent and pinned block. It is free because it has to run
-before every signature; the deep measurements stay paid.
+bound to the exact intent and a fresh pinned block. It is free because it has
+to run before every signature; the deep measurements stay paid.
 
 Once the intent is clear, two questions an agent cannot answer honestly by itself:
 
@@ -123,8 +123,8 @@ Response: `PASS` / `CAUTION` / `BLOCK`, `reasons[]`, `checked[]`,
   "sign_allowed": true,
   "requires_ack": true,
   "reasons": [{ "code": "unlimited_approval", "severity": "caution", "message": "..." }],
-  "checked": ["scheme", "network", "asset", "amount", "payee", "resource", "payer_balance"],
-  "notChecked": ["recipient reputation", "sanctions screening", "off-chain promises"],
+  "checked": ["scheme", "network", "asset", "amount", "payee", "resource", "payer_balance", "block_freshness"],
+  "notChecked": ["recipient reputation", "sanctions screening", "payment signature / signed payload", "facilitator settlement", "off-chain promises"],
   "receipt": {
     "spec": "verify402/preflight-receipt@1",
     "intentHash": "…",
@@ -137,13 +137,19 @@ Response: `PASS` / `CAUTION` / `BLOCK`, `reasons[]`, `checked[]`,
 ```
 
 - The receipt is HMAC-SHA256 signed, bound to the canonical normalized intent,
-  a pinned block where the chain is readable, and an expiry (default 90s, max
-  300s). `POST /preflight/verify` recomputes it.
+  a fresh pinned block where the chain is readable, and an expiry (default 90s,
+  max 300s). `POST /preflight/verify` recomputes it.
+- **Fresh block, not just any block:** on EVM chains, a latest block older than
+  **30s** is `CAUTION`; older than **120s** is `BLOCK`. The response carries
+  `block.timestamp` and `block.ageSeconds`. A block with no timestamp is a
+  `503`, not a PASS.
 - **Fail-closed:** if the chain cannot be read, the endpoint returns `503` and
   no receipt. An executor must refuse to sign without a verifiable receipt.
 - **Not checked, on purpose:** recipient reputation, sanctions, contract
-  audits, full balance-delta simulation, MEV. They are named in every response
-  instead of being implied.
+  audits, full balance-delta simulation, MEV, the payment signature/signed
+  payload, gas price/limit chosen by the signer, raw signed-transaction binding,
+  and facilitator settlement. They are named in every response instead of being
+  implied.
 - Free is rate-limited (60/min per IP, 8 concurrent) so it cannot become a
   public RPC proxy.
 

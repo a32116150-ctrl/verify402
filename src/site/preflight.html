@@ -109,7 +109,7 @@
         <table class="table">
           <thead><tr><th>Verdict</th><th>Meaning</th><th>What an agent should do</th></tr></thead>
           <tbody>
-            <tr><td class="mono">PASS</td><td>Every check in <code class="inline">checked</code> passed at this pinned block.</td><td>Proceed. Still read <code class="inline">notChecked</code>.</td></tr>
+            <tr><td class="mono">PASS</td><td>Every check in <code class="inline">checked</code> passed at this fresh pinned block. On EVM, &gt;30s is CAUTION and &gt;120s is BLOCK.</td><td>Proceed. Still read <code class="inline">notChecked</code>.</td></tr>
             <tr><td class="mono">CAUTION</td><td>A check needs a decision: an unvetted spender, a non-canonical asset, unknown calldata, no <code class="inline">from</code> to simulate.</td><td>Surface the reasons to the operator. Sign only with explicit acknowledgement.</td></tr>
             <tr><td class="mono">BLOCK</td><td>A hard check failed: a revert, a wrong asset, an expired authorization, a non-contract target, an allowlist mismatch.</td><td>Do not sign. Change the transaction, not the gate.</td></tr>
           </tbody>
@@ -154,8 +154,8 @@
   <span class="y">"sign_allowed"</span>: <span class="g">true</span>,
   <span class="y">"requires_ack"</span>: <span class="g">false</span>,
   <span class="y">"reasons"</span>: [],
-  <span class="y">"checked"</span>: [<span class="g">"scheme"</span>, <span class="g">"network"</span>, <span class="g">"asset"</span>, <span class="g">"amount"</span>, <span class="g">"payee"</span>, <span class="g">"resource"</span>, <span class="g">"payer_balance"</span>],
-  <span class="y">"notChecked"</span>: [<span class="g">"recipient reputation"</span>, <span class="g">"sanctions screening"</span>],
+  <span class="y">"checked"</span>: [<span class="g">"scheme"</span>, <span class="g">"network"</span>, <span class="g">"asset"</span>, <span class="g">"amount"</span>, <span class="g">"payee"</span>, <span class="g">"resource"</span>, <span class="g">"payer_balance"</span>, <span class="g">"block_freshness"</span>],
+  <span class="y">"notChecked"</span>: [<span class="g">"recipient reputation"</span>, <span class="g">"sanctions screening"</span>, <span class="g">"payment signature / signed payload"</span>, <span class="g">"facilitator settlement"</span>],
   <span class="y">"receipt"</span>: {
     <span class="y">"spec"</span>: <span class="g">"verify402/preflight-receipt@1"</span>,
     <span class="y">"intentHash"</span>: <span class="g">"…"</span>,
@@ -209,6 +209,14 @@
               <td>Whether the recipient is a scammer or a sanctioned address</td>
             </tr>
             <tr>
+              <td>EVM block freshness: &gt;30s CAUTION, &gt;120s BLOCK</td>
+              <td>Gas price/limit chosen by the signer; raw signed-transaction binding</td>
+            </tr>
+            <tr>
+              <td>Payment request fields and authorization window</td>
+              <td>Payment signature/signed payload; facilitator settlement</td>
+            </tr>
+            <tr>
               <td>Canonical USDC and a sane raw amount; payer balance on EVM mainnet</td>
               <td>Contract audits, proxy upgrades, owner privileges</td>
             </tr>
@@ -227,7 +235,7 @@
           </tbody>
         </table>
       </div>
-      <p class="small muted" style="margin-top:20px">A PASS means the left column passed at that block. It is not a guarantee that the transaction will execute, settle, or be honest. The right column is named on every response so nobody has to infer it.</p>
+      <p class="small muted" style="margin-top:20px">A PASS means the left column passed at that fresh block. A block with no timestamp is a 503, not a pass. It is not a guarantee that the transaction will execute, settle, or be honest. The right column is named on every response so nobody has to infer it.</p>
     </div>
   </section>
 
@@ -236,7 +244,7 @@
       <div class="sec-head">
         <p class="eyebrow">Receipts</p>
         <h2>A receipt an executor can actually check.</h2>
-        <p class="lead">Every response carries a short-lived HMAC-signed receipt. The intent hash binds the exact normalized request; the block pins the chain state; the expiry bounds reuse.</p>
+        <p class="lead">Every response carries a short-lived HMAC-signed receipt. The intent hash binds the exact normalized request; the fresh block pins the chain state; the expiry bounds reuse.</p>
       </div>
       <div class="steps" style="margin-top:40px">
         <div class="step">

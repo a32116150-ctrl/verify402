@@ -20,7 +20,7 @@ const ABI_TRANSFER = parseAbi(["function transfer(address to, uint256 amount)"])
 function fakeClient(overrides = {}) {
   return {
     async getBlock() {
-      return { number: 123n, hash: BLOCK_HASH };
+      return { number: 123n, hash: BLOCK_HASH, timestamp: BigInt(NOW / 1000) };
     },
     async getCode() {
       return "0x6000";
@@ -79,6 +79,8 @@ test("payment: canonical USDC with enough balance is PASS and the receipt verifi
   assert.equal(out.requires_ack, false);
   assert.equal(out.intentHash, out.receipt.intentHash);
   assert.equal(out.block.number, 123);
+  assert.equal(out.block.ageSeconds, 0);
+  assert.ok(out.checked.includes("block_freshness"));
   assert.ok(out.checked.includes("payer_balance"));
   assert.ok(out.notChecked.includes("sanctions screening"));
   assert.equal(verifyReceipt(out.receipt, { now: NOW }).valid, true);
@@ -226,6 +228,45 @@ test("chain unavailable: the gate fails closed with no receipt", async () => {
   const client = fakeClient({
     async getBlock() {
       throw new Error("rpc down");
+    },
+  });
+  await assert.rejects(
+    () => run(payment(), client),
+    (e) => e instanceof PreflightError && e.status === 503 && e.code === "chain_unavailable",
+  );
+});
+
+test("block freshness: a block older than 30s is CAUTION", async () => {
+  const client = fakeClient({
+    async getBlock() {
+      return { number: 123n, hash: BLOCK_HASH, timestamp: BigInt(NOW / 1000 - 31) };
+    },
+  });
+  const out = await run(payment(), client);
+  assert.equal(out.verdict, "CAUTION");
+  assert.equal(out.requires_ack, true);
+  assert.equal(out.block.ageSeconds, 31);
+  assert.ok(out.checked.includes("block_freshness"));
+  assert.ok(out.reasons.some((r) => r.code === "stale_block" && r.severity === "caution"));
+});
+
+test("block freshness: a block older than 120s is BLOCK", async () => {
+  const client = fakeClient({
+    async getBlock() {
+      return { number: 123n, hash: BLOCK_HASH, timestamp: BigInt(NOW / 1000 - 121) };
+    },
+  });
+  const out = await run(payment(), client);
+  assert.equal(out.verdict, "BLOCK");
+  assert.equal(out.sign_allowed, false);
+  assert.equal(out.block.ageSeconds, 121);
+  assert.ok(out.reasons.some((r) => r.code === "stale_block" && r.severity === "block"));
+});
+
+test("block freshness: a block without a timestamp fails closed", async () => {
+  const client = fakeClient({
+    async getBlock() {
+      return { number: 123n, hash: BLOCK_HASH };
     },
   });
   await assert.rejects(
