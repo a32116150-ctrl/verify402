@@ -38,6 +38,7 @@ import {
   PREFLIGHT_SPEC, RECEIPT_SPEC, RECEIPT_SECRET_SOURCE,
   DEFAULT_TTL_SECONDS,
 } from "./preflight.mjs";
+import { buildOpenapi } from "./openapi.mjs";
 
 // ---------------------------------------------------------------- config ----
 const MODE = process.env.X402_MODE === "mainnet" ? "mainnet" : "testnet";
@@ -517,6 +518,7 @@ app.get("/llms.txt", (_req, res) => {
       "",
       "## Machine-readable",
       "",
+      "- /openapi.json — OpenAPI 3.1 contract with x-payment-info on every paid route.",
       "- /.well-known/x402 — x402 capability manifest (draft-hawkins-x402-dns-discovery-02).",
       "- /.well-known/agent-card.json — A2A agent card.",
       "- /.well-known/agent-registration.json — ERC-8004 registration file.",
@@ -532,6 +534,21 @@ app.get("/llms.txt", (_req, res) => {
       "",
     ].join("\n"),
   );
+});
+
+// OpenAPI contract for x402scan and any agent that reads a spec before paying.
+// Prices are injected from the same strings the 402 middleware uses, so the
+// metadata and the runtime challenge cannot drift apart.
+app.get("/openapi.json", (_req, res) => {
+  res.set("Access-Control-Allow-Origin", "*");
+  res.set("Cache-Control", "public, max-age=300");
+  res.json(buildOpenapi({
+    verify: PRICE,
+    safety: SAFETY_PRICE,
+    route: ROUTE_PRICE,
+    quotecheck: QUOTECHECK_PRICE,
+    depth: DEPTH_PRICE,
+  }));
 });
 
 // x402 capability manifest, per draft-hawkins-x402-dns-discovery-02.
