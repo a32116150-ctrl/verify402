@@ -859,6 +859,8 @@ app.get("/info", (_req, res) => {
       defaultTtlSeconds: DEFAULT_TTL_SECONDS,
       limits: { perMinutePerIp: PREFLIGHT_RATE_PER_MIN, maxInFlight: PREFLIGHT_MAX_IN_FLIGHT },
       intents: ["payment", "transaction"],
+      paymentNetworks: "EVM (1, 42161, 8453, 84532, 11155111) + Solana mainnet/devnet",
+      transactionChains: Object.keys(CHAINS).map(Number),
       verdicts: {
         PASS: "every check in `checked` passed at this pinned block",
         CAUTION: "at least one check needs a decision; read `reasons`",

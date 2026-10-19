@@ -108,9 +108,10 @@ size that stays under the caller's cost tolerance. Live example (SHIB,
 `POST /preflight` is the free control an agent runs immediately before signing.
 It accepts one of two intents:
 
-- **payment** — an x402 402 challenge: scheme, CAIP-2 network, asset, raw
-  amount, `payTo`, resource, timeout, authorization window.
-- **transaction** — `chainId`, `to`, `data`, `value`, optional `from`.
+- **payment** — an x402 402 challenge (EVM or Solana): scheme, CAIP-2 network,
+  asset, raw amount, `payTo`, resource, timeout, authorization window.
+- **transaction** — `chainId`, `to`, `data`, `value`, optional `from` (EVM:
+  Ethereum 1, Arbitrum 42161, Base 8453).
 
 Response: `PASS` / `CAUTION` / `BLOCK`, `reasons[]`, `checked[]`,
 `notChecked[]`, and a receipt:
