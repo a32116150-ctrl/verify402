@@ -60,14 +60,14 @@
           <a class="btn ghost" href="#tools">See the tools</a>
         </div>
         <p class="hero-note">
-          <span><span class="dot"></span>Free gate · no wallet</span>
-          <span>Paid checks over x402</span>
-          <span>stdio · local</span>
+          <span><span class="dot"></span>Official MCP Registry: <a href="https://registry.modelcontextprotocol.io/" class="textlink" target="_blank" rel="noopener">active</a></span>
+          <span>npm: <a href="https://www.npmjs.com/package/verify402-mcp" class="textlink" target="_blank" rel="noopener">verify402-mcp v1.0.2</a></span>
+          <span>Free gate · no wallet</span>
         </p>
       </div>
       <aside>
         <div class="vcard">
-          <div class="vcard-head"><span>MCP · verify402</span><span class="ok">● example</span></div>
+          <div class="vcard-head"><span>MCP · verify402</span><span class="ok">● active registry</span></div>
           <div class="vcard-body">
             <div class="vrow"><span class="pair">preflight_gate</span><span class="verdict">free</span><span class="meta">before the signature</span></div>
             <div class="vrow"><span class="pair">verify_arbitrage</span><span class="verdict">$0.05</span><span class="meta">is it real?</span></div>
@@ -76,7 +76,7 @@
             <div class="vrow"><span class="pair">verify_quote_fairness</span><span class="verdict">$0.05</span><span class="meta">is the quote honest?</span></div>
             <div class="vrow"><span class="pair">get_trade_depth</span><span class="verdict">$0.05</span><span class="meta">how big can I trade?</span></div>
           </div>
-          <div class="vcard-foot">No subscription · the free gate needs no private key</div>
+          <div class="vcard-foot">No subscription · registry id: io.github.a32116150-ctrl/verify402-mcp</div>
         </div>
         <p class="small muted" style="margin-top:12px">The free gate runs before the signature. It is advice in the MCP layer; the executor enforces it.</p>
       </aside>
@@ -112,7 +112,7 @@
       <div class="sec-head">
         <p class="eyebrow">Install</p>
         <h2>Start with the free gate. Add the wallet later.</h2>
-        <p class="lead">Run these from the machine that runs your MCP client. The first <code class="inline">npx</code> installs dependencies; warm the cache once so your client does not hit its startup timeout.</p>
+        <p class="lead">Published to the public npm registry and the official Model Context Protocol Registry. Run directly with <code class="inline">npx</code> without cloning or building.</p>
       </div>
 
       <div class="proof-grid" style="margin-top:40px">
@@ -129,15 +129,13 @@
       </div>
 
       <div style="margin-top:32px">
-        <p class="code-cap">Warm the npx cache · no key needed</p>
-<pre>npx -y \
-  --package=https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.2/verify402-mcp-1.0.2.tgz \
-  verify402-mcp --help</pre>
+        <p class="code-cap">Run via npx · no wallet required</p>
+<pre>npx -y verify402-mcp --help</pre>
       </div>
 
-      <div class="callout warn" style="margin-top:24px">
-        <h3>Why the warm-up matters</h3>
-        <p>The first run downloads the MCP SDK and <code class="inline">viem</code>. Some clients kill a server that takes more than 30 seconds to start. Run the command above once; subsequent starts use the cache.</p>
+      <div class="callout good" style="margin-top:24px">
+        <h3>Official MCP Registry &amp; npm Distribution</h3>
+        <p>Published on npm as <a class="textlink" href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener"><strong>verify402-mcp</strong></a> (version 1.0.2) and listed on the official Model Context Protocol Registry as <code class="inline">io.github.a32116150-ctrl/verify402-mcp</code>. Machine agents can also fetch the machine-readable <a class="textlink" href="/.well-known/verify402.json">service manifest</a> and <a class="textlink" href="/openapi.json">OpenAPI 3.1 specification</a>.</p>
       </div>
 
       <article id="claude" style="margin-top:44px">
@@ -152,7 +150,6 @@
       <span class="y">"command"</span>: <span class="g">"npx"</span>,
       <span class="y">"args"</span>: [
         <span class="g">"-y"</span>,
-        <span class="g">"--package=https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.2/verify402-mcp-1.0.2.tgz"</span>,
         <span class="g">"verify402-mcp"</span>
       ],
       <span class="y">"env"</span>: {
@@ -181,7 +178,6 @@
         <span class="y">"command"</span>: [
           <span class="g">"npx"</span>,
           <span class="g">"-y"</span>,
-          <span class="g">"--package=https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.2/verify402-mcp-1.0.2.tgz"</span>,
           <span class="g">"verify402-mcp"</span>
         ],
         <span class="y">"environment"</span>: {
@@ -195,9 +191,9 @@
         <p class="small muted" style="margin-top:16px">V2 uses <code class="inline">mcp.servers</code> and <code class="inline">disabled</code>; there is no <code class="inline">enabled</code> field. The server name prefixes its tools in OpenCode.</p>
       </article>
 
-      <div class="callout good" style="margin-top:32px">
-        <h3>From source, if you prefer</h3>
-        <p><code class="inline">git clone https://github.com/a32116150-ctrl/verify402</code>, then <code class="inline">cd verify402/mcp-bridge &amp;&amp; npm ci</code>. Point the client at <code class="inline">node /absolute/path/to/verify402/mcp-bridge/index.mjs</code>. The package name is <code class="inline">verify402-mcp</code>; the release tarball above is the versioned install.</p>
+      <div class="callout" style="margin-top:32px">
+        <h3>Alternative install options</h3>
+        <p>If you prefer a pinned release tarball: <code class="inline">npx -y --package=https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.2/verify402-mcp-1.0.2.tgz verify402-mcp</code>. From source: <code class="inline">git clone https://github.com/a32116150-ctrl/verify402</code>, then <code class="inline">cd verify402/mcp-bridge &amp;&amp; npm ci</code>.</p>
       </div>
     </div>
   </section>
@@ -283,9 +279,12 @@
       </div>
       <div class="foot-col">
         <p class="cap">For machines</p>
-        <a href="/info">/info</a>
+        <a href="/.well-known/verify402.json">service manifest</a>
+        <a href="/openapi.json">openapi 3.1</a>
+        <a href="/llms.txt">llms.txt</a>
+        <a href="/sitemap.xml">sitemap</a>
+        <a href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener">npm package</a>
         <a href="/health">/health</a>
-        <a href="/.well-known/agent-card.json">agent card</a>
         <a href="/findings">/findings</a>
       </div>
     </div>

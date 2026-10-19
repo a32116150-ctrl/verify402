@@ -93,10 +93,11 @@ export function buildServiceManifest({
         type: "model-context-protocol",
         transport: "stdio",
         packageIdentifier: "verify402-mcp",
+        npmUrl: "https://www.npmjs.com/package/verify402-mcp",
         tarballUrl: "https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.2/verify402-mcp-1.0.2.tgz",
         registryName: "io.github.a32116150-ctrl/verify402-mcp",
-        registryUrl: "https://registry.modelcontextprotocol.io/servers/io.github.a32116150-ctrl/verify402-mcp",
-        quickInstallCommand: "npx -y --package=https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.2/verify402-mcp-1.0.2.tgz verify402-mcp",
+        registryUrl: "https://registry.modelcontextprotocol.io/v0.1/servers/io.github.a32116150-ctrl%2Fverify402-mcp/versions/1.0.2",
+        quickInstallCommand: "npx -y verify402-mcp",
         tools: [
           {
             name: "preflight_gate",

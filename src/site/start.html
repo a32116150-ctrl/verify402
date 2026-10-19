@@ -162,11 +162,10 @@
       <article id="mcp">
         <p class="eyebrow">04 · Inside the agent</p>
         <h2 style="margin-top:14px">One MCP tool, no wallet.</h2>
-        <p class="lead" style="margin-top:14px">Warm the <code class="inline">npx</code> cache once, then add the server to Claude Desktop, Cursor, OpenCode or any stdio MCP client. With no <code class="inline">EVM_PRIVATE_KEY</code>, only <code class="inline">preflight_gate</code> is registered — nothing can be charged.</p>
+        <p class="lead" style="margin-top:14px">Run with <code class="inline">npx</code>, or add the server to Claude Desktop, Cursor, OpenCode or any stdio MCP client. With no <code class="inline">EVM_PRIVATE_KEY</code>, only <code class="inline">preflight_gate</code> is registered — nothing can be charged. Published on npm as <a class="textlink" href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener">verify402-mcp</a> and listed on the official MCP Registry.</p>
         <div style="margin-top:24px">
-          <p class="code-cap">Warm once</p>
-<pre><span class="c">npx -y</span> --package=https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.2/verify402-mcp-1.0.2.tgz \
-  verify402-mcp --help</pre>
+          <p class="code-cap">Run via npx · free gate</p>
+<pre><span class="c">npx -y</span> verify402-mcp --help</pre>
         </div>
         <div style="margin-top:24px">
           <p class="code-cap">.cursor/mcp.json · free-only</p>
@@ -176,7 +175,6 @@
       <span class="y">"command"</span>: <span class="g">"npx"</span>,
       <span class="y">"args"</span>: [
         <span class="g">"-y"</span>,
-        <span class="g">"--package=https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.2/verify402-mcp-1.0.2.tgz"</span>,
         <span class="g">"verify402-mcp"</span>
       ],
       <span class="y">"env"</span>: { <span class="y">"VERIFY402_URL"</span>: <span class="g">"https://verify402.onrender.com"</span> }
@@ -249,9 +247,12 @@
       </div>
       <div class="foot-col">
         <p class="cap">For machines</p>
-        <a href="/info">/info</a>
+        <a href="/.well-known/verify402.json">service manifest</a>
+        <a href="/openapi.json">openapi 3.1</a>
+        <a href="/llms.txt">llms.txt</a>
+        <a href="/sitemap.xml">sitemap</a>
+        <a href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener">npm package</a>
         <a href="/health">/health</a>
-        <a href="/.well-known/agent-card.json">agent card</a>
         <a href="/findings">/findings</a>
       </div>
     </div>
