@@ -1,3 +1,4 @@
 node_modules/
+# Local secrets. This pattern matches .env at any depth, including mcp-bridge/.env.
 .env
 .DS_Store

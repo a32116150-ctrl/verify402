@@ -114,6 +114,10 @@ const BYPASS_PAYMENT = process.env.BYPASS_PAYMENT === "1";
 if (BYPASS_PAYMENT) {
   console.warn("\n  *** BYPASS_PAYMENT=1 : paid routes are UNPROTECTED. Local testing only. ***\n");
 }
+if (BYPASS_PAYMENT && MODE === "mainnet") {
+  console.error("REFUSING TO START: BYPASS_PAYMENT=1 is local-only and cannot be used with X402_MODE=mainnet.");
+  process.exit(1);
+}
 
 // The payer an x402 payment proof names, when the rail exposes one. EVM exact
 // carries it as payload.authorization.from; SVM proofs carry a transaction, so
@@ -613,9 +617,12 @@ app.get("/findings", async (_req, res) => {
 const PREFLIGHT_RATE_PER_MIN = 60;
 const PREFLIGHT_MAX_IN_FLIGHT = 8;
 const preflightBuckets = new Map();
+let preflightBucketsSweptAt = 0;
 let preflightInFlight = 0;
 
 function preflightRateLimit(req, res, next) {
+  // trust proxy=1 makes req.ip the rightmost untrusted hop (the client address
+  // appended by Render), not a client-supplied leftmost X-Forwarded-For value.
   const ip = req.ip || req.socket?.remoteAddress || "unknown";
   const now = Date.now();
   const bucket = preflightBuckets.get(ip);
@@ -631,7 +638,8 @@ function preflightRateLimit(req, res, next) {
       });
     }
   }
-  if (preflightBuckets.size > 5000) {
+  if (now - preflightBucketsSweptAt >= 60_000) {
+    preflightBucketsSweptAt = now;
     for (const [k, v] of preflightBuckets) if (now - v.at > 120_000) preflightBuckets.delete(k);
   }
   next();
