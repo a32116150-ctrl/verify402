@@ -14,13 +14,12 @@
 //   2. paid GET/POST        4. sign payment (wallet in env)
 //                           5. retry with proof → verdict
 //
-// PAYMENT POLICY (load-bearing, do not remove): the bridge verifies the 402
-// payment requirements BEFORE signing anything:
-//   - price must be <= MAX_PAYMENT_USD (default $0.25)
-//   - network must be one of the expected testnet/mainnet networks
-//   - facilitator/resource must be the configured verify402 server
-// An MCP server that signs anything any remote 402 asks for is a blank
-// cheque. This one is not.
+// PAYMENT POLICY (load-bearing, do not remove): before a signature exists,
+// x402Client's spend controls enforce the USD cap and the default-asset
+// (USDC) allowlist; payment-policy.mjs then enforces the network allowlist,
+// the verify402 payee, and a known paid resource on the configured server.
+// Redirects are refused. An MCP server that signs anything any remote 402
+// asks for is a blank cheque. This one is not.
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
@@ -38,7 +37,7 @@ const SERVER_URL = process.env.VERIFY402_URL || "https://verify402.onrender.com"
 // Preflight is free, so it does not go through the paying client. Keeping the
 // two clients separate means a misconfigured 402 on a free route can never
 // turn into a signature.
-const freeApi = axios.create({ baseURL: SERVER_URL, timeout: 30_000 });
+const freeApi = axios.create({ baseURL: SERVER_URL, timeout: 30_000, maxRedirects: 0 });
 // Spend guard: the x402 client refuses to SIGN any payment above this, before
 // a signature exists. Enforced inside x402Client (applySpendControls), not by
 // our own request code - so it cannot be bypassed by a caller.
@@ -63,6 +62,9 @@ Environment:
   MAX_PAYMENT_USD   cap on one x402 payment (default 0.25)
   MAX_DAILY_USD     optional cap for the UTC day, persisted in a small ledger
   SPEND_LEDGER_PATH optional ledger path (default .spend-ledger.json)
+  VERIFY402_NETWORKS  comma-separated EVM networks for paid calls (default eip155:8453)
+  VERIFY402_PAY_TO    EVM payee the 402 must name (default the verify402 payee)
+  VERIFY402_RESOURCE_PREFIX  resource origin/prefix the 402 must match (default VERIFY402_URL)
 
 The free gate is preflight_gate. The paid tools are verify_arbitrage,
 check_token_safety, get_best_route, verify_quote_fairness and get_trade_depth.
@@ -71,7 +73,7 @@ The bridge signs x402 payments only; it never signs or sends a trade.
   process.exit(0);
 }
 if (process.argv.includes("--version") || process.argv.includes("-v")) {
-  console.log("1.0.0");
+  console.log("1.0.1");
   process.exit(0);
 }
 
@@ -80,12 +82,28 @@ async function createPaidClient() {
   if (!Number.isFinite(MAX_PAYMENT_USD) || MAX_PAYMENT_USD <= 0) {
     throw new Error("MAX_PAYMENT_USD must be a positive number");
   }
-  const client = x402Client.fromConfig({
-    schemes: [], // registered below — the 402 itself decides the network
-    spendControls: { maxAmountPerPayment: `$${MAX_PAYMENT_USD}` },
+  const policy = createPaymentPolicy({
+    networks: process.env.VERIFY402_NETWORKS || DEFAULT_NETWORKS,
+    payTo: process.env.VERIFY402_PAY_TO || DEFAULT_PAY_TO,
+    resourcePrefix: process.env.VERIFY402_RESOURCE_PREFIX || SERVER_URL,
+    paidRoutes: Object.keys(DEFAULT_PRICES),
   });
-  client.register("eip155:*", new ExactEvmScheme(privateKeyToAccount(EVM_PRIVATE_KEY)));
-  const axiosInstance = axios.create({ baseURL: SERVER_URL, timeout: 120_000 });
+  const account = privateKeyToAccount(EVM_PRIVATE_KEY);
+  const client = x402Client.fromConfig({
+    schemes: [], // registered below, one per allowlisted network
+    spendControls: { maxAmountPerPayment: `$${MAX_PAYMENT_USD}` },
+    policies: [(version, requirements) => policy.filter(version, requirements)],
+  });
+  for (const network of policy.allowedNetworks) {
+    client.register(network, new ExactEvmScheme(account));
+  }
+  client.onBeforePaymentCreation((context) => policy.checkBeforeSign(context));
+  console.error(
+    `paid policy: networks=${policy.allowedNetworks.join(",")} ` +
+      `payee=${policy.allowedPayTo} resources=${policy.resourcePrefix} ` +
+      `{${policy.paidRoutes.join(",")}}`,
+  );
+  const axiosInstance = axios.create({ baseURL: SERVER_URL, timeout: 120_000, maxRedirects: 0 });
   return wrapAxiosWithPayment(axiosInstance, client);
 }
 
@@ -93,7 +111,8 @@ async function createPaidClient() {
 // The second, broader guard: MAX_PAYMENT_USD caps ONE payment; MAX_DAILY_USD
 // (optional) caps the whole UTC day across restarts, persisted in a tiny
 // ledger file. Attempted charges are counted conservatively (before payment).
-import { createDailyBudget } from "./budget.mjs";
+import { createDailyBudget, DEFAULT_PRICES } from "./budget.mjs";
+import { createPaymentPolicy, DEFAULT_NETWORKS, DEFAULT_PAY_TO } from "./payment-policy.mjs";
 const dailyBudget = createDailyBudget({
   maxDailyUsd: process.env.MAX_DAILY_USD,
 });
@@ -138,7 +157,7 @@ const DESCRIPTIONS = {
 async function main() {
   const paidApi = PAID_ENABLED ? await createPaidClient() : null;
 
-  const server = new McpServer({ name: "verify402", version: "1.0.0" });
+  const server = new McpServer({ name: "verify402", version: "1.0.1" });
 
   server.tool(
     "preflight_gate",

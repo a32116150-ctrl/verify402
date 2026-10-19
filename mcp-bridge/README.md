@@ -39,7 +39,7 @@ The package is distributed as a GitHub release tarball today and as
 ```bash
 # GitHub release tarball (works today)
 npx -y \
-  --package=https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.0/verify402-mcp-1.0.0.tgz \
+  --package=https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.1/verify402-mcp-1.0.1.tgz \
   verify402-mcp --help
 
 # npm, once published
@@ -77,7 +77,15 @@ VERIFY402_URL=https://verify402.onrender.com
 MAX_PAYMENT_USD=0.25         # hard cap on ONE payment, enforced at signature time
 MAX_DAILY_USD=0.50           # optional cap for the UTC day, persisted
 SPEND_LEDGER_PATH=           # optional ledger path (default .spend-ledger.json)
+VERIFY402_NETWORKS=eip155:8453   # paid calls only; comma-separated EVM networks
+VERIFY402_PAY_TO=0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb
+# VERIFY402_RESOURCE_PREFIX=https://verify402.onrender.com
 ```
+
+The paid client refuses a 402 that names another network or payee, a resource
+outside the configured server, or a non-paid route. It also refuses redirects.
+The amount cap and the USDC-only default-asset allowlist are enforced inside
+the x402 client, before a signature exists.
 
 ### Claude Desktop / Cursor
 
@@ -90,7 +98,7 @@ SPEND_LEDGER_PATH=           # optional ledger path (default .spend-ledger.json)
       "command": "npx",
       "args": [
         "-y",
-        "--package=https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.0/verify402-mcp-1.0.0.tgz",
+        "--package=https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.1/verify402-mcp-1.0.1.tgz",
         "verify402-mcp"
       ],
       "env": {
@@ -119,7 +127,7 @@ them.
         "command": [
           "npx",
           "-y",
-          "--package=https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.0/verify402-mcp-1.0.0.tgz",
+          "--package=https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.1/verify402-mcp-1.0.1.tgz",
           "verify402-mcp"
         ],
         "environment": {
@@ -138,8 +146,13 @@ the secret out of the config file.
 ## Safety
 
 - The bridge signs **x402 payments only**. It never signs or broadcasts a trade.
-- It verifies the 402's network, asset, amount, payee and facilitator against
-  the configured verify402 server before signing.
+- Before signing, the paid client requires the 402 to come from the configured
+  server and a known paid route, on an allowlisted EVM network, to the
+  verify402 payee. It accepts only recognized default assets (USDC), caps the
+  amount at `MAX_PAYMENT_USD`, and refuses redirects.
+- The allowlist can be narrowed or pointed at another deployment with
+  `VERIFY402_NETWORKS`, `VERIFY402_PAY_TO`, and `VERIFY402_RESOURCE_PREFIX`.
+  Defaults are Base mainnet and the public verify402 payee.
 - `MAX_PAYMENT_USD` is enforced inside the x402 client, before a signature
   exists; removing it is a security regression.
 - `preflight_gate` is a check, not a guarantee. Read `notChecked`: it does not

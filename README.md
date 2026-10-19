@@ -243,7 +243,9 @@ or any MCP client.
   `preflight_gate` and nothing can be charged.
 - **Paid tools:** add a dedicated hot wallet with USDC. The bridge signs the x402
   payment only — never a trade — and enforces `MAX_PAYMENT_USD` (default $0.25)
-  inside the x402 client before a signature exists. `MAX_DAILY_USD` is optional.
+  inside the x402 client before a signature exists. It also requires an
+  allowlisted EVM network, the verify402 payee, and a known paid resource on the
+  configured server, and refuses redirects. `MAX_DAILY_USD` is optional.
 - **Install:** `npx -y --package=<release-tarball> verify402-mcp` (the npm name is
   `verify402-mcp` once published). Client configs, the exact OpenCode V2 shape,
   and the release command are at
