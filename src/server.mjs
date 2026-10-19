@@ -443,6 +443,13 @@ app.get(["/.well-known/agent-registration.json", "/.well-known/agent-card.json"]
   res.json(registrationFile(req));
 });
 
+// 402 Index domain-ownership proof. The value is the public SHA-256 hash of a
+// private claim token, by design; publishing it lets us edit our own 402 Index
+// listings. The token itself stays in ~/.config/verify402/ (mode 600).
+app.get("/.well-known/402index-verify.txt", (_req, res) => {
+  res.type("text/plain").send("83f1c578d78d2b9645a4640bcc77939bdfbae84a86b7798d4d753e18085f3b14");
+});
+
 // Hero verdicts, FREE. Ethereum majors at one size - the boring part of the
 // market, and almost always no_edge. That is the point: an agent (or a
 // human) can validate that this service tells reproducible truth before
