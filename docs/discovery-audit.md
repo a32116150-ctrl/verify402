@@ -67,7 +67,7 @@
 
 ## Verification & Acceptance
 
-- **MCP Registry Listing:** PREPARED. Manifest is structurally valid. Blocked on package owner publishing `verify402-mcp` to npm and performing `mcp-publisher login github`.
+- **MCP Registry Listing:** VERIFIED & ACTIVE. Published to the official registry as `io.github.a32116150-ctrl/verify402-mcp` v1.0.2 (`status: "active"`).
 - **x402 Bazaar Discovery:** IMPLEMENTED & ACTIVE on all paid endpoints.
 - **Price Parity:** Synchronized across `src/server.mjs`, `mcp-bridge/budget.mjs`, `src/openapi.mjs`, and `src/manifest.mjs`.
 - **Security & Secret Prevention:** No private keys or facilitator secrets appear in discovery documents or responses. All claims distinguish free preflight from paid truth measurements. Fail-closed behavior preserved.

@@ -20,7 +20,7 @@ This checklist tracks official and third-party registry listings for Verify402. 
 
 | Directory / Catalog | Category | Status | Blocker / Requirement |
 |---|---|---|---|
-| **Official MCP Registry** | MCP Specification | **PREPARED** | Requires npm package publishing + GitHub owner authentication via `mcp-publisher` |
+| **Official MCP Registry** | MCP Specification | **VERIFIED** | Active listing at `io.github.a32116150-ctrl/verify402-mcp` v1.0.2 |
 | **x402 Bazaar Discovery** | Protocol Discovery | **IMPLEMENTED** | Active in 402 challenge responses across all 5 paid routes |
 | **402 Index** | x402 Directory | **VERIFIED** | Active via `/.well-known/402index-verify.txt` domain proof |
 | **ERC-8004 Agent Card** | A2A Discovery | **IMPLEMENTED** | Active via `/.well-known/agent-card.json` |
@@ -33,16 +33,18 @@ This checklist tracks official and third-party registry listings for Verify402. 
 
 ## 1. Official MCP Registry (`modelcontextprotocol.io`)
 
-- **Status:** **PREPARED**
+- **Status:** **VERIFIED & ACTIVE**
 - **Catalog URL:** [https://registry.modelcontextprotocol.io/](https://registry.modelcontextprotocol.io/)
 - **Repository Reference:** [https://github.com/modelcontextprotocol/registry](https://github.com/modelcontextprotocol/registry)
 - **Local Manifest:** [`server.json`](../server.json)
 - **Package Configuration:** `mcp-bridge/package.json` (`mcpName: "io.github.a32116150-ctrl/verify402-mcp"`)
-- **Validation Result:** Validated against official schema `https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json`.
-- **Publication Prerequisites:**
-  1. The npm package `verify402-mcp` must be published to the public npm registry by the package owner. (Per repository rules, automated npm publishing is prohibited in this workspace).
-  2. The GitHub user `a32116150-ctrl` must authenticate via `mcp-publisher login github` to claim the `io.github.a32116150-ctrl` namespace.
-  3. Publish command: `mcp-publisher publish server.json`.
+- **Published Namespace:** `io.github.a32116150-ctrl/verify402-mcp`
+- **Published Version:** `1.0.2`
+- **Published At:** `2026-10-19T22:58:26Z`
+- **Registry Query:**
+  ```bash
+  curl -s "https://registry.modelcontextprotocol.io/v0.1/servers/io.github.a32116150-ctrl%2Fverify402-mcp/versions/1.0.2" | jq ._meta
+  ```
 - **Documentation:** Detailed guide in [`docs/mcp-registry-publishing.md`](mcp-registry-publishing.md).
 
 ---
