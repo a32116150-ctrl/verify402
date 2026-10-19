@@ -488,6 +488,7 @@ async function measureFindingPair(target) {
       grossBps: r.gross.bps,
       netBps: r.net.bps,
       blockNumber: r.blockNumber,
+      blockHash: r.blockHash ?? null,
       // Reproducible inputs: everything needed to re-derive the two numbers above
       // from the same pinned block with a public RPC (feedback: clearreason_assistant,
       // Moltbook). Without these the row was a claim, not a receipt.

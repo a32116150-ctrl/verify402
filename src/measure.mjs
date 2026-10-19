@@ -371,6 +371,7 @@ export async function measureRoundTrip(chainId, { baseSymbol = "USDC", targetSym
     chainName: c.name,
     blockNumber: Number(blockNumber),
     blockTimestamp: Number(block.timestamp),
+    blockHash: block.hash ?? null,
     base: { symbol: baseSymbol, address: base.address, decimals: base.decimals },
     target: { symbol: targetSymbol, address: target.address, decimals: target.decimals },
     size: { raw: size.toString(), human: Number(size) / scale },
