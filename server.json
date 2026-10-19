@@ -1,0 +1,50 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.a32116150-ctrl/verify402-mcp",
+  "title": "verify402",
+  "description": "Preflight safety gate and x402 on-chain truth verification tools for AI agents",
+  "websiteUrl": "https://verify402.onrender.com",
+  "repository": {
+    "url": "https://github.com/a32116150-ctrl/verify402",
+    "source": "github",
+    "subfolder": "mcp-bridge"
+  },
+  "version": "1.0.2",
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "verify402-mcp",
+      "version": "1.0.2",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "VERIFY402_URL",
+          "description": "verify402 base URL",
+          "isRequired": false,
+          "isSecret": false
+        },
+        {
+          "name": "EVM_PRIVATE_KEY",
+          "description": "Private key for a dedicated hot wallet with USDC. Omit for the free preflight_gate only. Never use a main wallet.",
+          "isRequired": false,
+          "isSecret": true
+        },
+        {
+          "name": "MAX_PAYMENT_USD",
+          "description": "Hard cap on one x402 payment in USD (default 0.25). Enforced before signing.",
+          "isRequired": false,
+          "isSecret": false
+        },
+        {
+          "name": "MAX_DAILY_USD",
+          "description": "Optional cap for total spend per UTC day across restarts.",
+          "isRequired": false,
+          "isSecret": false
+        }
+      ]
+    }
+  ]
+}

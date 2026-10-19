@@ -1,36 +1,79 @@
 # verify402
 
-A machine-payable truth service for AI agents. Before an agent signs anything,
-`POST /preflight` is the free gate: it takes an x402 payment request or a chain
-transaction and returns `PASS` / `CAUTION` / `BLOCK` with typed reasons, the
-checks that actually ran, the checks that did not, and a short-lived receipt
-bound to the exact intent and a fresh pinned block. It is free because it has
-to run before every signature; the deep measurements stay paid.
+> **Machine-payable on-chain truth & pre-signing safety for AI agents.**
+> Free fail-closed preflight gate + five verifiable truth checks paid per call via x402 in USDC. No API key, no account, no wallet required for the free gate.
 
-Once the intent is clear, two questions an agent cannot answer honestly by itself:
+[![OpenAPI 3.1](https://img.shields.io/badge/OpenAPI-3.1.0-green.svg)](https://verify402.onrender.com/openapi.json)
+[![MCP Server](https://img.shields.io/badge/MCP-verify402--mcp-blue.svg)](https://verify402.onrender.com/mcp)
+[![x402 v2](https://img.shields.io/badge/x402-v2%20exact-purple.svg)](https://github.com/x402-foundation/x402)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-1. **"Is this arbitrage opportunity real?"** — `POST /verify` measures a
-   cross-venue round trip (buy `target` with `base` on the best venue, sell it
-   back on the best venue) at one pinned block, nets off flash-loan premium and
-   gas, and returns a verdict with full evidence. $0.05 per call.
-2. **"Is this token safe to buy?"** — `POST /safety` is a pre-trade gate the
-   agent runs *before* risking capital on any token: live contract facts,
-   market liquidity and scam signals, a USD-sized sell probe against every
-   venue (the honeypot test, answered by actually quoting the exit — direct
-   and WETH-routed), a full round-trip cost at the intended size, and
-   phantom-price detection. Returns `TRUST` / `CAUTION` / `AVOID` with the
-   evidence. $0.10 per call.
+---
 
-Payment is x402 in USDC, on Base or Solana — no account, no API key.
+## 30-Second Quickstart
 
-**Human pages:** [home](https://verify402.onrender.com/) ·
-[preflight gate](https://verify402.onrender.com/preflight) ·
-[MCP server](https://verify402.onrender.com/mcp) ·
-[the five checks](https://verify402.onrender.com/checks) ·
-[live findings](https://verify402.onrender.com/live) ·
-[proof &amp; receipts](https://verify402.onrender.com/proof) ·
-[docs](https://verify402.onrender.com/docs) ·
-[donate](https://verify402.onrender.com/donate)
+### 1. Free Preflight Gate (No wallet, no key)
+Verify an x402 payment challenge before signing it:
+
+```bash
+curl -sS -X POST https://verify402.onrender.com/preflight \
+  -H 'content-type: application/json' \
+  -d '{
+    "kind": "payment",
+    "payment": {
+      "scheme": "exact",
+      "network": "eip155:8453",
+      "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "amount": "10000",
+      "payTo": "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb",
+      "resource": "https://verify402.onrender.com/verify"
+    },
+    "policy": { "maxAmountUsd": 0.25 }
+  }'
+```
+
+Returns `PASS` / `CAUTION` / `BLOCK`, typed reasons, exact `checked` and `notChecked` lists, pinned block number, and a verifiable 90-second HMAC receipt.
+
+### 2. Connect via MCP (Claude Desktop, Cursor, AI Agents)
+Run the MCP server directly via `npx` (stdio transport):
+
+```bash
+npx -y --package=https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.2/verify402-mcp-1.0.2.tgz verify402-mcp
+```
+
+Add to Cursor or Claude Desktop (`mcp.json`):
+```json
+{
+  "mcpServers": {
+    "verify402": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "--package=https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.2/verify402-mcp-1.0.2.tgz",
+        "verify402-mcp"
+      ],
+      "env": { "VERIFY402_URL": "https://verify402.onrender.com" }
+    }
+  }
+}
+```
+*Note: With no `EVM_PRIVATE_KEY` configured, only the free `preflight_gate` is registered. Configure `EVM_PRIVATE_KEY` with a dedicated hot wallet holding USDC to unlock the 5 paid checks.*
+
+---
+
+## Machine-Readable Discovery
+
+- **Service Manifest:** [`/.well-known/verify402.json`](https://verify402.onrender.com/.well-known/verify402.json) ([Documentation](docs/service-manifest.md))
+- **OpenAPI 3.1 Specification:** [`/openapi.json`](https://verify402.onrender.com/openapi.json)
+- **MCP Registry Manifest:** [`server.json`](server.json) ([Publishing Guide](docs/mcp-registry-publishing.md))
+- **x402 Bazaar Discovery:** [`docs/x402-discovery.md`](docs/x402-discovery.md)
+- **Plain Text Contract:** [`/llms.txt`](https://verify402.onrender.com/llms.txt)
+- **Discovery Audit:** [`docs/discovery-audit.md`](docs/discovery-audit.md)
+- **Directory Submission Checklist:** [`docs/distribution-directory-checklist.md`](docs/distribution-directory-checklist.md)
+
+**Human Pages:** [Home](https://verify402.onrender.com/) · [Start](https://verify402.onrender.com/start) · [Preflight Gate](https://verify402.onrender.com/preflight) · [MCP Server](https://verify402.onrender.com/mcp) · [Checks](https://verify402.onrender.com/checks) · [Live Findings](https://verify402.onrender.com/live) · [Proof & Receipts](https://verify402.onrender.com/proof) · [Docs](https://verify402.onrender.com/docs) · [Donate](https://verify402.onrender.com/donate)
+
+---
 
 ## Why an agent would pay for this
 

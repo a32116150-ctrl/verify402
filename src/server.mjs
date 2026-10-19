@@ -39,6 +39,7 @@ import {
   DEFAULT_TTL_SECONDS,
 } from "./preflight.mjs";
 import { buildOpenapi } from "./openapi.mjs";
+import { buildServiceManifest } from "./manifest.mjs";
 
 // ---------------------------------------------------------------- config ----
 const MODE = process.env.X402_MODE === "mainnet" ? "mainnet" : "testnet";
@@ -549,9 +550,33 @@ app.get("/robots.txt", (_req, res) => {
       "User-agent: PerplexityBot",
       "Allow: /",
       "",
-      "# Machine-readable service contract: /llms.txt",
+      "Sitemap: https://verify402.onrender.com/sitemap.xml",
+      "# Machine-readable discovery contracts:",
+      "# Canonical service manifest: /.well-known/verify402.json",
+      "# Plain-text contract: /llms.txt",
+      "# OpenAPI specification: /openapi.json",
+      "# x402 capability discovery: /.well-known/x402",
       "",
     ].join("\n"),
+  );
+});
+
+// XML sitemap of all public documentation and landing pages for web crawlers.
+app.get("/sitemap.xml", (_req, res) => {
+  res.set("Cache-Control", "public, max-age=3600");
+  res.type("application/xml").send(
+    `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://verify402.onrender.com/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://verify402.onrender.com/start</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://verify402.onrender.com/docs</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://verify402.onrender.com/mcp</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://verify402.onrender.com/preflight</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://verify402.onrender.com/checks</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://verify402.onrender.com/proof</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://verify402.onrender.com/live</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://verify402.onrender.com/donate</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+</urlset>`
   );
 });
 
@@ -570,6 +595,8 @@ app.get("/llms.txt", (_req, res) => {
       "",
       "Live: https://verify402.onrender.com",
       "Quickstart: https://verify402.onrender.com/start",
+      "Interactive Docs: https://verify402.onrender.com/docs",
+      "MCP Information: https://verify402.onrender.com/mcp",
       "Code: https://github.com/a32116150-ctrl/verify402",
       "",
       "## Free, no key, no wallet",
@@ -580,8 +607,10 @@ app.get("/llms.txt", (_req, res) => {
       "- POST /preflight/verify — recompute a receipt. Tampered or expired",
       "  receipts return valid: false.",
       "- GET /findings — free published verdicts.",
+      "- GET /health — liveness and network configuration.",
+      "- GET /info — JSON capabilities and pricing.",
       "",
-      "## Paid, x402 exact, USDC on Base mainnet",
+      "## Paid, x402 exact, USDC on Base mainnet or Solana",
       "",
       "Each paid call returns a verdict with reproducible evidence and an",
       "evidence_bundle (requestHash, responseHash, pinnedBlock). The 402",
@@ -598,23 +627,49 @@ app.get("/llms.txt", (_req, res) => {
       "- POST /depth — 0.05 USDC. Largest size that still clears your cost",
       "  tolerance; capacityUsd.",
       "",
-      "## Machine-readable",
+      "## Machine-readable Manifests & Discovery",
       "",
+      "- /.well-known/verify402.json — Canonical machine-readable service manifest.",
       "- /openapi.json — OpenAPI 3.1 contract with x-payment-info on every paid route.",
       "- /.well-known/x402 — x402 capability manifest (draft-hawkins-x402-dns-discovery-02).",
-      "- /.well-known/agent-card.json — A2A agent card.",
-      "- /.well-known/agent-registration.json — ERC-8004 registration file.",
-      "- /info — endpoints, prices, and chains as JSON.",
-      "- MCP bridge: https://github.com/a32116150-ctrl/verify402/tree/master/mcp-bridge",
+      "- /.well-known/agent-card.json — A2A agent card (ERC-8004).",
+      "- /sitemap.xml — XML sitemap for public documentation indexers.",
+      "- MCP bridge package: verify402-mcp (stdio transport)",
+      "  Install: npx -y --package=https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.2/verify402-mcp-1.0.2.tgz verify402-mcp",
+      "  MCP Registry: io.github.a32116150-ctrl/verify402-mcp",
       "",
-      "## Honest boundary",
+      "## Honest boundary & Security",
       "",
       "No profit promises. The most common verdict is no_edge, and that",
-      "negative result is the product. The mechanism is proven on testnet;",
-      "external adoption is still building. Verdicts ship with the pinned",
-      "block and hashes needed to reproduce them, or refute them.",
+      "negative result is the product. Verdicts ship with the pinned",
+      "block and cryptographic hashes needed to reproduce or refute them.",
+      "A PASS on preflight does not mean a transaction is universally safe;",
+      "always inspect the 'notChecked' array for unverified assumptions.",
       "",
     ].join("\n"),
+  );
+});
+
+// Canonical machine-readable service manifest for agent discovery systems.
+app.get("/.well-known/verify402.json", (_req, res) => {
+  res.set("Access-Control-Allow-Origin", "*");
+  res.set("Cache-Control", "public, max-age=300");
+  res.json(
+    buildServiceManifest({
+      baseUrl: "https://verify402.onrender.com",
+      mode: MODE,
+      prices: {
+        verify: PRICE,
+        safety: SAFETY_PRICE,
+        route: ROUTE_PRICE,
+        quotecheck: QUOTECHECK_PRICE,
+        depth: DEPTH_PRICE,
+      },
+      payTo: {
+        evm: PAY_TO_EVM,
+        svm: PAY_TO_SVM,
+      },
+    })
   );
 });
 

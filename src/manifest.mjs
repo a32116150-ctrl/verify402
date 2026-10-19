@@ -1,0 +1,232 @@
+// Canonical machine-readable service manifest for verify402.
+// Serves /.well-known/verify402.json per Phase 4 requirements.
+// Reuses canonical pricing and configuration from server runtime to avoid drift.
+
+export function buildServiceManifest({
+  baseUrl = "https://verify402.onrender.com",
+  mode = "mainnet",
+  prices = {
+    verify: "$0.05",
+    safety: "$0.10",
+    route: "$0.03",
+    quotecheck: "$0.05",
+    depth: "$0.05",
+  },
+  payTo = {
+    evm: "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb",
+    svm: "BdcsYodhwWUhLTuL5FJ3m8D4u4wVy8KMw7vAvPVucAbJ",
+  },
+} = {}) {
+  const numPrice = (p) => Number(String(p).replace(/^\$/, ""));
+  const atomicUsdc = (p) => String(Math.round(numPrice(p) * 1e6));
+
+  const networks =
+    mode === "mainnet"
+      ? [
+          {
+            id: "eip155:8453",
+            name: "Base mainnet",
+            asset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+            symbol: "USDC",
+            decimals: 6,
+            payTo: payTo.evm,
+          },
+          {
+            id: "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
+            name: "Solana mainnet",
+            asset: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+            symbol: "USDC",
+            decimals: 6,
+            payTo: payTo.svm,
+          },
+        ]
+      : [
+          {
+            id: "eip155:84532",
+            name: "Base Sepolia",
+            asset: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+            symbol: "USDC",
+            decimals: 6,
+            payTo: payTo.evm,
+          },
+          {
+            id: "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1",
+            name: "Solana devnet",
+            asset: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
+            symbol: "USDC",
+            decimals: 6,
+            payTo: payTo.svm,
+          },
+        ];
+
+  return {
+    schemaVersion: "1.0.0",
+    name: "verify402",
+    title: "verify402 — Machine-Payable Truth Service for AI Agents",
+    description:
+      "Free fail-closed pre-signing gate plus x402-payable on-chain truth verification: arbitrage reality, token safety, execution book, quote fairness, and trade capacity measured at pinned blocks.",
+    version: "1.0.2",
+    license: "Apache-2.0",
+    canonicalUrl: baseUrl,
+    repository: {
+      url: "https://github.com/a32116150-ctrl/verify402",
+      type: "git",
+      subfolder: "mcp-bridge",
+    },
+    documentation: {
+      homepage: `${baseUrl}/`,
+      quickstart: `${baseUrl}/start`,
+      docs: `${baseUrl}/docs`,
+      mcp: `${baseUrl}/mcp`,
+      preflight: `${baseUrl}/preflight`,
+      proof: `${baseUrl}/proof`,
+      live: `${baseUrl}/live`,
+      openapi: `${baseUrl}/openapi.json`,
+      llmsTxt: `${baseUrl}/llms.txt`,
+      sitemap: `${baseUrl}/sitemap.xml`,
+      serviceManifest: `${baseUrl}/.well-known/verify402.json`,
+      x402Manifest: `${baseUrl}/.well-known/x402`,
+      agentCard: `${baseUrl}/.well-known/agent-card.json`,
+    },
+    integrations: {
+      mcp: {
+        type: "model-context-protocol",
+        transport: "stdio",
+        packageIdentifier: "verify402-mcp",
+        tarballUrl: "https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.2/verify402-mcp-1.0.2.tgz",
+        registryName: "io.github.a32116150-ctrl/verify402-mcp",
+        registryUrl: "https://registry.modelcontextprotocol.io/servers/io.github.a32116150-ctrl/verify402-mcp",
+        quickInstallCommand: "npx -y --package=https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.2/verify402-mcp-1.0.2.tgz verify402-mcp",
+        tools: [
+          {
+            name: "preflight_gate",
+            type: "free",
+            description: "Advisory pre-signing check for payments and transactions. Evaluates limits, allowances, recipient and freshness. Returns PASS/CAUTION/BLOCK with HMAC receipt.",
+          },
+          {
+            name: "verify_arbitrage",
+            type: "paid",
+            priceUsd: numPrice(prices.verify),
+            description: "Cross-venue arbitrage check using Uniswap QuoterV2 and venue routers at one pinned block. Most common verdict: no_edge.",
+          },
+          {
+            name: "check_token_safety",
+            type: "paid",
+            priceUsd: numPrice(prices.safety),
+            description: "Pre-trade token gate: TRUST/CAUTION/AVOID with contract facts, liquidity analysis, and USD-sized sell probe.",
+          },
+          {
+            name: "get_best_route",
+            type: "paid",
+            priceUsd: numPrice(prices.route),
+            description: "Execution book quoting pair across venues at one pinned block, best first.",
+          },
+          {
+            name: "verify_quote_fairness",
+            type: "paid",
+            priceUsd: numPrice(prices.quotecheck),
+            description: "Audit third-party swap quote against live chain truth: fair / overpaying / too_good_to_be_true.",
+          },
+          {
+            name: "get_trade_depth",
+            type: "paid",
+            priceUsd: numPrice(prices.depth),
+            description: "Position sizing: ladder of trade sizes, measuring impact %, round-trip cost %, and capacityUsd.",
+          },
+        ],
+        environmentVariables: [
+          {
+            name: "VERIFY402_URL",
+            description: "verify402 base URL",
+            default: baseUrl,
+            isRequired: false,
+            isSecret: false,
+          },
+          {
+            name: "EVM_PRIVATE_KEY",
+            description: "Private key for a dedicated hot wallet with USDC on Base. Required only for the 5 paid tools; omit for free-only preflight_gate.",
+            isRequired: false,
+            isSecret: true,
+          },
+          {
+            name: "MAX_PAYMENT_USD",
+            description: "Client-side spend cap per single payment (default: 0.25)",
+            default: "0.25",
+            isRequired: false,
+            isSecret: false,
+          },
+          {
+            name: "MAX_DAILY_USD",
+            description: "Client-side spend cap per UTC day across restarts",
+            isRequired: false,
+            isSecret: false,
+          },
+        ],
+      },
+      http: {
+        type: "rest-json",
+        baseUrl,
+        openapiUrl: `${baseUrl}/openapi.json`,
+      },
+    },
+    paymentRequirements: {
+      scheme: "exact",
+      protocol: "x402 v2",
+      facilitators: [
+        "https://facilitator.payai.network (Base + Solana mainnet, keyless)",
+        "Coinbase CDP x402 facilitator (via CDP_API_KEY_ID)",
+      ],
+      supportedNetworks: networks,
+      pricing: {
+        verify: { route: "/verify", priceUsd: numPrice(prices.verify), atomicAmountUsdc: atomicUsdc(prices.verify) },
+        safety: { route: "/safety", priceUsd: numPrice(prices.safety), atomicAmountUsdc: atomicUsdc(prices.safety) },
+        route: { route: "/route", priceUsd: numPrice(prices.route), atomicAmountUsdc: atomicUsdc(prices.route) },
+        quotecheck: { route: "/quotecheck", priceUsd: numPrice(prices.quotecheck), atomicAmountUsdc: atomicUsdc(prices.quotecheck) },
+        depth: { route: "/depth", priceUsd: numPrice(prices.depth), atomicAmountUsdc: atomicUsdc(prices.depth) },
+      },
+      settlementHeaders: {
+        paymentRequired: "WWW-Authenticate: x402",
+        paymentProofHeaders: ["x-payment", "payment-signature"],
+      },
+    },
+    freeEndpoints: [
+      { route: "/preflight", method: "POST", summary: "Free pre-signing PASS/CAUTION/BLOCK gate with HMAC receipt" },
+      { route: "/preflight/verify", method: "POST", summary: "Validate HMAC receipt authenticity and expiration" },
+      { route: "/health", method: "GET", summary: "Liveness and network mode check" },
+      { route: "/info", method: "GET", summary: "Machine-readable capabilities and pricing" },
+      { route: "/findings", method: "GET", summary: "Recent verifiable market observations" },
+      { route: "/openapi.json", method: "GET", summary: "OpenAPI 3.1 contract" },
+      { route: "/llms.txt", method: "GET", summary: "Plain-text contract for LLMs" },
+      { route: "/sitemap.xml", method: "GET", summary: "XML sitemap" },
+      { route: "/.well-known/verify402.json", method: "GET", summary: "Canonical service manifest" },
+      { route: "/.well-known/x402", method: "GET", summary: "x402 capability discovery manifest" },
+      { route: "/.well-known/agent-card.json", method: "GET", summary: "ERC-8004 agent card" },
+    ],
+    operationalPolicies: {
+      rateLimits: {
+        preflight: "60 requests/minute per IP, max concurrency 5",
+        paidEndpoints: "Guarded by x402 payment requirements",
+      },
+      idempotency: {
+        header: "x-idempotency-key",
+        description: "Replays settled verdicts at zero cost within 300s window (max 3 replays). Content-hashed.",
+        conflictStatus: 409,
+      },
+      receipts: {
+        type: "HMAC-SHA256",
+        defaultTtlSeconds: 90,
+        rangeSeconds: "15-300",
+      },
+    },
+    securityBoundaries: {
+      failClosed: true,
+      signingAuthority: "Client-side only. Verify402 never holds private keys, executes transactions, or initiates token transfers.",
+      disclaimers: {
+        verdictPass: "PASS indicates only that verified checks passed at the specified pinned block. Consult notChecked list.",
+        verdictTrust: "TRUST indicates contract passed heuristic checks, liquidity thresholds, and sell probe. Does not guarantee safety.",
+        noEdge: "Negative arbitrage outcome is the expected truthful result on liquid markets.",
+        financialAdvice: "None of the output constitutes financial, trading, or investment advice.",
+      },
+    },
+  };
+}

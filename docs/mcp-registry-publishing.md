@@ -1,0 +1,131 @@
+# Publishing verify402-mcp to the MCP Registry
+
+This guide explains how to publish the verify402 MCP server to the official
+MCP Registry at https://registry.modelcontextprotocol.io/.
+
+## Prerequisites
+
+- Node.js 20+
+- An npm account with publish access to the `verify402-mcp` package
+- A GitHub account that owns the `a32116150-ctrl/verify402` repository
+- The `mcp-publisher` CLI (installed below)
+
+## Step 1: Publish to npm (if not already published)
+
+The MCP Registry is a metadata registry; the actual package must live on npm.
+
+```bash
+cd mcp-bridge
+npm publish --access public
+```
+
+Verify it appeared:
+```bash
+npm view verify402-mcp version
+```
+
+## Step 2: Verify the package contains `mcpName`
+
+The MCP Registry verifies package ownership by checking that `package.json`
+contains an `mcpName` field matching the `name` in `server.json`:
+
+```json
+{
+  "mcpName": "io.github.a32116150-ctrl/verify402-mcp"
+}
+```
+
+This is already set in `mcp-bridge/package.json`.
+
+## Step 3: Install mcp-publisher
+
+The official `mcp-publisher` CLI tool is distributed via Homebrew or GitHub releases:
+
+```bash
+# macOS via Homebrew:
+brew install mcp-publisher
+
+# Or direct download on macOS/Linux:
+curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher && sudo mv mcp-publisher /usr/local/bin/
+```
+
+Verify installation:
+```bash
+mcp-publisher --help
+```
+
+## Step 4: Authenticate with GitHub
+
+The registry uses GitHub for namespace verification. The `io.github.a32116150-ctrl`
+namespace requires authentication from the GitHub account that owns the repository:
+
+```bash
+mcp-publisher login github
+```
+
+Follow the browser-based OAuth flow.
+
+## Step 5: Validate the manifest locally
+
+Before publishing, validate `server.json`:
+
+```bash
+mcp-publisher validate server.json
+```
+
+Note: The MCP Registry strictly limits the `description` field to 100 characters.
+
+## Step 6: Publish to the registry
+
+```bash
+mcp-publisher publish server.json
+```
+
+## Step 7: Verify the listing
+
+Check that the server appears in the registry:
+
+```bash
+curl -s https://registry.modelcontextprotocol.io/servers/io.github.a32116150-ctrl/verify402-mcp | jq .
+```
+
+Or visit:
+https://registry.modelcontextprotocol.io/servers/io.github.a32116150-ctrl/verify402-mcp
+
+## Updating the listing
+
+When you release a new version:
+
+1. Bump `version` in `mcp-bridge/package.json`
+2. Bump `version` in `server.json` (both top-level and inside `packages[]`)
+3. Publish to npm: `cd mcp-bridge && npm publish`
+4. Re-publish to the registry: `mcp-publisher publish server.json`
+
+## Troubleshooting
+
+### "Namespace not verified"
+You must authenticate with the GitHub account that owns the repository.
+The namespace `io.github.a32116150-ctrl` is tied to the `a32116150-ctrl` GitHub user.
+
+### "Package not found on npm"
+Publish the package to npm first. The registry validates that the npm package
+exists and contains the matching `mcpName`.
+
+### "Version mismatch"
+The `version` in `server.json` and in `packages[].version` must match the
+version published to npm.
+
+## Registry publishing is manual
+
+Registry publishing is an explicit release action, never part of automated
+builds. The `npm test` and CI pipeline validate the manifest structure but
+do not publish.
+
+## Current status
+
+| Step | Status |
+|---|---|
+| `server.json` created | DONE |
+| `mcpName` in package.json | DONE |
+| Published to npm | NOT YET (requires npm account ownership) |
+| Published to MCP Registry | NOT YET (requires npm publish first) |
