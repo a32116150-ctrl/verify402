@@ -880,12 +880,14 @@ app.get("/info", (_req, res) => {
     },
     mcp: {
       package: "verify402-mcp",
+      version: "1.0.2",
+      license: "Apache-2.0",
       transport: "stdio",
       install: "https://verify402.onrender.com/mcp",
       freeTool: "preflight_gate",
       paidTools: ["verify_arbitrage", "check_token_safety", "get_best_route", "verify_quote_fairness", "get_trade_depth"],
       freeOnlyWithoutWallet: true,
-      note: "Start with no EVM_PRIVATE_KEY to expose only the free gate. Paid tools use a dedicated hot wallet and cap each payment at MAX_PAYMENT_USD. The bridge signs x402 payments only, never a trade.",
+      note: "Start with no EVM_PRIVATE_KEY to expose only the free gate. Paid tools use a dedicated hot wallet, cap each payment at MAX_PAYMENT_USD, and only pay an allowlisted network/payee. The bridge signs x402 payments only, never a trade.",
     },
     recovery: {
       header: "x-idempotency-key",
