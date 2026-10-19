@@ -241,6 +241,8 @@ if (!BYPASS_PAYMENT) app.use(
         mimeType: "application/json",
         extensions: {
           ...declareDiscoveryExtension({
+            method: "POST",
+            bodyType: "json",
             input: { chainId: 1, target: "WETH", base: "USDC", size: 100000 },
             inputSchema: {
               properties: {
@@ -262,6 +264,8 @@ if (!BYPASS_PAYMENT) app.use(
         mimeType: "application/json",
         extensions: {
           ...declareDiscoveryExtension({
+            method: "POST",
+            bodyType: "json",
             input: { chainId: 1, tokenAddress: "0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE", intendedUsd: 500 },
             output: { verdict: "TRUST", reasons: [], notes: [], checked: ["contract", "market", "sellability", "liquidity"] },
             inputSchema: {
@@ -284,6 +288,8 @@ if (!BYPASS_PAYMENT) app.use(
         mimeType: "application/json",
         extensions: {
           ...declareDiscoveryExtension({
+            method: "POST",
+            bodyType: "json",
             input: { chainId: 1, tokenIn: "USDC", tokenOut: "WETH", amountIn: "1000000000" },
             inputSchema: {
               properties: {
@@ -304,6 +310,8 @@ if (!BYPASS_PAYMENT) app.use(
         mimeType: "application/json",
         extensions: {
           ...declareDiscoveryExtension({
+            method: "POST",
+            bodyType: "json",
             input: { chainId: 1, tokenAddress: "WETH", baseSymbol: "USDC", sizesUsd: [100, 1000, 10000, 100000] },
             inputSchema: {
               properties: {
@@ -325,6 +333,8 @@ if (!BYPASS_PAYMENT) app.use(
         mimeType: "application/json",
         extensions: {
           ...declareDiscoveryExtension({
+            method: "POST",
+            bodyType: "json",
             input: {
               chainId: 1, tokenIn: "USDC", tokenOut: "WETH",
               amountIn: "1000000000",
