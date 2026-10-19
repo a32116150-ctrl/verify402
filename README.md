@@ -184,20 +184,37 @@ MCP client, paying per call via x402 with a hard pre-sign spend cap
   stays intact, and replayed responses carry `recovery: { replayed: true, responseHash, replays }`.
   - **Settlement-gated (fail-closed):** a verdict record only becomes replayable
     **after the facilitator confirms the settlement** (official x402 `onAfterSettle`
-    hook, promoted against the actual response bytes). A failed, aborted or pending
-    settlement promotes nothing — there is no free replay keyed to a payment that did
-    not happen. The replay cap (3) is per operation, shared between the caller key
-    and the content-hash companion key — two aliases are ONE budget, not two.
+    hook). Promotion is keyed on a server-generated `operationId` carried in the
+    response (`recovery.operationId`, excluded from the projection) and requires a
+    confirmed settle result with a non-empty transaction reference; the projection hash
+    of the served bytes is an additional check. **Equal output does not identify an
+    operation** — two requests that both resolve to `{"verdict":"no_match"}` are still
+    distinct, and settling one never promotes the other. A failed, aborted or pending
+    settlement promotes nothing. The replay cap (3) is per operation, shared between the
+    caller key and the content-hash companion key — two aliases are ONE budget, not two.
+  - **Key/scope conflicts (rejected before payment or replay):** a key is bound to one
+    operation — its canonical request content plus, when the rail exposes it
+    (`payload.authorization.from`), the payer's scope. Presenting the same key with
+    **changed request content** or from a **different payer** returns `409 recovery_conflict`
+    (`conflict: "request_mismatch" | "scope_mismatch"`) *before* the paywall — never the
+    other operation's verdict, never a charge.
   - **Double-keying:** the verdict is recorded under the caller's key *and* an implicit key
     derived from the canonical request content. A caller that mints a fresh id on each retry
     still replays free under the content hash. Two distinct asks that canonicalise identically
     are the same question — sharing one verdict inside the window is determinism, not a bug.
+    The companion is a **same-caller** recovery alias, not a public cache: a companion hit is
+    only returned to a caller whose declared scope matches the scope recorded at staging.
+    Equal content alone is never permission to see another account's result.
   - **After the window (typed, not silent):** expired verdicts leave a tombstone carrying the
     previous `responseHash` for 6 hours. A retry within the tombstone window re-measures with
     the paywall re-armed (there is no free measure after the window — anything else would be a
     loophole), but the response carries `recovery: { remeasured: true, previousResponseHash,
     expiredAt }`, so the calling agent can branch on "this operation was charged before and
     could not be replayed" instead of guessing.
+  - **Conformance controls:** `test/recovery.test.mjs` includes the review-requested controls
+    — two staged operations with byte-identical output do not cross-promote; promotion is
+    refused on failed/pending settle, a missing/empty transaction, or a missing `operationId`;
+    same key + changed content or scope is a conflict; a companion requires a matching scope.
 - **Evidence bundle — implemented (`verify402/evidence-bundle@1`):** every paid response
   carries `evidence_bundle: { requestHash, responseHash, pinnedBlock, mode, createdAt,
   payment.in }`. Both hashes are sha256 over canonical JSON (keys sorted recursively, no
