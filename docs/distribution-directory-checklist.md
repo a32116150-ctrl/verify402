@@ -127,11 +127,7 @@ This checklist tracks official and third-party registry listings for Verify402. 
     "mcpServers": {
       "verify402": {
         "command": "npx",
-        "args": [
-          "-y",
-          "--package=https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.2/verify402-mcp-1.0.2.tgz",
-          "verify402-mcp"
-        ],
+        "args": ["-y", "verify402-mcp@latest"],
         "env": {
           "VERIFY402_URL": "https://verify402.onrender.com"
         }
