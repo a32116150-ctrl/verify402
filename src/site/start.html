@@ -89,7 +89,7 @@
   <span class="y">"requires_ack"</span>: <span class="g">false</span>,
   <span class="y">"reasons"</span>: [],
   <span class="y">"checked"</span>: [<span class="g">"scheme"</span>, <span class="g">"network"</span>, <span class="g">"asset"</span>, <span class="g">"amount"</span>, <span class="g">"payee"</span>, <span class="g">"resource"</span>, <span class="g">"timeout"</span>, <span class="g">"block_freshness"</span>],
-  <span class="y">"notChecked"</span>: [<span class="g">"recipient reputation"</span>, <span class="g">"sanctions screening"</span>, <span class="g">"payment signature / signed payload"</span>, <span class="g">"facilitator settlement"</span>, <span class="g">"off-chain promises"</span>, <span class="g">"payer_balance"</span>],
+  <span class="y">"notChecked"</span>: [<span class="g">"recipient reputation"</span>, <span class="g">"sanctions screening"</span>, <span class="g">"payment signature / signed payload"</span>, <span class="g">"facilitator settlement"</span>, <span class="g">"off-chain promises"</span>, <span class="g">"counterparty identity / tool metadata"</span>, <span class="g">"prompt injection / hidden Unicode in tool output"</span>, <span class="g">"payer_balance"</span>],
   <span class="y">"block"</span>: { <span class="y">"number"</span>: 52814257, <span class="y">"ageSeconds"</span>: 0 },
   <span class="y">"receipt"</span>: { <span class="y">"id"</span>: <span class="g">"pf_…"</span>, <span class="y">"expiresAt"</span>: <span class="g">"…"</span>, <span class="y">"signature"</span>: <span class="g">"…"</span> }
 }</pre>
@@ -198,7 +198,7 @@
         <p class="small muted" style="margin-top:14px">The gate is free and rate-limited. The five paid measurements — <a class="textlink" href="/checks">/verify, /safety, /route, /quotecheck, /depth</a> — are separate and not needed for this test.</p>
         <div class="callout warn" style="margin-top:24px">
           <h3>What the gate does not do</h3>
-          <p>It catches measurable signing mistakes: wrong network, non-canonical asset, amount over your cap, payee outside your allowlist, unlimited approval, a reverting call, a stale block. It does not screen reputation or sanctions, audit a contract, simulate full balance deltas, or guarantee a token is safe. Those limits are printed in <code class="inline">notChecked</code> on every response. A PASS means the checks in <code class="inline">checked</code> passed at that block — nothing more.</p>
+          <p>It catches measurable signing mistakes: wrong network, non-canonical asset, amount over your cap, payee outside your allowlist, unlimited approval, a reverting call, a stale block. It does not screen reputation or sanctions, audit a contract, simulate full balance deltas, audit the counterparty, scan tool output for hidden instructions, or guarantee a token is safe. Those limits are printed in <code class="inline">notChecked</code> on every response. A PASS means the checks in <code class="inline">checked</code> passed at that block — nothing more.</p>
         </div>
       </article>
 

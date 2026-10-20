@@ -212,12 +212,12 @@
             <tr><td>A swapped payee, a lookalike asset, a wrong amount, a bad network, an expired authorization</td><td>Whether the recipient is a scammer or a sanctioned address</td></tr>
             <tr><td>Decoded calldata: transfers, approvals, permits, common V2/V3 swaps; unlimited approvals and spenders</td><td>Contract audits, proxy upgrades, owner privileges, or a token's intent</td></tr>
             <tr><td>Contract bytecode, swap deadline, minimum output, output recipient, and an <code class="inline">eth_call</code> simulation from your wallet</td><td>Full balance-delta / state-change simulation; MEV and sandwich protection</td></tr>
-            <tr><td>The x402 payment itself: price, network, asset, payee, facilitator, before the caller signs</td><td>Off-chain promises: “the seller will deliver after you pay”</td></tr>
+            <tr><td>The x402 payment itself: price, network, asset, payee, facilitator, before the caller signs</td><td>Counterparty identity, tool metadata, hidden instructions in tool output, or off-chain promises: “the seller will deliver after you pay”</td></tr>
             <tr><td>Receipt integrity: HMAC, intent hash, pinned block, expiry</td><td>The agent ignoring the tool, or a signer that does not verify the receipt</td></tr>
           </tbody>
         </table>
       </div>
-      <p class="small muted" style="margin-top:20px">A PASS means the left column passed at that block. It is not a guarantee that a token is safe, a trade will profit, or a counterparty will deliver. It catches a class of measurable signing mistakes — not every scam.</p>
+      <p class="small muted" style="margin-top:20px">A PASS means the left column passed at that block. It is not a guarantee that a token is safe, a trade will profit, or a counterparty will deliver. It is not a counterparty audit and does not scan tool descriptions or responses for prompt injection. It catches a class of measurable signing mistakes — not every scam.</p>
       <div class="callout" style="margin-top:28px">
         <h3>Enforcement, not advice</h3>
         <p>The MCP tool is advisory: it cannot stop an agent that ignores the answer. Use the <a class="textlink" href="https://github.com/a32116150-ctrl/verify402/blob/master/examples/preflight-guard.mjs" rel="noopener">reference executor</a> to verify the receipt and refuse to call the signer without it. The full request shape is in <a class="textlink" href="/docs#preflight">/docs#preflight</a>.</p>

@@ -1232,8 +1232,10 @@ app.get("/info", (_req, res) => {
         "gas price/limit chosen by the signer",
         "raw signed-transaction binding",
         "facilitator settlement",
+        "counterparty identity / tool metadata",
+        "prompt injection / hidden Unicode in tool output",
       ],
-      note: "A PASS is not a guarantee. It means the listed checks passed at this block; `notChecked` lists what was not examined.",
+      note: "A PASS is not a guarantee or a counterparty audit. It means the listed checks passed at this block; `notChecked` lists what was not examined, including tool metadata and response content.",
     },
     mcp: {
       package: "verify402-mcp",

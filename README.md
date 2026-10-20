@@ -236,7 +236,7 @@ Response: `PASS` / `CAUTION` / `BLOCK`, `reasons[]`, `checked[]`,
   "requires_ack": true,
   "reasons": [{ "code": "unlimited_approval", "severity": "caution", "message": "..." }],
   "checked": ["scheme", "network", "asset", "amount", "payee", "resource", "payer_balance", "block_freshness"],
-  "notChecked": ["recipient reputation", "sanctions screening", "payment signature / signed payload", "facilitator settlement", "off-chain promises"],
+  "notChecked": ["recipient reputation", "sanctions screening", "payment signature / signed payload", "facilitator settlement", "off-chain promises", "counterparty identity / tool metadata", "prompt injection / hidden Unicode in tool output"],
   "receipt": {
     "spec": "verify402/preflight-receipt@1",
     "intentHash": "…",
@@ -260,8 +260,9 @@ Response: `PASS` / `CAUTION` / `BLOCK`, `reasons[]`, `checked[]`,
 - **Not checked, on purpose:** recipient reputation, sanctions, contract
   audits, full balance-delta simulation, MEV, the payment signature/signed
   payload, gas price/limit chosen by the signer, raw signed-transaction binding,
-  and facilitator settlement. They are named in every response instead of being
-  implied.
+  facilitator settlement, counterparty identity/tool metadata, and prompt
+  injection or hidden Unicode in tool output. They are named in every response
+  instead of being implied. A PASS is not a counterparty audit.
 - Free is rate-limited (60/min per IP, 8 concurrent) so it cannot become a
   public RPC proxy.
 

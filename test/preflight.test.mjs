@@ -83,6 +83,8 @@ test("payment: canonical USDC with enough balance is PASS and the receipt verifi
   assert.ok(out.checked.includes("block_freshness"));
   assert.ok(out.checked.includes("payer_balance"));
   assert.ok(out.notChecked.includes("sanctions screening"));
+  assert.ok(out.notChecked.includes("counterparty identity / tool metadata"));
+  assert.ok(out.notChecked.includes("prompt injection / hidden Unicode in tool output"));
   assert.equal(verifyReceipt(out.receipt, { now: NOW }).valid, true);
 });
 

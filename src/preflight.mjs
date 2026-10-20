@@ -627,7 +627,7 @@ export function verifyReceipt(receipt, { now = Date.now() } = {}) {
   };
 }
 
-const NOTE = "A PASS is not a guarantee. It means the checks listed in `checked` passed at this block; `notChecked` lists what was not examined. Receipts expire and are bound to the exact intent.";
+const NOTE = "A PASS is not a guarantee, a counterparty audit, or a prompt-injection filter. It means the checks listed in `checked` passed at this block; `notChecked` lists what was not examined, including tool metadata and response content. Receipts expire and are bound to the exact intent.";
 
 function finish({ kind, reasons, checked, notChecked, intent, block: chainBlock, simulation, decoded, payerBalance, ttlSeconds, now }) {
   const reasonsFinal = [...reasons];
@@ -698,6 +698,8 @@ async function paymentPreflight(body, { clientFactory, now }) {
     "payment signature / signed payload",
     "facilitator settlement",
     "off-chain promises",
+    "counterparty identity / tool metadata",
+    "prompt injection / hidden Unicode in tool output",
   ];
 
   const net = parseNetwork(raw.network);
@@ -998,6 +1000,8 @@ async function transactionPreflight(body, { clientFactory, now }) {
     "raw signed transaction binding",
     "contract audit",
     "off-chain promises",
+    "counterparty identity / tool metadata",
+    "prompt injection / hidden Unicode in tool output",
   ];
 
   const chainId = Number(raw.chainId ?? body.chainId ?? 1);

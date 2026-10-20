@@ -378,7 +378,7 @@ export function buildOpenapi(prices) {
             "Accepts an x402 payment challenge (kind=payment) or raw transaction calldata (kind=transaction).",
             "Evaluates structural validity, recipient allowlists, spend caps, approval limits, revert simulation, and block freshness.",
             "Returns PASS / CAUTION / BLOCK with typed reasons, checked/notChecked lists, pinned block number, and an HMAC receipt (valid for 90s).",
-            "\n**Security disclaimer:** A PASS indicates that the specific checks in `checked` passed. It is not an audit, does not screen sanctions, and does not guarantee the intent is safe. Always inspect `notChecked`.",
+            "\n**Security disclaimer:** A PASS indicates that the specific checks in `checked` passed. It is not an audit, does not screen sanctions, does not audit the counterparty, does not scan tool descriptions or responses for prompt injection, and does not guarantee the intent is safe. Always inspect `notChecked`.",
             "\n**Rate limits:** 60 requests/minute per IP, max concurrency of 5.",
           ].join("\n"),
           requestBody: {

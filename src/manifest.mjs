@@ -223,7 +223,7 @@ export function buildServiceManifest({
       failClosed: true,
       signingAuthority: "Client-side only. Verify402 never holds private keys, executes transactions, or initiates token transfers.",
       disclaimers: {
-        verdictPass: "PASS indicates only that verified checks passed at the specified pinned block. Consult notChecked list.",
+        verdictPass: "PASS indicates only that verified checks passed at the specified pinned block. It is not a counterparty audit or prompt-injection filter. Consult notChecked list.",
         verdictTrust: "TRUST indicates contract passed heuristic checks, liquidity thresholds, and sell probe. Does not guarantee safety.",
         noEdge: "Negative arbitrage outcome is the expected truthful result on liquid markets.",
         financialAdvice: "None of the output constitutes financial, trading, or investment advice.",

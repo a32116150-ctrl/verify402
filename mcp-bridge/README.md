@@ -166,8 +166,9 @@ Once configured, your agent automatically sees the tools in its context. You can
   can authorize; they do **not** protect a compromised private key.
 - `preflight_gate` is a check, not a guarantee. Read `notChecked`: it does not
   screen recipient reputation or sanctions, audit contracts, simulate full
-  balance deltas, or protect against MEV. It catches the measurable signing
-  mistakes, not every scam.
+  balance deltas, audit the counterparty, scan tool descriptions or responses
+  for prompt injection, or protect against MEV. It catches the measurable
+  signing mistakes, not every scam.
 - Use the [reference executor](https://github.com/a32116150-ctrl/verify402/blob/master/examples/preflight-guard.mjs)
   when you want enforcement rather than advice.
 

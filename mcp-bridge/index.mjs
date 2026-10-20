@@ -229,7 +229,11 @@ async function main() {
           isError: true,
           content: [{
             type: "text",
-            text: `preflight failed${status ? ` (${status})` : ""}: ${JSON.stringify(body ?? e.message)}. Do not sign without a verifiable receipt.`,
+            text: `preflight failed${status ? ` (${status})` : ""}: ${JSON.stringify(body ?? e.message)}. ${
+              status === 503
+                ? "No receipt was issued; stop and retry later."
+                : "Do not sign without a verifiable receipt."
+            }`,
           }],
         };
       }
