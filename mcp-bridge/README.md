@@ -14,7 +14,7 @@ wallet that pays in USDC; the bridge never signs or sends a trade.
 |---|---|---|
 | `preflight_gate` | **free** | "Should I sign this payment request or transaction?" — PASS / CAUTION / BLOCK with reasons, `checked` / `notChecked`, and a short-lived receipt |
 | `verify_arbitrage` | $0.05 | "Is this cross-venue arbitrage opportunity real, right now?" |
-| `check_token_safety` | $0.10 | "Is this token safe to buy?" — TRUST / CAUTION / AVOID with evidence |
+| `check_token_safety` | $0.10 | "Is this token sellable at a realistic size, and what does the round trip cost?" — TRUST / CAUTION / AVOID with evidence; not a code audit |
 | `get_best_route` | $0.03 | "What would the chain actually pay for this swap?" — best route + every quoted venue |
 | `verify_quote_fairness` | $0.05 | "A broker/bot offered me this number — is it honest?" fair / overpaying / too_good_to_be_true |
 | `get_trade_depth` | $0.05 | "How big can I trade here before the round trip eats me?" — per-size impact, round-trip cost, capacity |
@@ -62,7 +62,7 @@ node index.mjs --help
 ## AI Agent Integration (Step-by-Step)
 
 ### Step 1: Free Mode (Zero Config, No Wallet)
-To give your AI agent the free **`preflight_gate`** (evaluates transaction calldata, payment challenges, honeypots, and approvals before signing), paste this into your client configuration:
+To give your AI agent the free **`preflight_gate`** (checks transaction calldata, payment challenges, payee/amount, approvals, and block freshness before signing), paste this into your client configuration. Honeypot/sellability evidence is the paid `check_token_safety` check, not a free-gate guarantee.
 
 **Claude Desktop** (`claude_desktop_config.json`) or **Cursor** (`.cursor/mcp.json`):
 ```json
@@ -142,8 +142,8 @@ Once configured, your agent automatically sees the tools in its context. You can
 
 - **Preflight Gate (Free)**:
   > *"Before signing this transaction, call `preflight_gate` on the payment request / calldata. If it returns BLOCK, abort and explain why."*
-- **Token Safety & Honeypot Check ($0.10)**:
-  > *"Analyze token `0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE` using `check_token_safety`. Is it safe to trade or is there a sell tax / honeypot?"*
+- **Token Safety / Sellability Check ($0.10, not a code audit)**:
+  > *"Analyze token `0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE` using `check_token_safety`. Is it sellable at a realistic size, what is the round-trip cost, and is the result TRUST / CAUTION / AVOID?"*
 - **Arbitrage Verification ($0.05)**:
   > *"Use `verify_arbitrage` to verify if there is an arbitrage opportunity between Uniswap V3 and Sushiswap for WETH/USDC on chain 1 at the current block."*
 - **Quote Fairness Audit ($0.05)**:
@@ -162,7 +162,8 @@ Once configured, your agent automatically sees the tools in its context. You can
   `VERIFY402_NETWORKS`, `VERIFY402_PAY_TO`, and `VERIFY402_RESOURCE_PREFIX`.
   Defaults are Base mainnet and the public verify402 payee.
 - `MAX_PAYMENT_USD` is enforced inside the x402 client, before a signature
-  exists; removing it is a security regression.
+  exists; removing it is a security regression. The caps limit what the bridge
+  can authorize; they do **not** protect a compromised private key.
 - `preflight_gate` is a check, not a guarantee. Read `notChecked`: it does not
   screen recipient reputation or sanctions, audit contracts, simulate full
   balance deltas, or protect against MEV. It catches the measurable signing

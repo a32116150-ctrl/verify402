@@ -1,6 +1,6 @@
 # verify402
 
-> **Machine-payable on-chain truth & pre-signing safety for AI agents.**
+> **Machine-payable on-chain truth & pre-signing checks for AI agents.**
 > Free fail-closed preflight gate + five verifiable truth checks paid per call via x402 in USDC. No API key, no account, no wallet required for the free gate.
 
 [![npm version](https://img.shields.io/npm/v/verify402-mcp.svg)](https://www.npmjs.com/package/verify402-mcp)
@@ -36,6 +36,10 @@ curl -sS -X POST https://verify402.onrender.com/preflight \
 
 Returns `PASS` / `CAUTION` / `BLOCK`, typed reasons, exact `checked` and `notChecked` lists, pinned block number, and a verifiable 90-second HMAC receipt.
 
+A `PASS` means the listed checks passed at that block. It does **not** mean the
+transaction is safe, cannot drain funds, or that the token is not a honeypot.
+Read `notChecked` in the response.
+
 ---
 
 ## 🤖 Using verify402 with AI Agents (Step-by-Step)
@@ -47,7 +51,7 @@ It works with **Claude Desktop**, **Cursor**, **Windsurf**, **Cline**, **OpenCod
 ### Step 1: Add the MCP Server to Your Agent
 
 #### Option A: Free Mode (Zero Config, No Wallet, No Key)
-Gives your AI agent the free **`preflight_gate`** tool. The agent evaluates payment challenges, contract approvals, honeypots, and transaction calldata before signing.
+Gives your AI agent the free **`preflight_gate`** tool. It checks payment challenges, token approvals, payee/amount, and transaction calldata at a fresh block before signing. Honeypot/sellability evidence is the paid `check_token_safety` check, not a free-gate guarantee.
 
 Paste this into your client config file:
 - **Claude Desktop**: `~/Library/Application Support/Claude/claude_desktop_config.json` (Mac) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows)
@@ -107,7 +111,7 @@ If you want your agent to use the paid truth tools, follow these 4 steps to set 
    - Send ~$0.50 worth of ETH on Base for token approvals / gas overhead.
 4. **Export the Private Key**:
    - Copy the wallet's private key (hex string starting with `0x`) into the `EVM_PRIVATE_KEY` field in your MCP config.
-   - *Client-Side Guardrails*: The bridge enforces `MAX_PAYMENT_USD` (hard cap per call, default $0.25) and `MAX_DAILY_USD` (daily budget cap) before any signature can be created. The agent cannot drain the wallet.
+   - *Client-Side Guardrails*: The bridge enforces `MAX_PAYMENT_USD` (hard cap per call, default $0.25) and `MAX_DAILY_USD` (daily budget cap) before any signature can be created. This caps what the bridge can authorize; it is **not** protection against a compromised private key.
 
 ---
 
@@ -117,8 +121,8 @@ Once configured, restart your AI client. The agent automatically has access to t
 
 | What you want to do | Example Prompt to your AI Agent | Tool Called | Cost |
 | :--- | :--- | :--- | :--- |
-| **Verify a transaction before signing** | *"Before you sign this transaction, run `preflight_gate` on the transaction data to confirm it is safe to execute and does not drain my funds."* | `preflight_gate` | **Free** |
-| **Check if a token is a honeypot** | *"Check token `0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE` with `check_token_safety`. Tell me if there's any transfer tax or malicious code."* | `check_token_safety` | $0.10 |
+| **Verify a transaction before signing** | *"Before signing, run `preflight_gate` on the calldata to check payee, amount, approvals, and block freshness. If it returns BLOCK, stop; a PASS is not a guarantee."* | `preflight_gate` | **Free** |
+| **Check measured token safety / sellability** | *"Run `check_token_safety` on token `0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE` and tell me whether it is sellable at a realistic size, what the round-trip cost is, and whether the result is TRUST / CAUTION / AVOID. This is not a code audit."* | `check_token_safety` | $0.10 |
 | **Verify an arbitrage opportunity** | *"Use `verify_arbitrage` to check if the claimed arb between Uniswap V3 and Sushiswap on WETH/USDC is real right now on chain 1."* | `verify_arbitrage` | $0.05 |
 | **Audit a swap quote** | *"I was quoted 0.35 WETH for 1,000 USDC. Call `verify_quote_fairness` to see if this quote is honest or if I'm being overcharged."* | `verify_quote_fairness` | $0.05 |
 | **Check market depth & slippage** | *"Check `get_trade_depth` for WETH on Uniswap V3 to see how much slippage I would take on a $25,000 swap."* | `get_trade_depth` | $0.05 |
@@ -195,7 +199,7 @@ X402_MODE=mainnet FACILITATOR_URL=... node src/server.mjs
 | `POST /preflight` | free | pre-signing gate: validate a payment request or transaction, return PASS / CAUTION / BLOCK + a short-lived receipt |
 | `POST /preflight/verify` | free | verify a preflight receipt (HMAC, intent hash, expiry) |
 | `POST /verify` | $0.05 (x402) | the measurement, with verdict + evidence |
-| `POST /safety` | $0.10 (x402) | pre-trade gate: TRUST / CAUTION / AVOID + evidence |
+| `POST /safety` | $0.10 (x402) | pre-trade token check: TRUST / CAUTION / AVOID + evidence; not a code audit |
 | `POST /route` | $0.03 (x402) | what would the chain ACTUALLY pay for this swap? best route + every quoted venue |
 | `POST /quotecheck` | $0.05 (x402) | audit a quote someone else gave you: fair / overpaying / too_good_to_be_true |
 | `POST /depth` | $0.05 (x402) | position sizing: how big can I trade before the round trip eats me? |
@@ -360,10 +364,11 @@ or any MCP client.
   inside the x402 client before a signature exists. It also requires an
   allowlisted EVM network, the verify402 payee, and a known paid resource on the
   configured server, and refuses redirects. `MAX_DAILY_USD` is optional.
-- **Install:** `npx -y --package=<release-tarball> verify402-mcp`. The versioned
-  GitHub release tarball is the install; no npm account is required. Client
-  configs, the exact OpenCode V2 shape,
-  and the release command are at
+- **Install:** `npx -y verify402-mcp@latest` from the public npm registry.
+  The pinned GitHub release tarball remains an optional fallback:
+  `npx -y --package=https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.2/verify402-mcp-1.0.2.tgz verify402-mcp`.
+  No npm account is required to run the published package. Client configs, the
+  exact OpenCode V2 shape, and the release command are at
   [`/mcp`](https://verify402.onrender.com/mcp). See also
   `mcp-bridge/README.md`.
 
