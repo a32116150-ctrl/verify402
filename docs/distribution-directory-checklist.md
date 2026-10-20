@@ -20,11 +20,11 @@ This checklist tracks official and third-party registry listings for Verify402. 
 
 | Directory / Catalog | Category | Status | Blocker / Requirement |
 |---|---|---|---|
-| **Official MCP Registry** | MCP Specification | **VERIFIED** | Active listing at `io.github.a32116150-ctrl/verify402-mcp` v1.0.2 |
+| **Official MCP Registry** | MCP Specification | **VERIFIED** | Active listing at `io.github.a32116150-ctrl/verify402-mcp` v1.0.3 |
 | **x402 Bazaar Discovery** | Protocol Discovery | **IMPLEMENTED** | Active in 402 challenge responses across all 5 paid routes |
 | **402 Index** | x402 Directory | **VERIFIED** | Active via `/.well-known/402index-verify.txt` domain proof |
 | **ERC-8004 Agent Card** | A2A Discovery | **IMPLEMENTED** | Active via `/.well-known/agent-card.json` |
-| **Smithery.ai** | MCP Directory | **PREPARED** | Ready for submission once `verify402-mcp` is on npm |
+| **Smithery.ai** | MCP Directory | **PREPARED** | Ready for submission; `verify402-mcp@1.0.3` is on npm |
 | **Glama.ai** | MCP Registry | **PREPARED** | Submission text prepared for web form submission |
 | **PulseMCP** | MCP Index | **PREPARED** | Submission payload prepared for review |
 | **Cursor Directory** | Client Configs | **PREPARED** | Tested client configuration prepared |
@@ -39,11 +39,11 @@ This checklist tracks official and third-party registry listings for Verify402. 
 - **Local Manifest:** [`server.json`](../server.json)
 - **Package Configuration:** `mcp-bridge/package.json` (`mcpName: "io.github.a32116150-ctrl/verify402-mcp"`)
 - **Published Namespace:** `io.github.a32116150-ctrl/verify402-mcp`
-- **Published Version:** `1.0.2`
-- **Published At:** `2026-10-19T22:58:26Z`
+- **Published Version:** `1.0.3`
+- **Published At:** `2026-10-20T12:28:22Z`
 - **Registry Query:**
   ```bash
-  curl -s "https://registry.modelcontextprotocol.io/v0.1/servers/io.github.a32116150-ctrl%2Fverify402-mcp/versions/1.0.2" | jq ._meta
+  curl -s "https://registry.modelcontextprotocol.io/v0.1/servers/io.github.a32116150-ctrl%2Fverify402-mcp/versions/1.0.3" | jq ._meta
   ```
 - **Documentation:** Detailed guide in [`docs/mcp-registry-publishing.md`](mcp-registry-publishing.md).
 

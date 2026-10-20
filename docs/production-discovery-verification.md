@@ -1,6 +1,6 @@
 # Verify402 — Production Discovery Verification & Publication Report
 
-**Audit Date:** 2026-10-19
+**Audit Date:** 2026-10-20
 **Repository:** [https://github.com/a32116150-ctrl/verify402](https://github.com/a32116150-ctrl/verify402)
 **Production URL:** [https://verify402.onrender.com](https://verify402.onrender.com)
 **Active Production Mode:** `mainnet` (Base mainnet `eip155:8453` + Solana mainnet `solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp`)
@@ -21,8 +21,8 @@ Only allowed statuses are used: **PASS**, **FAIL**, **BLOCKED**, **NOT RUN**, an
 | Production `/llms.txt` | LLM Discovery | **PASS** | HTTP 200 OK, `text/plain`, structured plain-text contract. |
 | Production `/robots.txt` | Crawler Policy | **PASS** | HTTP 200 OK, `text/plain`, allows GPTBot, ClaudeBot, PerplexityBot. |
 | Production `/.well-known/x402` | Protocol Manifest| **PASS** | HTTP 200 OK, `application/json`, x402 v2 resource server manifest. |
-| Production `/.well-known/verify402.json` | Service Manifest | **FAIL** | HTTP 404 Not Found on deployed instance (Implemented in local codebase; pending deployment of master branch to Render). |
-| Production `/sitemap.xml` | Web Discovery | **FAIL** | HTTP 404 Not Found on deployed instance (Implemented in local codebase; pending deployment of master branch to Render). |
+| Production `/.well-known/verify402.json` | Service Manifest | **PASS** | HTTP 200 OK, `application/json`, versioned MCP install metadata and current tarball URL. |
+| Production `/sitemap.xml` | Web Discovery | **PASS** | HTTP 200 OK, `application/xml`, indexes the public documentation pages. |
 | Live 402 Challenge on `/verify` | x402 Protocol | **PASS** | HTTP 402 with `payment-required` header declaring Base + Solana exact settlement ($0.05). |
 | Live 402 Challenge on `/safety` | x402 Protocol | **PASS** | HTTP 402 with `payment-required` header declaring Base + Solana exact settlement ($0.10). |
 | Live 402 Challenge on `/route` | x402 Protocol | **PASS** | HTTP 402 with `payment-required` header declaring Base + Solana exact settlement ($0.03). |
@@ -30,10 +30,10 @@ Only allowed statuses are used: **PASS**, **FAIL**, **BLOCKED**, **NOT RUN**, an
 | Live 402 Challenge on `/depth` | x402 Protocol | **PASS** | HTTP 402 with `payment-required` header declaring Base + Solana exact settlement ($0.05). |
 | Live Bazaar Metadata in 402 Headers | x402 Bazaar | **PASS** | `extensions.bazaar` is present in base64 `payment-required` header across all 5 paid routes. |
 | External Catalog Indexing | Ecosystem | **UNCONFIRMED** | No synchronous external confirmation API. Asynchronous crawler indexing pending. |
-| MCP Distribution Artifact | Distribution | **PASS** | GitHub Release tarball `verify402-mcp-1.0.2.tgz` resolves live with HTTP 302 to immutable storage. |
+| MCP Distribution Artifact | Distribution | **PASS** | GitHub Release tarball `verify402-mcp-1.0.3.tgz` resolves live with HTTP 302 to immutable storage. |
 | MCP Clean Launch & Tool Enumeration | MCP Bridge | **PASS** | Tested stdio launch: free mode exports 1 tool; paid mode exports all 6 tools with valid schemas. |
-| npm Package Publication | Package Registry | **BLOCKED** | Package `verify402-mcp` is UNPUBLISHED on npm. Requires owner npm credentials. |
-| MCP Registry Publication | Registry Listing | **BLOCKED** | Listing `io.github.a32116150-ctrl/verify402-mcp` is UNPUBLISHED. Requires npm publish + GitHub OAuth login. |
+| npm Package Publication | Package Registry | **PASS** | `verify402-mcp@1.0.3` is live on the public npm registry and tagged `latest`. |
+| MCP Registry Publication | Registry Listing | **PASS** | `io.github.a32116150-ctrl/verify402-mcp` v1.0.3 is `active` and `isLatest: true` in the official MCP Registry. |
 | Live Paid Financial Transactions | Spend / Wallet | **NOT RUN** | Deliberately omitted to prevent unauthorized real funds expenditure. |
 
 ---
@@ -86,13 +86,13 @@ Only allowed statuses are used: **PASS**, **FAIL**, **BLOCKED**, **NOT RUN**, an
 
 #### 7. `GET https://verify402.onrender.com/.well-known/verify402.json`
 - **Command:** `curl -s -i https://verify402.onrender.com/.well-known/verify402.json`
-- **HTTP Status:** `404 Not Found`
-- **Evaluation:** **FAIL**. The endpoint is fully implemented in `src/server.mjs` and `src/manifest.mjs` locally, but has not yet been pushed and deployed to Render.
+- **HTTP Status:** `200 OK`
+- **Evaluation:** **PASS**. The manifest reports MCP `1.0.3` and the current pinned tarball URL.
 
 #### 8. `GET https://verify402.onrender.com/sitemap.xml`
 - **Command:** `curl -s -i https://verify402.onrender.com/sitemap.xml`
-- **HTTP Status:** `404 Not Found`
-- **Evaluation:** **FAIL**. The XML sitemap is implemented in local code, pending deployment to Render.
+- **HTTP Status:** `200 OK`
+- **Evaluation:** **PASS**. The XML sitemap indexes the public documentation pages.
 
 ---
 
@@ -100,13 +100,13 @@ Only allowed statuses are used: **PASS**, **FAIL**, **BLOCKED**, **NOT RUN**, an
 
 ### Package Consistency
 - **Name:** `verify402-mcp` (in `mcp-bridge/package.json`)
-- **Version:** `1.0.2`
+- **Version:** `1.0.3`
 - **mcpName:** `io.github.a32116150-ctrl/verify402-mcp` (matches `server.json`)
 - **Transport:** `stdio`
 
 ### Release Artifact Check
-- **Command:** `curl -I -s https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.2/verify402-mcp-1.0.2.tgz`
-- **Response:** `HTTP/2 302 Found` -> `https://release-assets.githubusercontent.com/.../verify402-mcp-1.0.2.tgz`
+- **Command:** `curl -I -s https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.3/verify402-mcp-1.0.3.tgz`
+- **Response:** `HTTP/2 302 Found` -> `https://release-assets.githubusercontent.com/.../verify402-mcp-1.0.3.tgz`
 - **Status:** **PASS**. The release asset is live and downloadable.
 
 ### npm Publish Dry Run Inspection
@@ -135,23 +135,14 @@ Only allowed statuses are used: **PASS**, **FAIL**, **BLOCKED**, **NOT RUN**, an
 ## 4. Phase 3 — MCP Registry Status
 
 ### Search Official Registry
-- **Commands:**
+- **Command:**
   ```bash
-  curl -s https://registry.modelcontextprotocol.io/servers/io.github.a32116150-ctrl/verify402-mcp
-  curl -s https://registry.modelcontextprotocol.io/v0/servers/io.github.a32116150-ctrl/verify402-mcp
+  curl -s "https://registry.modelcontextprotocol.io/v0.1/servers/io.github.a32116150-ctrl%2Fverify402-mcp/versions/1.0.3"
   ```
-- **Observed Result:** `HTTP 404 Not Found`.
-- **Status:** **UNPUBLISHED**.
-- **Publication Requirements & Blockers:**
-  1. The npm package `verify402-mcp` must be published to npm by the package owner. (Agent cannot publish without user's npm credentials).
-  2. The GitHub user `a32116150-ctrl` must authenticate via:
-     ```bash
-     mcp-publisher login github
-     ```
-  3. Publish manifest:
-     ```bash
-     mcp-publisher publish server.json
-     ```
+- **Observed Result:** version `1.0.3`, `status: "active"`, `isLatest: true`, published `2026-10-20T12:28:22Z`.
+- **Status:** **PUBLISHED**.
+- **npm package:** `verify402-mcp@1.0.3` is live and tagged `latest`.
+- **Manifest:** `server.json` version `1.0.3`; published with `mcp-publisher publish server.json`.
 
 ---
 
@@ -240,7 +231,7 @@ Expected: JSON with `x402Version: 2`, `accepts` array for Base + Solana, and `ex
 
 ### Step 3: Run the MCP Server Locally via npx
 ```bash
-npx -y --package=https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.2/verify402-mcp-1.0.2.tgz \
+npx -y --package=https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.3/verify402-mcp-1.0.3.tgz \
   verify402-mcp --help
 ```
 Expected: Prints CLI help documenting `preflight_gate` and paid tools.
@@ -254,7 +245,7 @@ Add to `.cursor/mcp.json` or Claude Desktop configuration:
       "command": "npx",
       "args": [
         "-y",
-        "--package=https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.2/verify402-mcp-1.0.2.tgz",
+        "--package=https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.3/verify402-mcp-1.0.3.tgz",
         "verify402-mcp"
       ],
       "env": {

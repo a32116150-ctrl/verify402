@@ -90,7 +90,7 @@ Check that the server appears in the registry:
 curl -s "https://registry.modelcontextprotocol.io/v0.1/servers/io.github.a32116150-ctrl%2Fverify402-mcp/versions" | jq .
 
 # Query the active release status directly
-curl -s "https://registry.modelcontextprotocol.io/v0.1/servers/io.github.a32116150-ctrl%2Fverify402-mcp/versions/1.0.2" | jq ._meta
+curl -s "https://registry.modelcontextprotocol.io/v0.1/servers/io.github.a32116150-ctrl%2Fverify402-mcp/versions/1.0.3" | jq ._meta
 ```
 
 Or visit the official registry API documentation:

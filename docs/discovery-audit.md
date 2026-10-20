@@ -31,7 +31,7 @@
 
 ### MCP Bridge (`mcp-bridge/`)
 
-- **Package name:** `verify402-mcp` (version 1.0.2)
+- **Package name:** `verify402-mcp` (version 1.0.3)
 - **Transport:** stdio
 - **NOT a remote MCP server** -- `/mcp` serves an HTML page
 - **Distribution:** GitHub release tarball via npx
@@ -67,7 +67,7 @@
 
 ## Verification & Acceptance
 
-- **MCP Registry Listing:** VERIFIED & ACTIVE. Published to the official registry as `io.github.a32116150-ctrl/verify402-mcp` v1.0.2 (`status: "active"`).
+- **MCP Registry Listing:** VERIFIED & ACTIVE. Published to the official registry as `io.github.a32116150-ctrl/verify402-mcp` v1.0.3 (`status: "active"`, `isLatest: true`).
 - **x402 Bazaar Discovery:** IMPLEMENTED & ACTIVE on all paid endpoints.
 - **Price Parity:** Synchronized across `src/server.mjs`, `mcp-bridge/budget.mjs`, `src/openapi.mjs`, and `src/manifest.mjs`.
 - **Security & Secret Prevention:** No private keys or facilitator secrets appear in discovery documents or responses. All claims distinguish free preflight from paid truth measurements. Fail-closed behavior preserved.
