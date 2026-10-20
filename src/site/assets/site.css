@@ -157,6 +157,32 @@ section.soft { background: var(--soft); border-top: 1px solid var(--line); borde
 .sec-head h2 { margin-top: 16px; }
 .sec-head .lead { margin-top: 16px; }
 .sec-head + .rows, .sec-head + .grid, .sec-head + .proof-grid, .sec-head + .steps { margin-top: 44px; }
+.sec-head.with-figure { max-width: none; display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 360px); gap: 56px; align-items: center; }
+.sec-head.with-figure .sec-copy { max-width: 720px; }
+
+/* hairline figures */
+.hairline-block { margin: 0; }
+.hairline-figure {
+  width: 100%;
+  aspect-ratio: 5 / 4;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: #fff;
+  overflow: hidden;
+  --hairline-plate: #fff;
+  --hairline-hi: #232327;
+  --hairline-edge: #6f727a;
+  --hairline-mid: #9fa1a8;
+  --hairline-lo: #dcdce0;
+  --hairline-stroke: 1.05;
+}
+
+.hairline-block figcaption { margin-top: 10px; font: 400 11.5px/1.5 var(--mono); color: var(--muted); }
+@media (max-width: 900px) {
+  .sec-head.with-figure { grid-template-columns: 1fr; gap: 28px; }
+  .hairline-block { max-width: 360px; }
+}
+@media (max-width: 700px) { .hairline-block { display: none; } }
 
 /* checks list */
 .rows { border-top: 1px solid var(--line); }
@@ -245,10 +271,16 @@ pre .y { color: #ffd479; }
 @media (max-width: 760px) { .wallets { grid-template-columns: 1fr; } }
 
 /* page header */
-.page-head { padding: 64px 0 40px; border-bottom: 1px solid var(--line); }
+.page-head { padding: 64px 40px 40px; border-bottom: 1px solid var(--line); }
 .page-head h1 { margin-top: 16px; max-width: 20ch; }
 .page-head .lead { margin-top: 18px; max-width: 66ch; }
-@media (max-width: 700px) { .page-head { padding: 44px 0 32px; } }
+.page-head.with-figure { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 340px); gap: 56px; align-items: center; }
+.page-head.with-figure .page-copy { max-width: 760px; }
+@media (max-width: 900px) {
+  .page-head.with-figure { grid-template-columns: 1fr; gap: 30px; }
+  .page-head.with-figure .hairline-block { max-width: 340px; }
+}
+@media (max-width: 700px) { .page-head { padding: 44px 20px 32px; } }
 
 /* footer */
 footer { border-top: 1px solid var(--line); padding: 56px 0 40px; margin-top: 24px; }

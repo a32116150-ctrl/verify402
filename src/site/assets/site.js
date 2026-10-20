@@ -24,6 +24,26 @@
     });
   });
 
+  // Hairline figures. The bundle is local and tree-shaken; the import stays
+  // lazy so text-only pages pay nothing. Reduced motion is handled by the
+  // library; each figure still answers the pointer.
+  var figureEls = document.querySelectorAll("[data-hairline-figure]");
+  if (figureEls.length) {
+    import("/assets/hairline.js").then(function (figures) {
+      figureEls.forEach(function (el) {
+        var draw = figures[el.getAttribute("data-hairline-figure")];
+        if (typeof draw !== "function") return;
+        var intensity = parseFloat(el.getAttribute("data-intensity"));
+        draw(el, {
+          theme: "light",
+          intensity: isFinite(intensity) ? intensity : 0.55,
+          play: el.getAttribute("data-play") === "true",
+          label: el.getAttribute("data-label") || undefined
+        });
+      });
+    }).catch(function () {});
+  }
+
   // Live free verdicts: fill any [data-findings] list from GET /findings.
   // The nav block label is updated on every page, with or without a card.
   // One retry covers a cold free-tier instance; after that, say so honestly.
