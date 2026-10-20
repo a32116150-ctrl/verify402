@@ -3,8 +3,10 @@
 > **Machine-payable on-chain truth & pre-signing safety for AI agents.**
 > Free fail-closed preflight gate + five verifiable truth checks paid per call via x402 in USDC. No API key, no account, no wallet required for the free gate.
 
-[![OpenAPI 3.1](https://img.shields.io/badge/OpenAPI-3.1.0-green.svg)](https://verify402.onrender.com/openapi.json)
+[![npm version](https://img.shields.io/npm/v/verify402-mcp.svg)](https://www.npmjs.com/package/verify402-mcp)
 [![MCP Server](https://img.shields.io/badge/MCP-verify402--mcp-blue.svg)](https://verify402.onrender.com/mcp)
+[![MCP Registry](https://img.shields.io/badge/MCP%20Registry-active-success.svg)](https://registry.modelcontextprotocol.io/)
+[![OpenAPI 3.1](https://img.shields.io/badge/OpenAPI-3.1.0-green.svg)](https://verify402.onrender.com/openapi.json)
 [![x402 v2](https://img.shields.io/badge/x402-v2%20exact-purple.svg)](https://github.com/x402-foundation/x402)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
@@ -34,30 +36,93 @@ curl -sS -X POST https://verify402.onrender.com/preflight \
 
 Returns `PASS` / `CAUTION` / `BLOCK`, typed reasons, exact `checked` and `notChecked` lists, pinned block number, and a verifiable 90-second HMAC receipt.
 
-### 2. Connect via MCP (Claude Desktop, Cursor, AI Agents)
-Run the MCP server directly via `npx` (stdio transport):
+---
 
-```bash
-npx -y --package=https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.2/verify402-mcp-1.0.2.tgz verify402-mcp
-```
+## 🤖 Using verify402 with AI Agents (Step-by-Step)
 
-Add to Cursor or Claude Desktop (`mcp.json`):
+The MCP server is live on npm as **[`verify402-mcp`](https://www.npmjs.com/package/verify402-mcp)** and indexed on the official [Model Context Protocol Registry](https://registry.modelcontextprotocol.io/) (`io.github.a32116150-ctrl/verify402-mcp`).
+
+It works with **Claude Desktop**, **Cursor**, **Windsurf**, **Cline**, **OpenCode**, and any MCP client over stdio.
+
+### Step 1: Add the MCP Server to Your Agent
+
+#### Option A: Free Mode (Zero Config, No Wallet, No Key)
+Gives your AI agent the free **`preflight_gate`** tool. The agent evaluates payment challenges, contract approvals, honeypots, and transaction calldata before signing.
+
+Paste this into your client config file:
+- **Claude Desktop**: `~/Library/Application Support/Claude/claude_desktop_config.json` (Mac) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows)
+- **Cursor**: `.cursor/mcp.json` or Cursor Settings → MCP
+- **Windsurf**: `~/.codeium/windsurf/mcp_config.json`
+- **Cline**: `cline_mcp_settings.json`
+
 ```json
 {
   "mcpServers": {
     "verify402": {
       "command": "npx",
-      "args": [
-        "-y",
-        "--package=https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.2/verify402-mcp-1.0.2.tgz",
-        "verify402-mcp"
-      ],
-      "env": { "VERIFY402_URL": "https://verify402.onrender.com" }
+      "args": ["-y", "verify402-mcp@latest"],
+      "env": {
+        "VERIFY402_URL": "https://verify402.onrender.com"
+      }
     }
   }
 }
 ```
-*Note: With no `EVM_PRIVATE_KEY` configured, only the free `preflight_gate` is registered. Configure `EVM_PRIVATE_KEY` with a dedicated hot wallet holding USDC to unlock the 5 paid checks.*
+
+#### Option B: Paid Mode (Unlocks 5 Deep Truth Checks)
+Unlocks the 5 on-chain truth checks (`verify_arbitrage`, `check_token_safety`, `get_best_route`, `verify_quote_fairness`, `get_trade_depth`). The agent pays per call via x402 in USDC.
+
+```json
+{
+  "mcpServers": {
+    "verify402": {
+      "command": "npx",
+      "args": ["-y", "verify402-mcp@latest"],
+      "env": {
+        "VERIFY402_URL": "https://verify402.onrender.com",
+        "EVM_PRIVATE_KEY": "0xYOUR_HOT_WALLET_PRIVATE_KEY",
+        "MAX_PAYMENT_USD": "0.25",
+        "MAX_DAILY_USD": "1.00",
+        "VERIFY402_NETWORKS": "eip155:8453",
+        "VERIFY402_PAY_TO": "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb"
+      }
+    }
+  }
+}
+```
+
+---
+
+### Step 2: How to Set Up the Agent's Hot Wallet
+
+If you want your agent to use the paid truth tools, follow these 4 steps to set up its wallet safely:
+
+1. **Create a Dedicated Hot Wallet**:
+   - Generate a brand new EVM address using MetaMask, Rabby, or CLI (`cast wallet new`).
+   - ⚠️ **NEVER USE YOUR MAIN WALLET OR COLD VAULT.** Treat this wallet like physical petty cash.
+2. **Fund with USDC on Base (EIP-155:8453)**:
+   - Send $2 to $10 of USDC on the Base network to your new hot wallet.
+   - The tools cost tiny fixed amounts per call: `$0.03` (route), `$0.05` (arbitrage/quotecheck/depth), `$0.10` (token safety).
+3. **Fund with Gas (ETH on Base)**:
+   - Send ~$0.50 worth of ETH on Base for token approvals / gas overhead.
+4. **Export the Private Key**:
+   - Copy the wallet's private key (hex string starting with `0x`) into the `EVM_PRIVATE_KEY` field in your MCP config.
+   - *Client-Side Guardrails*: The bridge enforces `MAX_PAYMENT_USD` (hard cap per call, default $0.25) and `MAX_DAILY_USD` (daily budget cap) before any signature can be created. The agent cannot drain the wallet.
+
+---
+
+### Step 3: Prompting the AI Agent to Use the Tools
+
+Once configured, restart your AI client. The agent automatically has access to the tools. You can prompt it naturally:
+
+| What you want to do | Example Prompt to your AI Agent | Tool Called | Cost |
+| :--- | :--- | :--- | :--- |
+| **Verify a transaction before signing** | *"Before you sign this transaction, run `preflight_gate` on the transaction data to confirm it is safe to execute and does not drain my funds."* | `preflight_gate` | **Free** |
+| **Check if a token is a honeypot** | *"Check token `0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE` with `check_token_safety`. Tell me if there's any transfer tax or malicious code."* | `check_token_safety` | $0.10 |
+| **Verify an arbitrage opportunity** | *"Use `verify_arbitrage` to check if the claimed arb between Uniswap V3 and Sushiswap on WETH/USDC is real right now on chain 1."* | `verify_arbitrage` | $0.05 |
+| **Audit a swap quote** | *"I was quoted 0.35 WETH for 1,000 USDC. Call `verify_quote_fairness` to see if this quote is honest or if I'm being overcharged."* | `verify_quote_fairness` | $0.05 |
+| **Check market depth & slippage** | *"Check `get_trade_depth` for WETH on Uniswap V3 to see how much slippage I would take on a $25,000 swap."* | `get_trade_depth` | $0.05 |
+| **Find true on-chain swap route** | *"Query `get_best_route` to find the exact net payout for swapping 2,000 USDC to WETH across all DEX pools."* | `get_best_route` | $0.03 |
 
 ---
 
