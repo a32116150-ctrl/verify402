@@ -32,7 +32,7 @@ import { z } from "zod";
 
 config();
 
-const VERSION = "1.0.2";
+const VERSION = "1.0.3";
 const EVM_PRIVATE_KEY = process.env.EVM_PRIVATE_KEY;
 const SERVER_URL = process.env.VERIFY402_URL || "https://verify402.onrender.com";
 // Tell the server which client made the call. This is a label, not an identity:

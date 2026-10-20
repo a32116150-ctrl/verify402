@@ -1239,7 +1239,7 @@ app.get("/info", (_req, res) => {
     },
     mcp: {
       package: "verify402-mcp",
-      version: "1.0.2",
+      version: "1.0.3",
       license: "Apache-2.0",
       transport: "stdio",
       install: "https://verify402.onrender.com/mcp",

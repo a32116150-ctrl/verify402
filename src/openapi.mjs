@@ -178,7 +178,7 @@ export function buildOpenapi(prices) {
     openapi: "3.1.0",
     info: {
       title: "verify402",
-      version: "1.0.2",
+      version: "1.0.3",
       description:
         "Machine-payable truth service for AI agents: free pre-signing preflight safety gate plus paid, evidence-backed on-chain truth checks paid per call via x402 in USDC on Base or Solana.",
       "x-guidance":
