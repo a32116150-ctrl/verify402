@@ -256,6 +256,38 @@ export function buildOpenapi(prices) {
           },
         },
       },
+      "/usage": {
+        get: {
+          tags: ["Discovery"],
+          operationId: "getUsage",
+          summary: "Anonymous free-gate call counts",
+          description: "Process-local counts of free preflight calls by client, kind, verdict, and status. No IP addresses, request bodies, intents, or wallets are stored. A call is not a unique agent; paid settlements are the identity-backed usage signal. Resets on restart or deploy.",
+          responses: {
+            200: {
+              description: "Free-gate call counts since this process started.",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      spec: { type: "string", example: "verify402/usage@1" },
+                      scope: { type: "string" },
+                      since: { type: "string", format: "date-time", nullable: true },
+                      lastAt: { type: "string", format: "date-time", nullable: true },
+                      total: { type: "integer", minimum: 0 },
+                      byVerdict: { type: "object", additionalProperties: { type: "integer" } },
+                      byKind: { type: "object", additionalProperties: { type: "integer" } },
+                      byClient: { type: "object", additionalProperties: { type: "integer" } },
+                      byStatus: { type: "object", additionalProperties: { type: "integer" } },
+                      note: { type: "string" },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
       "/findings": {
         get: {
           tags: ["Discovery"],

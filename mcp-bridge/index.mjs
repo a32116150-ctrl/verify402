@@ -32,12 +32,20 @@ import { z } from "zod";
 
 config();
 
+const VERSION = "1.0.2";
 const EVM_PRIVATE_KEY = process.env.EVM_PRIVATE_KEY;
 const SERVER_URL = process.env.VERIFY402_URL || "https://verify402.onrender.com";
+// Tell the server which client made the call. This is a label, not an identity:
+// it helps separate MCP use from generic HTTP probes without collecting keys or
+// wallet addresses.
+const CLIENT_HEADERS = {
+  "User-Agent": `verify402-mcp/${VERSION}`,
+  "X-Verify402-Client": `mcp/${VERSION}`,
+};
 // Preflight is free, so it does not go through the paying client. Keeping the
 // two clients separate means a misconfigured 402 on a free route can never
 // turn into a signature.
-const freeApi = axios.create({ baseURL: SERVER_URL, timeout: 30_000, maxRedirects: 0 });
+const freeApi = axios.create({ baseURL: SERVER_URL, timeout: 30_000, maxRedirects: 0, headers: CLIENT_HEADERS });
 // Spend guard: the x402 client refuses to SIGN any payment above this, before
 // a signature exists. Enforced inside x402Client (applySpendControls), not by
 // our own request code - so it cannot be bypassed by a caller.
@@ -73,7 +81,7 @@ The bridge signs x402 payments only; it never signs or sends a trade.
   process.exit(0);
 }
 if (process.argv.includes("--version") || process.argv.includes("-v")) {
-  console.log("1.0.2");
+  console.log(VERSION);
   process.exit(0);
 }
 
@@ -103,7 +111,7 @@ async function createPaidClient() {
       `payee=${policy.allowedPayTo} resources=${policy.resourcePrefix} ` +
       `{${policy.paidRoutes.join(",")}}`,
   );
-  const axiosInstance = axios.create({ baseURL: SERVER_URL, timeout: 120_000, maxRedirects: 0 });
+  const axiosInstance = axios.create({ baseURL: SERVER_URL, timeout: 120_000, maxRedirects: 0, headers: CLIENT_HEADERS });
   return wrapAxiosWithPayment(axiosInstance, client);
 }
 
@@ -157,7 +165,7 @@ const DESCRIPTIONS = {
 async function main() {
   const paidApi = PAID_ENABLED ? await createPaidClient() : null;
 
-  const server = new McpServer({ name: "verify402", version: "1.0.2" });
+  const server = new McpServer({ name: "verify402", version: VERSION });
 
   server.tool(
     "preflight_gate",

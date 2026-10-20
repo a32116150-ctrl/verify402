@@ -40,6 +40,7 @@ import {
 } from "./preflight.mjs";
 import { buildOpenapi } from "./openapi.mjs";
 import { buildServiceManifest } from "./manifest.mjs";
+import { recordPreflight, usageSnapshot } from "./usage.mjs";
 
 // ---------------------------------------------------------------- config ----
 const MODE = process.env.X402_MODE === "mainnet" ? "mainnet" : "testnet";
@@ -975,11 +976,16 @@ app.post("/preflight", preflightRateLimit, preflightConcurrency, async (req, res
   const started = Date.now();
   try {
     const result = await preflight(req.body || {});
-    res.json({ ...result, elapsedMs: Date.now() - started });
+    const ms = Date.now() - started;
+    recordPreflight({ req, result, status: 200, ms });
+    res.json({ ...result, elapsedMs: ms });
   } catch (e) {
+    const ms = Date.now() - started;
     if (e instanceof PreflightError) {
+      recordPreflight({ req, result: null, status: e.status, ms, code: e.code });
       return res.status(e.status).json({ error: e.code, message: e.message });
     }
+    recordPreflight({ req, result: null, status: 503, ms, code: "preflight_unavailable" });
     console.error("[preflight]", e);
     // Fail closed: no receipt means an executor must refuse to sign. A 200
     // with a guessed verdict would be the one failure mode this gate exists
@@ -990,6 +996,13 @@ app.post("/preflight", preflightRateLimit, preflightConcurrency, async (req, res
       detail: e.message,
     });
   }
+});
+
+// Anonymous, process-local free-gate counts. This is a call counter, not an
+// identity system; see src/usage.mjs for the boundary.
+app.get("/usage", (req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json(usageSnapshot());
 });
 
 app.post("/preflight/verify", preflightRateLimit, (req, res) => {
@@ -1032,6 +1045,7 @@ app.get("/", (req, res) => {
       `  POST /quotecheck ${QUOTECHECK_PRICE} per call      audit a quote someone else gave you`,
       `  POST /depth    ${DEPTH_PRICE} per call        how big can I trade before cost eats me?`,
       "  GET  /findings free                 live verdicts on Ethereum majors, free",
+      "  GET  /usage    free                 anonymous free-gate call counts (process-local)",
       "  GET  /mcp      free                 MCP server: free gate + five paid tools",
       "  GET  /start    free                 five-minute quickstart for developers (human page)",
       "  GET  /info     free                 machine-readable service description",
@@ -1065,6 +1079,12 @@ app.get("/info", (_req, res) => {
       route: ROUTE_PRICE,
       quotecheck: QUOTECHECK_PRICE,
       depth: DEPTH_PRICE,
+    },
+    usage: {
+      path: "/usage",
+      price: "free",
+      scope: "this process instance; resets on restart or deploy",
+      note: "Anonymous free-gate call counts. Not a unique-agent count; paid settlements are the identity-backed signal.",
     },
     payment: { protocol: "x402", scheme: "exact", acceptsExample: accepts(PRICE)[0] },
     chains: Object.entries(CHAINS).map(([id, c]) => ({
