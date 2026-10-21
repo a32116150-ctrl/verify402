@@ -9,10 +9,17 @@
 //   * If that key has a settled verdict on file — fresh within the TTL — a
 //     replay returns the SAME verdict without requiring another payment.
 //   * TTL is short (10 min), replays are capped (3), the store is small.
-//   * The key is the caller's secret: anyone who presents it can replay the
-//     verdict for free, so callers should not log it publicly. We bound the
-//     free window tightly instead of pretending the web can do anything more
-//     advanced without breaking the x402 paywall.
+//   * The key is the ONLY replay credential. It is caller-chosen and secret;
+//     anyone who presents it can replay the verdict for free, so callers should
+//     not log it publicly. No header-derived payer identity is trusted here.
+//   * There is no content-hash companion alias. A content hash is public, so
+//     deriving a second credential from it turns "known body" into "free read".
+//     A token returned only in the original response cannot help a caller whose
+//     response was lost, which is the whole point of recovery. The original key
+//     is the only secret that survives a lost response, so it is the only one.
+//   * A settled record always retains the settlement-promoted payer (when the
+//     facilitator supplied one) as `verified_payer` for audit. It is not used to
+//     authorize a replay from an unverified header.
 //
 // Every paid response also carries a standard evidence bundle:
 //   requestHash (sha256 of the canonical request), responseHash (sha256 of the
@@ -75,9 +82,10 @@ export function requestHash(route, body) {
 // caller must either pay through x402 (the `onAfterSettle` hook in server.mjs
 // promotes the entry once the facilitator confirms the settlement), or run in
 // BYPASS mode (settledNow: true, local testing only — loud warnings upstream).
-// Two aliases share ONE entry object (caller key + content-hash companion), so
-// the replay cap is per operation, not per alias (SameDayDesk: two aliases
-// must not mean six free reads).
+//
+// One key, one entry. The old content-hash companion is deliberately gone: a
+// companion key derived from public request content is a second credential, and
+// it made a settled verdict readable by anyone who could reproduce the body.
 //
 // Every operation gets a server-generated `operationId`, embedded in the
 // response under `recovery.operationId` (excluded from the projection hash).
@@ -86,10 +94,9 @@ export function requestHash(route, body) {
 // (review: NSPG13 on x402-foundation/x402#3848, Oct 2026).
 // The responseHash is computed from a copy of payload with `recovery.operationId`
 // removed, so it stays stable across operations that embed their own identity.
-export function recordSettlement(key, payload, companionKey = null, {
+export function recordSettlement(key, payload, _companionKey = null, {
   settledNow = false,
   requestHash: operationRequestHash = null,
-  scope = null,
   operationId = randomUUID(),
 } = {}) {
   // The projection strips `recovery` (and `operationId`) entirely, so the hash
@@ -104,13 +111,13 @@ export function recordSettlement(key, payload, companionKey = null, {
   const entry = {
     payload, responseHash, operationId,
     requestHash: operationRequestHash,
-    scope,
+    verified_payer: null,
     settlement: null,
     settled: settledNow ? true : false,
     stagedAt: t,
     settledAt: settledNow ? t : null,
     replays: 0,
-    aliases: [key, companionKey].filter(Boolean),
+    aliases: [key].filter(Boolean),
   };
   // staged-entry GC: drop staged records that were never promoted
   for (const [k, e] of settled) {
@@ -138,7 +145,9 @@ export function recordSettlement(key, payload, companionKey = null, {
 //   2. a confirmed settlement (success + transaction reference),
 //   3. exactly one staged entry with that operationId,
 //   4. the projected bytes still match that entry (additional check),
-//   5. the settlement's payer matches the staged authorization scope, if known.
+//   5. if the entry already carries a verified payer, the settlement must agree.
+// The settlement's payer is stored as `verified_payer` for audit. It does not
+// authorize replays from a raw header; the caller's key does that.
 // Response-hash equality alone is never enough: two operations can legitimately
 // return identical bytes, and settling one must not promote the other.
 export function promoteSettlement(body, settlement) {
@@ -166,14 +175,17 @@ export function promoteSettlement(body, settlement) {
   const e = matches[0];
   if (e.settled) return 0;
   if (e.responseHash !== h) return 0;           // bytes changed since staging
-  if (e.scope) {
-    const payer = typeof settlement.payer === "string" ? settlement.payer.toLowerCase() : null;
-    if (!payer || payer !== e.scope) return 0;  // scope must be confirmed, not assumed
-  }
+
+  const payer = typeof settlement.payer === "string" && settlement.payer.trim()
+    ? settlement.payer.trim().toLowerCase()
+    : null;
+  if (e.verified_payer && e.verified_payer !== payer) return 0;
 
   const t = nowFn();
   e.settled = true;
   e.settledAt = t;
+  e.verified_payer = payer;
+  e.identity = payer ? "settlement_payer" : "settlement_only";
   e.settlement = {
     transaction: settlement.transaction,
     network: settlement.network ?? null,
@@ -187,50 +199,30 @@ export function promoteSettlement(body, settlement) {
 // `{ hit }` (replay), `{ conflict }` (reject BEFORE payment or replay), or
 // null (not recoverable — continue to the paywall).
 //
-// The key is bound to the operation's request fingerprint and authorization
-// scope. Reusing a key for different content, or presenting a settled key from
-// a different payer, is a conflict rather than a wrong answer or a free ride.
-// The content companion is a recovery alias for the SAME caller, not a public
-// cache: equal request bodies do not establish permission to see another
-// caller's result (review: NSPG13 on x402-foundation/x402#3848).
+// Authorization is possession of the original key, full stop. The key is bound
+// to the operation's request fingerprint, so reusing it for different content
+// is a conflict rather than a wrong answer. No payer scope is read from
+// `x-payment`, `payment-signature`, or any other caller-controlled header:
+// `authorization.from` is unverified at this layer, and treating it as an
+// identity was C-1. The settled record's `verified_payer` comes only from the
+// facilitator's settlement result.
 export function lookupRecovery({
   key,
-  companionKey = null,
   requestHash: operationRequestHash = null,
-  scope = null,
 } = {}) {
   const entry = key ? settled.get(key) : null;
-  if (entry) {
-    if (operationRequestHash && entry.requestHash && operationRequestHash !== entry.requestHash) {
-      return { conflict: "request_mismatch" };
-    }
-    if (scope && entry.scope && scope !== entry.scope) {
-      return { conflict: "scope_mismatch" };
-    }
-    if (entry.settled) {
-      const hit = replayFor(key);
-      return hit ? { hit } : null;
-    }
-    return null; // staged: same operation may pay; nothing is replayable yet
+  if (!entry) return null;
+  if (operationRequestHash && entry.requestHash && operationRequestHash !== entry.requestHash) {
+    return { conflict: "request_mismatch" };
   }
-
-  if (companionKey) {
-    const c = settled.get(companionKey);
-    if (c && c.settled) {
-      // Equal content is not permission. Without a known, matching scope the
-      // companion is not a recovery path for this caller.
-      if (!scope || !c.scope || c.scope !== scope) return null;
-      if (operationRequestHash && c.requestHash && operationRequestHash !== c.requestHash) return null;
-      const hit = replayFor(companionKey);
-      return hit ? { hit } : null;
-    }
-  }
-  return null;
+  if (!entry.settled) return null; // staged: same operation may pay; nothing is replayable yet
+  const hit = replayFor(key);
+  return hit ? { hit } : null;
 }
 
-// Look up a replayable verdict. Applies the settled gate, TTL, replay cap and
-// companion-key fallback; expired SETTLED keys move to the tombstone map
-// instead of vanishing. Staged-but-unpromoted entries are invisible here.
+// Look up a replayable verdict. Applies the settled gate, TTL and replay cap.
+// Expired SETTLED keys move to the tombstone map instead of vanishing.
+// Staged-but-unpromoted entries are invisible here.
 export function replayFor(key) {
   const entry = settled.get(key);
   if (!entry || !entry.settled) {

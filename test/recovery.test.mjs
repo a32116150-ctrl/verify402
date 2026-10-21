@@ -2,10 +2,13 @@
 //
 //   node test/recovery.test.mjs
 //
-// v3 (post-SameDayDesk): recordSettlement STAGES; records become replayable
-// only after promoteSettlement() — which server.mjs wires to the official
-// x402 `onAfterSettle` hook, i.e. ONLY after the facilitator confirms the
-// settle. A failed/pending settlement must never leave a free replay.
+// v4 (C-1): recordSettlement STAGES; records become replayable only after
+// promoteSettlement() — which server.mjs wires to the official x402
+// `onAfterSettle` hook, i.e. ONLY after the facilitator confirms the settle.
+// A failed/pending settlement must never leave a free replay. The caller's
+// original idempotency key is the ONLY replay credential: no payer identity is
+// derived from x-payment/payment-signature, and the content-hash companion
+// alias has been removed entirely.
 
 import {
   canonicalStable, requestHash, recordSettlement, promoteSettlement, replayFor,
@@ -21,15 +24,18 @@ const check = (name, fn) => {
 };
 const assert = (cond, msg) => { if (!cond) throw new Error(msg); };
 
-// simulates the effective response: stage under a key, then settle-confirm via
+const SCOPE_A = "0xaaeef086dd4e436c69d6d0f684b4c9f43392df9cb";
+const SCOPE_B = "0xbb00000000000000000000000000000000000001";
+
+// Simulates the effective response: stage under a key, then settle-confirm via
 // the bytes the caller would receive (this is exactly what the onAfterSettle
 // hook does with transportContext.responseBody).
-const affirm = (key, payload, companion = null) => {
-  recordSettlement(key, payload, companion);                  // stage
+const affirm = (key, payload) => {
+  recordSettlement(key, payload);                  // stage
   promoteSettlement(JSON.stringify(payload), { ok: true, transaction: "tx-1" }); // settle confirmed
 };
-const affirmNow = (key, payload, companion = null) => {
-  const r = recordSettlement(key, payload, companion, { settledNow: true });
+const affirmNow = (key, payload) => {
+  const r = recordSettlement(key, payload, null, { settledNow: true });
   return r;
 };
 
@@ -58,9 +64,9 @@ check("requestHash differs across route or body", () => {
 
 check("STAGED record is NOT replayable — a failed settlement leaves nothing free", () => {
 
-  recordSettlement("fail-key", { verdict: "no_edge", n: 1 }, "fail-companion");
+  recordSettlement("fail-key", { verdict: "no_edge", n: 1 });
   assert(replayFor("fail-key") === null, "unpromoted key must be inert");
-  assert(replayFor("fail-companion") === null, "unpromoted companion must be inert");
+  assert(replayFor("fail-companion") === null, "there is no companion key to replay");
   assert(expiredRecoveryInfo("fail-key") === null, "nothing settled -> no tombstone");
 
 });
@@ -68,11 +74,12 @@ check("STAGED record is NOT replayable — a failed settlement leaves nothing fr
 check("promotion keyed on the ACTUAL response bytes unlocks the replay", () => {
 
   const payload = { verdict: "edge", net: { bps: 7.5 } };
-  recordSettlement("ok-key", payload, "ok-companion");
+  recordSettlement("ok-key", payload);
   const n = promoteSettlement(JSON.stringify(payload), { ok: true, transaction: "tx-1" });  // Buffer, like the middleware
-  assert(n === 1, "one operation (two aliases, one entry) promoted");
+  assert(n === 1, "one operation promoted");
   const h = replayFor("ok-key");
   assert(h && h.payload.verdict === "edge" && h.replays === 1, "promoted entry replays");
+  assert(replayFor("ok-companion") === null, "the removed companion alias must never be created");
 
 });
 
@@ -119,13 +126,57 @@ check("replay cap deletes the key after MAX_REPLAYS", () => {
 
 });
 
-check("companion alias SHARES the operation's replay cap (3 total, not 3+3)", () => {
+check("C-1: a content hash is not a second replay credential", () => {
 
-  affirmNow("cap-key", { verdict: "edge" }, "cap-companion");
+  const rh = requestHash("/verify", { target: "WETH" });
+  const payload = { verdict: "edge" };
+  const { operationId } = recordSettlement("c1-owner-key", { ...payload }, null, { requestHash: rh });
+  promoteSettlement(JSON.stringify({ ...payload, recovery: { operationId } }),
+    { ok: true, transaction: "tx-c1", payer: SCOPE_A });
+
+  // The caller's original key works.
+  assert(replayFor("c1-owner-key") !== null, "the original key replays once");
+
+  // A caller who only knows the public request body cannot mint a free read.
+  assert(lookupRecovery({ key: rh, requestHash: rh }) === null,
+    "the content hash is not an alias and must not replay");
+  assert(lookupRecovery({ key: "brand-new-id", companionKey: rh, requestHash: rh }) === null,
+    "the removed companion option must not replay");
+
+});
+
+check("C-1: a different key with a known body does not replay the victim's verdict", () => {
+
+  const rh = requestHash("/verify", { target: "USDC" });
+  const payload = { verdict: "edge", secret: "owner-only" };
+  const { operationId } = recordSettlement("c1-victim-key", { ...payload }, null, { requestHash: rh });
+  promoteSettlement(JSON.stringify({ ...payload, recovery: { operationId } }),
+    { ok: true, transaction: "tx-v", payer: SCOPE_A });
+
+  assert(lookupRecovery({ key: "attacker-fresh-key", requestHash: rh }) === null,
+    "a fresh key does not inherit the verdict even with identical content");
+
+});
+
+check("C-1: forged payer headers/scope cannot authorize a replay or spend the budget", () => {
+
+  const rh = requestHash("/route", { tokenIn: "WETH" });
+  const payload = { ok: true, quote_status: "ok" };
+  const { operationId } = recordSettlement("c1-budget-key", { ...payload }, null, { requestHash: rh });
+  promoteSettlement(JSON.stringify({ ...payload, recovery: { operationId } }),
+    { ok: true, transaction: "tx-b", payer: SCOPE_A });
+
+  // Forged scope requests for the wrong key do nothing, and must not consume
+  // the legitimate caller's replay budget.
+  for (let i = 0; i < IDEMPOTENCY_MAX_REPLAYS + 2; i++) {
+    assert(lookupRecovery({ key: "forged-key", requestHash: rh, scope: SCOPE_B }) === null,
+      "no key, no replay — even with a forged scope");
+  }
+
+  // The legitimate caller still has its full budget.
   let reads = 0;
-  while (replayFor("cap-key") !== null) reads++;
-  while (replayFor("cap-companion") !== null) reads++;        // fresh-id retry path
-  assert(reads === IDEMPOTENCY_MAX_REPLAYS, `one operation, one cap: reads=${reads}`);
+  while (replayFor("c1-budget-key") !== null) reads++;
+  assert(reads === IDEMPOTENCY_MAX_REPLAYS, `victim budget untouched: reads=${reads}`);
 
 });
 
@@ -217,67 +268,53 @@ check("CONTROL: promotion requires the response to name its operation identity",
 
 });
 
-const SCOPE_A = "0xaaeef086dd4e436c69d6d0f684b4c9f43392df9cb";
-const SCOPE_B = "0xbb00000000000000000000000000000000000001";
-
 check("CONTROL: same key + changed request content is a conflict, not an answer", () => {
 
   const rh1 = requestHash("/verify", { target: "WETH" });
   const rh2 = requestHash("/verify", { target: "USDC" });
   const { operationId } = recordSettlement("idem-conflict", { verdict: "no_edge" }, null,
-    { requestHash: rh1, scope: SCOPE_A });
+    { requestHash: rh1 });
   promoteSettlement(JSON.stringify({ verdict: "no_edge", recovery: { operationId } }),
     { ok: true, transaction: "tx-c", payer: SCOPE_A });
 
-  const mismatch = lookupRecovery({ key: "idem-conflict", requestHash: rh2, scope: SCOPE_A });
+  const mismatch = lookupRecovery({ key: "idem-conflict", requestHash: rh2 });
   assert(mismatch?.conflict === "request_mismatch", "different content under the same key must conflict");
-  assert(lookupRecovery({ key: "idem-conflict", requestHash: rh2, scope: SCOPE_A }).hit === undefined, "no replay leaks through a conflict");
-  const ok = lookupRecovery({ key: "idem-conflict", requestHash: rh1, scope: SCOPE_A });
-  assert(ok?.hit, "same content + same scope still replays");
+  assert(mismatch.hit === undefined, "no replay leaks through a conflict");
+  const ok = lookupRecovery({ key: "idem-conflict", requestHash: rh1 });
+  assert(ok?.hit, "same content still replays");
 
 });
 
-check("CONTROL: same key under a different authorization scope is a conflict", () => {
+check("C-1: a caller-supplied payer scope is ignored, not trusted", () => {
 
   const rh = requestHash("/verify", { target: "WETH" });
   const { operationId } = recordSettlement("idem-scope", { verdict: "no_edge" }, null,
     { requestHash: rh, scope: SCOPE_A });
-  promoteSettlement(JSON.stringify({ verdict: "no_edge", recovery: { operationId } }),
-    { ok: true, transaction: "tx-s", payer: SCOPE_A });
+  // Legacy `scope` in options is ignored: promotion is authorized by the
+  // facilitator's settlement, not by a caller-declared identity.
+  assert(promoteSettlement(JSON.stringify({ verdict: "no_edge", recovery: { operationId } }),
+    { ok: true, transaction: "tx-s", payer: SCOPE_B }) === 1, "settlement payer is audit data, not a gate");
 
-  const other = lookupRecovery({ key: "idem-scope", requestHash: rh, scope: SCOPE_B });
-  assert(other?.conflict === "scope_mismatch", "another payer must not replay this key");
-
-});
-
-check("CONTROL: promotion refuses a settlement whose payer does not match the scope", () => {
-
-  const { operationId } = recordSettlement("idem-scope-gate", { verdict: "no_edge" }, null,
-    { requestHash: requestHash("/verify", {}), scope: SCOPE_A });
-  const body = JSON.stringify({ verdict: "no_edge", recovery: { operationId } });
-  assert(promoteSettlement(body, { ok: true, transaction: "tx-x", payer: SCOPE_B }) === 0, "wrong payer must not promote");
-  assert(replayFor("idem-scope-gate") === null, "still inert");
-  assert(promoteSettlement(body, { ok: true, transaction: "tx-y", payer: SCOPE_A }) === 1, "right payer promotes");
+  // A forged header scope on the replay request changes nothing.
+  const hit = lookupRecovery({ key: "idem-scope", requestHash: rh, scope: SCOPE_B });
+  assert(hit?.hit && hit.hit.payload.verdict === "no_edge", "the key holder replays; scope is not consulted");
+  assert(hit.conflict === undefined, "a different declared scope is not a conflict — there is no scope check");
 
 });
 
-check("CONTROL: the content companion is not a public cache — the scope must match", () => {
+check("C-1: promotion records the facilitator payer for audit only", () => {
 
-  const rh = requestHash("/verify", { target: "WETH" });
-  const { operationId } = recordSettlement("idem-main", { verdict: "edge" }, "idem-companion",
-    { requestHash: rh, scope: SCOPE_A });
-  promoteSettlement(JSON.stringify({ verdict: "edge", recovery: { operationId } }),
-    { ok: true, transaction: "tx-p", payer: SCOPE_A });
+  const p = { verdict: "edge" };
+  const { operationId } = recordSettlement("idem-audit", { ...p });
+  assert(promoteSettlement(JSON.stringify({ ...p, recovery: { operationId } }),
+    { ok: true, transaction: "tx-audit", payer: SCOPE_A.toUpperCase() }) === 1, "promotes");
 
-  // fresh caller id + equal content, but no declared scope: equal content is not permission
-  assert(lookupRecovery({ key: "brand-new-id", companionKey: "idem-companion", requestHash: rh }) === null,
-    "equal content alone does not establish permission");
-  // a different account presenting the same content must not read this result
-  assert(lookupRecovery({ key: "brand-new-id", companionKey: "idem-companion", requestHash: rh, scope: SCOPE_B }) === null,
-    "another account's scope must not read this result");
-  // the same caller (same scope) recovers via the companion
-  const ok = lookupRecovery({ key: "brand-new-id", companionKey: "idem-companion", requestHash: rh, scope: SCOPE_A });
-  assert(ok?.hit && ok.hit.payload.verdict === "edge", "the same caller recovers via the content companion");
+  // The recorded payer (normalized) cannot be changed by a later settlement
+  // attempt, and a replay does not expose or require it.
+  const again = promoteSettlement(JSON.stringify({ ...p, recovery: { operationId } }),
+    { ok: true, transaction: "tx-other", payer: SCOPE_B });
+  assert(again === 0, "an already-settled operation is not re-promoted");
+  assert(replayFor("idem-audit")?.payload.verdict === "edge", "replay is keyed by the caller's secret");
 
 });
 
@@ -286,29 +323,30 @@ check("CONTROL: the content companion is not a public cache — the scope must m
 let T0 = 1_000_000;
 _setNow(() => T0);
 
-check("companion key replays when the caller mints a fresh id (double-keying)", () => {
+check("C-1: a fresh id cannot replay — only the original key survives a lost response", () => {
 
-  affirmNow("op-key-1", { verdict: "edge", net: { bps: 7.5 } }, "request-hash-1");
-  const h = replayFor("request-hash-1");                 // fresh id would miss; companion hit
-  assert(h && h.payload.verdict === "edge", "companion key must carry the verdict");
-  assert(replayFor("op-key-1") !== null, "explicit key still works too");
+  affirmNow("op-key-1", { verdict: "edge", net: { bps: 7.5 } });
+  const h = replayFor("op-key-1");
+  assert(h && h.payload.verdict === "edge", "the original key replays");
+  assert(replayFor("request-hash-1") === null, "a content hash is not an alias");
+  assert(lookupRecovery({ key: "fresh-retry-id", companionKey: "request-hash-1" }) === null,
+    "minting a new id does not recover the verdict");
 
 });
 
 check("expired verdict is typed, not silent: tombstone returns the lost hash", () => {
 
-  affirmNow("op-key-2", { verdict: "no_edge" }, "request-hash-2");
+  affirmNow("op-key-2", { verdict: "no_edge" });
   T0 += IDEMPOTENCY_TTL_MS + 1;                          // past the replay window
   assert(replayFor("op-key-2") === null, "past TTL there is no free replay");
-  assert(replayFor("request-hash-2") === null, "past TTL there is no free replay (companion too)");
-  const info = expiredRecoveryInfo("op-key-2") || expiredRecoveryInfo("request-hash-2");
+  const info = expiredRecoveryInfo("op-key-2");
   assert(info && info.previousResponseHash && info.expiredAt, "the tombstone must tell the caller what it lost");
 
 });
 
 check("a fresh settlement re-opens the window and clears the tombstone", () => {
 
-  affirmNow("op-key-2", { verdict: "no_edge", n: 2 }, "request-hash-2");
+  affirmNow("op-key-2", { verdict: "no_edge", n: 2 });
   assert(expiredRecoveryInfo("op-key-2") === null, "tombstone must clear on re-settlement");
   const h = replayFor("op-key-2");
   assert(h && h.payload.n === 2, "fresh verdict is replayable again");
