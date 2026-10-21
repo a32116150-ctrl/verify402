@@ -81,6 +81,20 @@ if (MODE === "mainnet" && !String(process.env.PREFLIGHT_SECRET || "").trim()) {
   process.exit(1);
 }
 
+if (MODE === "mainnet") {
+  const alwaysOnConfirmed =
+    String(process.env.MAINNET_ALWAYS_ON_CONFIRMED || "").trim().toLowerCase() === "yes" ||
+    String(process.env.REQUIRE_ALWAYS_ON || "").trim() === "1";
+  if (!alwaysOnConfirmed) {
+    logError("REFUSING TO START: X402_MODE=mainnet requires MAINNET_ALWAYS_ON_CONFIRMED=yes (or REQUIRE_ALWAYS_ON=1). Free hosts spin down; mainnet requires an always-on paid instance.");
+    process.exit(1);
+  }
+  if (String(process.env.ALLOW_MAINNET_ON_FREE_TIER || "").trim()) {
+    logError("REFUSING TO START: ALLOW_MAINNET_ON_FREE_TIER must not be set. Mainnet is not allowed on a free tier.");
+    process.exit(1);
+  }
+}
+
 const NETWORKS =
   MODE === "mainnet"
     ? { evm: "eip155:8453", svm: "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp", label: "Base mainnet / Solana mainnet" }

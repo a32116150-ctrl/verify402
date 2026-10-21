@@ -575,6 +575,71 @@ await check("mainnet refuses to start without PREFLIGHT_SECRET", async () => {
   assert.match(logs.join(""), /PREFLIGHT_SECRET/);
 });
 
+await check("mainnet refuses to start without MAINNET_ALWAYS_ON_CONFIRMED", async () => {
+  const logs = [];
+  const child = spawn(process.execPath, ["src/server.mjs"], {
+    cwd: new URL("..", import.meta.url).pathname,
+    env: {
+      ...process.env,
+      X402_MODE: "mainnet",
+      FACILITATOR_URL: "https://facilitator.payai.network",
+      AGENT_URL: "https://fixed.example",
+      PREFLIGHT_SECRET: "secret",
+      MAINNET_ALWAYS_ON_CONFIRMED: "",
+      REQUIRE_ALWAYS_ON: "",
+      ALLOW_MAINNET_ON_FREE_TIER: "",
+      BYPASS_PAYMENT: "",
+    },
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  child.stdout.on("data", (d) => logs.push(String(d)));
+  child.stderr.on("data", (d) => logs.push(String(d)));
+  const code = await new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      child.kill("SIGTERM");
+      reject(new Error(`server did not exit:\n${logs.join("")}`));
+    }, 5000);
+    child.on("exit", (exitCode) => {
+      clearTimeout(timer);
+      resolve(exitCode);
+    });
+  });
+  assert.equal(code, 1);
+  assert.match(logs.join(""), /MAINNET_ALWAYS_ON_CONFIRMED/);
+});
+
+await check("mainnet refuses free-tier acknowledgement override", async () => {
+  const logs = [];
+  const child = spawn(process.execPath, ["src/server.mjs"], {
+    cwd: new URL("..", import.meta.url).pathname,
+    env: {
+      ...process.env,
+      X402_MODE: "mainnet",
+      FACILITATOR_URL: "https://facilitator.payai.network",
+      AGENT_URL: "https://fixed.example",
+      PREFLIGHT_SECRET: "secret",
+      MAINNET_ALWAYS_ON_CONFIRMED: "yes",
+      ALLOW_MAINNET_ON_FREE_TIER: "1",
+      BYPASS_PAYMENT: "",
+    },
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  child.stdout.on("data", (d) => logs.push(String(d)));
+  child.stderr.on("data", (d) => logs.push(String(d)));
+  const code = await new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      child.kill("SIGTERM");
+      reject(new Error(`server did not exit:\n${logs.join("")}`));
+    }, 5000);
+    child.on("exit", (exitCode) => {
+      clearTimeout(timer);
+      resolve(exitCode);
+    });
+  });
+  assert.equal(code, 1);
+  assert.match(logs.join(""), /ALLOW_MAINNET_ON_FREE_TIER/);
+});
+
 server.close();
 console.log(`\nhttp: ${passed} passed, ${failed} failed\n`);
 if (failed) process.exit(1);
