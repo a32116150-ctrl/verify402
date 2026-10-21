@@ -154,6 +154,11 @@ Once configured, your agent automatically sees the tools in its context. You can
 ## Safety
 
 - The bridge signs **x402 payments only**. It never signs or broadcasts a trade.
+- Each paid tool call mints one `crypto.randomUUID()` idempotency key and sends it
+  as `x-idempotency-key`. A timeout or lost response is retried with the **same**
+  key, so the server replays the settled verdict (`recovery.replayed: true`)
+  instead of charging twice. A 402 or 409 is never auto-retried; the error is
+  surfaced to the MCP client. The key is a secret and is never logged or returned.
 - Before signing, the paid client requires the 402 to come from the configured
   server and a known paid route, on an allowlisted EVM network, to the
   verify402 payee. It accepts only recognized default assets (USDC), caps the

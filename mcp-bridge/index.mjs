@@ -30,6 +30,7 @@ import { privateKeyToAccount } from "viem/accounts";
 import { config } from "dotenv";
 import { z } from "zod";
 import { installConsoleRedaction, logInfo, logError } from "./log.mjs";
+import { paidPost } from "./paid-call.mjs";
 
 installConsoleRedaction();
 config();
@@ -129,7 +130,13 @@ const dailyBudget = createDailyBudget({
 
 async function guardedPaidCall(route, run) {
   if (dailyBudget.enabled) dailyBudget.assert(route);
-  return run();
+  const res = await run();
+  if (res?.data?.recovery?.replayed) {
+    // Visible to the operator without exposing the bearer key. The same flag
+    // is already in the JSON returned to the MCP client.
+    logInfo(`${route}: recovery.replayed=true (settled verdict returned without a second charge)`);
+  }
+  return res;
 }
 
 // ------------------------------------------------------------------ tools ---
@@ -260,7 +267,7 @@ async function main() {
       size: z.number().optional().describe("Trade size in whole base units, e.g. 100000 (default 100000)"),
     },
     async (args) => {
-      const res = await guardedPaidCall("/verify", () => paidApi.post("/verify", {
+      const res = await guardedPaidCall("/verify", () => paidPost(paidApi, "/verify", {
         chainId: args.chainId,
         target: String(args.target ?? "WETH").toUpperCase(),
         base: String(args.base ?? "USDC").toUpperCase(),
@@ -280,7 +287,7 @@ async function main() {
       offeredPriceUsd: z.number().optional().describe("Optional price per token someone offered you"),
     },
     async (args) => {
-      const res = await guardedPaidCall("/safety", () => paidApi.post("/safety", {
+      const res = await guardedPaidCall("/safety", () => paidPost(paidApi, "/safety", {
         chainId: args.chainId,
         tokenAddress: String(args.tokenAddress ?? "").trim(),
         intendedUsd: args.intendedUsd ?? 500,
@@ -300,7 +307,7 @@ async function main() {
       chainId: z.number().int().describe("REQUIRED. 1 Ethereum, 42161 Arbitrum, 8453 Base. There is no default; omitting it returns 400 missing_chain."),
     },
     async (args) => {
-      const res = await guardedPaidCall("/route", () => paidApi.post("/route", {
+      const res = await guardedPaidCall("/route", () => paidPost(paidApi, "/route", {
         chainId: args.chainId,
         tokenIn: args.tokenIn,
         tokenOut: args.tokenOut,
@@ -322,7 +329,7 @@ async function main() {
       chainId: z.number().int().describe("REQUIRED. 1 Ethereum, 42161 Arbitrum, 8453 Base. There is no default; omitting it returns 400 missing_chain."),
     },
     async (args) => {
-      const res = await guardedPaidCall("/quotecheck", () => paidApi.post("/quotecheck", {
+      const res = await guardedPaidCall("/quotecheck", () => paidPost(paidApi, "/quotecheck", {
         chainId: args.chainId,
         tokenIn: args.tokenIn,
         tokenOut: args.tokenOut,
@@ -345,7 +352,7 @@ async function main() {
       maxRoundTripPct: z.number().optional().describe("Your round-trip cost tolerance, default 1%"),
     },
     async (args) => {
-      const res = await guardedPaidCall("/depth", () => paidApi.post("/depth", {
+      const res = await guardedPaidCall("/depth", () => paidPost(paidApi, "/depth", {
         chainId: args.chainId,
         tokenAddress: args.tokenAddress,
         baseSymbol: args.baseSymbol ?? "USDC",
