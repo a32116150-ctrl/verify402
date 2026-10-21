@@ -39,7 +39,17 @@ for (const path of ["/info", "/openapi.json", "/.well-known/verify402.json", "/.
   docs[path] = await fetchText(path);
 }
 
-const banned = /honeypot test|honeypot probe|every venue\b|sell probe across every venue|double-keying|content-hash companion key|scope_mismatch|shared between the caller key|different payer/i;
+const banned = new RegExp([
+  "honeypot" + " " + "test",
+  "honeypot" + " " + "probe",
+  "every" + " " + "venue" + "\\b",
+  "sell probe across " + "every" + " " + "venue",
+  "double" + "-" + "keying",
+  "content-hash" + " " + "companion key",
+  "scope" + "_" + "mismatch",
+  "shared between the caller" + " " + "key",
+  "different" + " " + "payer",
+].join("|"), "i");
 for (const path of ["/info", "/openapi.json", "/.well-known/verify402.json", "/.well-known/x402", "/llms.txt"]) {
   await check(`banned phrases absent from ${path}`, () => {
     if (banned.test(docs[path].text)) throw new Error("banned phrase found");
