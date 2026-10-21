@@ -1,5 +1,39 @@
 # Deploy Guide For Me (Plain Language)
 
+## If I already have the service running on Render (free instance, testnet)
+
+Do these before any push.
+
+1. Open the Render dashboard.
+2. Click the existing `verify402` web service.
+3. Click "Environment" or "Environment Variables".
+4. Find `X402_MODE`.
+   - If it says `testnet`, the live service is on testnet.
+   - If it says `mainnet`, the live service is on mainnet.
+5. Add every missing variable before any push. Use placeholders or generated values only in Render, never in the repo:
+   - `X402_MODE` = `testnet`
+   - `FACILITATOR_URL` = `https://x402.org/facilitator`
+   - `AGENT_URL` = `https://<your-render-url>`
+   - `TRUSTED_HOSTS` = `<your-render-url>,localhost,127.0.0.1`
+   - `PREFLIGHT_SECRET` = a password-manager generated random secret, at least 32 characters
+   - `PAY_TO_EVM` = testnet receiving wallet
+   - `PAY_TO_SVM` = testnet receiving wallet
+   - `READY_CHAIN_ID` = `1`
+   - `ETH_RPC_URL`, `ARB_RPC_URL`, `BASE_RPC_URL` = your new private RPC endpoints, set only in Render
+6. Confirm the instance type shows Free.
+7. Confirm no mainnet-only variables are set: `X402_MODE` must not be `mainnet`, and `MAINNET_ALWAYS_ON_CONFIRMED`, `REQUIRE_ALWAYS_ON`, and `ALLOW_MAINNET_ON_FREE_TIER` must not be set.
+8. Ask OpenCode to run the push. Do not push yourself.
+9. Open "Deploys" or "Events" and watch the deploy logs.
+   - Healthy boot line: `verify402 listening on http://localhost:...`
+   - A cold start can take about a minute; the first request may be slow.
+   - Bad sign: `REFUSING TO START`.
+10. If the deploy fails to start, click the previous deploy and choose "Rollback" or redeploy the previous commit.
+11. After it is live, paste the live URL back to OpenCode.
+
+> Warning: If the live service is currently on MAINNET, switch it back to testnet before deploying, because the free instance cannot run mainnet safely.
+
+---
+
 ## If I already have the service running on Render
 
 Do these steps before pushing anything.
