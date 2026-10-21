@@ -8,8 +8,10 @@
 //   node test/measure-typed.test.mjs
 
 import assert from "node:assert/strict";
+import { encodeFunctionResult } from "viem";
 import {
   quoteV3, quoteV2, quoteAllVenues, measureRoundTrip, isHardQuoteFailure, classifyQuoteError,
+  V2_ROUTER_ABI,
 } from "../src/measure.mjs";
 import { CHAINS } from "../src/config.mjs";
 
@@ -71,6 +73,46 @@ await checkAsync("quoteV2: transport -> hard failure", async () => {
     amountIn: 1_000_000n, blockNumber,
   });
   assert.equal(r.kind, "transport");
+  assert.equal(isHardQuoteFailure(r), true);
+});
+
+await checkAsync("quoteV2: an exact 1:1 output is a legitimate quote, not an echo", async () => {
+  const amountIn = 1_000_000n;
+  const r = await quoteV2(clientCall(() => ({
+    data: encodeFunctionResult({
+      abi: V2_ROUTER_ABI,
+      functionName: "getAmountsOut",
+      result: [amountIn, amountIn],
+    }),
+  })), {
+    router: C.v2Routers[0].address,
+    tokenIn: C.tokens.USDC.address,
+    tokenOut: C.tokens.USDT.address,
+    amountIn,
+    blockNumber,
+  });
+  assert.equal(r.ok, true);
+  assert.equal(r.amountOut, amountIn);
+  assert.equal(isHardQuoteFailure(r), false);
+});
+
+await checkAsync("quoteV2: a wrong-shaped getAmountsOut result is still a decode failure", async () => {
+  const amountIn = 1_000_000n;
+  const r = await quoteV2(clientCall(() => ({
+    data: encodeFunctionResult({
+      abi: V2_ROUTER_ABI,
+      functionName: "getAmountsOut",
+      result: [amountIn],
+    }),
+  })), {
+    router: C.v2Routers[0].address,
+    tokenIn: C.tokens.USDC.address,
+    tokenOut: C.tokens.USDT.address,
+    amountIn,
+    blockNumber,
+  });
+  assert.equal(r.ok, false);
+  assert.equal(r.kind, "decode");
   assert.equal(isHardQuoteFailure(r), true);
 });
 

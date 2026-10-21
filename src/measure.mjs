@@ -193,12 +193,12 @@ export async function quoteV2(client, { router, tokenIn, tokenOut, amountIn, blo
     if (!amounts || amounts.length < 2) return quoteFail("decode", "getAmountsOut did not return a uint256[]");
     const out = amounts[amounts.length - 1];
 
-    // Structural guard: no router can hand back exactly what it was given.
-    // If it does, this decode is wrong, and a wrong decode here is invented
-    // profit - the one bug this engine must never ship. We keep this as a
-    // market-unavailable result (the L-1 edge case is tracked separately)
-    // rather than a 503, because it is a decode-shape guard, not an outage.
-    if (!(out > 0n) || out === amountIn) return quoteFail("no_pool", "echo guard: amountOut equals amountIn");
+    // Structural guard only: the router must hand back the uint256[] shape,
+    // with at least the input and one output. A 1:1 exact-input quote is a
+    // legitimate answer for a stable swap (or a same-asset round trip), so
+    // out === amountIn is NOT evidence of a bad decode. The old echo guard
+    // turned those real quotes into no_pool.
+    if (!(out > 0n)) return quoteFail("no_pool", "router returned zero");
     return quoteOk(out);
   } catch (e) {
     const c = classifyQuoteError(e);
