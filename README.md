@@ -186,7 +186,7 @@ come out profitable.* If it ever does, the engine is wrong until proven otherwis
 
 ```bash
 npm install
-npm test                              # engine checks (network required)
+npm test                              # full suite (RPC checks need network)
 node src/server.mjs                   # testnet payment mode
 BYPASS_PAYMENT=1 node src/server.mjs  # local dev only - loud warning, no billing
 X402_MODE=mainnet FACILITATOR_URL=... AGENT_URL=https://verify402.example node src/server.mjs

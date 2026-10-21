@@ -29,6 +29,11 @@ import { fairQuoteCheck, bestRouteBook, parseRawPositive } from "./quotecheck.mj
 import { depthProfile } from "./depth.mjs";
 import { CHAINS, DEFAULT_SIZE, chain, resolveToken, requireChainId } from "./config.mjs";
 import {
+  PRICE_DEFAULTS,
+  PREFLIGHT_RATE_PER_MIN,
+  PREFLIGHT_MAX_IN_FLIGHT,
+} from "./contract.mjs";
+import {
   IDEMPOTENCY_TTL_MS, IDEMPOTENCY_MAX_REPLAYS,
   recordSettlement, promoteSettlement, lookupRecovery,
   evidenceBundle, requestHash, expiredRecoveryInfo,
@@ -37,7 +42,7 @@ import {
 import {
   preflight, verifyReceipt, PreflightError,
   PREFLIGHT_SPEC, RECEIPT_SPEC, RECEIPT_SECRET_SOURCE,
-  DEFAULT_TTL_SECONDS,
+  DEFAULT_TTL_SECONDS, MAX_TTL_SECONDS,
 } from "./preflight.mjs";
 import { buildOpenapi } from "./openapi.mjs";
 import { buildServiceManifest } from "./manifest.mjs";
@@ -82,16 +87,16 @@ const NETWORKS =
 
 const PAY_TO_EVM = process.env.PAY_TO_EVM || "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb";
 const PAY_TO_SVM = process.env.PAY_TO_SVM || "BdcsYodhwWUhLTuL5FJ3m8D4u4wVy8KMw7vAvPVucAbJ";
-const PRICE = process.env.PRICE || "$0.05";
+const PRICE = process.env.PRICE || PRICE_DEFAULTS.verify;
 // The pre-trade gate is the product most agents will call before every swap;
 // it is priced above /verify because it does strictly more work:
 // contract facts, market data, a quote-based sellability check and a full round trip.
-const SAFETY_PRICE = process.env.SAFETY_PRICE || "$0.10";
+const SAFETY_PRICE = process.env.SAFETY_PRICE || PRICE_DEFAULTS.safety;
 // Fairness audit: cheap enough to run before every single swap.
-const ROUTE_PRICE = process.env.ROUTE_PRICE || "$0.03";
-const QUOTECHECK_PRICE = process.env.QUOTECHECK_PRICE || "$0.05";
+const ROUTE_PRICE = process.env.ROUTE_PRICE || PRICE_DEFAULTS.route;
+const QUOTECHECK_PRICE = process.env.QUOTECHECK_PRICE || PRICE_DEFAULTS.quotecheck;
 // Sizing: the decision that happens BEFORE every trade after a route is known.
-const DEPTH_PRICE = process.env.DEPTH_PRICE || "$0.05";
+const DEPTH_PRICE = process.env.DEPTH_PRICE || PRICE_DEFAULTS.depth;
 
 // The public x402.org facilitator is testnet-only. Mainnet needs a real one.
 // Mainnet: Coinbase's CDP facilitator. createCdpFacilitatorClient() reads
@@ -482,9 +487,9 @@ if (!BYPASS_PAYMENT) app.use(
                 maxRoundTripPct: 1,
                 capacityUsd: 10000,
                 ladder: [
-                  { sizeUsd: 100, fillable: true, buyVenue: "uniswap-v3", sellVenue: "uniswap-v3", gotTokens: 0.03, impliedPriceUsd: 3300.12, impactPct: 0.01, roundTripCostPct: 0.12, underTolerance: true },
-                  { sizeUsd: 10000, fillable: true, buyVenue: "uniswap-v3", sellVenue: "sushiswap", gotTokens: 3.02, impliedPriceUsd: 3310.4, impactPct: 0.3, roundTripCostPct: 0.9, underTolerance: true },
-                  { sizeUsd: 100000, fillable: false, buyVenue: null, sellVenue: null, gotTokens: null, impliedPriceUsd: null, impactPct: null, roundTripCostPct: null, underTolerance: false },
+                  { sizeUsd: 100, fillable: true, buyVenue: "uniswap-v3", sellVenue: "uniswap-v3", gotTokens: 0.03, impliedPriceBase: 3300.12, impliedPriceUsd: 3300.12, impactPct: 0.01, roundTripCostPct: 0.12, underTolerance: true },
+                  { sizeUsd: 10000, fillable: true, buyVenue: "uniswap-v3", sellVenue: "sushiswap", gotTokens: 3.02, impliedPriceBase: 3310.4, impliedPriceUsd: 3310.4, impactPct: 0.3, roundTripCostPct: 0.9, underTolerance: true },
+                  { sizeUsd: 100000, fillable: false, buyVenue: null, sellVenue: null, gotTokens: null, impliedPriceBase: null, impliedPriceUsd: null, impactPct: null, roundTripCostPct: null, underTolerance: false },
                 ],
                 checked: ["target token facts", "dexscreener liquidity", "entry via best route", "immediate exit of the exact position"],
                 notes: ["largest size with round-trip cost <= 1%: $10,000"],
@@ -1054,8 +1059,6 @@ app.get("/findings", async (req, res) => {
 // measurements (/verify, /safety, /depth) stay paid. Free still costs RPC, so
 // the gate is rate-limited per IP and capped in flight; otherwise a free
 // endpoint becomes a public proxy for the chain.
-const PREFLIGHT_RATE_PER_MIN = 60;
-const PREFLIGHT_MAX_IN_FLIGHT = 8;
 const preflightBuckets = new Map();
 let preflightBucketsSweptAt = 0;
 let preflightInFlight = 0;
@@ -1225,7 +1228,7 @@ app.get("/ready", async (req, res) => {
   } catch (e) {
     return sendPublicError(req, res, 503, "rpc_unavailable", "the chain could not be read within the readiness timeout", {
       log: e,
-      extra: { ready: false, chainId, latencyMs: Date.now() - started },
+      extra: { ok: false, ready: false, chainId, latencyMs: Date.now() - started },
     });
   }
 });
@@ -1361,7 +1364,7 @@ app.get("/info", (_req, res) => {
         body: { chainId: 1, tokenAddress: "WETH", baseSymbol: "USDC", sizesUsd: [100, 1000, 10000, 100000], maxRoundTripPct: 1 },
         response: {
           capacityUsd: "largest rung with round-trip cost <= maxRoundTripPct",
-          ladder: "per size: impactPct, roundTripCostPct, buyVenue, sellVenue, impliedPriceUsd",
+          ladder: "per size: impactPct, roundTripCostPct, buyVenue, sellVenue, impliedPriceBase, impliedPriceUsd (deprecated alias for USD-stable bases only)",
           notes: ["the honest caveats, block-pinned"],
         },
         use_when: "an agent is ABOUT TO CHOOSE A SIZE and needs to know what the pool will really give it",
@@ -1405,7 +1408,7 @@ app.get("/info", (_req, res) => {
         noTimestamp: "503, no receipt",
         note: "EVM only; the response carries block.timestamp and block.ageSeconds",
       },
-      binding: "sha256 of the canonical normalized intent, a fresh pinned block where the chain is readable, and an expiry (default 90s, max 300s)",
+      binding: `sha256 of the canonical normalized intent, a fresh pinned block where the chain is readable, and an expiry (default ${DEFAULT_TTL_SECONDS}s, max ${MAX_TTL_SECONDS}s)`,
       failClosed: "if the chain cannot be read, /preflight returns 503 and issues no receipt; an executor should refuse to sign without a verifiable PASS or an explicitly acknowledged CAUTION",
       receiptSigning: RECEIPT_SECRET_SOURCE === "env"
         ? "hmac-sha256 with PREFLIGHT_SECRET"
@@ -1442,8 +1445,8 @@ app.get("/info", (_req, res) => {
       header: "x-idempotency-key",
       behavior: "Send this header on the FIRST call of an operation. If the response is lost after settlement, retrying with the same header returns the SAME verdict within the TTL without requiring payment again. Records are promoted to replayable ONLY after your settlement is confirmed by the facilitator: a failed or pending settlement leaves no free replay (fail-closed).",
       keyStrength: "Use crypto.randomUUID() or at least 32 URL-safe characters (A-Z, a-z, 0-9, _, -) with at least 16 distinct characters. Weak keys return 400 weak_idempotency_key. Omitting the header keeps normal pay-per-call behavior.",
-      ttlMinutes: 10,
-      maxReplays: 3,
+      ttlMinutes: IDEMPOTENCY_TTL_MS / 60000,
+      maxReplays: IDEMPOTENCY_MAX_REPLAYS,
       maxReplaysNote: "the cap is per operation, bound to the caller's key",
       identity: "The original idempotency key is the only replay credential. The service does NOT derive a payer identity from x-payment, payment-signature, or authorization.from. The settled record stores the facilitator-confirmed payer as verified_payer for audit only.",
       noCompanionAlias: "There is no content-hash companion alias. A public content hash would turn a known body into a free read, and a token returned only in the original response cannot help a lost-response retry. The caller's secret key is the only credential that survives.",

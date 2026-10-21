@@ -22,8 +22,20 @@ process.env.ETH_RPC_URL = "http://127.0.0.1:1/FAKE_RPC_SECRET_DO_NOT_LEAK";
 // exercise the real error path.
 process.env.TEST_OFFLINE_RPC_URL = "http://127.0.0.1:1/FAKE_RPC_SECRET_DO_NOT_LEAK";
 
+const {
+  PRICE_DEFAULTS,
+  PREFLIGHT_RATE_PER_MIN,
+  PREFLIGHT_MAX_IN_FLIGHT,
+  HEALTH_OK_KEYS,
+  READY_OK_KEYS,
+  READY_FAILURE_KEYS,
+  bannedClaimHits,
+} = await import("../src/contract.mjs");
+const {
+  recordSettlement, requestHash, lookupRecovery,
+  IDEMPOTENCY_TTL_MS, IDEMPOTENCY_MAX_REPLAYS,
+} = await import("../src/recovery.mjs");
 const { app } = await import("../src/server.mjs");
-const { recordSettlement, requestHash, lookupRecovery } = await import("../src/recovery.mjs");
 
 const server = await new Promise((resolve) => {
   const s = app.listen(0, "127.0.0.1", () => resolve(s));
@@ -280,8 +292,10 @@ await check("503: /ready is a deep check and fails closed when the chain is unre
   assert.equal(r.status, 503);
   const body = await r.json();
   assert.equal(body.error, "rpc_unavailable");
+  assert.equal(body.ok, false);
   assert.equal(body.ready, false);
   assert.equal(typeof body.requestId, "string");
+  assert.deepEqual(Object.keys(body).sort(), [...READY_FAILURE_KEYS].sort());
   assert.ok(!JSON.stringify(body).includes("FAKE_RPC_SECRET_DO_NOT_LEAK"));
 });
 
@@ -291,6 +305,10 @@ await check("/health stays liveness-only and advertises /ready", async () => {
   const body = await r.json();
   assert.equal(body.ok, true);
   assert.equal(body.ready, "/ready");
+  assert.equal(body.mode, "testnet");
+  assert.equal(body.price, PRICE_DEFAULTS.verify);
+  assert.equal(body.preflight, "free");
+  assert.deepEqual(Object.keys(body).sort(), [...HEALTH_OK_KEYS].sort());
 });
 
 await check("/info and /llms.txt describe quote-based sellability and no banned overclaims", async () => {
@@ -327,6 +345,64 @@ await check("/openapi.json requires chainId and documents typed 503s", async () 
   assert.match(post.responses["503"].description, /not charged|settlement/i);
   assert.match(doc.info["x-state-persistence"], /process-local/i);
   assert.match(doc.info["x-state-persistence"], /lost on restart or deploy/i);
+});
+
+await check("discovery: OpenAPI, manifest, /info, and runtime agree on TTL, limits, prices, and shapes", async () => {
+  const [infoRes, manifestRes, openapiRes, healthRes, llmsRes] = await Promise.all([
+    fetch(`${base}/info`),
+    fetch(`${base}/.well-known/verify402.json`),
+    fetch(`${base}/openapi.json`),
+    fetch(`${base}/health`),
+    fetch(`${base}/llms.txt`),
+  ]);
+  for (const r of [infoRes, manifestRes, openapiRes, healthRes, llmsRes]) assert.equal(r.status, 200);
+  const info = await infoRes.json();
+  const manifest = await manifestRes.json();
+  const openapi = await openapiRes.json();
+  const health = await healthRes.json();
+  const llms = await llmsRes.text();
+
+  // Prices: runtime /info, manifest, and OpenAPI all come from the same strings.
+  for (const route of ["verify", "safety", "route", "quotecheck", "depth"]) {
+    const amount = PRICE_DEFAULTS[route].replace(/^\$/, "");
+    assert.equal(info.prices[route], PRICE_DEFAULTS[route], `${route} runtime price`);
+    assert.equal(manifest.paymentRequirements.pricing[route].priceUsd, Number(amount), `${route} manifest price`);
+    assert.equal(openapi.paths[`/${route}`].post["x-payment-info"].price.amount, amount, `${route} openapi price`);
+  }
+  assert.equal(health.price, info.prices.verify, "health advertises the runtime /verify price");
+
+  // Idempotency TTL/replays: recovery.mjs is the source; every contract follows it.
+  const ttlSeconds = IDEMPOTENCY_TTL_MS / 1000;
+  assert.equal(info.recovery.ttlMinutes * 60, ttlSeconds);
+  assert.equal(info.recovery.maxReplays, IDEMPOTENCY_MAX_REPLAYS);
+  assert.match(manifest.operationalPolicies.idempotency.description, new RegExp(`${ttlSeconds}s`));
+  assert.match(manifest.operationalPolicies.idempotency.description, new RegExp(`max ${IDEMPOTENCY_MAX_REPLAYS} replays`));
+  const idem = openapi.paths["/verify"].post.parameters.find((p) => p.name === "x-idempotency-key");
+  assert.match(idem.description, new RegExp(`${ttlSeconds}s`));
+  assert.match(idem.description, new RegExp(`up to ${IDEMPOTENCY_MAX_REPLAYS} times`));
+
+  // Preflight limits: contract.mjs is the source for runtime and both contracts.
+  assert.equal(info.preflight.limits.perMinutePerIp, PREFLIGHT_RATE_PER_MIN);
+  assert.equal(info.preflight.limits.maxInFlight, PREFLIGHT_MAX_IN_FLIGHT);
+  assert.match(manifest.operationalPolicies.rateLimits.preflight, new RegExp(`${PREFLIGHT_RATE_PER_MIN} requests/minute`));
+  assert.match(manifest.operationalPolicies.rateLimits.preflight, new RegExp(`max concurrency ${PREFLIGHT_MAX_IN_FLIGHT}`));
+  assert.match(openapi.paths["/preflight"].post.description, new RegExp(`max concurrency of ${PREFLIGHT_MAX_IN_FLIGHT}`));
+
+  // Health and readiness shapes.
+  const healthSchema = openapi.paths["/health"].get.responses[200].content["application/json"].schema;
+  assert.deepEqual([...healthSchema.required].sort(), [...HEALTH_OK_KEYS].sort());
+  assert.deepEqual(Object.keys(health).sort(), [...HEALTH_OK_KEYS].sort());
+  assert.deepEqual([...manifest.operationalPolicies.endpoints.health.fields].sort(), [...HEALTH_OK_KEYS].sort());
+  const readySchema = openapi.paths["/ready"].get.responses[200].content["application/json"].schema;
+  const readyFailSchema = openapi.paths["/ready"].get.responses[503].content["application/json"].schema;
+  assert.deepEqual([...readySchema.required].sort(), [...READY_OK_KEYS].sort());
+  assert.deepEqual([...readyFailSchema.required].sort(), [...READY_FAILURE_KEYS].sort());
+  assert.deepEqual([...manifest.operationalPolicies.endpoints.ready.successFields].sort(), [...READY_OK_KEYS].sort());
+  assert.deepEqual([...manifest.operationalPolicies.endpoints.ready.failureFields].sort(), [...READY_FAILURE_KEYS].sort());
+
+  // The same banned-claims list covers runtime /info, both machine contracts, and llms.txt.
+  assert.deepEqual(bannedClaimHits(JSON.stringify({ info, manifest, openapi })), []);
+  assert.deepEqual(bannedClaimHits(llms), []);
 });
 
 await check("agent card rejects a forged Host and never reflects it", async () => {

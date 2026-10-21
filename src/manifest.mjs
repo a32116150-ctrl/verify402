@@ -2,15 +2,28 @@
 // Serves /.well-known/verify402.json per Phase 4 requirements.
 // Reuses canonical pricing and configuration from server runtime to avoid drift.
 
+import { IDEMPOTENCY_MAX_REPLAYS, IDEMPOTENCY_TTL_MS } from "./recovery.mjs";
+import { DEFAULT_TTL_SECONDS, MAX_TTL_SECONDS, MIN_TTL_SECONDS } from "./preflight.mjs";
+import {
+  PRICE_DEFAULTS,
+  PREFLIGHT_RATE_PER_MIN,
+  PREFLIGHT_MAX_IN_FLIGHT,
+  HEALTH_OK_KEYS,
+  READY_OK_KEYS,
+  READY_FAILURE_KEYS,
+} from "./contract.mjs";
+
+const IDEMPOTENCY_TTL_SECONDS = IDEMPOTENCY_TTL_MS / 1000;
+
 export function buildServiceManifest({
   baseUrl = "https://verify402.onrender.com",
   mode = "mainnet",
   prices = {
-    verify: "$0.05",
-    safety: "$0.10",
-    route: "$0.03",
-    quotecheck: "$0.05",
-    depth: "$0.05",
+    verify: PRICE_DEFAULTS.verify,
+    safety: PRICE_DEFAULTS.safety,
+    route: PRICE_DEFAULTS.route,
+    quotecheck: PRICE_DEFAULTS.quotecheck,
+    depth: PRICE_DEFAULTS.depth,
   },
   payTo = {
     evm: "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb",
@@ -206,16 +219,31 @@ export function buildServiceManifest({
     ],
     operationalPolicies: {
       rateLimits: {
-        preflight: "60 requests/minute per IP, max concurrency 8",
+        preflight: `${PREFLIGHT_RATE_PER_MIN} requests/minute per IP, max concurrency ${PREFLIGHT_MAX_IN_FLIGHT}`,
         paidEndpoints: "Guarded by x402 payment requirements",
       },
       idempotency: {
         header: "x-idempotency-key",
-        description: "Replays a settled verdict at zero cost within a 600s window (max 3 replays). The key is the only credential: no payer identity is read from x-payment or payment-signature, and there is no content-hash companion alias. The key is bound to the canonical request body. Use crypto.randomUUID() or at least 32 URL-safe characters with at least 16 distinct characters; weak keys return 400 weak_idempotency_key. The key is a secret: a leaked key allows replay until the TTL/replay cap. Omitting it keeps normal pay-per-call behavior.",
+        description: `Replays a settled verdict at zero cost within a ${IDEMPOTENCY_TTL_SECONDS}s window (max ${IDEMPOTENCY_MAX_REPLAYS} replays). The key is the only credential: no payer identity is read from x-payment or payment-signature, and there is no content-hash companion alias. The key is bound to the canonical request body. Use crypto.randomUUID() or at least 32 URL-safe characters with at least 16 distinct characters; weak keys return 400 weak_idempotency_key. The key is a secret: a leaked key allows replay until the TTL/replay cap. Omitting it keeps normal pay-per-call behavior.`,
         conflictStatus: 409,
         weakKeyStatus: 400,
-        secret: "Treat the key as a bearer credential. A leaked key allows anyone to replay the settled verdict until the 10-minute window closes or the 3-replay cap is reached.",
+        secret: `Treat the key as a bearer credential. A leaked key allows anyone to replay the settled verdict until the ${IDEMPOTENCY_TTL_SECONDS / 60}-minute window closes or the ${IDEMPOTENCY_MAX_REPLAYS}-replay cap is reached.`,
         doesNotGuarantee: "Recovery is not a durable ledger, does not survive a restart, does not prove payment or refund a failed call, and does not replay after the TTL/cap. If the caller loses the key, recovery is unavailable.",
+      },
+      endpoints: {
+        health: {
+          path: "/health",
+          method: "GET",
+          liveness: true,
+          fields: [...HEALTH_OK_KEYS],
+        },
+        ready: {
+          path: "/ready",
+          method: "GET",
+          deep: true,
+          successFields: [...READY_OK_KEYS],
+          failureFields: [...READY_FAILURE_KEYS],
+        },
       },
       statePersistence: {
         scope: "process-local",
@@ -234,8 +262,8 @@ export function buildServiceManifest({
       },
       receipts: {
         type: "HMAC-SHA256",
-        defaultTtlSeconds: 90,
-        rangeSeconds: "15-300",
+        defaultTtlSeconds: DEFAULT_TTL_SECONDS,
+        rangeSeconds: `${MIN_TTL_SECONDS}-${MAX_TTL_SECONDS}`,
       },
     },
     securityBoundaries: {

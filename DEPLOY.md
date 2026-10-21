@@ -8,8 +8,8 @@ the go-to-market cannot be automated and pretending otherwise costs weeks.
 
 ```bash
 npm install
-npm test                # 5/5: bytecode check, quoter agreement, no-invented-profit,
-                        #      monotonicity, determinism
+npm test                # full suite; run `npm run test:counts` for the current
+                        # offline/RPC split. Do not hardcode a check count in docs.
 BYPASS_PAYMENT=1 node src/server.mjs &
 curl -s localhost:4021/health
 curl -s -X POST localhost:4021/safety \

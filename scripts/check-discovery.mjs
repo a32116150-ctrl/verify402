@@ -18,6 +18,7 @@ import { fileURLToPath } from "url";
 import { buildOpenapi } from "../src/openapi.mjs";
 import { buildServiceManifest } from "../src/manifest.mjs";
 import { DEFAULT_PRICES } from "../mcp-bridge/budget.mjs";
+import { PRICE_DEFAULTS } from "../src/contract.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -67,21 +68,11 @@ try {
 console.log("\n[2/4] Checking Cross-Component Price Consistency...");
 
 const manifest = buildServiceManifest();
-const openapi = buildOpenapi({
-  verify: "$0.05",
-  safety: "$0.10",
-  route: "$0.03",
-  quotecheck: "$0.05",
-  depth: "$0.05",
-});
+const openapi = buildOpenapi(PRICE_DEFAULTS);
 
-const EXPECTED_PRICES = {
-  "/verify": 0.05,
-  "/safety": 0.10,
-  "/route": 0.03,
-  "/quotecheck": 0.05,
-  "/depth": 0.05,
-};
+const EXPECTED_PRICES = Object.fromEntries(
+  Object.entries(PRICE_DEFAULTS).map(([key, value]) => [`/${key}`, Number(value.replace(/^\$/, ""))])
+);
 
 for (const [route, price] of Object.entries(EXPECTED_PRICES)) {
   const shortName = route.replace("/", "");

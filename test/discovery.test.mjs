@@ -11,6 +11,17 @@ import { fileURLToPath } from "node:url";
 import { buildOpenapi } from "../src/openapi.mjs";
 import { buildServiceManifest } from "../src/manifest.mjs";
 import { DEFAULT_PRICES } from "../mcp-bridge/budget.mjs";
+import {
+  PRICE_DEFAULTS,
+  PREFLIGHT_RATE_PER_MIN,
+  PREFLIGHT_MAX_IN_FLIGHT,
+  HEALTH_OK_KEYS,
+  READY_OK_KEYS,
+  READY_FAILURE_KEYS,
+  bannedClaimHits,
+} from "../src/contract.mjs";
+import { IDEMPOTENCY_MAX_REPLAYS, IDEMPOTENCY_TTL_MS } from "../src/recovery.mjs";
+import { DEFAULT_TTL_SECONDS, MAX_TTL_SECONDS, MIN_TTL_SECONDS } from "../src/preflight.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -62,14 +73,10 @@ test("discovery: canonical service manifest matches implemented tools and runtim
     assert.ok(toolNames.has(expected), `Manifest must include tool ${expected}`);
   }
 
-  // Price parity
-  const expectedPrices = {
-    verify: 0.05,
-    safety: 0.10,
-    route: 0.03,
-    quotecheck: 0.05,
-    depth: 0.05,
-  };
+  // Price parity comes from the same defaults the server and manifest use.
+  const expectedPrices = Object.fromEntries(
+    Object.entries(PRICE_DEFAULTS).map(([key, value]) => [key, Number(value.replace(/^\$/, ""))])
+  );
 
   for (const [key, expectedUsd] of Object.entries(expectedPrices)) {
     assert.equal(manifest.paymentRequirements.pricing[key].priceUsd, expectedUsd);
@@ -78,19 +85,14 @@ test("discovery: canonical service manifest matches implemented tools and runtim
 });
 
 test("discovery: openapi specification defines all public routes and response codes", () => {
-  const openapi = buildOpenapi({
-    verify: "$0.05",
-    safety: "$0.10",
-    route: "$0.03",
-    quotecheck: "$0.05",
-    depth: "$0.05",
-  });
+  const openapi = buildOpenapi(PRICE_DEFAULTS);
 
   assert.equal(openapi.openapi, "3.1.0");
   assert.ok(openapi.info.title, "OpenAPI has title");
 
   const requiredPaths = [
     "/health",
+    "/ready",
     "/info",
     "/findings",
     "/.well-known/verify402.json",
@@ -127,15 +129,46 @@ test("discovery: openapi specification defines all public routes and response co
   }
 });
 
+test("discovery: manifest and OpenAPI derive TTL, limits, prices, and health shapes from shared sources", () => {
+  const manifest = buildServiceManifest();
+  const openapi = buildOpenapi(PRICE_DEFAULTS);
+  const ttlSeconds = IDEMPOTENCY_TTL_MS / 1000;
+
+  assert.equal(manifest.operationalPolicies.receipts.defaultTtlSeconds, DEFAULT_TTL_SECONDS);
+  assert.equal(manifest.operationalPolicies.receipts.rangeSeconds, `${MIN_TTL_SECONDS}-${MAX_TTL_SECONDS}`);
+  assert.match(manifest.operationalPolicies.idempotency.description, new RegExp(`${ttlSeconds}s`));
+  assert.match(manifest.operationalPolicies.idempotency.description, new RegExp(`max ${IDEMPOTENCY_MAX_REPLAYS} replays`));
+
+  const idem = openapi.paths["/verify"].post.parameters.find((p) => p.name === "x-idempotency-key");
+  assert.match(idem.description, new RegExp(`${ttlSeconds}s`));
+  assert.match(idem.description, new RegExp(`up to ${IDEMPOTENCY_MAX_REPLAYS} times`));
+
+  assert.match(manifest.operationalPolicies.rateLimits.preflight, new RegExp(`${PREFLIGHT_RATE_PER_MIN} requests/minute`));
+  assert.match(manifest.operationalPolicies.rateLimits.preflight, new RegExp(`max concurrency ${PREFLIGHT_MAX_IN_FLIGHT}`));
+  assert.match(openapi.paths["/preflight"].post.description, new RegExp(`max concurrency of ${PREFLIGHT_MAX_IN_FLIGHT}`));
+
+  for (const route of ["verify", "safety", "route", "quotecheck", "depth"]) {
+    const amount = PRICE_DEFAULTS[route].replace(/^\$/, "");
+    assert.equal(manifest.paymentRequirements.pricing[route].priceUsd, Number(amount));
+    assert.equal(openapi.paths[`/${route}`].post["x-payment-info"].price.amount, amount);
+  }
+
+  const healthSchema = openapi.paths["/health"].get.responses[200].content["application/json"].schema;
+  assert.deepEqual([...healthSchema.required].sort(), [...HEALTH_OK_KEYS].sort());
+  assert.deepEqual([...manifest.operationalPolicies.endpoints.health.fields].sort(), [...HEALTH_OK_KEYS].sort());
+  const readySchema = openapi.paths["/ready"].get.responses[200].content["application/json"].schema;
+  const readyFailSchema = openapi.paths["/ready"].get.responses[503].content["application/json"].schema;
+  assert.deepEqual([...readySchema.required].sort(), [...READY_OK_KEYS].sort());
+  assert.deepEqual([...readyFailSchema.required].sort(), [...READY_FAILURE_KEYS].sort());
+  assert.deepEqual([...manifest.operationalPolicies.endpoints.ready.successFields].sort(), [...READY_OK_KEYS].sort());
+  assert.deepEqual([...manifest.operationalPolicies.endpoints.ready.failureFields].sort(), [...READY_FAILURE_KEYS].sort());
+
+  assert.deepEqual(bannedClaimHits(JSON.stringify({ manifest, openapi })), []);
+});
+
 test("discovery: no secrets leaked in public discovery outputs", () => {
   const manifest = buildServiceManifest();
-  const openapi = buildOpenapi({
-    verify: "$0.05",
-    safety: "$0.10",
-    route: "$0.03",
-    quotecheck: "$0.05",
-    depth: "$0.05",
-  });
+  const openapi = buildOpenapi(PRICE_DEFAULTS);
   const serverJson = JSON.parse(fs.readFileSync(path.join(ROOT, "server.json"), "utf8"));
 
   const jsonBlobs = [JSON.stringify(manifest), JSON.stringify(openapi), JSON.stringify(serverJson)];

@@ -6,6 +6,7 @@
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { bannedClaimHits, PREFLIGHT_MAX_IN_FLIGHT } from "../src/contract.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const read = (p) => readFileSync(`${root}${p}`, "utf8");
@@ -33,28 +34,15 @@ const PUBLIC_TEXT = [
   ...docsFiles,
 ];
 
-// Claims that were removed as part of C-3 / C-1. Case-insensitive.
-const BANNED = [
-  /honeypot test/i,
-  /honeypot probe/i,
-  /every venue\b/i,
-  /sell probe across every venue/i,
-  /double-keying/i,
-  /content-hash companion key/i,
-  /scope_mismatch/i,
-  /shared between the caller key/i,
-  /different payer/i,
-];
+// The banned list is shared with the live /info, OpenAPI, and manifest checks.
+
 
 console.log("\npublic claims");
 
 check("banned overclaims are absent from every public surface", () => {
   const hits = [];
   for (const file of PUBLIC_TEXT) {
-    const text = read(file);
-    for (const re of BANNED) {
-      if (re.test(text)) hits.push(`${file}: ${re}`);
-    }
+    for (const pattern of bannedClaimHits(read(file))) hits.push(`${file}: ${pattern}`);
   }
   assert.deepEqual(hits, [], hits.join("\n"));
 });
@@ -89,7 +77,8 @@ check("chainId has no silent default in OpenAPI or the MCP bridge", () => {
   assert.match(mcp, /REQUIRED/);
   assert.match(openapi, /kind: \{ const: "transaction" \}[\s\S]*?required: \["chainId"\]/,
     "transaction preflight schema must conditionally require chainId");
-  assert.match(openapi, /concurrency of 8/);
+  assert.equal(PREFLIGHT_MAX_IN_FLIGHT, 8);
+  assert.match(openapi, /PREFLIGHT_MAX_IN_FLIGHT/);
   assert.match(read("docs/service-manifest.md"), /concurrency cap of 8/);
 });
 

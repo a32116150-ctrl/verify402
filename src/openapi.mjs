@@ -4,6 +4,18 @@
 //
 // Complies with official OpenAPI 3.1 specification (https://spec.openapis.org/oas/v3.1.0.html).
 
+import { IDEMPOTENCY_MAX_REPLAYS, IDEMPOTENCY_TTL_MS } from "./recovery.mjs";
+import { DEFAULT_TTL_SECONDS, MAX_TTL_SECONDS, MIN_TTL_SECONDS } from "./preflight.mjs";
+import {
+  HEALTH_OK_KEYS,
+  READY_OK_KEYS,
+  READY_FAILURE_KEYS,
+  PREFLIGHT_RATE_PER_MIN,
+  PREFLIGHT_MAX_IN_FLIGHT,
+} from "./contract.mjs";
+
+const IDEMPOTENCY_TTL_SECONDS = IDEMPOTENCY_TTL_MS / 1000;
+
 const OUTPUT_SCHEMA = {
   type: "object",
   required: ["ok", "checked", "notChecked", "evidence_bundle"],
@@ -22,7 +34,7 @@ const OUTPUT_SCHEMA = {
       required: ["requestHash", "responseHash", "pinnedBlock"],
       properties: {
         requestHash: { type: "string", description: "SHA-256 of canonical sorted JSON { route, body }." },
-        responseHash: { type: "string", description: "SHA-256 of canonical sorted JSON { route, payload }." },
+        responseHash: { type: "string", description: "SHA-256 of canonical sorted JSON of the response body excluding evidence_bundle, recovery, cache, elapsedMs, and operationId." },
         pinnedBlock: { type: "integer", description: "Pinned block number for deterministic reproduction." },
         timestamp: { type: "string", format: "date-time", description: "ISO UTC timestamp of measurement." },
       },
@@ -93,7 +105,7 @@ const IDEMPOTENCY_HEADER = {
   in: "header",
   required: false,
   description:
-    "Optional secret idempotency key. A settled verdict is cached under this key and can be replayed up to 3 times within 600s at zero charge. This key is the ONLY replay credential: no payer identity is read from x-payment or payment-signature. Use crypto.randomUUID() or at least 32 URL-safe characters (A-Z, a-z, 0-9, _, -) with at least 16 distinct characters; weak keys return 400 weak_idempotency_key. A leaked key allows replay until the TTL/replay cap. Omitting the header keeps normal pay-per-call behavior. Changing the request body with the same key returns 409 Conflict.",
+    `Optional secret idempotency key. A settled verdict is cached under this key and can be replayed up to ${IDEMPOTENCY_MAX_REPLAYS} times within ${IDEMPOTENCY_TTL_SECONDS}s at zero charge. This key is the ONLY replay credential: no payer identity is read from x-payment or payment-signature. Use crypto.randomUUID() or at least 32 URL-safe characters (A-Z, a-z, 0-9, _, -) with at least 16 distinct characters; weak keys return 400 weak_idempotency_key. A leaked key allows replay until the TTL/replay cap. Omitting the header keeps normal pay-per-call behavior. Changing the request body with the same key returns 409 Conflict.`,
   schema: { type: "string", minLength: 32 },
 };
 
@@ -119,7 +131,7 @@ function paidOperation({ price, operationId, summary, tag, inputSchema, outputSc
       "3. Client signs payment authorization for USDC on Base (`eip155:8453`) or Solana.",
       "4. Retry original request with proof in `x-payment` or `payment-signature` header.",
       "5. Receive 200 OK with reproducible `evidence_bundle`.",
-      "\n**Idempotency & Replay:** Supply `x-idempotency-key` on the first call. A settled verdict can be replayed up to 3 times within 600s at zero charge. The key is the only replay credential; no payer identity is derived from an unverified payment header. Use `crypto.randomUUID()` or at least 32 URL-safe random characters with at least 16 distinct characters; weak keys return `400 weak_idempotency_key`. The key is a secret: a leaked key allows replay until the TTL/replay cap. Omitting it keeps normal pay-per-call behavior.",
+      `\n**Idempotency & Replay:** Supply \`x-idempotency-key\` on the first call. A settled verdict can be replayed up to ${IDEMPOTENCY_MAX_REPLAYS} times within ${IDEMPOTENCY_TTL_SECONDS}s at zero charge. The key is the only replay credential; no payer identity is derived from an unverified payment header. Use \`crypto.randomUUID()\` or at least 32 URL-safe random characters with at least 16 distinct characters; weak keys return \`400 weak_idempotency_key\`. The key is a secret: a leaked key allows replay until the TTL/replay cap. Omitting it keeps normal pay-per-call behavior.`,
       "\n**Safety boundary:** Truth checks measure chain state at one pinned block. They do not predict future blocks, guarantee arbitrage execution, or endorse tokens as risk-free.",
     ].join("\n"),
     security: [],
@@ -157,7 +169,7 @@ function paidOperation({ price, operationId, summary, tag, inputSchema, outputSc
         content: { "application/json": { schema: PAYMENT_REQUIRED_SCHEMA } },
       },
       409: {
-        description: "Conflict: Reused idempotency key with conflicting request parameters or concurrent in-flight operation.",
+        description: "Conflict: the same idempotency key was reused with different request parameters. Recovery binds one key to one canonical request body.",
         content: { "application/json": { schema: ERROR_SCHEMA } },
       },
       429: {
@@ -218,7 +230,7 @@ export function buildOpenapi(prices) {
           tags: ["Discovery"],
           operationId: "getHealth",
           summary: "Liveness and network configuration check",
-          description: "Returns server operational health, active mode (mainnet/testnet), and supported settlement networks. Free, no authentication.",
+          description: "Liveness only: this endpoint does not read the chain. Returns the runtime mode, current /verify price, free-preflight marker, settlement-network label, and the readiness path. Free, no authentication.",
           responses: {
             200: {
               description: "Service is healthy and reachable.",
@@ -226,11 +238,63 @@ export function buildOpenapi(prices) {
                 "application/json": {
                   schema: {
                     type: "object",
-                    required: ["status", "mode", "networks"],
+                    required: [...HEALTH_OK_KEYS],
                     properties: {
-                      status: { type: "string", example: "ok" },
+                      ok: { type: "boolean", const: true },
                       mode: { type: "string", enum: ["mainnet", "testnet"], example: "mainnet" },
+                      price: { type: "string", example: "$0.05" },
+                      preflight: { type: "string", example: "free" },
                       networks: { type: "string", example: "Base mainnet / Solana mainnet" },
+                      ready: { type: "string", example: "/ready" },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      "/ready": {
+        get: {
+          tags: ["Discovery"],
+          operationId: "getReady",
+          summary: "Deep readiness: latest block read with a timeout",
+          description: "Traffic readiness, not liveness. Reads the latest block on READY_CHAIN_ID with a 3s timeout. A process that cannot read the chain returns 503 with ok:false and must not receive paid traffic.",
+          responses: {
+            200: {
+              description: "The configured readiness chain was read successfully.",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    required: [...READY_OK_KEYS],
+                    properties: {
+                      ok: { type: "boolean", const: true },
+                      ready: { type: "boolean", const: true },
+                      mode: { type: "string", enum: ["mainnet", "testnet"] },
+                      chainId: { type: "integer" },
+                      blockNumber: { type: "integer" },
+                      latencyMs: { type: "integer" },
+                    },
+                  },
+                },
+              },
+            },
+            503: {
+              description: "The configured readiness chain could not be read; no paid traffic should be sent here.",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    required: [...READY_FAILURE_KEYS],
+                    properties: {
+                      ok: { type: "boolean", const: false },
+                      error: { type: "string", const: "rpc_unavailable" },
+                      message: { type: "string" },
+                      requestId: { type: "string" },
+                      ready: { type: "boolean", const: false },
+                      chainId: { type: "integer" },
+                      latencyMs: { type: "integer" },
                     },
                   },
                 },
@@ -244,7 +308,7 @@ export function buildOpenapi(prices) {
           tags: ["Discovery"],
           operationId: "getInfo",
           summary: "Service capabilities, pricing, and chain IDs",
-          description: "Returns summary of available endpoints, current prices, and supported chain IDs as machine-readable JSON. Free.",
+          description: "Returns capabilities, current prices, preflight limits, recovery terms, process-local state warning, readiness path, and supported chains as machine-readable JSON. Free.",
           responses: {
             200: {
               description: "Service information.",
@@ -252,10 +316,49 @@ export function buildOpenapi(prices) {
                 "application/json": {
                   schema: {
                     type: "object",
+                    required: ["name", "prices", "preflight", "recovery", "state_persistence", "readiness", "chains", "endpoints"],
                     properties: {
                       name: { type: "string", example: "verify402" },
-                      endpoints: { type: "object", additionalProperties: true },
-                      chains: { type: "array", items: { type: "integer" } },
+                      description: { type: "string" },
+                      prices: { type: "object", additionalProperties: { type: "string" } },
+                      preflight: {
+                        type: "object",
+                        required: ["limits", "defaultTtlSeconds"],
+                        properties: {
+                          limits: {
+                            type: "object",
+                            required: ["perMinutePerIp", "maxInFlight"],
+                            properties: {
+                              perMinutePerIp: { type: "integer", const: PREFLIGHT_RATE_PER_MIN },
+                              maxInFlight: { type: "integer", const: PREFLIGHT_MAX_IN_FLIGHT },
+                            },
+                          },
+                          defaultTtlSeconds: { type: "integer", const: DEFAULT_TTL_SECONDS },
+                        },
+                      },
+                      recovery: {
+                        type: "object",
+                        required: ["ttlMinutes", "maxReplays"],
+                        properties: {
+                          ttlMinutes: { type: "integer", const: IDEMPOTENCY_TTL_SECONDS / 60 },
+                          maxReplays: { type: "integer", const: IDEMPOTENCY_MAX_REPLAYS },
+                        },
+                      },
+                      state_persistence: {
+                        type: "object",
+                        required: ["scope", "lostOnRestart"],
+                        properties: {
+                          scope: { type: "string", const: "process-local" },
+                          lostOnRestart: { type: "boolean", const: true },
+                        },
+                      },
+                      readiness: {
+                        type: "object",
+                        required: ["path"],
+                        properties: { path: { type: "string", const: "/ready" } },
+                      },
+                      endpoints: { type: "array", items: { type: "object", additionalProperties: true } },
+                      chains: { type: "array", items: { type: "object", additionalProperties: true } },
                     },
                   },
                 },
@@ -387,7 +490,7 @@ export function buildOpenapi(prices) {
             "Evaluates structural validity, recipient allowlists, spend caps, approval limits, revert simulation, and block freshness.",
             "Returns PASS / CAUTION / BLOCK with typed reasons, checked/notChecked lists, pinned block number, and an HMAC receipt (valid for 90s).",
             "\n**Security disclaimer:** A PASS indicates that the specific checks in `checked` passed. It is not an audit, does not screen sanctions, does not audit the counterparty, does not scan tool descriptions or responses for prompt injection, and does not guarantee the intent is safe. Always inspect `notChecked`.",
-            "\n**Rate limits:** 60 requests/minute per IP, max concurrency of 8.",
+            `\n**Rate limits:** ${PREFLIGHT_RATE_PER_MIN} requests/minute per IP, max concurrency of ${PREFLIGHT_MAX_IN_FLIGHT}.`,
           ].join("\n"),
           requestBody: {
             required: true,
@@ -430,7 +533,7 @@ export function buildOpenapi(prices) {
                       },
                       additionalProperties: true,
                     },
-                    ttlSeconds: { type: "integer", default: 90, minimum: 15, maximum: 300, description: "Receipt lifetime in seconds." },
+                    ttlSeconds: { type: "integer", default: DEFAULT_TTL_SECONDS, minimum: MIN_TTL_SECONDS, maximum: MAX_TTL_SECONDS, description: "Receipt lifetime in seconds." },
                   },
                   additionalProperties: true,
                   allOf: [

@@ -13,9 +13,9 @@ Only allowed statuses are used: **PASS**, **FAIL**, **BLOCKED**, **NOT RUN**, an
 
 | Item | Category | Status | Evidence & Notes |
 |---|---|---|---|
-| Local Test Suite (`npm test`) | Test Suite | **PASS** | 123 tests/assertions passed across recovery, engine, fairness, depth, preflight, guard, policy, and discovery. |
+| Local Test Suite (`npm test`) | Test Suite | **PASS** | Full suite passed across recovery, engine, fairness, depth, preflight, guard, policy, and discovery. Current counts are generated from the test sources: run `npm run test:counts`; do not quote a fixed number in docs. |
 | Discovery Validation Script (`npm run check:discovery`) | Discovery Script | **PASS** | 33 passed, 0 failed verifying schema, description length, and price parity. |
-| Production `/health` | HTTP Endpoint | **PASS** | HTTP 200 OK, `application/json`, `{"ok":true,"mode":"mainnet","preflight":"free"}`. |
+| Production `/health` | HTTP Endpoint | **PASS** | HTTP 200 OK, `application/json`, liveness fields `ok`, `mode`, `price`, `preflight`, `networks`, `ready` (no chain read). |
 | Production `/info` | HTTP Endpoint | **PASS** | HTTP 200 OK, `application/json`, reports exact runtime prices. |
 | Production `/openapi.json` | Discovery Spec | **PASS** | HTTP 200 OK, `application/json`, OpenAPI 3.1.0 contract. |
 | Production `/llms.txt` | LLM Discovery | **PASS** | HTTP 200 OK, `text/plain`, structured plain-text contract. |

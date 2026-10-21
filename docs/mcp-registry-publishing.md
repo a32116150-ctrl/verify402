@@ -127,9 +127,12 @@ do not publish.
 
 ## Current status
 
+Current release: `verify402-mcp@1.0.3` is published on npm and listed in the
+official MCP Registry. This hotfix does **not** publish a new package.
+
 | Step | Status |
 |---|---|
 | `server.json` created | DONE |
 | `mcpName` in package.json | DONE |
-| Published to npm | NOT YET (requires npm account ownership) |
-| Published to MCP Registry | NOT YET (requires npm publish first) |
+| Published to npm | DONE — `verify402-mcp@1.0.3` is live and tagged `latest` |
+| Published to MCP Registry | DONE — `io.github.a32116150-ctrl/verify402-mcp` v1.0.3 is active |
