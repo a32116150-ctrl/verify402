@@ -17,12 +17,13 @@ Do these steps before pushing anything.
    - Mainnet required: `X402_MODE=mainnet`, `AGENT_URL`, `PREFLIGHT_SECRET`, `FACILITATOR_URL`, `PAY_TO_EVM`, and `PAY_TO_SVM`.
    - If using Coinbase CDP, also add `CDP_API_KEY_ID` and `CDP_API_KEY_SECRET`.
 7. Save the environment changes.
-8. Upgrade the instance to a paid always-on plan before pushing:
-   - Click "Settings".
-   - Find "Instance Type" or "Plan".
-   - Change from Free to a paid always-on instance.
-   - Save.
-9. Only after the variables are saved and the plan is paid, push the new commit.
+8. Keep this service on the Render Free plan. Do not upgrade to a paid plan for this testnet-only demo.
+   - Free instances spin down after about 15 minutes idle.
+   - A cold start can take about 1 minute.
+   - Free instances can restart at any time.
+   - The filesystem is ephemeral; recovery records and /usage counters are in memory and are lost on restart.
+   - Rule: X402_MODE=testnet only on free instances. Mainnet requires an always-on paid instance.
+9. Only after the variables are saved, push the new commit.
 10. Open "Deploys" or "Events" and watch the new deploy.
 11. A healthy boot line looks like:
     `verify402 listening on http://localhost:...`
@@ -72,7 +73,7 @@ in chat, or in a screenshot. Use placeholders and keep real values in Render onl
 3. Connect your GitHub account if Render asks.
 4. Select the verify402 repository.
 5. Choose the branch you want to deploy, usually `master`.
-6. Choose a paid, always-on instance. Do not use a free sleeping instance.
+6. Choose the Render Free instance. This demo is testnet only. Do not choose a paid plan unless you are moving to mainnet later.
 7. Set the build command to `npm install`.
 8. Set the start command to `npm start`.
 9. Set the health check path to `/health`.
@@ -172,3 +173,21 @@ SMOKE_BASE_URL=<url> npm run post-deploy
 ```
 
 Paste the full output back to OpenCode.
+
+
+## Free-tier survival checklist
+
+1. Open the Render dashboard.
+2. Click the verify402 web service.
+3. Click "Settings".
+4. Find "Instance Type" or "Plan".
+5. Confirm it says "Free". If it says anything else, this section does not apply.
+6. Open the service "Logs" or "Events" tab.
+7. After about 15 minutes with no traffic, the free instance spins down.
+8. The first request after spin-down can take about a minute.
+9. During a cold start, logs may show the service starting again and then `verify402 listening on http://localhost:...`.
+10. If the service has not woken yet, `/health` may be slow or fail; wait about a minute and retry.
+11. Open "Usage" or "Billing" in Render.
+12. Check the monthly hours used against the free allowance.
+13. If usage is close to the monthly limit, reduce unnecessary wake-ups or upgrade later.
+14. Remember that recovery records and /usage counters are in memory and are lost on any restart.
