@@ -8,11 +8,21 @@
 
 import { depthProfile } from "../src/depth.mjs";
 import { chain } from "../src/config.mjs";
+import { rpcSetFor, testMode } from "./suite.mjs";
+
+const RPC = rpcSetFor(import.meta.url);
 
 let passed = 0;
 let failed = 0;
+let skipped = 0;
 
 async function check(name, fn) {
+  const mode = testMode(RPC.has(name));
+  if (mode !== "run") {
+    skipped++;
+    console.log(`  ${name} ... SKIP (${mode === "skip-rpc" ? "requires RPC; TEST_OFFLINE=1" : "offline test; covered by test:offline"})`);
+    return;
+  }
   process.stdout.write(`  ${name} ... `);
   try {
     const detail = await fn();
@@ -95,5 +105,5 @@ await check("insane sizes rejected (0, negative, >1e6)", async () => {
   return "rejected";
 });
 
-console.log(`\n${passed} passed, ${failed} failed\n`);
+console.log(`\n${passed} passed, ${failed} failed, ${skipped} skipped\n`);
 process.exit(failed > 0 ? 1 : 0);

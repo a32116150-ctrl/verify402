@@ -76,19 +76,31 @@ const clients = new Map();
 export function clientFor(chainId) {
   if (clients.has(chainId)) return clients.get(chainId);
   const c = chain(chainId);
+  const offline = process.env.TEST_OFFLINE === "1";
+  const offlineUrl = process.env.TEST_OFFLINE_RPC_URL || "http://127.0.0.1:1/offline-rpc";
   const configured = process.env[c.rpcEnv];
   // A single free endpoint can throttle a cloud instance's egress IP, which is
   // how a correct measurement becomes a 90-second "loading" spinner. When no
   // paid endpoint is configured, fail over across independent public ones
   // instead of trusting any single provider.
-  const urls = configured ? [configured] : [c.rpcDefault, ...(c.rpcFallbacks || [])];
+  //
+  // TEST_OFFLINE=1 deliberately uses one closed endpoint and no public
+  // fallback. Tests that need chain access declare it and are skipped by the
+  // shared suite helper; nothing can silently reach mainnet in offline mode.
+  const urls = offline
+    ? [offlineUrl]
+    : configured
+      ? [configured]
+      : [c.rpcDefault, ...(c.rpcFallbacks || [])];
   const viemChain = viemChains[c.viemChain];
-  const transport = urls.length === 1
-    ? http(urls[0], { retryCount: 2, timeout: 15_000 })
-    : fallback(
-        urls.map((url) => http(url, { retryCount: 0, timeout: 5_000 })),
-        { rank: false },
-      );
+  const transport = offline
+    ? http(offlineUrl, { retryCount: 0, timeout: 1_000 })
+    : urls.length === 1
+      ? http(urls[0], { retryCount: 2, timeout: 15_000 })
+      : fallback(
+          urls.map((url) => http(url, { retryCount: 0, timeout: 5_000 })),
+          { rank: false },
+        );
   const client = createPublicClient({ chain: viemChain, transport });
   clients.set(chainId, client);
   return client;

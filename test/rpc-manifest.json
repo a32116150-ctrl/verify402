@@ -1,0 +1,20 @@
+{
+  "test/measure.test.mjs": [
+    "all configured venues exist on-chain",
+    "QuoterV2 agrees with V2 router within 5%",
+    "no invented profit on a 100k USDC round trip",
+    "output is monotonic in size",
+    "measurements are deterministic at a pinned block"
+  ],
+  "test/quotecheck.test.mjs": [
+    "a real chain quote audits as fair",
+    "a 50%-lowballed quote is overpaying",
+    "a doubled quote is too_good_to_be_true",
+    "a pair with no liquidity returns unknown"
+  ],
+  "test/depth.test.mjs": [
+    "WETH ladder is fully fillable with rising impact",
+    "$100 round trip on WETH under 3%",
+    "SHIB: honest 0 under a 1% tolerance, real capacity under 2.5%"
+  ]
+}

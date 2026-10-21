@@ -115,7 +115,7 @@ async function stopServer(child) {
 
 async function runCase({ name, url, secrets }) {
   const idem = "idem-super-secret-key-1234567890";
-  const { child, port, logs } = await startServer({ ETH_RPC_URL: url });
+  const { child, port, logs } = await startServer({ ETH_RPC_URL: url, TEST_OFFLINE_RPC_URL: url });
   try {
     const r = await fetch(`http://127.0.0.1:${port}/verify`, {
       method: "POST",

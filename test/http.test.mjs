@@ -15,6 +15,10 @@ import { readFileSync } from "node:fs";
 process.env.X402_MODE = "testnet";
 process.env.BYPASS_PAYMENT = "1";
 process.env.ETH_RPC_URL = "http://127.0.0.1:1/FAKE_RPC_SECRET_DO_NOT_LEAK";
+// `npm run test:offline` sets TEST_OFFLINE=1, which makes clientFor ignore the
+// public fallbacks. Keep the same closed endpoint so the leak assertions still
+// exercise the real error path.
+process.env.TEST_OFFLINE_RPC_URL = "http://127.0.0.1:1/FAKE_RPC_SECRET_DO_NOT_LEAK";
 
 const { app } = await import("../src/server.mjs");
 const { recordSettlement, requestHash, lookupRecovery } = await import("../src/recovery.mjs");

@@ -8,8 +8,9 @@
   "scripts": {
     "start": "node src/server.mjs",
     "test": "npm run test:offline && npm run test:rpc && node test/discovery.test.mjs && node scripts/check-discovery.mjs",
-    "test:offline": "node test/recovery.test.mjs && node test/measure-typed.test.mjs && node test/safety.test.mjs && node test/honesty.test.mjs && node test/preflight.test.mjs && node test/preflight-guard.test.mjs && node test/usage.test.mjs && node --test mcp-bridge/test/payment-policy.test.mjs && node test/http.test.mjs && node test/claims.test.mjs && node test/log-redaction.test.mjs",
-    "test:rpc": "node test/measure.test.mjs && node test/quotecheck.test.mjs && node test/depth.test.mjs",
+    "test:offline": "TEST_OFFLINE=1 node test/offline-mode.test.mjs && TEST_OFFLINE=1 node test/recovery.test.mjs && TEST_OFFLINE=1 node test/measure-typed.test.mjs && TEST_OFFLINE=1 node test/safety.test.mjs && TEST_OFFLINE=1 node test/honesty.test.mjs && TEST_OFFLINE=1 node test/preflight.test.mjs && TEST_OFFLINE=1 node test/preflight-guard.test.mjs && TEST_OFFLINE=1 node test/usage.test.mjs && TEST_OFFLINE=1 node --test mcp-bridge/test/payment-policy.test.mjs && TEST_OFFLINE=1 node test/http.test.mjs && TEST_OFFLINE=1 node test/claims.test.mjs && TEST_OFFLINE=1 node test/log-redaction.test.mjs && TEST_OFFLINE=1 node test/measure.test.mjs && TEST_OFFLINE=1 node test/quotecheck.test.mjs && TEST_OFFLINE=1 node test/depth.test.mjs",
+    "test:rpc": "TEST_RPC_ONLY=1 node test/measure.test.mjs && TEST_RPC_ONLY=1 node test/quotecheck.test.mjs && TEST_RPC_ONLY=1 node test/depth.test.mjs",
+    "test:counts": "node scripts/test-counts.mjs",
     "check:discovery": "node scripts/check-discovery.mjs",
     "register": "node scripts/register-agent.mjs"
   },

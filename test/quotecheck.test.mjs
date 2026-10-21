@@ -9,11 +9,21 @@
 import { clientFor, quoteAllVenues } from "../src/measure.mjs";
 import { fairQuoteCheck } from "../src/quotecheck.mjs";
 import { chain } from "../src/config.mjs";
+import { rpcSetFor, testMode } from "./suite.mjs";
+
+const RPC = rpcSetFor(import.meta.url);
 
 let passed = 0;
 let failed = 0;
+let skipped = 0;
 
 async function check(name, fn) {
+  const mode = testMode(RPC.has(name));
+  if (mode !== "run") {
+    skipped++;
+    console.log(`  ${name} ... SKIP (${mode === "skip-rpc" ? "requires RPC; TEST_OFFLINE=1" : "offline test; covered by test:offline"})`);
+    return;
+  }
   process.stdout.write(`  ${name} ... `);
   try {
     const detail = await fn();
@@ -37,11 +47,18 @@ const USDC = c.tokens.USDC.address;
 
 console.log(`\nfairness-audit tests on ${c.name} (chainId ${CHAIN_ID})\n`);
 
-// Shared block so every test quotes the same book.
-const blockNumber = await client.getBlockNumber();
+// Shared block so every test quotes the same book. The promise is created
+// inside the first RPC test, not at module top level: an unreachable RPC must
+// produce per-test FAILs, never an unhandled top-level rejection.
+let blockPromise = null;
+function sharedBlock() {
+  if (!blockPromise) blockPromise = client.getBlockNumber();
+  return blockPromise;
+}
 
 // --- 1. a quote the chain itself produced must pass as fair ----------------
 await check("a real chain quote audits as fair", async () => {
+  const blockNumber = await sharedBlock();
   const oneEth = 10n ** 18n;
   const book = await quoteAllVenues(client, CHAIN_ID, {
     tokenIn: WETH, tokenOut: USDC, amountIn: oneEth, blockNumber, intermediates: ["WETH"],
@@ -58,6 +75,7 @@ await check("a real chain quote audits as fair", async () => {
 
 // --- 2. half of a real quote must be overpaying ------------------------------
 await check("a 50%-lowballed quote is overpaying", async () => {
+  const blockNumber = await sharedBlock();
   const oneEth = 10n ** 18n;
   const book = await quoteAllVenues(client, CHAIN_ID, {
     tokenIn: WETH, tokenOut: USDC, amountIn: oneEth, blockNumber, intermediates: ["WETH"],
@@ -74,6 +92,7 @@ await check("a 50%-lowballed quote is overpaying", async () => {
 
 // --- 3. many times the real quote is too good -------------------------------
 await check("a doubled quote is too_good_to_be_true", async () => {
+  const blockNumber = await sharedBlock();
   const oneEth = 10n ** 18n;
   const book = await quoteAllVenues(client, CHAIN_ID, {
     tokenIn: WETH, tokenOut: USDC, amountIn: oneEth, blockNumber, intermediates: ["WETH"],
@@ -123,5 +142,5 @@ await check("a pair with no liquidity returns unknown", async () => {
   return r.verdict;
 });
 
-console.log(`\n${passed} passed, ${failed} failed\n`);
+console.log(`\n${passed} passed, ${failed} failed, ${skipped} skipped\n`);
 process.exit(failed > 0 ? 1 : 0);
