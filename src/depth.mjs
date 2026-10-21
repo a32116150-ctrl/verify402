@@ -82,6 +82,7 @@ export async function depthProfile(chainId, {
   baseSymbol = "USDC",
   sizesUsd = null,   // ladder in USD of base
   maxRoundTripPct = DEFAULT_TOLERANCE_PCT,
+  blockNumber = null,
 } = {}, { clientFactory = clientFor, dexscreenerPair = realDexscreenerPair } = {}) {
   const started = Date.now();
   const notes = [];
@@ -107,10 +108,21 @@ export async function depthProfile(chainId, {
     };
   }
 
+  // One pinned block for token facts and every rung. A ladder assembled from
+  // different blocks is not one measurement.
+  const client = clientFactory(chainId);
+  let pinnedBlock = blockNumber;
+  try {
+    if (pinnedBlock == null) pinnedBlock = await client.getBlockNumber();
+  } catch (e) {
+    const cErr = classifyQuoteError(e);
+    return failure(chainId, started, cErr.kind, checked, notes);
+  }
+
   // The target must BE a token. Without this guard a non-token address could
   // produce "rungs" - the tests caught exactly that with the Aave pool address.
   checked.push("contract");
-  const facts = await tokenFacts(chainId, target, { clientFactory });
+  const facts = await tokenFacts(chainId, target, { clientFactory, blockNumber: pinnedBlock });
   if (facts.ok === false && (facts.kind === "transport" || facts.kind === "decode")) {
     return failure(chainId, started, facts.kind, checked, notes);
   }
@@ -151,14 +163,6 @@ export async function depthProfile(chainId, {
   }
   checked.push("market");
 
-  const client = clientFactory(chainId);
-  let blockNumber;
-  try {
-    blockNumber = await client.getBlockNumber();
-  } catch (e) {
-    const c = classifyQuoteError(e);
-    return failure(chainId, started, c.kind, checked, notes);
-  }
   checked.push("book-sweeps");
 
   const ladder = [];
@@ -169,7 +173,7 @@ export async function depthProfile(chainId, {
     const sizeRaw = BigInt(Math.max(1, Math.round(sizeUsd * 10 ** base.decimals)));
 
     const buy = await quoteAllVenues(client, chainId, {
-      tokenIn: base.address, tokenOut: target, amountIn: sizeRaw, blockNumber,
+      tokenIn: base.address, tokenOut: target, amountIn: sizeRaw, blockNumber: pinnedBlock,
       intermediates: ["WETH"],
     });
     if (buy.hard_failure) return failure(chainId, started, buy.hard_failure.kind, checked, notes);
@@ -189,7 +193,7 @@ export async function depthProfile(chainId, {
     const got = bestBuy.amountOut;
 
     const sellBack = await quoteAllVenues(client, chainId, {
-      tokenIn: target, tokenOut: base.address, amountIn: got, blockNumber,
+      tokenIn: target, tokenOut: base.address, amountIn: got, blockNumber: pinnedBlock,
       intermediates: ["WETH"],
     });
     if (sellBack.hard_failure) return failure(chainId, started, sellBack.hard_failure.kind, checked, notes);
@@ -259,7 +263,7 @@ export async function depthProfile(chainId, {
     quote_status: quoteStatus,
     unavailable_reason: quoteStatus === "no_pool" ? "no_pool" : quoteStatus === "partial" ? "some_venues_no_pool" : null,
     token: { address: target, base: baseSymbol, chainId },
-    blockNumber: Number(blockNumber),
+    blockNumber: Number(pinnedBlock),
     maxRoundTripPct,
     capacityUsd: capacity,
     ladder,

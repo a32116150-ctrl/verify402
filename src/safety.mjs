@@ -44,10 +44,10 @@ const ERC20_ABI = [
   },
 ];
 
-async function safeERC20Call(client, address, functionName, args = []) {
+async function safeERC20Call(client, address, functionName, args = [], blockNumber = null) {
   try {
     const data = encodeFunctionData({ abi: ERC20_ABI, functionName, args });
-    const raw = await client.call({ to: address, data });
+    const raw = await client.call({ to: address, data, ...(blockNumber != null ? { blockNumber } : {}) });
     if (!raw?.data || raw.data === "0x") {
       return { ok: false, kind: "malformed_metadata", detail: "empty data" };
     }
@@ -70,12 +70,12 @@ async function safeERC20Call(client, address, functionName, args = []) {
 }
 
 /** Everything the verdict needs from the token contract itself. */
-export async function tokenFacts(chainId, tokenAddress, { clientFactory = clientFor } = {}) {
+export async function tokenFacts(chainId, tokenAddress, { clientFactory = clientFor, blockNumber = null } = {}) {
   const client = clientFactory(chainId);
 
   let code;
   try {
-    code = await client.getCode({ address: tokenAddress });
+    code = await client.getCode({ address: tokenAddress, ...(blockNumber != null ? { blockNumber } : {}) });
   } catch (e) {
     const c = classifyQuoteError(e);
     return { ok: false, kind: c.kind, reason: "the chain could not be read" };
@@ -85,10 +85,10 @@ export async function tokenFacts(chainId, tokenAddress, { clientFactory = client
   }
 
   const [name, symbol, decimals, totalSupply] = await Promise.all([
-    safeERC20Call(client, tokenAddress, "name"),
-    safeERC20Call(client, tokenAddress, "symbol"),
-    safeERC20Call(client, tokenAddress, "decimals"),
-    safeERC20Call(client, tokenAddress, "totalSupply"),
+    safeERC20Call(client, tokenAddress, "name", [], blockNumber),
+    safeERC20Call(client, tokenAddress, "symbol", [], blockNumber),
+    safeERC20Call(client, tokenAddress, "decimals", [], blockNumber),
+    safeERC20Call(client, tokenAddress, "totalSupply", [], blockNumber),
   ]);
 
   const hard = [name, symbol, decimals, totalSupply].find(isHardQuoteFailure);
@@ -119,13 +119,13 @@ export async function tokenFacts(chainId, tokenAddress, { clientFactory = client
  * through the venues this service knows about. That is a quote, not a transfer:
  * blacklist, pause, transfer tax and max-tx restrictions are NOT tested here.
  */
-export async function sellabilityProbe(chainId, tokenAddress, probeUnits, { clientFactory = clientFor } = {}) {
+export async function sellabilityProbe(chainId, tokenAddress, probeUnits, { clientFactory = clientFor, blockNumber = null } = {}) {
   const client = clientFactory(chainId);
   const c = chain(chainId);
 
   let decimals = null;
   if (probeUnits === null || probeUnits === undefined) {
-    const d = await safeERC20Call(client, tokenAddress, "decimals");
+    const d = await safeERC20Call(client, tokenAddress, "decimals", [], blockNumber);
     if (isHardQuoteFailure(d)) {
       return { ok: false, kind: d.kind, canSell: null, quote_status: "failed", unavailable_reason: d.kind };
     }
@@ -151,6 +151,7 @@ export async function sellabilityProbe(chainId, tokenAddress, probeUnits, { clie
     tokenIn: tokenAddress,
     tokenOut: usdc.address,
     amountIn: probeUnits,
+    blockNumber,
     // Deep pairs are usually vs WETH; a direct-only probe would falsely call
     // well-behaved tokens "unexitable" (this happened with SHIB).
     intermediates: ["WETH"],
@@ -179,7 +180,7 @@ export async function sellabilityProbe(chainId, tokenAddress, probeUnits, { clie
   };
 }
 
-function failure(chainId, started, kind, checked, extraNotChecked = []) {
+function failure(chainId, started, kind, checked, extraNotChecked = [], blockNumber = null) {
   const honesty = paidHonesty("/safety", {
     checked: ["request validation", ...checked],
     notChecked: [
@@ -195,6 +196,7 @@ function failure(chainId, started, kind, checked, extraNotChecked = []) {
     quote_status: "failed",
     unavailable_reason: kind,
     token: { chainId },
+    blockNumber: blockNumber == null ? null : Number(blockNumber),
     reasons: [],
     notes: [],
     checked: honesty.checked,
@@ -213,6 +215,7 @@ export async function preTradeCheck(chainId, {
   offeredPriceUsd = null,
   baseSymbol = "USDC",
   probeUsd = 25,
+  blockNumber = null,
 } = {}, { clientFactory = clientFor, dexscreenerPair = realDexscreenerPair } = {}) {
   const c = chain(chainId);
   const started = Date.now();
@@ -221,6 +224,20 @@ export async function preTradeCheck(chainId, {
   const problems = [];
   const evidence = {};
   const checked = [];
+
+  // One block for every call in this check. Without this, token facts could be
+  // read at block N, the probe at N+1, and the two round-trip legs at N+2:
+  // a verdict assembled from different chain states is not one measurement.
+  const client = clientFactory(chainId);
+  let pinnedBlock = blockNumber;
+  if (pinnedBlock == null) {
+    try {
+      pinnedBlock = await client.getBlockNumber();
+    } catch (e) {
+      const cErr = classifyQuoteError(e);
+      return failure(chainId, started, cErr.kind, checked);
+    }
+  }
 
   // --- 0. resolve the token: registry symbol or raw address ----------------
   let address = tokenAddress;
@@ -234,17 +251,18 @@ export async function preTradeCheck(chainId, {
       return {
         ok: false, kind: "bad_request", verdict: null,
         token: { input: tokenAddress, chainId, chainName: c.name },
+        blockNumber: Number(pinnedBlock),
         reasons: [e.message], notes: [], checked, evidence, elapsedMs: Date.now() - started,
       };
     }
   }
 
   // --- 1. the token contract -------------------------------------------------
-  const facts = await tokenFacts(chainId, address, { clientFactory });
+  const facts = await tokenFacts(chainId, address, { clientFactory, blockNumber: pinnedBlock });
   checked.push("contract");
 
   if (facts.ok === false && isHardQuoteFailure(facts)) {
-    return failure(chainId, started, facts.kind, checked);
+    return failure(chainId, started, facts.kind, checked, [], pinnedBlock);
   }
 
   if (!facts.ok) {
@@ -258,6 +276,7 @@ export async function preTradeCheck(chainId, {
     return {
       ok: true, verdict: "AVOID", quote_status: "no_pool", unavailable_reason: "no_contract",
       token: { input: tokenAddress, address, chainId, chainName: c.name },
+      blockNumber: Number(pinnedBlock),
       reasons: [facts.reason], notes, checked: honesty.checked, notChecked: honesty.notChecked,
       evidence, elapsedMs: Date.now() - started,
     };
@@ -292,10 +311,10 @@ export async function preTradeCheck(chainId, {
   let sell;
   if (priceUsd != null && priceUsd > 0) {
     const units = BigInt(Math.max(1, Math.round((probeUsd / priceUsd) * 10 ** facts.decimals)));
-    sell = await sellabilityProbe(chainId, address, units, { clientFactory });
+    sell = await sellabilityProbe(chainId, address, units, { clientFactory, blockNumber: pinnedBlock });
   } else {
     // No external price: fall back to a token-unit probe and say so.
-    sell = await sellabilityProbe(chainId, address, null, { clientFactory });
+    sell = await sellabilityProbe(chainId, address, null, { clientFactory, blockNumber: pinnedBlock });
     if (sell.ok) {
       sell.reason = "no external price to size a USD probe; probed 0.5 whole token instead";
       notes.push("no external price to size a USD probe; probed 0.5 whole token instead - the probe size is stated, not hidden");
@@ -304,7 +323,7 @@ export async function preTradeCheck(chainId, {
   checked.push("quote-based sellability");
 
   if (sell.ok === false && isHardQuoteFailure(sell)) {
-    return failure(chainId, started, sell.kind, checked);
+    return failure(chainId, started, sell.kind, checked, [], pinnedBlock);
   }
 
   evidence.sellability = {
@@ -333,21 +352,20 @@ export async function preTradeCheck(chainId, {
   if (sell.canSell) {
     const base = resolveToken(chainId, baseSymbol);
     const size = BigInt(Math.max(1, Math.round(intendedUsd * 10 ** base.decimals)));
-    const client = clientFactory(chainId);
 
     const buy = await quoteAllVenues(client, chainId, {
-      tokenIn: base.address, tokenOut: address, amountIn: size, intermediates: ["WETH"],
+      tokenIn: base.address, tokenOut: address, amountIn: size, blockNumber: pinnedBlock, intermediates: ["WETH"],
     });
-    if (buy.hard_failure) return failure(chainId, started, buy.hard_failure.kind, checked);
+    if (buy.hard_failure) return failure(chainId, started, buy.hard_failure.kind, checked, [], pinnedBlock);
 
     if (!buy.quoted.length) {
       problems.push(`no configured venue could fill a $${intendedUsd} ${baseSymbol} entry - the pair is too thin to trade`);
     } else {
       const got = buy.quoted[0];
       const sellBack = await quoteAllVenues(client, chainId, {
-        tokenIn: address, tokenOut: base.address, amountIn: got.amountOut, intermediates: ["WETH"],
+        tokenIn: address, tokenOut: base.address, amountIn: got.amountOut, blockNumber: pinnedBlock, intermediates: ["WETH"],
       });
-      if (sellBack.hard_failure) return failure(chainId, started, sellBack.hard_failure.kind, checked);
+      if (sellBack.hard_failure) return failure(chainId, started, sellBack.hard_failure.kind, checked, [], pinnedBlock);
 
       if (!sellBack.quoted.length) {
         problems.push(`entered at the best venue but no configured venue would buy the exact position back at $${intendedUsd}`);
@@ -424,6 +442,7 @@ export async function preTradeCheck(chainId, {
     verdict: !sell.canSell ? "AVOID" : problems.length > 0 ? "CAUTION" : "TRUST",
     quote_status: quoteStatus,
     unavailable_reason: quoteStatus === "no_pool" ? "no_pool" : quoteStatus === "partial" ? "some_venues_no_pool" : null,
+    blockNumber: Number(pinnedBlock),
     token: {
       input: tokenAddress,
       address,

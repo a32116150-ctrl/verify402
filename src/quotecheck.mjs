@@ -91,6 +91,7 @@ export async function fairQuoteCheck(chainId, {
   quotedOut,
   venueClaimed = null,
   chainIn = null, // optional: claimed network the quote came from, for the report
+  blockNumber = null,
 } = {}, { clientFactory = clientFor } = {}) {
   const c = chain(chainId);
   const notes = [];
@@ -161,15 +162,15 @@ export async function fairQuoteCheck(chainId, {
 
   // --- what the chain actually pays ------------------------------------------
   const client = clientFactory(chainId);
-  let blockNumber;
+  let pinnedBlock = blockNumber;
   try {
-    blockNumber = await client.getBlockNumber();
+    if (pinnedBlock == null) pinnedBlock = await client.getBlockNumber();
   } catch (e) {
     const cErr = classifyQuoteError(e);
     return failure(chainId, cErr.kind, checked);
   }
   checked.push("chain-book");
-  const book = await bestRouteBook(client, chainId, { tokenIn: addrIn, tokenOut: addrOut, amountIn, blockNumber });
+  const book = await bestRouteBook(client, chainId, { tokenIn: addrIn, tokenOut: addrOut, amountIn, blockNumber: pinnedBlock });
 
   const evidence = {
     offered: {
@@ -177,7 +178,7 @@ export async function fairQuoteCheck(chainId, {
       claimedVenue: venueClaimed,
       claimedChain: chainIn,
     },
-    blockNumber: Number(blockNumber),
+    blockNumber: Number(pinnedBlock),
     amountIn: amountIn.toString(),
     book: book.quoted.slice(0, 8).map((q) => ({
       venue: q.venue, kind: q.kind, amountOut: q.amountOut.toString(),
@@ -246,6 +247,7 @@ export async function fairQuoteCheck(chainId, {
     verdict,
     quote_status: quoteStatus,
     unavailable_reason: quoteStatus === "partial" ? "some_venues_no_pool" : null,
+    blockNumber: Number(pinnedBlock),
     checked: honesty.checked,
     notChecked: honesty.notChecked,
     notes,

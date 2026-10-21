@@ -221,7 +221,7 @@ function emitPaid(req, res, core) {
   const bundle = evidenceBundle({
     route: req.path,
     body,
-    pinnedBlock: clean?.cache?.pinnedBlock ?? clean?.blockNumber ?? null,
+    pinnedBlock: clean?.blockNumber ?? clean?.cache?.pinnedBlock ?? null,
     payload: clean,
   });
   const full = { ...clean, ...honesty, evidence_bundle: bundle };
@@ -1450,6 +1450,7 @@ app.post("/verify", async (req, res) => {
       targetSymbol: target,
       size: raw,
       minNet: BigInt(Math.round(minNet * 10 ** baseTok.decimals)),
+      blockNumber,
     });
 
     // transport/decode: 503, no charge, no cached verdict, no settlement record.
@@ -1516,6 +1517,7 @@ app.post("/safety", async (req, res) => {
       intendedUsd,
       offeredPriceUsd,
       baseSymbol,
+      blockNumber,
     });
 
     if (hardFailureResponse(req, res, result)) return;
@@ -1649,6 +1651,7 @@ app.post("/quotecheck", async (req, res) => {
       quotedOut: quotedOut.toString(),
       venueClaimed: body.venueClaimed ?? null,
       chainIn: body.chainIn ?? null,
+      blockNumber,
     });
 
     if (hardFailureResponse(req, res, result)) return;
@@ -1698,7 +1701,7 @@ app.post("/depth", async (req, res) => {
       return emitPaid(req, res, { ...cache.get(key), cache: { hit: true, pinnedBlock: Number(blockNumber) }, elapsedMs: Date.now() - started });
     }
 
-    const result = await depthProfile(chainId, { tokenAddress: token, baseSymbol, sizesUsd, maxRoundTripPct });
+    const result = await depthProfile(chainId, { tokenAddress: token, baseSymbol, sizesUsd, maxRoundTripPct, blockNumber });
     if (hardFailureResponse(req, res, result)) return;
     if (result?.ok === false && result.kind === "bad_request") {
       return paidFail(req, res, 400, "bad_request", result.error || "invalid token or parameters");

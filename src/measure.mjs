@@ -254,6 +254,7 @@ export async function quoteV3Path(client, { quoter, path, amountIn, fee, blockNu
 /** Every configured venue this chain knows about, at one block. */
 export async function quoteAllVenues(client, chainId, { tokenIn, tokenOut, amountIn, blockNumber, intermediates = [] }) {
   const c = chain(chainId);
+  if (blockNumber == null) blockNumber = await client.getBlockNumber();
 
   // Direct pairs miss most real liquidity: a token's deep pool is frequently
   // VS WETH (or another major), not vs the caller's base. Routed jobs use the
@@ -418,16 +419,17 @@ export async function measureRoundTrip(chainId, {
   minNet = 0n,
   gasUnits = DEFAULT_GAS_UNITS,
   venues = null,
+  blockNumber: pinnedBlock = null,
 } = {}, { clientFactory = clientFor } = {}) {
   const c = chain(chainId);
   const base = resolveToken(chainId, baseSymbol);
   const target = resolveToken(chainId, targetSymbol);
   const client = clientFactory(chainId);
 
-  let blockNumber;
+  let blockNumber = pinnedBlock;
   let block;
   try {
-    blockNumber = await client.getBlockNumber();
+    if (blockNumber == null) blockNumber = await client.getBlockNumber();
     block = await client.getBlock({ blockNumber });
   } catch (e) {
     const failure = classifyQuoteError(e);
