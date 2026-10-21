@@ -17,6 +17,7 @@
 //                              and the original message is never echoed
 
 import { randomUUID } from "node:crypto";
+import { logError } from "./log.mjs";
 
 export class HttpError extends Error {
   constructor(status, code, message) {
@@ -66,7 +67,13 @@ export function sendPublicError(req, res, status, code, message, {
   const requestId = requestIdFor(req);
   if (log) {
     // Server-side only. The request id ties the public response to this line.
-    console.error(`[error ${requestId}] ${code}:`, log);
+    // logError redacts URLs, credentials, headers and idempotency keys before
+    // anything reaches stdout/stderr.
+    logError(`[error ${requestId}] ${code}`, log, {
+      requestId,
+      ...(req?.path ? { route: req.path } : {}),
+      ...(req?.idempotencyKey ? { idempotencyKey: req.idempotencyKey } : {}),
+    });
   }
   res.set("Cache-Control", "no-store");
   res.set("x-request-id", requestId);

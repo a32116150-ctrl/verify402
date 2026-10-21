@@ -29,7 +29,9 @@ import { ExactEvmScheme } from "@x402/evm/exact/client";
 import { privateKeyToAccount } from "viem/accounts";
 import { config } from "dotenv";
 import { z } from "zod";
+import { installConsoleRedaction, logInfo, logError } from "./log.mjs";
 
+installConsoleRedaction();
 config();
 
 const VERSION = "1.0.3";
@@ -106,7 +108,7 @@ async function createPaidClient() {
     client.register(network, new ExactEvmScheme(account));
   }
   client.onBeforePaymentCreation((context) => policy.checkBeforeSign(context));
-  console.error(
+  logInfo(
     `paid policy: networks=${policy.allowedNetworks.join(",")} ` +
       `payee=${policy.allowedPayTo} resources=${policy.resourcePrefix} ` +
       `{${policy.paidRoutes.join(",")}}`,
@@ -357,7 +359,7 @@ async function main() {
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error(
+  logInfo(
     paidApi
       ? `verify402 MCP bridge connected -> ${SERVER_URL} (paid tools on, max payment $${MAX_PAYMENT_USD})`
       : `verify402 MCP bridge connected -> ${SERVER_URL} (free preflight_gate only; set EVM_PRIVATE_KEY for paid tools)`,
@@ -365,6 +367,6 @@ async function main() {
 }
 
 main().catch((e) => {
-  console.error("bridge failed:", e.message);
+  logError("bridge failed", e);
   process.exit(1);
 });

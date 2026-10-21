@@ -7,6 +7,8 @@
 // design, so a call cannot prove a unique agent. The only identity-backed usage
 // signal remains a paid settlement and its payer address.
 
+import { logInfo } from "./log.mjs";
+
 const MAX_CLIENT_LENGTH = 64;
 const MAX_KIND_LENGTH = 32;
 
@@ -75,7 +77,7 @@ export function recordPreflight({ req, result, status = 200, ms = 0, code, now =
   bump(byStatus, event.status);
 
   // One line per call. No body, no IP, no intent, no key.
-  console.log(JSON.stringify(event));
+  logInfo(JSON.stringify(event));
   return event;
 }
 

@@ -8,7 +8,7 @@
   "scripts": {
     "start": "node src/server.mjs",
     "test": "npm run test:offline && npm run test:rpc && node test/discovery.test.mjs && node scripts/check-discovery.mjs",
-    "test:offline": "node test/recovery.test.mjs && node test/measure-typed.test.mjs && node test/safety.test.mjs && node test/honesty.test.mjs && node test/preflight.test.mjs && node test/preflight-guard.test.mjs && node test/usage.test.mjs && node --test mcp-bridge/test/payment-policy.test.mjs && node test/http.test.mjs && node test/claims.test.mjs",
+    "test:offline": "node test/recovery.test.mjs && node test/measure-typed.test.mjs && node test/safety.test.mjs && node test/honesty.test.mjs && node test/preflight.test.mjs && node test/preflight-guard.test.mjs && node test/usage.test.mjs && node --test mcp-bridge/test/payment-policy.test.mjs && node test/http.test.mjs && node test/claims.test.mjs && node test/log-redaction.test.mjs",
     "test:rpc": "node test/measure.test.mjs && node test/quotecheck.test.mjs && node test/depth.test.mjs",
     "check:discovery": "node scripts/check-discovery.mjs",
     "register": "node scripts/register-agent.mjs"

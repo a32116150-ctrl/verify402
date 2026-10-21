@@ -45,6 +45,11 @@ import {
   HttpError, requestIdMiddleware, sendPublicError, sendClassifiedError, classifyError,
 } from "./errors.mjs";
 import { paidHonesty, honestFailure, unconfiguredVenues } from "./honesty.mjs";
+import { installConsoleRedaction, logInfo, logWarn, logError } from "./log.mjs";
+
+// Install before any startup/config log can run. This also wraps direct
+// console.* calls made by dependencies or future code.
+installConsoleRedaction();
 
 // ---------------------------------------------------------------- config ----
 const MODE = process.env.X402_MODE === "mainnet" ? "mainnet" : "testnet";
@@ -83,11 +88,11 @@ const FACILITATOR_URL =
   process.env.FACILITATOR_URL || (MODE === "mainnet" ? "" : "https://x402.org/facilitator");
 
 if (MODE === "mainnet" && !FACILITATOR_URL) {
-  console.error("REFUSING TO START: mainnet mode needs FACILITATOR_URL (e.g. https://facilitator.payai.network) or a CDP API key.");
+  logError("REFUSING TO START: mainnet mode needs FACILITATOR_URL (e.g. https://facilitator.payai.network) or a CDP API key.");
   process.exit(1);
 }
 if (MODE === "mainnet" && process.env.FACILITATOR_URL?.includes("api.cdp.coinbase.com") && !process.env.CDP_API_KEY_ID) {
-  console.error("REFUSING TO START: pointing at the CDP facilitator needs CDP_API_KEY_ID + CDP_API_KEY_SECRET (or switch FACILITATOR_URL to a keyless mainnet facilitator).");
+  logError("REFUSING TO START: pointing at the CDP facilitator needs CDP_API_KEY_ID + CDP_API_KEY_SECRET (or switch FACILITATOR_URL to a keyless mainnet facilitator).");
   process.exit(1);
 }
 
@@ -120,10 +125,10 @@ const facilitatorClient = MODE === "mainnet" && process.env.CDP_API_KEY_ID
 // is charging when it is not is worse than one that is plainly down.
 const BYPASS_PAYMENT = process.env.BYPASS_PAYMENT === "1";
 if (BYPASS_PAYMENT) {
-  console.warn("\n  *** BYPASS_PAYMENT=1 : paid routes are UNPROTECTED. Local testing only. ***\n");
+  logWarn("\n  *** BYPASS_PAYMENT=1 : paid routes are UNPROTECTED. Local testing only. ***\n");
 }
 if (BYPASS_PAYMENT && MODE === "mainnet") {
-  console.error("REFUSING TO START: BYPASS_PAYMENT=1 is local-only and cannot be used with X402_MODE=mainnet.");
+  logError("REFUSING TO START: BYPASS_PAYMENT=1 is local-only and cannot be used with X402_MODE=mainnet.");
   process.exit(1);
 }
 
@@ -486,7 +491,7 @@ if (!BYPASS_PAYMENT) app.use(
             payer: ctx?.result?.payer ?? null,
           });
         } catch (e) {
-          console.error("[recovery] promotion failed:", e && e.message);
+          logError("[recovery] promotion failed", e);
         }
       }),
   ),
@@ -872,8 +877,8 @@ async function measureFindingPair(target) {
     return row;
   } catch (e) {
     // Free route, same H-6 boundary: never echo the provider's message. The
-    // row is explicitly unavailable; the detail stays in the log.
-    console.error("[findings] measurement failed:", e?.message || e);
+    // row is explicitly unavailable; the detail stays in the redacted log.
+    logError("[findings] measurement failed", e);
     return { target, verdict: "unavailable", reason: "measurement unavailable: the chain/provider could not be read", blockNumber: null };
   }
 }
@@ -915,7 +920,7 @@ function fillMissingFindings() {
       const payload = await computeFindings();
       findingsSnap = { payload, at: Date.now() };
     })
-    .catch((e) => console.warn("findings retry failed:", e.message))
+    .catch((e) => logWarn("findings retry failed", e))
     .finally(() => { findingsFill = null; });
 }
 
@@ -1695,20 +1700,20 @@ export { app };
 const IS_MAIN = Boolean(process.argv[1]) && import.meta.url === pathToFileURL(process.argv[1]).href;
 if (IS_MAIN) {
   app.listen(PORT, () => {
-    console.log(`\nverify402 listening on http://localhost:${PORT}`);
-    console.log(`  mode        : ${MODE}  (${NETWORKS.label})`);
-    console.log(`  /preflight  : free   (should I sign this payment or transaction?)`);
-    console.log(`  /verify     : ${PRICE}   (is this arbitrage real?)`);
-    console.log(`  /safety     : ${SAFETY_PRICE}   (is this token safe to buy?)`);
-    console.log(`  /route      : ${ROUTE_PRICE}   (what would the chain actually pay?)`);
-    console.log(`  /quotecheck : ${QUOTECHECK_PRICE}   (is someone else's quote honest?)`);
-    console.log(`  pay to EVM  : ${PAY_TO_EVM}`);
-    console.log(`  pay to SVM  : ${PAY_TO_SVM}`);
-    console.log(`  facilitator : ${FACILITATOR_URL}`);
-    console.log(`  free        : GET / , /info , /health , /ready , /findings , /.well-known/*.json\n`);
+    logInfo(`\nverify402 listening on http://localhost:${PORT}`);
+    logInfo(`  mode        : ${MODE}  (${NETWORKS.label})`);
+    logInfo(`  /preflight  : free   (should I sign this payment or transaction?)`);
+    logInfo(`  /verify     : ${PRICE}   (is this arbitrage real?)`);
+    logInfo(`  /safety     : ${SAFETY_PRICE}   (is this token safe to buy?)`);
+    logInfo(`  /route      : ${ROUTE_PRICE}   (what would the chain actually pay?)`);
+    logInfo(`  /quotecheck : ${QUOTECHECK_PRICE}   (is someone else's quote honest?)`);
+    logInfo(`  pay to EVM  : ${PAY_TO_EVM}`);
+    logInfo(`  pay to SVM  : ${PAY_TO_SVM}`);
+    logInfo(`  facilitator : ${FACILITATOR_URL}`);
+    logInfo(`  free        : GET / , /info , /health , /ready , /findings , /.well-known/*.json\n`);
 
     // Warm the free snapshot as soon as the process is up: a cold Render instance
     // should spend its boot time measuring, not making the first visitor wait.
-    refreshFindings().catch((e) => console.warn("findings prewarm failed:", e.message));
+    refreshFindings().catch((e) => logWarn("findings prewarm failed", e));
   });
 }
