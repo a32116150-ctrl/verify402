@@ -1,4 +1,4 @@
-import { runSmoke, normalizeBaseUrl } from "./smoke.mjs";
+import { runSmoke, normalizeBaseUrl, wakeService } from "./smoke.mjs";
 
 const BASE = normalizeBaseUrl(process.env.SMOKE_BASE_URL || process.env.VERIFY402_URL);
 const results = [];
@@ -23,6 +23,11 @@ async function fetchText(path) {
 }
 
 console.log(`verify402 post-deploy check: ${BASE}`);
+
+const wake = await wakeService({ baseUrl: BASE, log: () => {} });
+check("wake service", () => {
+  if (!wake.ok) throw new Error(wake.error?.message ?? "service did not wake");
+});
 
 const smoke = await runSmoke({ baseUrl: BASE, env: process.env, log: () => {} });
 await check("smoke checks", () => {

@@ -64,6 +64,31 @@ async function rawRequest(fetchImpl, baseUrl, method, route, body = null, header
   return { res, json, text };
 }
 
+export async function wakeService({ baseUrl, fetchImpl = fetch, timeoutMs = 90000, retries = 3, retryDelayMs = 1000, log = console.log } = {}) {
+  const started = Date.now();
+  let lastError = null;
+  for (let attempt = 1; attempt <= retries; attempt += 1) {
+    try {
+      const res = await fetchImpl(`${baseUrl}/health`, { signal: AbortSignal.timeout(timeoutMs) });
+      const text = await res.text();
+      let json = null;
+      try { json = JSON.parse(text); } catch { /* keep text */ }
+      if (res.ok && json?.ok === true) {
+        const elapsedMs = Date.now() - started;
+        log(`wake: ready after ${elapsedMs}ms (attempt ${attempt})`);
+        return { ok: true, attempts: attempt, elapsedMs, response: { res, json, text } };
+      }
+      lastError = new Error(`HTTP ${res.status}`);
+    } catch (error) {
+      lastError = error;
+    }
+    if (attempt < retries) await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+  }
+  const elapsedMs = Date.now() - started;
+  log(`wake: FAILED after ${elapsedMs}ms`);
+  return { ok: false, attempts: retries, elapsedMs, error: lastError };
+}
+
 export async function runSmoke({ baseUrl, env = process.env, fetchImpl = fetch, log = console.log, spawnImpl = spawn } = {}) {
   const base = normalizeBaseUrl(baseUrl || env.SMOKE_BASE_URL || env.VERIFY402_URL);
   const paid = env.SMOKE_PAID === "1";
@@ -83,6 +108,11 @@ export async function runSmoke({ baseUrl, env = process.env, fetchImpl = fetch, 
   }
 
   log(`verify402 smoke test: ${base}`);
+
+  const wake = await wakeService({ baseUrl: base, fetchImpl, log });
+  await check("wake service", async () => {
+    if (!wake.ok) throw new Error(wake.error?.message ?? "service did not wake");
+  });
 
   let health = null;
   await check("/health", async () => {

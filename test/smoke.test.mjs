@@ -93,3 +93,25 @@ test("runSmoke returns ok:true when all mocked checks pass", async () => {
   const result = await runSmoke({ baseUrl: "http://example.test", env: { AGENT_URL: "http://example.test" }, fetchImpl, log: () => {} });
   assert.equal(result.ok, true, JSON.stringify(result.failures));
 });
+
+import { wakeService } from "../scripts/smoke.mjs";
+
+test("wakeService retries until /health succeeds", async () => {
+  let calls = 0;
+  const fetchImpl = async () => {
+    calls += 1;
+    if (calls === 1) throw new Error("cold");
+    return withGet(jsonResponse(200, { ok: true }));
+  };
+  const result = await wakeService({ baseUrl: "http://example.test", fetchImpl, retryDelayMs: 0, log: () => {} });
+  assert.equal(result.ok, true);
+  assert.equal(result.attempts, 2);
+  assert.equal(calls, 2);
+});
+
+test("wakeService returns ok:false when all attempts fail", async () => {
+  const fetchImpl = async () => { throw new Error("still cold"); };
+  const result = await wakeService({ baseUrl: "http://example.test", fetchImpl, retries: 2, retryDelayMs: 0, log: () => {} });
+  assert.equal(result.ok, false);
+  assert.equal(result.attempts, 2);
+});
