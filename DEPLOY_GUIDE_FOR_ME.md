@@ -246,3 +246,11 @@ Paste the full output back to OpenCode.
 12. Check the monthly hours used against the free allowance.
 13. If usage is close to the monthly limit, reduce unnecessary wake-ups or upgrade later.
 14. Remember that recovery records and /usage counters are in memory and are lost on any restart.
+
+
+## Wallet safety
+
+- Use public receiving addresses only. Never put a seed phrase or private key in the repo, Render, chat, an issue, a commit, or a log.
+- Use a separate receiving account for verify402. Do not use a personal or trading wallet.
+- For paid test calls later, create a separate throwaway testnet payer wallet. Fund it with only small testnet amounts.
+- The MCP bridge uses `EVM_PRIVATE_KEY` only in the client, never in the server. Keep buyer keys out of the server environment.
