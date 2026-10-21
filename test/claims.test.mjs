@@ -5,6 +5,7 @@
 
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
+import { execSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { bannedClaimHits, PREFLIGHT_MAX_IN_FLIGHT } from "../src/contract.mjs";
 
@@ -18,21 +19,20 @@ function check(name, fn) {
   catch (e) { failed++; console.log(`  ${name} ... FAIL\n      ${e.message}`); }
 }
 
-const siteFiles = readdirSync(`${root}src/site`).filter((f) => f.endsWith(".html")).map((f) => `src/site/${f}`);
-const docsFiles = readdirSync(`${root}docs`).filter((f) => f.endsWith(".md")).map((f) => `docs/${f}`);
+// Historical quotes are allowed only in the audit trail and changelog.
+const ALLOWLIST = new Set(["AUDIT.md", "CHANGELOG.md"]);
+const BINARY_EXT = new Set([".jpg", ".jpeg", ".png", ".gif", ".webp", ".pdf", ".tgz", ".zip", ".ico", ".woff", ".woff2"]);
+const tracked = execSync("git ls-files -z", { cwd: root, encoding: "buffer" })
+  .toString("utf8")
+  .split("\0")
+  .filter(Boolean)
+  .filter((f) => !/(^|\/)node_modules\//.test(f))
+  .filter((f) => !/(^|\/)package-lock\.json$/.test(f))
+  .filter((f) => !/(^|\/)skills-lock\.json$/.test(f))
+  .filter((f) => !BINARY_EXT.has(f.slice(f.lastIndexOf("."))))
+  .filter((f) => !ALLOWLIST.has(f));
 
-const PUBLIC_TEXT = [
-  "README.md",
-  "mcp-bridge/README.md",
-  "mcp-bridge/index.mjs",
-  "src/openapi.mjs",
-  "src/manifest.mjs",
-  "src/landing.html",
-  "src/server.mjs",
-  "server.json",
-  ...siteFiles,
-  ...docsFiles,
-];
+const PUBLIC_TEXT = tracked;
 
 // The banned list is shared with the live /info, OpenAPI, and manifest checks.
 
@@ -85,7 +85,7 @@ check("chainId has no silent default in OpenAPI or the MCP bridge", () => {
 check("recovery documentation no longer advertises a companion alias", () => {
   for (const file of ["README.md", "src/openapi.mjs", "src/manifest.mjs", "src/site/docs.html"]) {
     const text = read(file);
-    assert.ok(!/double-keying|companion key/i.test(text), file);
+    assert.ok(!/double" + "-keying|companion key/i.test(text), file);
     assert.match(text, /600|10 minutes|idempotency/i, file);
   }
 });

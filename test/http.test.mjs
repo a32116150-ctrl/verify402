@@ -352,7 +352,7 @@ await check("/info and /llms.txt describe quote-based sellability and no banned 
   const info = await infoRes.json();
   const text = JSON.stringify(info);
   assert.match(text, /quote-based sellability/i);
-  assert.ok(!/honeypot test|honeypot probe|every venue\b/i.test(text), "no removed claims in /info");
+  assert.deepEqual(bannedClaimHits(text), [], "no removed claims in /info");
   assert.match(info.chainIdRequired, /missing_chain/);
   assert.match(info.recovery.noCompanionAlias, /no content-hash companion/i);
   assert.equal(info.readiness.path, "/ready");
@@ -366,7 +366,7 @@ await check("/info and /llms.txt describe quote-based sellability and no banned 
   assert.equal(llmsRes.status, 200);
   const llms = await llmsRes.text();
   assert.match(llms, /quote-based sellability/i);
-  assert.ok(!/honeypot test|honeypot probe|every venue\b/i.test(llms), "no removed claims in llms.txt");
+  assert.deepEqual(bannedClaimHits(llms), [], "no removed claims in llms.txt");
 });
 
 await check("/openapi.json requires chainId and documents typed 503s", async () => {

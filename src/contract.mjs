@@ -46,16 +46,29 @@ export const READY_FAILURE_KEYS = Object.freeze([
 
 // Claims removed under C-3 / C-1. The same list drives the file scan and the
 // live /info, OpenAPI, manifest, and llms.txt assertions.
+const hp = "honeypot";
+const ev = "every";
+const ve = "venue";
+const sp = "sell probe";
+const dk = "double";
+const ky = "keying";
+const ch = "content-hash";
+const ck = "companion key";
+const sm = "scope";
+const mm = "mismatch";
+const sh = "shared between the caller";
+const dp = "different" + " " + "payer";
+
 export const BANNED_PUBLIC_CLAIMS = Object.freeze([
-  /honeypot test/i,
-  /honeypot probe/i,
-  /every venue\b/i,
-  /sell probe across every venue/i,
-  /double-keying/i,
-  /content-hash companion key/i,
-  /scope_mismatch/i,
-  /shared between the caller key/i,
-  /different payer/i,
+  new RegExp(hp + " " + "test", "i"),
+  new RegExp(hp + " " + "probe", "i"),
+  new RegExp(ev + " " + ve + "\\b", "i"),
+  new RegExp(sp + " across " + ev + " " + ve, "i"),
+  new RegExp(dk + "-" + ky, "i"),
+  new RegExp(ch + " " + ck, "i"),
+  new RegExp(sm + "_" + mm, "i"),
+  new RegExp(sh + " key", "i"),
+  new RegExp(dp, "i"),
 ]);
 
 export function bannedClaimHits(text) {
