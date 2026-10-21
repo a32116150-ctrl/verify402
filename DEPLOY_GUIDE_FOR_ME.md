@@ -1,5 +1,25 @@
 # Deploy Guide For Me (Plain Language)
 
+## Render Environment page: exact edits for the current service
+
+1. Open Render and click the `verify402` web service.
+2. Click "Environment" or "Environment Variables".
+3. Find the row whose key is the literal text `ETH_RPC_URL, ARB_RPC_URL, BASE_RPC_URL`.
+4. Delete that broken row. It does nothing.
+5. Edit `AGENT_URL` to `https://verify402.onrender.com` with no trailing slash.
+6. Edit `TRUSTED_HOSTS` to `verify402.onrender.com,localhost,127.0.0.1`.
+7. Edit `FACILITATOR_URL` to `https://x402.org/facilitator`.
+8. Edit `X402_MODE` to `testnet`.
+9. Leave `CDP_API_KEY_ID` and `CDP_API_KEY_SECRET` only if you plan to use CDP later; otherwise delete them.
+10. Leave `PREFLIGHT_SECRET` as it is, or replace it with a new password-manager generated secret of at least 32 random characters. Do not paste it into chat.
+11. Leave `PAY_TO_EVM` and `PAY_TO_SVM` only if they are your testnet wallets.
+12. Leave `READY_CHAIN_ID` as `1`.
+13. Do not add `ETH_RPC_URL`, `ARB_RPC_URL`, or `BASE_RPC_URL` unless you have private endpoints.
+14. Click "Save Changes". If Render shows a small arrow or menu next to Save, choose the option that saves without deploying. If there is no such option, saving will redeploy the service; watch the deploy logs.
+15. After saving, open `/health` and confirm `ok: true`.
+
+---
+
 ## If I already have the service running on Render (free instance, testnet)
 
 Do these before any push.
