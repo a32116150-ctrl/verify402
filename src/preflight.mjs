@@ -629,7 +629,7 @@ export function verifyReceipt(receipt, { now = Date.now() } = {}) {
 
 const NOTE = "A PASS is not a guarantee, a counterparty audit, or a prompt-injection filter. It means the checks listed in `checked` passed at this block; `notChecked` lists what was not examined, including tool metadata and response content. Receipts expire and are bound to the exact intent.";
 
-function finish({ kind, reasons, checked, notChecked, intent, block: chainBlock, simulation, decoded, payerBalance, ttlSeconds, now }) {
+function finish({ kind, reasons, checked, notChecked, intent, block: chainBlock, simulation, decoded, payerBalance, ttlSeconds, now, structuralOnly = false, structuralOnlyReasons = [] }) {
   const reasonsFinal = [...reasons];
   let blockAgeSeconds = null;
   if (chainBlock?.timestamp != null) {
@@ -645,6 +645,11 @@ function finish({ kind, reasons, checked, notChecked, intent, block: chainBlock,
   const checkedFinal = unique(checked);
   const notCheckedFinal = unique(notChecked);
   const intentHash = sha256Hex(canonicalStable(intent));
+  const structuralReasonsFinal = unique(structuralOnlyReasons);
+  let summary = summaryOf(verdict, reasonsFinal);
+  if (structuralOnly) {
+    summary += " Structural only: " + structuralReasonsFinal.join("; ") + ".";
+  }
   const receipt = makeReceipt({
     kind,
     verdict,
@@ -662,7 +667,9 @@ function finish({ kind, reasons, checked, notChecked, intent, block: chainBlock,
     verdict,
     sign_allowed: verdict !== "BLOCK",
     requires_ack: verdict === "CAUTION",
-    summary: summaryOf(verdict, reasonsFinal),
+    structural_only: Boolean(structuralOnly),
+    ...(structuralOnly ? { structural_only_reasons: structuralReasonsFinal } : {}),
+    summary,
     reasons: reasonsFinal,
     checked: checkedFinal,
     notChecked: notCheckedFinal,
@@ -950,6 +957,26 @@ async function paymentPreflight(body, { clientFactory, now }) {
     return Number.isFinite(n) ? n : null;
   };
 
+  // M-5: a payment PREFLIGHT is a structural check unless the caller supplies
+  // both a payer address and a proof. Without them PASS would overstate what
+  // was verified, so keep the PASS (least breaking for existing callers) and
+  // mark it `structural_only`, with the exact missing pieces named.
+  const proofRaw = body.proof ?? body.paymentProof ?? raw.proof ?? raw.payload ?? raw.signature ?? null;
+  const structuralOnlyReasons = [];
+  if (!from) {
+    structuralOnlyReasons.push("no payer `from` address: payer balance, signature, and settlement were not checked");
+  }
+  if (proofRaw == null) {
+    structuralOnlyReasons.push("no payment proof/signature supplied: the request was checked structurally only");
+    notChecked.push("payment proof / signed payload");
+  }
+  if (net?.family === "evm" && net.measurement === false) {
+    structuralOnlyReasons.push(`testnet chain ${net.name}: no block binding or on-chain balance check`);
+  }
+  if (net?.family === "svm") {
+    structuralOnlyReasons.push("Solana payment preflight is structural: no slot binding and no balance check");
+  }
+
   const intent = {
     kind: "payment",
     payment: {
@@ -980,6 +1007,8 @@ async function paymentPreflight(body, { clientFactory, now }) {
     payerBalance,
     ttlSeconds: ttlOf(body),
     now,
+    structuralOnly: structuralOnlyReasons.length > 0,
+    structuralOnlyReasons,
   });
 }
 
@@ -1004,13 +1033,22 @@ async function transactionPreflight(body, { clientFactory, now }) {
     "prompt injection / hidden Unicode in tool output",
   ];
 
-  const chainId = Number(raw.chainId ?? body.chainId ?? 1);
+  // H-4: a transaction intent must name its chain. A silent default to
+  // Ethereum is how a Base or Arbitrum transaction gets simulated against
+  // the wrong chain and produces a confident, wrong PASS/BLOCK.
+  const chainIdRaw = raw.chainId ?? body.chainId;
+  if (chainIdRaw === undefined || chainIdRaw === null || chainIdRaw === "") {
+    throw new PreflightError(400, "missing_chain", "chainId is required for transaction intents");
+  }
+  if (typeof chainIdRaw !== "number" || !Number.isInteger(chainIdRaw)) {
+    throw new PreflightError(400, "invalid_chain", "chainId must be an integer JSON number");
+  }
+  const chainId = chainIdRaw;
   const c = CHAINS[chainId];
   if (!c) {
-    reasons.push(block("unsupported_chain", `chainId ${chainId} is not in the measurement registry`));
-  } else {
-    checked.push("chain");
+    throw new PreflightError(400, "unsupported_chain", `chainId ${chainId} is not in the measurement registry; supported: ${Object.keys(CHAINS).join(", ")}`);
   }
+  checked.push("chain");
 
   let from = null;
   const fromRaw = body.from ?? raw.from ?? null;

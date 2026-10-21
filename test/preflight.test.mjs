@@ -332,3 +332,85 @@ test("receipt: a missing or unknown receipt is rejected", () => {
   assert.equal(verifyReceipt(null).valid, false);
   assert.equal(verifyReceipt({ spec: "something-else", signature: "00" }).reason, "unknown_spec");
 });
+
+// --- H-4: transaction chainId is mandatory and typed ------------------------
+
+test("H-4: transaction without chainId returns 400 missing_chain (no Ethereum default)", async () => {
+  const input = tx("0x");
+  delete input.chainId;
+  await assert.rejects(
+    () => run(input),
+    (err) => err instanceof PreflightError && err.status === 400 && err.code === "missing_chain",
+  );
+});
+
+test("H-4: numeric-string chainId is rejected as invalid_chain", async () => {
+  await assert.rejects(
+    () => run(tx("0x", { chainId: "8453" })),
+    (err) => err.status === 400 && err.code === "invalid_chain",
+  );
+});
+
+test("H-4: unsupported chainId is 400 unsupported_chain, not a guessed simulation", async () => {
+  await assert.rejects(
+    () => run(tx("0x", { chainId: 999 })),
+    (err) => err.status === 400 && err.code === "unsupported_chain",
+  );
+});
+
+test("H-4: contract code is read on the named chain, not a default chain", async () => {
+  const data = encodeFunctionData({
+    abi: ABI_TRANSFER,
+    functionName: "transfer",
+    args: [RECIPIENT, 1n],
+  });
+  const clientFor = (chainId) => fakeClient({
+    async getCode() { return chainId === 8453 ? "0x6000" : "0x"; },
+  });
+
+  const onBase = await preflight(tx(data), { clientFactory: clientFor, now: NOW });
+  assert.ok(onBase.checked.includes("contract_code"), "Base sees bytecode");
+  assert.ok(!onBase.reasons.some((r) => r.code === "target_not_contract"), "Base is not called an EOA");
+
+  const onMainnet = await preflight(tx(data, { chainId: 1 }), { clientFactory: clientFor, now: NOW });
+  assert.equal(onMainnet.verdict, "BLOCK");
+  assert.ok(onMainnet.reasons.some((r) => r.code === "target_not_contract"), "mainnet sees an EOA at the same address");
+});
+
+// --- M-5: payment PASS must disclose that it is structural-only -------------
+
+test("M-5: payment with no from is PASS but structural_only and names the gap", async () => {
+  const input = payment({ from: undefined });
+  delete input.from;
+  const out = await run(input);
+  assert.equal(out.verdict, "PASS", "backward-compatible verdict");
+  assert.equal(out.structural_only, true);
+  assert.ok(out.structural_only_reasons.some((r) => /no payer/i.test(r)));
+});
+
+test("M-5: payment with no proof is PASS but structural_only and names the gap", async () => {
+  const out = await run(payment());
+  assert.equal(out.verdict, "PASS");
+  assert.equal(out.structural_only, true);
+  assert.ok(out.structural_only_reasons.some((r) => /no payment proof/i.test(r)));
+  assert.ok(out.notChecked.includes("payment proof / signed payload"));
+});
+
+test("M-5: testnet payment is structural_only even with from and proof", async () => {
+  const input = payment({
+    payment: { network: "eip155:84532", asset: "0x036CbD53842c5426634e7929541eC2318f3dCF7e" },
+  });
+  input.proof = "0xsigned";
+  const out = await run(input);
+  assert.equal(out.verdict, "PASS");
+  assert.equal(out.structural_only, true);
+  assert.ok(out.structural_only_reasons.some((r) => /testnet/i.test(r)));
+});
+
+test("M-5: mainnet payment with from and proof is not marked structural_only", async () => {
+  const input = payment();
+  input.proof = "0xsigned";
+  const out = await run(input);
+  assert.equal(out.verdict, "PASS");
+  assert.equal(out.structural_only, false);
+});

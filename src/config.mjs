@@ -5,6 +5,8 @@
 // hardcoded address that has drifted is the quietest way for a service like
 // this to start lying.
 
+import { HttpError } from "./errors.mjs";
+
 export const CHAINS = {
   // ---------------------------------------------------------------- mainnet
   1: {
@@ -105,6 +107,33 @@ export function chain(chainId) {
   const c = CHAINS[chainId];
   if (!c) throw new Error(`unsupported chainId ${chainId}; supported: ${Object.keys(CHAINS).join(", ")}`);
   return c;
+}
+
+/**
+ * Paid routes must name their chain. There is no silent Ethereum default: an
+ * agent on Base or Arbitrum that omits chainId used to get an Ethereum answer.
+ * Returns the numeric chain id or throws a typed 400.
+ */
+export function requireChainId(body) {
+  const value = body?.chainId;
+  if (value === undefined || value === null || value === "") {
+    throw new HttpError(
+      400,
+      "missing_chain",
+      `chainId is required; supported: ${Object.keys(CHAINS).join(", ")}`,
+    );
+  }
+  if (typeof value !== "number" || !Number.isInteger(value)) {
+    throw new HttpError(400, "invalid_chain", "chainId must be an integer JSON number");
+  }
+  if (!CHAINS[value]) {
+    throw new HttpError(
+      400,
+      "unsupported_chain",
+      `unsupported chainId ${value}; supported: ${Object.keys(CHAINS).join(", ")}`,
+    );
+  }
+  return value;
 }
 
 export function resolveToken(chainId, symbol) {
