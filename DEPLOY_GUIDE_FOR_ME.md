@@ -21,6 +21,7 @@ Do these steps before pushing anything.
    - Free instances spin down after about 15 minutes idle.
    - A cold start can take about 1 minute.
    - Free instances can restart at any time.
+Never set MAINNET_ALWAYS_ON_CONFIRMED or REQUIRE_ALWAYS_ON on the Render free instance; the app cannot detect the instance type, so that is the only protection.
    - The filesystem is ephemeral; recovery records and /usage counters are in memory and are lost on restart.
    - Rule: X402_MODE=testnet only on free instances. Mainnet requires an always-on paid instance.
 9. Only after the variables are saved, push the new commit.

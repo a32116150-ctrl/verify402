@@ -25,6 +25,7 @@ async function fetchText(path) {
 console.log(`verify402 post-deploy check: ${BASE}`);
 
 const wake = await wakeService({ baseUrl: BASE, log: () => {} });
+console.log(`wake: ${wake.ok ? "ready" : "FAILED"}, ${wake.elapsedMs}ms, ${wake.attempts} attempt(s)`);
 check("wake service", () => {
   if (!wake.ok) throw new Error(wake.error?.message ?? "service did not wake");
 });
