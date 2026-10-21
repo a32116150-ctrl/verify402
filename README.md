@@ -514,6 +514,10 @@ or any MCP client.
 - The service reports what it measured, not what it guarantees.
 - Not financial advice.
 
+## Hosting status
+
+Demo instance runs on a free host: first request after idle can take about a minute; testnet only.
+
 ## License
 
 Apache License 2.0. See `LICENSE` and `NOTICE`.

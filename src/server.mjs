@@ -1331,6 +1331,11 @@ app.get("/info", (_req, res) => {
       appliesTo: ["recovery", "/usage"],
       warning: "Recovery records and /usage counters are process-local: they live only in this process. A restart or deploy loses both: a previously settled idempotency key may be charged again, and usage counts reset. State is not shared across instances.",
     },
+    hosting: {
+      status: "Demo instance runs on a free host: first request after idle can take about a minute; testnet only.",
+      freeTier: true,
+      coldStartSeconds: 60,
+    },
     payment: { protocol: "x402", scheme: "exact", acceptsExample: accepts(PRICE)[0] },
     chains: Object.entries(CHAINS).map(([id, c]) => ({
       chainId: Number(id),

@@ -361,6 +361,7 @@ await check("/info and /llms.txt describe quote-based sellability and no banned 
   assert.match(info.state_persistence.warning, /process-local/i);
   assert.match(info.state_persistence.warning, /restart or deploy/i);
   assert.match(info.state_persistence.warning, /not shared across instances/i);
+  assert.match(info.hosting.status, /Demo instance runs on a free host/i);
 
   const llmsRes = await fetch(`${base}/llms.txt`);
   assert.equal(llmsRes.status, 200);
