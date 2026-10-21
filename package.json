@@ -13,7 +13,8 @@
     "test:counts": "node scripts/test-counts.mjs",
     "check:discovery": "node scripts/check-discovery.mjs",
     "smoke": "node scripts/smoke.mjs",
-    "register": "node scripts/register-agent.mjs"
+    "register": "node scripts/register-agent.mjs",
+    "post-deploy": "node scripts/post-deploy-check.mjs"
   },
   "dependencies": {
     "@coinbase/cdp-sdk": "^1.59.0",

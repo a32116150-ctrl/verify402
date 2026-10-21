@@ -155,3 +155,7 @@ separate, explicit operator decision.
 - [ ] Confirm no `x-powered-by` header is present.
 - [ ] Confirm paid responses and 402 challenges carry no `access-control-allow-origin`.
 - [ ] If a full URL or key appears, stop paid traffic, roll back, rotate the key, and fix the logger before serving again.
+
+## Post-deploy verification
+
+- Run `SMOKE_BASE_URL=<url> npm run post-deploy` and paste the full output to the reviewer.
