@@ -1,5 +1,7 @@
 # Deploy Readiness Report
 
+Rule: X402_MODE=testnet only on free instances. Mainnet requires an always-on paid instance.
+
 ## Verified offline
 
 - `npm test` passed: offline suite, RPC suite, discovery tests, discovery script, env-example test, claims test, smoke offline tests.
@@ -25,9 +27,14 @@ SMOKE_BASE_URL=<url> npm run post-deploy
 
 Paste the full output to the reviewer.
 
+
+## Hosting status
+
+This demo runs on a free host. Free instances spin down after about 15 minutes idle, can take about a minute to wake, can restart at any time, and have an ephemeral filesystem. Recovery records and /usage counters are in memory and are lost on restart. X402_MODE=testnet only on free; mainnet requires an always-on paid instance.
+
 ## Host environment variables
 
-Required in mainnet:
+Required in mainnet (always-on paid instance only):
 
 - `X402_MODE=mainnet`
 - `AGENT_URL=https://<canonical host>` (canonical public origin; do not derive from Host)

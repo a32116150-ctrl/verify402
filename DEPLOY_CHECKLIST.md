@@ -1,5 +1,7 @@
 # verify402 — Deploy Checklist
 
+Rule: X402_MODE=testnet only on free instances. Mainnet requires an always-on paid instance.
+
 Use this before every production deploy. It is a gate, not a suggestion. No step
 in this file performs a deploy by itself.
 
@@ -19,12 +21,15 @@ Current logging contract:
 - Idempotency keys are logged only as `idem:<8-char SHA-256 prefix>`.
 - Raw viem/`HttpRequestError` objects and stacks are formatted through the redaction layer; they are never passed to `console.*` unchanged.
 
-## 2. Paid always-on host: exact environment
+## 2. Free host (testnet only): exact environment
 
-Use a paid, always-on instance. A free instance that sleeps cannot honor paid
-measurements or the recovery window. Do not horizontally scale a single deploy
-while recovery and `/usage` are process-local; if you do, use sticky routing and
-accept that a restart loses both.
+This demo uses a Render free instance. Free instances spin down after about 15
+minutes idle, can take about a minute to wake, can restart at any time, and have
+an ephemeral filesystem. Recovery records and `/usage` counters are in memory and
+are lost on restart. X402_MODE=testnet only on free; mainnet requires an
+always-on paid instance. Do not horizontally scale a single deploy while recovery
+and `/usage` are process-local; if you do, use sticky routing and accept that a
+restart loses both.
 
 ### Testnet instance (use this for the paid smoke test)
 
@@ -80,7 +85,7 @@ Never set any of these in a paid deploy:
 
 ## 4. Deploy (operator action; not part of this repository task)
 
-1. Deploy the recorded commit to the paid always-on instance.
+1. Deploy the recorded commit to the Render free instance (testnet only).
 2. Wait for the platform to report the instance healthy.
 3. Confirm the process logs `verify402 listening` and no startup refusal.
 4. Run the smoke test in §5 against the deployed origin.
