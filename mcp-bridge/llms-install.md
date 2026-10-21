@@ -10,7 +10,7 @@ takes more than 30 seconds to start, so run this once first:
 
 ```bash
 npx -y \
-  --package=https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.3/verify402-mcp-1.0.3.tgz \
+  --package=https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.4/verify402-mcp-1.0.4.tgz \
   verify402-mcp --help
 ```
 
@@ -27,7 +27,7 @@ Free gate only — no wallet, nothing can be charged:
       "command": "npx",
       "args": [
         "-y",
-        "--package=https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.3/verify402-mcp-1.0.3.tgz",
+        "--package=https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.4/verify402-mcp-1.0.4.tgz",
         "verify402-mcp"
       ],
       "env": {

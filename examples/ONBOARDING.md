@@ -115,7 +115,7 @@ Receipts expire after 90 seconds by default (15–300 configurable via
 Warm the `npx` cache once:
 
 ```bash
-npx -y --package=https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.3/verify402-mcp-1.0.3.tgz \
+npx -y --package=https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.4/verify402-mcp-1.0.4.tgz \
   verify402-mcp --help
 ```
 
@@ -128,7 +128,7 @@ Then add it to Claude Desktop / Cursor (`.cursor/mcp.json`):
       "command": "npx",
       "args": [
         "-y",
-        "--package=https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.3/verify402-mcp-1.0.3.tgz",
+        "--package=https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.4/verify402-mcp-1.0.4.tgz",
         "verify402-mcp"
       ],
       "env": { "VERIFY402_URL": "https://verify402.onrender.com" }

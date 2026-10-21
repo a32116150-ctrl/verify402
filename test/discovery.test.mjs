@@ -32,7 +32,7 @@ test("discovery: server.json complies with MCP Registry specification", () => {
 
   const server = JSON.parse(fs.readFileSync(serverPath, "utf8"));
   assert.equal(server.name, "io.github.a32116150-ctrl/verify402-mcp");
-  assert.equal(server.version, "1.0.3");
+  assert.equal(server.version, "1.0.4");
   assert.ok(server.description.length <= 100, `description length ${server.description.length} must be <= 100 chars`);
   assert.equal(server.websiteUrl, "https://verify402.onrender.com");
   assert.ok(Array.isArray(server.packages) && server.packages.length > 0);

@@ -48,7 +48,7 @@ try {
   assert(serverJson.$schema != null, "server.json has $schema defined");
   assert(serverJson.name === "io.github.a32116150-ctrl/verify402-mcp", `server.json name is ${serverJson.name}`);
   assert(serverJson.description.length <= 100, `server.json description is <= 100 chars (current: ${serverJson.description.length})`);
-  assert(serverJson.version === "1.0.3", `server.json version is 1.0.3 (current: ${serverJson.version})`);
+  assert(serverJson.version === "1.0.4", `server.json version is 1.0.4 (current: ${serverJson.version})`);
   assert(Array.isArray(serverJson.packages) && serverJson.packages.length > 0, "server.json has packages defined");
   assert(serverJson.packages[0].transport.type === "stdio", "transport type is stdio");
 } catch (e) {

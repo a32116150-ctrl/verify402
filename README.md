@@ -383,7 +383,7 @@ or any MCP client.
   configured server, and refuses redirects. `MAX_DAILY_USD` is optional.
 - **Install:** `npx -y verify402-mcp@latest` from the public npm registry.
   The pinned GitHub release tarball remains an optional fallback:
-  `npx -y --package=https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.3/verify402-mcp-1.0.3.tgz verify402-mcp`.
+  `npx -y --package=https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.4/verify402-mcp-1.0.4.tgz verify402-mcp`.
   No npm account is required to run the published package. Client configs, the
   exact OpenCode V2 shape, and the release command are at
   [`/mcp`](https://verify402.onrender.com/mcp). See also
