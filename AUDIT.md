@@ -27,6 +27,21 @@ separate, explicit deploy.
 | M-5 | A payment `PASS` could be entirely structural. | `PASS` is retained for backward compatibility. When `from`, payment proof, or a mainnet measurement is missing (including testnet and Solana structural checks), the response adds `structural_only: true` and `structural_only_reasons[]`. | `c65d65f` |
 | L-4 | No dedicated safety or HTTP integration tests. | Added `test/safety.test.mjs`, `test/http.test.mjs`, `test/measure-typed.test.mjs`, `test/honesty.test.mjs`, and `test/claims.test.mjs`, plus H-4/M-5 cases in `test/preflight.test.mjs`. | `5e176a0`, `c65d65f`, `d0bdb14`, `7a7bf8f` |
 
+#### C-1 regression record
+
+Six C-1-named regression tests in `test/recovery.test.mjs` now define the contract:
+
+1. `C-1: a content hash is not a second replay credential`
+2. `C-1: a different key with a known body does not replay the victim's verdict`
+3. `C-1: forged payer headers/scope cannot authorize a replay or spend the budget`
+4. `C-1: a caller-supplied payer scope is ignored, not trusted`
+5. `C-1: promotion records the facilitator payer for audit only`
+6. `C-1: a fresh id cannot replay — only the original key survives a lost response`
+
+The old companion-alias and payer-scope assertions were removed by design. There is no longer a content-hash companion read, and no payer scope derived from `x-payment`, `payment-signature`, or `authorization.from` is trusted: those inputs are attacker-controlled. The only replay credential is the caller's original idempotency key plus a matching request fingerprint. Promotion still requires an operationId and a facilitator-confirmed settlement; the verified payer is stored as `verified_payer` for audit only and cannot authorize a read.
+
+The idempotency key is therefore a **bearer secret**. Mitigation: Hotfix 2 item 1's entropy requirement for caller-supplied idempotency keys; a key must be a high-entropy value, never a guessable request-derived string. Until item 1 enforces that requirement, callers should generate the key from a CSPRNG and treat it like a password.
+
 ### Still open
 
 These were outside the approved hotfix scope. They are not silently marked done.
@@ -46,14 +61,54 @@ These were outside the approved hotfix scope. They are not silently marked done.
 | L-2 | Security headers, CORS policy, and graceful shutdown were not added. |
 | L-3 | `/findings` remains a free chain read without its own rate limit. |
 
+### Addendum — logging, offline mode, audit consistency
+
+| Item | Change | Commit |
+|---|---|---|
+| A | Central log redaction for URLs, credentials, headers, API keys, and idempotency keys; raw viem/`HttpRequestError` and stacks are formatted through it. `DEPLOY_CHECKLIST.md` records the rotation gate. | `74d579c` |
+| B | `TEST_OFFLINE=1` uses one closed endpoint with no public fallback. `npm run test:offline` skips RPC-required tests; `npm run test:rpc` runs only those. Per-test classification lives in `test/rpc-manifest.json`; `npm run test:counts` derives counts from the sources. `quotecheck` no longer has a top-level RPC rejection. | `c952178` |
+| C | This section plus the current counts; section 2 is marked as the `4a8fb1c` historical baseline; the C-1 regression record is above. | this commit |
+
 ### Verification counts
 
-`npm test` is green on the hotfix tree:
+Current counts are generated from the test sources and `test/rpc-manifest.json`; run:
 
-- **Offline:** 140 tests (`recovery` 26, `measure-typed` 10, `safety` 7, `honesty` 6, `preflight` 33, `preflight-guard` 8, `usage` 13, MCP policy 12, `http` 14, `claims` 6, `discovery` 5).
-- **RPC-required:** 16 tests (`measure` 5, `quotecheck` 6, `depth` 5).
-- **Total:** 156 tests, 0 failed.
+```bash
+npm run test:counts
+```
+
+Result on 2026-10-21:
+
+| File | Tests | Offline | RPC-required |
+|---|---:|---:|---:|
+| `test/recovery.test.mjs` | 26 | 26 | 0 |
+| `test/measure-typed.test.mjs` | 10 | 10 | 0 |
+| `test/safety.test.mjs` | 7 | 7 | 0 |
+| `test/honesty.test.mjs` | 6 | 6 | 0 |
+| `test/preflight.test.mjs` | 33 | 33 | 0 |
+| `test/preflight-guard.test.mjs` | 8 | 8 | 0 |
+| `test/usage.test.mjs` | 13 | 13 | 0 |
+| `mcp-bridge/test/payment-policy.test.mjs` | 12 | 12 | 0 |
+| `test/http.test.mjs` | 14 | 14 | 0 |
+| `test/claims.test.mjs` | 6 | 6 | 0 |
+| `test/log-redaction.test.mjs` | 5 | 5 | 0 |
+| `test/offline-mode.test.mjs` | 1 | 1 | 0 |
+| `test/measure.test.mjs` | 5 | 0 | 5 |
+| `test/quotecheck.test.mjs` | 6 | 2 | 4 |
+| `test/depth.test.mjs` | 5 | 2 | 3 |
+| `test/discovery.test.mjs` | 5 | 5 | 0 |
+| **Total** | **162** | **150** | **12** |
+
+The two `depth` checks that reject invalid input before chain access, and the two `quotecheck` checks that reject an echo/zero offer before chain access, are offline. The remaining twelve tests require a mainnet RPC.
+
+`npm test` result:
+
+- **Offline phase:** 145 passed, 12 skipped (the RPC-required tests).
+- **RPC phase:** 12 passed, 4 skipped (the offline tests in the RPC files, already run in the offline phase).
+- **Discovery:** 5 passed.
 - **Discovery validation:** 33 metadata checks, 0 failed.
+- **Unique tests:** 162 passed, 0 failed. The 16 skip lines are mode exclusions, not failures or missing coverage.
+- **Offline safety:** `TEST_OFFLINE=1` forces a single closed endpoint with no public fallback; `test/offline-mode.test.mjs` pins that behavior.
 
 ### Public-facing text changed
 
@@ -64,6 +119,10 @@ These were outside the approved hotfix scope. They are not silently marked done.
 - `src/landing.html`, `src/site/checks.html`, `src/site/docs.html`, `src/site/mcp.html`, `src/site/proof.html`: removed honeypot/every-venue claims; added quote-based wording and chainId/readiness notes.
 - `docs/ai-agent-guide.md`, `docs/service-manifest.md`, `docs/x402-discovery.md`: same claim and contract corrections.
 - Runtime `/info` and `/llms.txt` (served by `src/server.mjs`): quote-based sellability, required `chainId`, no companion alias, deep readiness, and typed-error guidance.
+
+### Operational docs changed
+
+- `DEPLOY_CHECKLIST.md` (new): rotate any RPC key that may have appeared in old logs; verify `scheme://host/***`, `[REDACTED]`, and `idem:<8 hex>` in new logs; do not serve paid traffic if a full URL or key appears.
 
 ---
 
@@ -111,7 +170,9 @@ The local `mcp-bridge/.env` file exists but is ignored by git; it was not read. 
 
 ---
 
-## 2. Test result and coverage
+## 2. Test result and coverage — baseline at `4a8fb1c` (historical)
+
+> **Historical baseline.** The table and limitations in this section describe commit `4a8fb1c` only. They are preserved to show what Phase 0 looked like and must not be quoted as current status. The current, script-generated counts are in **Verification counts** above.
 
 Command:
 
@@ -147,7 +208,7 @@ The network-required checks are exactly the three engine suites above. The measu
 - The MCP paid tools are not tested against a fake 402 or a lost response; only the payment policy is tested.
 - No test asserts the paid-route honesty contract (`checked` / `notChecked`).
 
-`npm test` is not offline-safe: a machine without mainnet RPC access will fail the 16 engine checks. That is documented in the README, but it should be explicit in CI and in the operator runbook.
+`npm test` is not offline-safe at `4a8fb1c`: a machine without mainnet RPC access will fail the 16 engine checks. That was true at the baseline. Current status: `npm run test:offline` sets `TEST_OFFLINE=1`, uses one closed endpoint with no public fallback, and skips the twelve RPC-required tests; `npm run test:rpc` runs only those twelve. See **Verification counts** above.
 
 ---
 
