@@ -12,6 +12,7 @@ import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
+import http from "node:http";
 
 process.env.X402_MODE = "testnet";
 process.env.BYPASS_PAYMENT = "1";
@@ -51,6 +52,23 @@ async function post(path, body, headers = {}) {
   let json = null;
   try { json = await r.json(); } catch { /* non-JSON is itself a failure below */ }
   return { status: r.status, headers: r.headers, body: json };
+}
+
+function getWithHost(port, path, host) {
+  return new Promise((resolve, reject) => {
+    const req = http.request({ host: "127.0.0.1", port, path, headers: { host } }, (res) => {
+      const chunks = [];
+      res.on("data", (d) => chunks.push(d));
+      res.on("end", () => {
+        const raw = Buffer.concat(chunks).toString("utf8");
+        let body = null;
+        try { body = JSON.parse(raw); } catch { /* leave null */ }
+        resolve({ status: res.statusCode, headers: res.headers, body, raw });
+      });
+    });
+    req.on("error", reject);
+    req.end();
+  });
 }
 
 const honesty = (body) => {
@@ -240,6 +258,21 @@ await check("/openapi.json requires chainId and documents typed 503s", async () 
   assert.match(post.responses["503"].description, /not charged|settlement/i);
 });
 
+await check("agent card rejects a forged Host and never reflects it", async () => {
+  const port = server.address().port;
+  const forged = await getWithHost(port, "/.well-known/agent-card.json", "attacker.example");
+  assert.equal(forged.status, 400);
+  assert.equal(forged.body.error, "untrusted_host");
+  assert.equal(forged.body.code, "untrusted_host");
+  assert.equal(typeof forged.body.requestId, "string");
+  assert.ok(!forged.raw.includes("attacker.example"), "the forged Host must not be reflected");
+
+  const allowed = await getWithHost(port, "/.well-known/agent-card.json", `127.0.0.1:${port}`);
+  assert.equal(allowed.status, 200);
+  assert.equal(allowed.body.url, `http://127.0.0.1:${port}`);
+  assert.ok(allowed.body.services.every((s) => !s.endpoint.includes("attacker.example")));
+});
+
 // ---------------------------------------------------------------------------
 // A separate process with the paywall ARMED: an unpaid paid route must be 402,
 // and the challenge must name the resource and both rails.
@@ -266,6 +299,7 @@ await check("402: an unpaid paid route returns a payment challenge, never a verd
       PORT: String(port),
       X402_MODE: "testnet",
       BYPASS_PAYMENT: "",
+      AGENT_URL: "https://fixed.example",
     },
     stdio: ["ignore", "pipe", "pipe"],
   });
@@ -287,10 +321,44 @@ await check("402: an unpaid paid route returns a payment challenge, never a verd
     const text = decoded.includes("accepts") ? decoded : challenge;
     assert.ok(text.includes("eip155:84532"), "challenge names the EVM testnet rail");
     assert.ok(text.includes("solana:"), "challenge names the Solana testnet rail");
+
+    const card = await getWithHost(port, "/.well-known/agent-card.json", "attacker.example");
+    assert.equal(card.status, 200);
+    assert.equal(card.body.url, "https://fixed.example", "AGENT_URL wins over a forged Host");
+    assert.ok(!card.raw.includes("attacker.example"), "the forged Host must not appear in the card");
   } finally {
     child.kill("SIGTERM");
     await new Promise((r) => setTimeout(r, 100));
   }
+});
+
+await check("mainnet refuses to start without AGENT_URL", async () => {
+  const logs = [];
+  const child = spawn(process.execPath, ["src/server.mjs"], {
+    cwd: new URL("..", import.meta.url).pathname,
+    env: {
+      ...process.env,
+      X402_MODE: "mainnet",
+      FACILITATOR_URL: "https://facilitator.payai.network",
+      AGENT_URL: "",
+      BYPASS_PAYMENT: "",
+    },
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  child.stdout.on("data", (d) => logs.push(String(d)));
+  child.stderr.on("data", (d) => logs.push(String(d)));
+  const code = await new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      child.kill("SIGTERM");
+      reject(new Error(`server did not exit:\n${logs.join("")}`));
+    }, 5000);
+    child.on("exit", (exitCode) => {
+      clearTimeout(timer);
+      resolve(exitCode);
+    });
+  });
+  assert.equal(code, 1);
+  assert.match(logs.join(""), /AGENT_URL/);
 });
 
 server.close();

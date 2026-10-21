@@ -41,6 +41,7 @@ import {
 } from "./preflight.mjs";
 import { buildOpenapi } from "./openapi.mjs";
 import { buildServiceManifest } from "./manifest.mjs";
+import { parseAgentUrl, parseTrustedHosts, resolvePublicBaseUrl } from "./public-url.mjs";
 import { recordPreflight, usageSnapshot } from "./usage.mjs";
 import {
   HttpError, requestIdMiddleware, sendPublicError, sendClassifiedError, classifyError,
@@ -54,6 +55,21 @@ installConsoleRedaction();
 
 // ---------------------------------------------------------------- config ----
 const MODE = process.env.X402_MODE === "mainnet" ? "mainnet" : "testnet";
+
+// The agent card is an identity document, not a reflection of the request.
+// Mainnet must pin its public origin; every other mode falls back to a Host
+// allowlist, and an unlisted Host is rejected rather than echoed.
+const AGENT_URL_CHECK = parseAgentUrl(process.env.AGENT_URL);
+if (!AGENT_URL_CHECK.ok) {
+  logError(`REFUSING TO START: ${AGENT_URL_CHECK.error}.`);
+  process.exit(1);
+}
+const AGENT_URL = AGENT_URL_CHECK.value;
+if (MODE === "mainnet" && !AGENT_URL) {
+  logError("REFUSING TO START: X402_MODE=mainnet requires AGENT_URL (e.g. https://verify402.example). The agent card must not derive its identity from the Host header.");
+  process.exit(1);
+}
+const TRUSTED_HOSTS = parseTrustedHosts(process.env.TRUSTED_HOSTS, { agentUrl: AGENT_URL });
 
 const NETWORKS =
   MODE === "mainnet"
@@ -518,8 +534,7 @@ if (!BYPASS_PAYMENT) app.use(
 // indexers actually look for when they meet an unfamiliar service: the A2A
 // agent card and the ERC-8004 domain-verification file. Both derive from one
 // registration file so they can never disagree.
-function registrationFile(req) {
-  const base = process.env.AGENT_URL || `${req.protocol}://${req.get("host")}`;
+function registrationFile(base) {
   const file = {
     type: "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
     name: "verify402",
@@ -573,8 +588,18 @@ function registrationFile(req) {
 }
 
 app.get(["/.well-known/agent-registration.json", "/.well-known/agent-card.json"], (req, res) => {
+  const identity = resolvePublicBaseUrl(req, { agentUrl: AGENT_URL, trustedHosts: TRUSTED_HOSTS });
+  if (!identity.ok) {
+    res.set("Cache-Control", "no-store");
+    return res.status(400).json({
+      error: identity.code,
+      code: identity.code,
+      message: identity.message,
+      requestId: req.requestId,
+    });
+  }
   res.set("Cache-Control", "public, max-age=3600");
-  res.json(registrationFile(req));
+  res.json(registrationFile(identity.base));
 });
 
 // 402 Index domain-ownership proof. The value is the public SHA-256 hash of a

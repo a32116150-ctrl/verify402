@@ -75,6 +75,8 @@ a reputation surface, not buyers.
 ## 3. Mainnet (only after testnet settlements work end to end)
 
 - `X402_MODE=mainnet`
+- `AGENT_URL=https://<app>.onrender.com` (required in mainnet; the server refuses
+  to start without it, because the agent card must not trust the Host header)
 - A mainnet facilitator, e.g. Coinbase CDP:
   `FACILITATOR_URL=https://api.cdp.coinbase.com/platform/v2/x402`
   (create a CDP API key; do NOT reuse `x402.org/facilitator` - it is testnet-only)

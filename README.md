@@ -189,8 +189,14 @@ npm install
 npm test                              # engine checks (network required)
 node src/server.mjs                   # testnet payment mode
 BYPASS_PAYMENT=1 node src/server.mjs  # local dev only - loud warning, no billing
-X402_MODE=mainnet FACILITATOR_URL=... node src/server.mjs
+X402_MODE=mainnet FACILITATOR_URL=... AGENT_URL=https://verify402.example node src/server.mjs
 ```
+
+Mainnet refuses to start without `AGENT_URL`: the agent card is a public
+identity document and must not derive its origin from the request's `Host`
+header. In testnet/local mode the card falls back to a Host allowlist
+(`TRUSTED_HOSTS`, plus `localhost` / `127.0.0.1`); an unlisted Host gets
+`400 untrusted_host` instead of being reflected.
 
 ## Endpoints
 
