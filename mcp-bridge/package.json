@@ -12,6 +12,7 @@
     "index.mjs",
     "budget.mjs",
     "payment-policy.mjs",
+    "paid-call.mjs",
     "log.mjs",
     "README.md",
     ".env.example",

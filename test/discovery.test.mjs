@@ -185,6 +185,24 @@ test("discovery: no secrets leaked in public discovery outputs", () => {
   }
 });
 
+test("discovery: the published MCP package includes every local runtime import", () => {
+  const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, "mcp-bridge/package.json"), "utf8"));
+  const shipped = new Set(pkg.files || []);
+  const pending = [...shipped].filter((name) => name.endsWith(".mjs"));
+  const seen = new Set();
+  while (pending.length) {
+    const name = pending.pop();
+    if (seen.has(name)) continue;
+    seen.add(name);
+    const source = fs.readFileSync(path.join(ROOT, "mcp-bridge", name), "utf8");
+    for (const match of source.matchAll(/from\s+["']\.\/([^"']+)["']/g)) {
+      const dependency = match[1];
+      assert.ok(shipped.has(dependency), `${name} imports ${dependency}, but package.json files omits it`);
+      if (!seen.has(dependency)) pending.push(dependency);
+    }
+  }
+});
+
 test("discovery: google site verification meta tag and file are present for Search Console", () => {
   const token = "iGmI2QL110IkjnW0thU3DRZrdgQe_7mZsPWgkZVte7o";
   const expectedTag = `<meta name="google-site-verification" content="${token}">`;
