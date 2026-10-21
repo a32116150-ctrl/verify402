@@ -11,7 +11,7 @@
 // intended caller is a program.
 
 import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 const LANDING_HTML = readFileSync(new URL("./landing.html", import.meta.url), "utf8");
 const SITE_DIR = fileURLToPath(new URL("./site", import.meta.url));
 
@@ -23,11 +23,11 @@ import { HTTPFacilitatorClient } from "@x402/core/server";
 import { createCdpFacilitatorClient } from "@coinbase/cdp-sdk/x402";
 import { declareDiscoveryExtension } from "@x402/extensions/bazaar";
 
-import { measureRoundTrip, clientFor } from "./measure.mjs";
+import { measureRoundTrip, clientFor, isHardQuoteFailure } from "./measure.mjs";
 import { preTradeCheck } from "./safety.mjs";
-import { fairQuoteCheck, bestRouteBook } from "./quotecheck.mjs";
+import { fairQuoteCheck, bestRouteBook, parseRawPositive } from "./quotecheck.mjs";
 import { depthProfile } from "./depth.mjs";
-import { CHAINS, DEFAULT_SIZE, chain, resolveToken } from "./config.mjs";
+import { CHAINS, DEFAULT_SIZE, chain, resolveToken, requireChainId } from "./config.mjs";
 import {
   IDEMPOTENCY_TTL_MS, IDEMPOTENCY_MAX_REPLAYS,
   recordSettlement, promoteSettlement, lookupRecovery,
@@ -41,6 +41,10 @@ import {
 import { buildOpenapi } from "./openapi.mjs";
 import { buildServiceManifest } from "./manifest.mjs";
 import { recordPreflight, usageSnapshot } from "./usage.mjs";
+import {
+  HttpError, requestIdMiddleware, sendPublicError, sendClassifiedError, classifyError,
+} from "./errors.mjs";
+import { paidHonesty, honestFailure, unconfiguredVenues } from "./honesty.mjs";
 
 // ---------------------------------------------------------------- config ----
 const MODE = process.env.X402_MODE === "mainnet" ? "mainnet" : "testnet";
@@ -55,7 +59,7 @@ const PAY_TO_SVM = process.env.PAY_TO_SVM || "BdcsYodhwWUhLTuL5FJ3m8D4u4wVy8KMw7
 const PRICE = process.env.PRICE || "$0.05";
 // The pre-trade gate is the product most agents will call before every swap;
 // it is priced above /verify because it does strictly more work:
-// contract facts, market data, a USD-sized sell probe and a full round trip.
+// contract facts, market data, a quote-based sellability check and a full round trip.
 const SAFETY_PRICE = process.env.SAFETY_PRICE || "$0.10";
 // Fairness audit: cheap enough to run before every single swap.
 const ROUTE_PRICE = process.env.ROUTE_PRICE || "$0.03";
@@ -95,6 +99,7 @@ const app = express();
 // the agent-registration file would advertise the wrong scheme.
 app.set("trust proxy", 1);
 app.use(express.json({ limit: "64kb" }));
+app.use(requestIdMiddleware);
 
 // Same price on both rails, so an agent can pay on whichever chain it already
 // holds funds - and a Solana agent never has to bridge.
@@ -122,22 +127,6 @@ if (BYPASS_PAYMENT && MODE === "mainnet") {
   process.exit(1);
 }
 
-// The payer an x402 payment proof names, when the rail exposes one. EVM exact
-// carries it as payload.authorization.from; SVM proofs carry a transaction, so
-// no stable payer string is assumed. Unknown scope is allowed to PAY, never to
-// replay someone else's result.
-function paymentScope(req) {
-  const raw = req.get("x-payment") || req.get("payment-signature") || "";
-  if (!raw) return null;
-  try {
-    const proof = JSON.parse(Buffer.from(raw, "base64").toString("utf8"));
-    const from = proof?.payload?.authorization?.from;
-    return typeof from === "string" && /^0x[0-9a-fA-F]{40}$/.test(from) ? from.toLowerCase() : null;
-  } catch {
-    return null;
-  }
-}
-
 // ---------------------------------------------------------------- recovery --
 // The recovery contract (see src/recovery.mjs): a caller that sends
 // x-idempotency-key on its first call can replay that settled verdict —
@@ -145,28 +134,30 @@ function paymentScope(req) {
 // This middleware runs BEFORE the payment wall, which is the entire point:
 // by the time paymentMiddleware inspects the request, a legitimate replay has
 // already been answered.
+//
+// C-1: the key is the only credential. No payer scope is derived from
+// `x-payment` / `payment-signature`; those headers are unverified at this
+// layer. The settled record's verified payer comes only from the facilitator.
 app.use((req, res, next) => {
   const key = String(req.get("x-idempotency-key") || req.get("idempotency-key") || "").trim();
   // /preflight is free and issues its own receipt; it does not participate in
   // paid-settlement recovery, where a reused key would 409 the gate.
   if (key && req.method === "POST" && !req.path.startsWith("/.well-known") && !req.path.startsWith("/preflight")) {
-    // A key is bound to one operation: the canonical request content plus the
-    // payer identity the payment proof names. Reuse with different content or
-    // a different payer is a conflict, rejected before payment — never a wrong
-    // answer and never a free read (review: NSPG13, x402-foundation/x402#3848).
-    const companion = requestHash(req.path, req.body || {});
-    const scope = paymentScope(req);
-    const found = lookupRecovery({
-      key, companionKey: companion, requestHash: companion, scope,
-    });
+    // A key is bound to one operation's canonical request content. Reuse with
+    // different content is a conflict, rejected before payment — never a wrong
+    // answer and never a free read.
+    const rh = requestHash(req.path, req.body || {});
+    const found = lookupRecovery({ key, requestHash: rh });
     if (found?.conflict) {
+      const h = honestFailure(req.path, null);
       res.set("Cache-Control", "no-store");
       return res.status(409).json({
         error: "recovery_conflict",
+        code: "request_mismatch",
         conflict: found.conflict,
-        note: found.conflict === "request_mismatch"
-          ? "this idempotency key belongs to a different request; use a new key for a new operation"
-          : "this idempotency key belongs to a different payment/authorization scope",
+        message: "this idempotency key belongs to a different request; use a new key for a new operation",
+        requestId: req.requestId,
+        ...h,
       });
     }
     if (found?.hit) {
@@ -185,26 +176,34 @@ app.use((req, res, next) => {
     // Post-window typed signal: expired verdicts leave a tombstone; a retry
     // now re-measures with the paywall re-armed (no free measures), and the
     // response below will carry recovery.remeasured instead of being silent.
-    req.expiredRecovery = expiredRecoveryInfo(key) || expiredRecoveryInfo(companion);
+    req.expiredRecovery = expiredRecoveryInfo(key);
     req.idempotencyKey = key;
-    req.recoveryCompanionKey = companion;
-    req.recoveryScope = scope;
+    req.recoveryRequestHash = rh;
   }
   next();
 });
 
-// Shared exit path for the paid handlers: attach the standard evidence bundle,
-// remember the settlement under the caller's idempotency key (if provided),
-// then send. `core` is the handler's result; cache/elapsedMs may already be on it.
+// Shared exit path for the paid handlers: attach the honesty contract and the
+// standard evidence bundle, remember the settlement under the caller's
+// idempotency key (if provided), then send. `core` is the handler's result;
+// cache/elapsedMs may already be on it.
 function emitPaid(req, res, core) {
   const body = req.body || {};
+  // `_detail` is provider detail retained for server-side logging only. It must
+  // never cross the public boundary (H-6).
+  const clean = { ...core };
+  delete clean._detail;
+  const honesty = paidHonesty(req.path, {
+    checked: Array.isArray(clean.checked) ? clean.checked : [],
+    notChecked: Array.isArray(clean.notChecked) ? clean.notChecked : [],
+  });
   const bundle = evidenceBundle({
     route: req.path,
     body,
-    pinnedBlock: core?.cache?.pinnedBlock ?? core?.blockNumber ?? null,
-    payload: core,
+    pinnedBlock: clean?.cache?.pinnedBlock ?? clean?.blockNumber ?? null,
+    payload: clean,
   });
-  const full = { ...core, evidence_bundle: bundle };
+  const full = { ...clean, ...honesty, evidence_bundle: bundle };
   if (req.expiredRecovery) {
     // Typed signal (prismdeadlines): the caller can branch on this instead of
     // guessing whether it paid twice for one answer. The paywall re-armed for
@@ -223,13 +222,47 @@ function emitPaid(req, res, core) {
     // operation identity. In local bypass mode there is no settlement to wait
     // for, so the record promotes immediately (same loud warning as the
     // paywall bypass: local testing only).
-    recordSettlement(req.idempotencyKey, full, req.recoveryCompanionKey || null, {
+    recordSettlement(req.idempotencyKey, full, null, {
       settledNow: BYPASS_PAYMENT,
       requestHash: bundle.requestHash,
-      scope: req.recoveryScope || null,
     });
   }
   res.json(full);
+}
+
+// A typed failure on a paid route. Never echoes the provider's message; logs
+// it under the request id. Both honesty arrays are always present (H-1).
+function paidFail(req, res, status, code, message, { kind = null, log = null, extra = {} } = {}) {
+  const honesty = honestFailure(req.path, kind);
+  return sendPublicError(req, res, status, code, message, {
+    log,
+    extra: { ...honesty, ...extra },
+  });
+}
+
+// Map a typed engine result to an HTTP failure. Only transport/decode are hard
+// failures; no_pool/revert are market facts and stay 200 with ok:false.
+function hardFailureResponse(req, res, result) {
+  if (!result || result.ok !== false || !isHardQuoteFailure(result)) return false;
+  const code = result.kind === "decode" ? "internal_error" : "rpc_unavailable";
+  const message = result.kind === "decode"
+    ? "the provider returned data this service could not decode; no verdict was issued"
+    : "the chain could not be read; no verdict was issued and no settlement should occur";
+  paidFail(req, res, 503, code, message, {
+    kind: result.kind,
+    log: result._detail ?? result.kind,
+    extra: { quote_status: "failed", unavailable_reason: result.kind },
+  });
+  return true;
+}
+
+function paidCatch(req, res, e) {
+  if (e instanceof HttpError) {
+    return paidFail(req, res, e.status, e.code, e.message);
+  }
+  const c = classifyError(e);
+  const kind = c.code === "rpc_unavailable" || c.code === "rpc_rate_limited" ? "transport" : null;
+  return paidFail(req, res, c.status, c.code, c.message, { kind, log: e });
 }
 
 // Middleware stays compiled but UNMOUNTED in bypass mode: one loud warning,
@@ -282,7 +315,7 @@ if (!BYPASS_PAYMENT) app.use(
       "POST /safety": {
         accepts: accepts(SAFETY_PRICE),
         description:
-          "Pre-trade gate for an agent about to buy a token. Verdict TRUST / CAUTION / AVOID with evidence: contract facts from the live chain, market liquidity and scam signals, a USD-sized sell probe (the honeypot question, answered against every venue's own router, direct and WETH-routed), a full round-trip cost at your intended size, and an offered-price sanity check against chain consensus.",
+          "Pre-trade gate for an agent about to buy a token. Verdict TRUST / CAUTION / AVOID with evidence: contract facts from the live chain, market liquidity and scam signals, a quote-based sellability check (a USD-sized sell QUOTED through the configured venues' own routers, direct and WETH-routed), a full round-trip cost at your intended size, and an offered-price sanity check against chain consensus. It does not execute a transfer; transfer restrictions and unconfigured venues are named in notChecked.",
         mimeType: "application/json",
         extensions: {
           ...declareDiscoveryExtension({
@@ -295,8 +328,8 @@ if (!BYPASS_PAYMENT) app.use(
                 verdict: "TRUST",
                 token: { input: "0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE", address: "0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE", chainId: 1, chainName: "ethereum" },
                 reasons: [],
-                notes: ["liquidity and a USD-sized sell probe both cleared"],
-                checked: ["contract", "market", "sellability", "liquidity"],
+                notes: ["liquidity and a quote-based sellability check both cleared"],
+                checked: ["contract", "market", "quote-based sellability", "liquidity"],
                 evidence: { canSell: true, probedInUsd: 500, venuesThatQuote: ["uniswap-v3", "sushiswap"] },
               },
             },
@@ -316,7 +349,7 @@ if (!BYPASS_PAYMENT) app.use(
       "POST /route": {
         accepts: accepts(ROUTE_PRICE),
         description:
-          "The full execution book right now: every venue (direct and WETH-routed) quoting tokenIn -> tokenOut at one pinned block, best first. Verdict-free evidence; pair it with /quotecheck to audit someone else's number.",
+          "The full execution book right now: every configured venue (direct and WETH-routed) quoting tokenIn -> tokenOut at one pinned block, best first. Verdict-free evidence; pair it with /quotecheck to audit someone else's number.",
         mimeType: "application/json",
         extensions: {
           ...declareDiscoveryExtension({
@@ -450,7 +483,7 @@ if (!BYPASS_PAYMENT) app.use(
             ok: ctx?.result?.success === true,
             transaction: ctx?.result?.transaction ?? null,
             network: ctx?.result?.network ?? null,
-            payer: ctx?.result?.payer ?? ctx?.paymentPayload?.payload?.authorization?.from ?? null,
+            payer: ctx?.result?.payer ?? null,
           });
         } catch (e) {
           console.error("[recovery] promotion failed:", e && e.message);
@@ -475,8 +508,10 @@ function registrationFile(req) {
       "BLOCK with a short-lived receipt bound to the exact intent. POST /verify measures whether a claimed " +
       "cross-venue arbitrage is real (pinned-block quotes from Uniswap QuoterV2 and each " +
       "router's own math; the honest answer is usually no_edge). POST /safety is a pre-trade " +
-      "gate: contract facts, market liquidity and scam signals, a USD-sized sell probe across " +
-      "every venue, round-trip cost at the intended size, and phantom-price detection. " +
+      "gate: contract facts, market liquidity and scam signals, a quote-based sellability " +
+      "check through the configured venues' own routers, round-trip cost at the intended size, " +
+      "and phantom-price detection. It does not execute a transfer; transfer restrictions and " +
+      "unconfigured venues are named in notChecked. " +
       "TRUST / CAUTION / AVOID with evidence. Per-call x402 payment, USDC on Base or Solana. " +
       "An MCP server (verify402-mcp, stdio) exposes the free gate and all five checks to any " +
       "MCP client; install at /mcp. No profitability is ever promised; the service reports what it measured.",
@@ -499,7 +534,7 @@ function registrationFile(req) {
     skills: [
       { id: "preflight", name: "preflight", description: "Free pre-signing gate for any x402 payment request or chain transaction: PASS / CAUTION / BLOCK, typed reasons, checked/notChecked, and a short-lived receipt bound to the exact intent and a fresh pinned block. Call before signing." },
       { id: "verify", name: "verify", description: "Cross-venue arbitrage truth check: pinned-block quotes from both sides, three-state verdict (edge / no_edge / no_edge_costs_ate_it), evidence included." },
-      { id: "safety", name: "safety", description: "Pre-trade gate: contract facts, market liquidity, scam signals, a USD-sized sell probe, round-trip cost at the intended size, TRUST / CAUTION / AVOID with evidence." },
+      { id: "safety", name: "safety", description: "Pre-trade gate: contract facts, market liquidity, scam signals, a quote-based sellability check, round-trip cost at the intended size, TRUST / CAUTION / AVOID with evidence and notChecked transfer restrictions." },
       { id: "route", name: "route", description: "What the chain would actually pay for a swap: best route plus every quoted venue at a USD size." },
       { id: "quotecheck", name: "quotecheck", description: "Audit a quote someone else gave you: fair / overpaying / too_good_to_be_true, re-measured at a pinned block." },
       { id: "depth", name: "depth", description: "Position sizing: how big can I trade before the round trip eats me? Capacity ladder across sizes." },
@@ -620,8 +655,9 @@ app.get("/llms.txt", (_req, res) => {
       "- POST /verify — 0.05 USDC. Is this cross-venue arbitrage real at one",
       "  pinned block? Most common honest answer: no_edge.",
       "- POST /safety — 0.10 USDC. Token gate: TRUST / CAUTION / AVOID, with a",
-      "  USD-sized sell probe against every venue.",
-      "- POST /route — 0.03 USDC. Every venue quoting tokenIn to tokenOut at",
+      "  quote-based sellability check on the configured venues. It does not execute",
+      "  a transfer; transfer restrictions and unconfigured venues are in notChecked.",
+      "- POST /route — 0.03 USDC. Every configured venue quoting tokenIn to tokenOut at",
       "  one pinned block, best first.",
       "- POST /quotecheck — 0.05 USDC. Audit someone else's quote: fair /",
       "  overpaying / too_good_to_be_true / unknown.",
@@ -714,13 +750,13 @@ app.get("/.well-known/x402", (_req, res) => {
         url: "https://verify402.onrender.com/safety",
         method: "POST",
         description:
-          "Pre-trade token gate: TRUST / CAUTION / AVOID, with live contract facts and a USD-sized sell probe against every venue.",
+          "Pre-trade token gate: TRUST / CAUTION / AVOID, with live contract facts and a quote-based sellability check on the configured venues. Does not execute a transfer; transfer restrictions are in notChecked.",
       },
       {
         url: "https://verify402.onrender.com/route",
         method: "POST",
         description:
-          "Every venue quoting tokenIn to tokenOut at one pinned block, direct and WETH-routed, best first.",
+          "Every configured venue quoting tokenIn to tokenOut at one pinned block, direct and WETH-routed, best first. Aggregators and unconfigured DEXs are excluded.",
       },
       {
         url: "https://verify402.onrender.com/quotecheck",
@@ -835,7 +871,10 @@ async function measureFindingPair(target) {
     findingsPairs.set(target, { at: Date.now(), row });
     return row;
   } catch (e) {
-    return { target, verdict: "unavailable", reason: e.message, blockNumber: null };
+    // Free route, same H-6 boundary: never echo the provider's message. The
+    // row is explicitly unavailable; the detail stays in the log.
+    console.error("[findings] measurement failed:", e?.message || e);
+    return { target, verdict: "unavailable", reason: "measurement unavailable: the chain/provider could not be read", blockNumber: null };
   }
 }
 
@@ -895,7 +934,7 @@ function refreshFindings() {
 
 const findingsAge = () => Math.round((Date.now() - findingsSnap.at) / 1000);
 
-app.get("/findings", async (_req, res) => {
+app.get("/findings", async (req, res) => {
   if (findingsSnap && Date.now() - findingsSnap.at < FINDINGS_TTL_MS) {
     res.set("Cache-Control", "public, max-age=30");
     return res.json({ ...findingsSnap.payload, ageSeconds: findingsAge() });
@@ -913,7 +952,10 @@ app.get("/findings", async (_req, res) => {
     res.set("Cache-Control", "public, max-age=30");
     return res.json({ ...payload, ageSeconds: 0 });
   } catch (e) {
-    res.status(503).json({ error: e.message, hint: "The measurement pass failed; retry in a few seconds." });
+    return sendPublicError(req, res, 503, "rpc_unavailable", "the measurement pass failed; retry in a few seconds", {
+      log: e,
+      extra: { hint: "The measurement pass failed; retry in a few seconds." },
+    });
   }
 });
 
@@ -944,6 +986,7 @@ function preflightRateLimit(req, res, next) {
       return res.status(429).json({
         error: "rate_limited",
         message: `max ${PREFLIGHT_RATE_PER_MIN} preflight calls per minute per IP`,
+        requestId: req.requestId,
       });
     }
   }
@@ -957,7 +1000,7 @@ function preflightRateLimit(req, res, next) {
 function preflightConcurrency(req, res, next) {
   if (preflightInFlight >= PREFLIGHT_MAX_IN_FLIGHT) {
     res.set("Retry-After", "2");
-    return res.status(429).json({ error: "busy", message: "too many concurrent preflights; retry shortly" });
+    return res.status(429).json({ error: "busy", message: "too many concurrent preflights; retry shortly", requestId: req.requestId });
   }
   preflightInFlight += 1;
   let released = false;
@@ -983,17 +1026,21 @@ app.post("/preflight", preflightRateLimit, preflightConcurrency, async (req, res
     const ms = Date.now() - started;
     if (e instanceof PreflightError) {
       recordPreflight({ req, result: null, status: e.status, ms, code: e.code });
-      return res.status(e.status).json({ error: e.code, message: e.message });
+      if (e.status >= 500) {
+        return sendPublicError(req, res, e.status, "preflight_unavailable", "the chain could not be read, so no receipt was issued; the gate must fail closed", {
+          log: e,
+          extra: { code: e.code },
+        });
+      }
+      return sendPublicError(req, res, e.status, e.code, e.message, { extra: { code: e.code } });
     }
     recordPreflight({ req, result: null, status: 503, ms, code: "preflight_unavailable" });
-    console.error("[preflight]", e);
     // Fail closed: no receipt means an executor must refuse to sign. A 200
     // with a guessed verdict would be the one failure mode this gate exists
-    // to prevent.
-    res.status(503).json({
-      error: "preflight_unavailable",
-      message: "the chain could not be read, so no receipt was issued; the gate must fail closed",
-      detail: e.message,
+    // to prevent. The provider's message stays in the log, never the body.
+    return sendPublicError(req, res, 503, "preflight_unavailable", "the chain could not be read, so no receipt was issued; the gate must fail closed", {
+      log: e,
+      extra: { code: "preflight_unavailable" },
     });
   }
 });
@@ -1063,14 +1110,40 @@ app.get("/", (req, res) => {
 });
 
 app.get("/health", (_req, res) => {
-  res.json({ ok: true, mode: MODE, price: PRICE, preflight: "free", networks: NETWORKS.label });
+  res.json({ ok: true, mode: MODE, price: PRICE, preflight: "free", networks: NETWORKS.label, ready: "/ready" });
+});
+
+// Readiness is a DEEP check: read the latest block with a short timeout. A
+// process that is up but cannot reach a chain must not receive traffic. Liveness
+// stays /health; orchestrators should use /ready for traffic.
+app.get("/ready", async (req, res) => {
+  const started = Date.now();
+  const chainId = Number(process.env.READY_CHAIN_ID || 1);
+  try {
+    if (!CHAINS[chainId]) throw new Error(`READY_CHAIN_ID ${chainId} is not configured`);
+    const blockNumber = await withTimeout(clientFor(chainId).getBlockNumber(), 3000, "ready");
+    res.set("Cache-Control", "no-store");
+    return res.json({
+      ok: true,
+      ready: true,
+      mode: MODE,
+      chainId,
+      blockNumber: Number(blockNumber),
+      latencyMs: Date.now() - started,
+    });
+  } catch (e) {
+    return sendPublicError(req, res, 503, "rpc_unavailable", "the chain could not be read within the readiness timeout", {
+      log: e,
+      extra: { ready: false, chainId, latencyMs: Date.now() - started },
+    });
+  }
 });
 
 app.get("/info", (_req, res) => {
   res.json({
     name: "verify402",
     description:
-      "Machine-payable truth service. /preflight is the free pre-signing gate: validate an x402 payment request or a chain transaction and get PASS / CAUTION / BLOCK with typed reasons and a short-lived receipt. /verify measures whether a cross-venue arbitrage round trip is profitable; /safety is a pre-trade gate that tells an agent whether a token is safe to buy before it risks capital. All quotes come from Uniswap's canonical QuoterV2 and each venue's own router, never from our own reimplementation of venue mathematics. The MCP server (verify402-mcp) exposes the gate and the five checks as native tools; install at /mcp.",
+      "Machine-payable truth service. /preflight is the free pre-signing gate: validate an x402 payment request or a chain transaction and get PASS / CAUTION / BLOCK with typed reasons and a short-lived receipt. /verify measures whether a cross-venue arbitrage round trip is profitable; /safety is a pre-trade gate with a quote-based sellability check, not a honeypot proof. All quotes come from Uniswap's canonical QuoterV2 and each venue's own router, never from our own reimplementation of venue mathematics. The MCP server (verify402-mcp) exposes the gate and the five checks as native tools; install at /mcp.",
     prices: {
       preflight: "free",
       preflight_verify: "free",
@@ -1152,10 +1225,11 @@ app.get("/info", (_req, res) => {
           verdict: "TRUST | CAUTION | AVOID",
           reasons: ["why it is not TRUST"],
           notes: ["what checked out"],
-          checked: ["contract", "market", "sellability", "liquidity", "price-sanity"],
-          evidence: "contract facts, market data, sell-probe venues, round-trip cost, price comparison",
+          checked: ["contract", "market", "quote-based sellability", "liquidity", "price-sanity"],
+          notChecked: ["actual token transfer or sell execution", "transfer tax / fee-on-transfer", "blacklist / pause / max-tx restrictions", "venues not in config"],
+          evidence: "contract facts, market data, quote-based sellability venues, round-trip cost, price comparison",
         },
-        use_when: "an agent is about to BUY a token and needs to know it can exit and the price is real",
+        use_when: "an agent is about to BUY a token and needs a quote-based check that it can exit on the configured venues, plus the stated untested restrictions",
       },
       {
         method: "POST",
@@ -1164,8 +1238,10 @@ app.get("/info", (_req, res) => {
         body: { chainId: 1, tokenIn: "USDC", tokenOut: "WETH", amountIn: "1000000000" },
         response: {
           best: "{ venue, kind, amountOut(raw) } | null",
-          book: "every venue (direct + WETH-routed), best first, one pinned block",
+          book: "every configured venue (direct + WETH-routed), best first, one pinned block",
           unavailable: ["venues that could not quote the size"],
+          checked: ["every configured venue", "direct and WETH-routed paths"],
+          notChecked: ["aggregators", "unconfigured DEX venues", "execution", "MEV"],
         },
         use_when: "an agent wants the chain's own answer for what a swap should pay, before trusting any counterparty's number",
       },
@@ -1195,6 +1271,23 @@ app.get("/info", (_req, res) => {
       },
     ],
     unpayable: "A request without payment returns HTTP 402 with instructions in the payment-required header.",
+    chainIdRequired: "Every paid route and every transaction preflight requires an integer chainId. Missing => 400 missing_chain; wrong type => 400 invalid_chain; unsupported => 400 unsupported_chain. There is no silent Ethereum default.",
+    errors: {
+      bad_request: "400; the caller's input is wrong (specific code: missing_chain, invalid_chain, unsupported_chain, invalid_size, ...)",
+      rate_limited: "429; retry after the advertised window",
+      busy: "429; too many concurrent requests",
+      rpc_unavailable: "503; the chain/provider could not be read; no verdict was issued",
+      rpc_rate_limited: "503; the provider rate-limited us; no verdict was issued",
+      internal_error: "500; no provider detail is returned",
+      requestId: "Every error carries requestId and the same value in the x-request-id header; server logs use it.",
+      settlement: "x402 settlement is cancelled for any response >=400 (the installed @x402/express middleware checks res.statusCode). A 503 means no charge.",
+    },
+    readiness: {
+      path: "/ready",
+      price: "free",
+      check: "latest block read with a 3s timeout",
+      liveness: "/health",
+    },
     preflight: {
       spec: PREFLIGHT_SPEC,
       receiptSpec: RECEIPT_SPEC,
@@ -1253,8 +1346,10 @@ app.get("/info", (_req, res) => {
       behavior: "Send this header on the FIRST call of an operation. If the response is lost after settlement, retrying with the same header returns the SAME verdict within the TTL without requiring payment again. Records are promoted to replayable ONLY after your settlement is confirmed by the facilitator: a failed or pending settlement leaves no free replay (fail-closed).",
       ttlMinutes: 10,
       maxReplays: 3,
-      maxReplaysNote: "the cap is per operation, shared between the caller key and the content-hash companion key",
-      doubleKeying: "verdicts are also recorded under a hash of the canonical request content, so a retry that mints a fresh id still replays free within the window",
+      maxReplaysNote: "the cap is per operation, bound to the caller's key",
+      identity: "The original idempotency key is the only replay credential. The service does NOT derive a payer identity from x-payment, payment-signature, or authorization.from. The settled record stores the facilitator-confirmed payer as verified_payer for audit only.",
+      noCompanionAlias: "There is no content-hash companion alias. A public content hash would turn a known body into a free read, and a token returned only in the original response cannot help a lost-response retry. The caller's secret key is the only credential that survives.",
+      requestBinding: "The key is bound to the canonical request body; reusing it for a different operation returns 409 recovery_conflict before payment.",
       afterWindow: "expired verdicts leave a tombstone holding the previous responseHash for 6 hours; a retry re-measures with the paywall re-armed and the response carries recovery.remeasured + previousResponseHash so agents can branch instead of guessing",
       delegatedSpend: "the caps here are client-side for the signer that constructs the payment; spend through wallets delegated to OTHER agents is outside this contract and governed by the delegating owner's own controls",
       warn: "The key is the caller's secret: whoever presents it can replay the verdict for free. Do not log it publicly.",
@@ -1269,8 +1364,9 @@ app.get("/info", (_req, res) => {
     honesty: [
       "No profit is promised. The measured answer for mainstream pairs is usually no_edge.",
       "If a response says edge, verify before acting; the service reports what it measured, not what it guarantees.",
-      "Safety verdicts are measured evidence (live contract calls, actual venue quotes, market data), not a paid audit or a score from folklore.",
+      "Safety verdicts use a quote-based sellability check (quotes, not transfer execution). Transfer tax, blacklist, pause, and max-tx restrictions are listed in notChecked.",
       "A preflight PASS is not a guarantee: it means the listed checks passed at that block; `notChecked` names what was not examined.",
+      "Payment preflight PASS can be structural_only: with no payer from address or no proof, it validates the request shape and says so.",
       "Not financial advice.",
     ],
   });
@@ -1290,27 +1386,33 @@ app.post("/verify", async (req, res) => {
   const started = Date.now();
   try {
     const body = req.body || {};
-    const chainId = Number(body.chainId ?? 1);
+    const chainId = requireChainId(body);
     const base = String(body.base ?? "USDC").toUpperCase();
     const target = String(body.target ?? "").toUpperCase();
     const size = Number(body.size ?? DEFAULT_SIZE);
     const minNet = Number(body.minNet ?? 0);
 
-    if (!target) return res.status(400).json({ error: "target is required, e.g. {\"target\":\"WETH\"}" });
-    if (!CHAINS[chainId]) {
-      return res.status(400).json({ error: `unsupported chainId ${chainId}`, supported: Object.keys(CHAINS).map(Number) });
-    }
-    if (!Number.isFinite(size) || size <= 0) {
-      return res.status(400).json({ error: "size must be a positive number" });
-    }
-
+    if (!target) return paidFail(req, res, 400, "missing_target", 'target is required, e.g. {"target":"WETH"}');
     const c = CHAINS[chainId];
     const baseTok = c.tokens[base];
     const targetTok = c.tokens[target];
-    if (!baseTok) return res.status(400).json({ error: `unknown base ${base}`, known: Object.keys(c.tokens) });
-    if (!targetTok) return res.status(400).json({ error: `unknown target ${target}`, known: Object.keys(c.tokens) });
+    if (!baseTok) return paidFail(req, res, 400, "unknown_base", `unknown base ${base}`, { extra: { known: Object.keys(c.tokens) } });
+    if (!targetTok) return paidFail(req, res, 400, "unknown_target", `unknown target ${target}`, { extra: { known: Object.keys(c.tokens) } });
 
-    const blockNumber = await clientFor(chainId).getBlockNumber();
+    const maxWhole = Number.MAX_SAFE_INTEGER / 10 ** baseTok.decimals;
+    if (!Number.isFinite(size) || size <= 0 || size > maxWhole) {
+      return paidFail(req, res, 400, "invalid_size", `size must be a positive number <= ${maxWhole}`);
+    }
+    if (!Number.isFinite(minNet) || minNet < 0 || minNet > maxWhole) {
+      return paidFail(req, res, 400, "invalid_minNet", `minNet must be a non-negative number <= ${maxWhole}`);
+    }
+
+    let blockNumber;
+    try {
+      blockNumber = await clientFor(chainId).getBlockNumber();
+    } catch (e) {
+      return paidCatch(req, res, e);
+    }
     const key = `${chainId}:${base}:${target}:${size}:${minNet}:${blockNumber}`;
 
     if (cache.has(key)) {
@@ -1325,6 +1427,9 @@ app.post("/verify", async (req, res) => {
       minNet: BigInt(Math.round(minNet * 10 ** baseTok.decimals)),
     });
 
+    // transport/decode: 503, no charge, no cached verdict, no settlement record.
+    if (hardFailureResponse(req, res, result)) return;
+
     cachePut(key, result);
     emitPaid(req, res, {
       ...result,
@@ -1332,7 +1437,7 @@ app.post("/verify", async (req, res) => {
       elapsedMs: Date.now() - started,
     });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    return paidCatch(req, res, e);
   }
 });
 
@@ -1343,25 +1448,34 @@ app.post("/safety", async (req, res) => {
   const started = Date.now();
   try {
     const body = req.body || {};
-    const chainId = Number(body.chainId ?? 1);
+    const chainId = requireChainId(body);
     const tokenAddress = String(body.tokenAddress ?? "").trim();
     const intendedUsd = Number(body.intendedUsd ?? 500);
     const offeredPriceUsd = body.offeredPriceUsd != null ? Number(body.offeredPriceUsd) : null;
     const baseSymbol = String(body.baseSymbol ?? "USDC").toUpperCase();
 
     if (!tokenAddress) {
-      return res.status(400).json({ error: 'tokenAddress is required, e.g. {"tokenAddress":"0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE"}' });
+      return paidFail(req, res, 400, "missing_tokenAddress", 'tokenAddress is required, e.g. {"tokenAddress":"0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE"}');
     }
-    if (!CHAINS[chainId]) {
-      return res.status(400).json({ error: `unsupported chainId ${chainId}`, supported: Object.keys(CHAINS).map(Number) });
+    const c = CHAINS[chainId];
+    const baseTok = c.tokens[baseSymbol];
+    if (!baseTok) return paidFail(req, res, 400, "unknown_base", `unknown base ${baseSymbol}`, { extra: { known: Object.keys(c.tokens) } });
+    const maxWhole = Number.MAX_SAFE_INTEGER / 10 ** baseTok.decimals;
+    if (!Number.isFinite(intendedUsd) || intendedUsd <= 0 || intendedUsd > maxWhole) {
+      return paidFail(req, res, 400, "invalid_intendedUsd", `intendedUsd must be a positive number <= ${maxWhole}`);
     }
-    if (!Number.isFinite(intendedUsd) || intendedUsd <= 0) {
-      return res.status(400).json({ error: "intendedUsd must be a positive number" });
+    if (offeredPriceUsd != null && (!Number.isFinite(offeredPriceUsd) || offeredPriceUsd < 0)) {
+      return paidFail(req, res, 400, "invalid_offeredPriceUsd", "offeredPriceUsd must be a non-negative number when supplied");
     }
 
     // Same (route, params, block) cache key: two agents asking about the same
     // token in the same block share one set of probes.
-    const blockNumber = await clientFor(chainId).getBlockNumber();
+    let blockNumber;
+    try {
+      blockNumber = await clientFor(chainId).getBlockNumber();
+    } catch (e) {
+      return paidCatch(req, res, e);
+    }
     const key = `safety:${chainId}:${tokenAddress.toLowerCase()}:${intendedUsd}:${offeredPriceUsd ?? ""}:${blockNumber}`;
 
     if (cache.has(key)) {
@@ -1379,6 +1493,11 @@ app.post("/safety", async (req, res) => {
       baseSymbol,
     });
 
+    if (hardFailureResponse(req, res, result)) return;
+    if (result?.ok === false && result.kind === "bad_request") {
+      return paidFail(req, res, 400, "bad_request", result.error || "invalid token or parameters");
+    }
+
     cachePut(key, result);
     emitPaid(req, res, {
       ...result,
@@ -1386,7 +1505,7 @@ app.post("/safety", async (req, res) => {
       elapsedMs: Date.now() - started,
     });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    return paidCatch(req, res, e);
   }
 });
 
@@ -1395,10 +1514,7 @@ app.post("/route", async (req, res) => {
   const started = Date.now();
   try {
     const body = req.body || {};
-    const chainId = Number(body.chainId ?? 1);
-    if (!CHAINS[chainId]) {
-      return res.status(400).json({ error: `unsupported chainId ${chainId}`, supported: Object.keys(CHAINS).map(Number) });
-    }
+    const chainId = requireChainId(body);
     let addrIn; let addrOut; let amountIn;
     try {
       addrIn = resolveToken(chainId, String(body.tokenIn ?? "").trim()).address;
@@ -1411,42 +1527,57 @@ app.post("/route", async (req, res) => {
       addrOut = String(body.tokenOut ?? "").trim();
     }
     if (!/^0x[0-9a-fA-F]{40}$/.test(addrIn) || !/^0x[0-9a-fA-F]{40}$/.test(addrOut)) {
-      return res.status(400).json({ error: "tokenIn/tokenOut must be a known symbol or a 0x address" });
+      return paidFail(req, res, 400, "invalid_token", "tokenIn/tokenOut must be a known symbol or a 0x address");
     }
     if (addrIn.toLowerCase() === addrOut.toLowerCase()) {
-      return res.status(400).json({ error: "tokenIn and tokenOut must differ" });
+      return paidFail(req, res, 400, "same_token", "tokenIn and tokenOut must differ");
     }
     try {
+      if (String(body.amountIn ?? "").length > 100) throw new Error();
       amountIn = BigInt(body.amountIn);
       if (amountIn <= 0n) throw new Error();
     } catch {
-      return res.status(400).json({ error: "amountIn must be a positive integer string in RAW units of tokenIn" });
+      return paidFail(req, res, 400, "invalid_amountIn", "amountIn must be a positive integer string in RAW units of tokenIn");
     }
 
     const client = clientFor(chainId);
-    const blockNumber = await client.getBlockNumber();
+    let blockNumber;
+    try {
+      blockNumber = await client.getBlockNumber();
+    } catch (e) {
+      return paidCatch(req, res, e);
+    }
     const key = `route:${chainId}:${addrIn.toLowerCase()}:${addrOut.toLowerCase()}:${amountIn.toString()}:${blockNumber}`;
     if (cache.has(key)) {
       return emitPaid(req, res, { ...cache.get(key), cache: { hit: true, pinnedBlock: Number(blockNumber) }, elapsedMs: Date.now() - started });
     }
 
     const book = await bestRouteBook(client, chainId, { tokenIn: addrIn, tokenOut: addrOut, amountIn, blockNumber });
+    if (book.hard_failure) {
+      return hardFailureResponse(req, res, { ok: false, kind: book.hard_failure.kind, _detail: book.hard_failure.detail });
+    }
+
     const best = book.quoted[0] ?? null;
+    const quoteStatus = best ? (book.unavailable.length ? "partial" : "ok") : "no_pool";
     const result = {
-      ok: true,
+      ok: Boolean(best),
+      quote_status: quoteStatus,
+      unavailable_reason: quoteStatus === "no_pool" ? "no_pool" : quoteStatus === "partial" ? "some_venues_no_pool" : null,
       chainId,
       chainName: CHAINS[chainId].name,
       blockNumber: Number(blockNumber),
       amountIn: amountIn.toString(),
       best: best ? { venue: best.venue, kind: best.kind, amountOut: best.amountOut.toString() } : null,
       book: book.quoted.map((q) => ({ venue: q.venue, kind: q.kind, amountOut: q.amountOut.toString() })),
+      // Backward-compatible names plus typed reasons.
       unavailable: book.unavailable.map((u) => u.venue),
-      note: best ? null : "no venue quoted this pair at this size",
+      unavailable_reasons: book.unavailable,
+      note: best ? null : "no configured venue quoted this pair at this size",
     };
     cachePut(key, result);
     emitPaid(req, res, { ...result, cache: { hit: false, pinnedBlock: Number(blockNumber) }, elapsedMs: Date.now() - started });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    return paidCatch(req, res, e);
   }
 });
 
@@ -1454,20 +1585,34 @@ app.post("/quotecheck", async (req, res) => {
   const started = Date.now();
   try {
     const body = req.body || {};
-    const chainId = Number(body.chainId ?? 1);
-    if (!CHAINS[chainId]) {
-      return res.status(400).json({ error: `unsupported chainId ${chainId}`, supported: Object.keys(CHAINS).map(Number) });
-    }
+    const chainId = requireChainId(body);
     const required = ["tokenIn", "tokenOut", "amountIn", "quotedOut"];
     const missing = required.filter((k) => body[k] === undefined || body[k] === null || body[k] === "");
     if (missing.length) {
-      return res.status(400).json({ error: `missing fields: ${missing.join(", ")}`, example: required.map((k) => ({ [k]: "..." })).reduce((a, b) => ({ ...a, ...b })) });
+      return paidFail(req, res, 400, "missing_fields", `missing fields: ${missing.join(", ")}`);
+    }
+    let amountIn;
+    let quotedOut;
+    try {
+      amountIn = parseRawPositive(body.amountIn, "amountIn");
+    } catch (e) {
+      return paidFail(req, res, 400, "invalid_amountIn", e.message);
+    }
+    try {
+      quotedOut = parseRawPositive(body.quotedOut, "quotedOut");
+    } catch (e) {
+      return paidFail(req, res, 400, "invalid_quotedOut", e.message);
     }
 
     // Cache by offered number: two agents auditing the same offer in the same
     // block share one book.
-    const blockNumber = await clientFor(chainId).getBlockNumber();
-    const key = `qc:${chainId}:${String(body.tokenIn).toLowerCase()}:${String(body.tokenOut).toLowerCase()}:${String(body.amountIn)}:${String(body.quotedOut)}:${blockNumber}`;
+    let blockNumber;
+    try {
+      blockNumber = await clientFor(chainId).getBlockNumber();
+    } catch (e) {
+      return paidCatch(req, res, e);
+    }
+    const key = `qc:${chainId}:${String(body.tokenIn).toLowerCase()}:${String(body.tokenOut).toLowerCase()}:${amountIn.toString()}:${quotedOut.toString()}:${blockNumber}`;
     if (cache.has(key)) {
       return emitPaid(req, res, { ...cache.get(key), cache: { hit: true, pinnedBlock: Number(blockNumber) }, elapsedMs: Date.now() - started });
     }
@@ -1475,16 +1620,21 @@ app.post("/quotecheck", async (req, res) => {
     const result = await fairQuoteCheck(chainId, {
       tokenIn: body.tokenIn,
       tokenOut: body.tokenOut,
-      amountIn: body.amountIn,
-      quotedOut: body.quotedOut,
+      amountIn: amountIn.toString(),
+      quotedOut: quotedOut.toString(),
       venueClaimed: body.venueClaimed ?? null,
       chainIn: body.chainIn ?? null,
     });
 
+    if (hardFailureResponse(req, res, result)) return;
+    if (result?.ok === false && result.kind === "bad_request") {
+      return paidFail(req, res, 400, "bad_request", result.error || "invalid token or parameters");
+    }
+
     cachePut(key, result);
     emitPaid(req, res, { ...result, cache: { hit: false, pinnedBlock: Number(blockNumber) }, elapsedMs: Date.now() - started });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    return paidCatch(req, res, e);
   }
 });
 
@@ -1493,27 +1643,42 @@ app.post("/depth", async (req, res) => {
   const started = Date.now();
   try {
     const body = req.body || {};
-    const chainId = Number(body.chainId ?? 1);
-    if (!CHAINS[chainId]) {
-      return res.status(400).json({ error: `unsupported chainId ${chainId}`, supported: Object.keys(CHAINS).map(Number) });
-    }
+    const chainId = requireChainId(body);
     const token = String(body.tokenAddress ?? "").trim();
-    if (!token) return res.status(400).json({ error: 'tokenAddress is required, e.g. {"tokenAddress":"WETH"}' });
+    if (!token) return paidFail(req, res, 400, "missing_tokenAddress", 'tokenAddress is required, e.g. {"tokenAddress":"WETH"}');
     const baseSymbol = String(body.baseSymbol ?? "USDC").toUpperCase();
     const maxRoundTripPct = body.maxRoundTripPct != null ? Number(body.maxRoundTripPct) : 1.0;
     if (!Number.isFinite(maxRoundTripPct) || maxRoundTripPct <= 0 || maxRoundTripPct > 100) {
-      return res.status(400).json({ error: "maxRoundTripPct must be a number in (0, 100]" });
+      return paidFail(req, res, 400, "invalid_maxRoundTripPct", "maxRoundTripPct must be a number in (0, 100]");
     }
     let sizesUsd = null;
-    if (Array.isArray(body.sizesUsd) && body.sizesUsd.length) sizesUsd = body.sizesUsd.map(Number);
+    if (body.sizesUsd != null) {
+      if (!Array.isArray(body.sizesUsd) || !body.sizesUsd.length) {
+        return paidFail(req, res, 400, "invalid_sizesUsd", "sizesUsd must be a non-empty array of positive numbers, each <= 1,000,000 USD");
+      }
+      sizesUsd = body.sizesUsd.map(Number);
+      if (sizesUsd.some((s) => !Number.isFinite(s) || s <= 0 || s > 1_000_000)) {
+        return paidFail(req, res, 400, "invalid_sizesUsd", "sizesUsd must contain only positive numbers, each <= 1,000,000 USD");
+      }
+    }
 
-    const blockNumber = await clientFor(chainId).getBlockNumber();
+    let blockNumber;
+    try {
+      blockNumber = await clientFor(chainId).getBlockNumber();
+    } catch (e) {
+      return paidCatch(req, res, e);
+    }
     const key = `depth:${chainId}:${token.toLowerCase()}:${baseSymbol}:${JSON.stringify(sizesUsd)}:${maxRoundTripPct}:${blockNumber}`;
     if (cache.has(key)) {
       return emitPaid(req, res, { ...cache.get(key), cache: { hit: true, pinnedBlock: Number(blockNumber) }, elapsedMs: Date.now() - started });
     }
 
     const result = await depthProfile(chainId, { tokenAddress: token, baseSymbol, sizesUsd, maxRoundTripPct });
+    if (hardFailureResponse(req, res, result)) return;
+    if (result?.ok === false && result.kind === "bad_request") {
+      return paidFail(req, res, 400, "bad_request", result.error || "invalid token or parameters");
+    }
+
     cachePut(key, result);
     emitPaid(req, res, {
       ...result,
@@ -1521,24 +1686,29 @@ app.post("/depth", async (req, res) => {
       elapsedMs: Date.now() - started,
     });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    return paidCatch(req, res, e);
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`\nverify402 listening on http://localhost:${PORT}`);
-  console.log(`  mode        : ${MODE}  (${NETWORKS.label})`);
-  console.log(`  /preflight  : free   (should I sign this payment or transaction?)`);
-  console.log(`  /verify     : ${PRICE}   (is this arbitrage real?)`);
-  console.log(`  /safety     : ${SAFETY_PRICE}   (is this token safe to buy?)`);
-  console.log(`  /route      : ${ROUTE_PRICE}   (what would the chain actually pay?)`);
-  console.log(`  /quotecheck : ${QUOTECHECK_PRICE}   (is someone else's quote honest?)`);
-  console.log(`  pay to EVM  : ${PAY_TO_EVM}`);
-  console.log(`  pay to SVM  : ${PAY_TO_SVM}`);
-  console.log(`  facilitator : ${FACILITATOR_URL}`);
-  console.log(`  free        : GET / , /info , /health , /findings , /.well-known/*.json\n`);
+export { app };
 
-  // Warm the free snapshot as soon as the process is up: a cold Render instance
-  // should spend its boot time measuring, not making the first visitor wait.
-  refreshFindings().catch((e) => console.warn("findings prewarm failed:", e.message));
-});
+const IS_MAIN = Boolean(process.argv[1]) && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (IS_MAIN) {
+  app.listen(PORT, () => {
+    console.log(`\nverify402 listening on http://localhost:${PORT}`);
+    console.log(`  mode        : ${MODE}  (${NETWORKS.label})`);
+    console.log(`  /preflight  : free   (should I sign this payment or transaction?)`);
+    console.log(`  /verify     : ${PRICE}   (is this arbitrage real?)`);
+    console.log(`  /safety     : ${SAFETY_PRICE}   (is this token safe to buy?)`);
+    console.log(`  /route      : ${ROUTE_PRICE}   (what would the chain actually pay?)`);
+    console.log(`  /quotecheck : ${QUOTECHECK_PRICE}   (is someone else's quote honest?)`);
+    console.log(`  pay to EVM  : ${PAY_TO_EVM}`);
+    console.log(`  pay to SVM  : ${PAY_TO_SVM}`);
+    console.log(`  facilitator : ${FACILITATOR_URL}`);
+    console.log(`  free        : GET / , /info , /health , /ready , /findings , /.well-known/*.json\n`);
+
+    // Warm the free snapshot as soon as the process is up: a cold Render instance
+    // should spend its boot time measuring, not making the first visitor wait.
+    refreshFindings().catch((e) => console.warn("findings prewarm failed:", e.message));
+  });
+}
