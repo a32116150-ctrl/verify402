@@ -6,13 +6,17 @@
 
 const OUTPUT_SCHEMA = {
   type: "object",
-  required: ["ok", "evidence_bundle"],
+  required: ["ok", "checked", "notChecked", "evidence_bundle"],
   properties: {
     ok: { type: "boolean", description: "True if measurement succeeded on-chain." },
     verdict: { type: "string", description: "Core verdict, e.g. 'no_edge', 'TRUST', 'CAUTION', 'AVOID', 'fair'." },
+    quote_status: { type: "string", enum: ["ok", "partial", "no_pool", "failed"], description: "Typed quote outcome. 'failed' is returned with HTTP 503; transport/decode failures never become a market verdict." },
+    unavailable_reason: { type: "string", nullable: true, description: "Why part/all of the book was unavailable: no_pool, revert, some_venues_no_pool, transport, decode." },
     chainId: { type: "integer", description: "EVM chain ID where block was pinned." },
     chainName: { type: "string", description: "Canonical chain name (e.g. 'ethereum', 'base')." },
     blockNumber: { type: "integer", description: "Pinned block number at which all pool states and prices were sampled." },
+    checked: { type: "array", items: { type: "string" }, minItems: 1, description: "What this response actually measured." },
+    notChecked: { type: "array", items: { type: "string" }, minItems: 1, description: "What this response deliberately did not measure. Read this before acting." },
     evidence_bundle: {
       type: "object",
       required: ["requestHash", "responseHash", "pinnedBlock"],
@@ -42,11 +46,14 @@ const OUTPUT_SCHEMA = {
 
 const ERROR_SCHEMA = {
   type: "object",
-  required: ["error"],
+  required: ["error", "message", "requestId"],
   properties: {
-    error: { type: "string", description: "Error category or message." },
-    code: { type: "string", description: "Machine-readable error code." },
-    detail: { type: "string", description: "Human-readable diagnostic detail." },
+    error: { type: "string", description: "Stable public code: bad_request, missing_chain, invalid_chain, unsupported_chain, rate_limited, busy, rpc_unavailable, rpc_rate_limited, internal_error." },
+    code: { type: "string", description: "Machine-readable sub-code (for example invalid_size)." },
+    message: { type: "string", description: "Public-safe message. Never contains a provider error, RPC URL, or API key." },
+    requestId: { type: "string", description: "Correlates this response with the server-side log line. Also returned as x-request-id." },
+    checked: { type: "array", items: { type: "string" }, minItems: 1 },
+    notChecked: { type: "array", items: { type: "string" }, minItems: 1 },
   },
   additionalProperties: true,
 };
@@ -86,7 +93,7 @@ const IDEMPOTENCY_HEADER = {
   in: "header",
   required: false,
   description:
-    "Optional idempotency key. A settled verdict is cached under this key and can be replayed up to 3 times within 300s at zero charge. Changing the request body with the same key returns 409 Conflict.",
+    "Optional secret idempotency key. A settled verdict is cached under this key and can be replayed up to 3 times within 600s at zero charge. This key is the ONLY replay credential: no payer identity is read from x-payment or payment-signature. Changing the request body with the same key returns 409 Conflict.",
   schema: { type: "string" },
 };
 
@@ -112,7 +119,7 @@ function paidOperation({ price, operationId, summary, tag, inputSchema, outputSc
       "3. Client signs payment authorization for USDC on Base (`eip155:8453`) or Solana.",
       "4. Retry original request with proof in `x-payment` or `payment-signature` header.",
       "5. Receive 200 OK with reproducible `evidence_bundle`.",
-      "\n**Idempotency & Replay:** Supply `x-idempotency-key` to enable safe replays if network disconnects. Max 3 replays within 300s TTL.",
+      "\n**Idempotency & Replay:** Supply `x-idempotency-key` on the first call. A settled verdict can be replayed up to 3 times within 600s at zero charge. The key is the only replay credential; no payer identity is derived from an unverified payment header.",
       "\n**Safety boundary:** Truth checks measure chain state at one pinned block. They do not predict future blocks, guarantee arbitrage execution, or endorse tokens as risk-free.",
     ].join("\n"),
     security: [],
@@ -136,7 +143,7 @@ function paidOperation({ price, operationId, summary, tag, inputSchema, outputSc
         content: { "application/json": { schema: outputSchema } },
       },
       400: {
-        description: "Bad Request: Malformed payload, unsupported chain, or non-existent token address.",
+        description: "Bad Request: Malformed payload, missing/invalid/unsupported chainId (400 missing_chain), or non-existent token address. The response includes requestId and both checked/notChecked.",
         content: { "application/json": { schema: ERROR_SCHEMA } },
       },
       402: {
@@ -158,7 +165,7 @@ function paidOperation({ price, operationId, summary, tag, inputSchema, outputSc
         content: { "application/json": { schema: ERROR_SCHEMA } },
       },
       503: {
-        description: "Service Unavailable: Blockchain RPC failure or facilitator unavailability. Fail-closed design ensures no funds are settled on failure.",
+        description: "Service Unavailable: transport/decode failure, RPC rate limit, or facilitator unavailability. No verdict is issued. The x402 middleware cancels settlement for any response >=400, so a 503 is not charged. The body never contains the provider message, RPC URL, or API key.",
         content: { "application/json": { schema: ERROR_SCHEMA } },
       },
     },
@@ -167,8 +174,7 @@ function paidOperation({ price, operationId, summary, tag, inputSchema, outputSc
 
 const chainId = {
   type: "integer",
-  description: "EVM chain id: 1 Ethereum mainnet, 42161 Arbitrum One, 8453 Base mainnet, 84532 Base Sepolia (testnet mode).",
-  default: 1,
+  description: "Required EVM chain id: 1 Ethereum mainnet, 42161 Arbitrum One, 8453 Base mainnet, 84532 Base Sepolia (testnet mode). There is no silent default; missing => 400 missing_chain.",
 };
 
 export function buildOpenapi(prices) {
@@ -453,6 +459,8 @@ export function buildOpenapi(prices) {
                       verdict: { type: "string", enum: ["PASS", "CAUTION", "BLOCK"], description: "Overall recommendation." },
                       sign_allowed: { type: "boolean", description: "False if verdict is BLOCK; true if PASS or CAUTION." },
                       requires_ack: { type: "boolean", description: "True if verdict is CAUTION; human/operator confirmation recommended." },
+                      structural_only: { type: "boolean", description: "Payment intents only: true when no payer `from` or no proof was supplied, or the rail is testnet/Solana. A PASS then means the request shape was validated, not that funds or settlement were checked." },
+                      structural_only_reasons: { type: "array", items: { type: "string" }, description: "Why the payment preflight is structural-only." },
                       reasons: {
                         type: "array",
                         items: {
@@ -490,7 +498,7 @@ export function buildOpenapi(prices) {
               },
             },
             400: {
-              description: "Invalid intent format or malformed policy.",
+              description: "Invalid intent format or malformed policy. Transaction intents require an integer chainId: 400 missing_chain / invalid_chain / unsupported_chain.",
               content: { "application/json": { schema: ERROR_SCHEMA } },
             },
             429: {
@@ -561,10 +569,10 @@ export function buildOpenapi(prices) {
           summary: "Is this cross-venue arbitrage real right now?",
           tag: "Truth",
           guidance:
-            "Measures a round trip across venues at one pinned block using Uniswap QuoterV2 and venue routers, nets gas and flash loan fees, and returns a verdict. The honest answer is usually 'no_edge'.",
+            "Measures a round trip across configured venues at one pinned block using Uniswap QuoterV2 and venue routers, nets gas and flash loan fees, and returns a verdict. transport/decode failures return HTTP 503 with no verdict and no settlement; only no_pool/revert may make a leg unavailable. The honest answer is usually 'no_edge'.",
           inputSchema: {
             type: "object",
-            required: ["target"],
+            required: ["chainId", "target"],
             properties: {
               chainId,
               base: { type: "string", default: "USDC", description: "Base currency token symbol or address." },
@@ -581,13 +589,13 @@ export function buildOpenapi(prices) {
         post: paidOperation({
           price: usd(prices.safety),
           operationId: "checkTokenSafety",
-          summary: "Pre-trade token gate: TRUST / CAUTION / AVOID",
+          summary: "Pre-trade token gate: TRUST / CAUTION / AVOID (quote-based sellability)",
           tag: "Truth",
           guidance:
-            "Gathers live contract facts, liquidity and scam indicators, and performs a USD-sized sell probe against every DEX router to test for honeypot exit restrictions.",
+            "Gathers live contract facts, liquidity and scam indicators, and performs a quote-based sellability check: a USD-sized sell is quoted through the configured venues' own routers, direct and WETH-routed. It does NOT execute or simulate a transfer, so transfer tax, blacklist, pause, and max-tx restrictions are listed in notChecked, not tested. Unconfigured venues are also named in notChecked.",
           inputSchema: {
             type: "object",
-            required: ["tokenAddress"],
+            required: ["chainId", "tokenAddress"],
             properties: {
               chainId,
               tokenAddress: { type: "string", minLength: 1, description: "ERC-20 token address or known symbol." },
@@ -604,13 +612,13 @@ export function buildOpenapi(prices) {
         post: paidOperation({
           price: usd(prices.route),
           operationId: "getBestRoute",
-          summary: "Every venue quoting this pair at one pinned block, best first",
+          summary: "Every configured venue quoting this pair at one pinned block, best first",
           tag: "Truth",
           guidance:
-            "Direct and WETH-routed quotes at one pinned block, ranked best to worst. Unbiased evidence of what venues would actually pay.",
+            "Direct and WETH-routed quotes at one pinned block, ranked best to worst. Unbiased evidence of what configured venues would actually pay. Aggregators and unconfigured DEXs are not included; execution is not simulated.",
           inputSchema: {
             type: "object",
-            required: ["tokenIn", "tokenOut", "amountIn"],
+            required: ["chainId", "tokenIn", "tokenOut", "amountIn"],
             properties: {
               chainId,
               tokenIn: { type: "string", minLength: 1, description: "Source token symbol or 0x address." },
@@ -629,10 +637,10 @@ export function buildOpenapi(prices) {
           summary: "Audit someone else's quote: fair / overpaying / too_good_to_be_true",
           tag: "Truth",
           guidance:
-            "Compares a third-party quote against the full chain venue book at one pinned block before signing.",
+            "Compares a third-party quote against the full configured venue book at one pinned block before signing. A transport/decode failure returns HTTP 503, never 'unknown'.",
           inputSchema: {
             type: "object",
-            required: ["tokenIn", "tokenOut", "amountIn", "quotedOut"],
+            required: ["chainId", "tokenIn", "tokenOut", "amountIn", "quotedOut"],
             properties: {
               chainId,
               tokenIn: { type: "string", minLength: 1, description: "Source token symbol or address." },
@@ -653,10 +661,10 @@ export function buildOpenapi(prices) {
           summary: "Largest size that still clears your cost tolerance",
           tag: "Truth",
           guidance:
-            "Position sizing: simulates entry and exit at multiple USD sizes, reporting impact %, round-trip cost %, and max fillable capacityUsd.",
+            "Position sizing: quotes entry and exit at multiple USD sizes, reporting impact %, round-trip cost %, and max fillable capacityUsd. transport/decode failures return HTTP 503 with no depth verdict.",
           inputSchema: {
             type: "object",
-            required: ["tokenAddress"],
+            required: ["chainId", "tokenAddress"],
             properties: {
               chainId,
               tokenAddress: { type: "string", minLength: 1, description: "ERC-20 token address or known symbol." },

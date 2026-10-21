@@ -72,7 +72,7 @@
           <div class="vcard-body">
             <div class="vrow"><span class="pair">preflight_gate</span><span class="verdict">free</span><span class="meta">before the signature</span></div>
             <div class="vrow"><span class="pair">verify_arbitrage</span><span class="verdict">$0.05</span><span class="meta">is it real?</span></div>
-            <div class="vrow"><span class="pair">check_token_safety</span><span class="verdict">$0.10</span><span class="meta">honeypot probe</span></div>
+            <div class="vrow"><span class="pair">check_token_safety</span><span class="verdict">$0.10</span><span class="meta">quote-based sellability</span></div>
             <div class="vrow"><span class="pair">get_best_route</span><span class="verdict">$0.03</span><span class="meta">what the chain pays</span></div>
             <div class="vrow"><span class="pair">verify_quote_fairness</span><span class="verdict">$0.05</span><span class="meta">is the quote honest?</span></div>
             <div class="vrow"><span class="pair">get_trade_depth</span><span class="verdict">$0.05</span><span class="meta">how big can I trade?</span></div>
@@ -97,7 +97,7 @@
           <tbody>
             <tr><td class="mono">preflight_gate</td><td class="mono">free</td><td>Should I sign this payment or transaction?</td><td>PASS / CAUTION / BLOCK, typed reasons, <code class="inline">checked</code> / <code class="inline">notChecked</code>, and a short-lived receipt</td></tr>
             <tr><td class="mono">verify_arbitrage</td><td class="mono">$0.05</td><td>Is this cross-venue arbitrage real, right now?</td><td>Verdict + evidence + <code class="inline">no_edge</code> when there is none</td></tr>
-            <tr><td class="mono">check_token_safety</td><td class="mono">$0.10</td><td>Is this token safe to buy?</td><td>TRUST / CAUTION / AVOID, live contract facts, liquidity, a sell probe</td></tr>
+            <tr><td class="mono">check_token_safety</td><td class="mono">$0.10</td><td>Can this token be sold on the configured venues?</td><td>TRUST / CAUTION / AVOID, live contract facts, liquidity, a quote-based sellability check</td></tr>
             <tr><td class="mono">get_best_route</td><td class="mono">$0.03</td><td>What would the chain actually pay?</td><td>Every quoted venue at one pinned block, best first</td></tr>
             <tr><td class="mono">verify_quote_fairness</td><td class="mono">$0.05</td><td>Is this quote someone gave me honest?</td><td>fair / overpaying / too_good_to_be_true, with the chain book</td></tr>
             <tr><td class="mono">get_trade_depth</td><td class="mono">$0.05</td><td>How big can I trade before the round trip eats me?</td><td>Per-size impact, round-trip cost, and the largest size under your tolerance</td></tr>

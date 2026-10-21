@@ -138,26 +138,31 @@ const DESCRIPTIONS = {
     "the checks that did not, and a short-lived receipt bound to the exact intent + block. " +
     "If sign_allowed is false, DO NOT SIGN. If requires_ack is true, surface the reasons to the " +
     "operator before signing. The receipt expires (default 90s): call again rather than reuse it. " +
-    "Free. Pass `from` (the wallet that will sign) to enable simulation and balance checks.",
+    "Free. Pass `from` (the wallet that will sign) to enable simulation and balance checks. For " +
+    "kind=transaction, chainId is REQUIRED (400 missing_chain without it). For payment intents " +
+    "with no `from` or no proof, the response is PASS with structural_only:true and names what was not checked.",
   verify_arbitrage:
     "Ask verify402 whether a cross-venue arbitrage opportunity is REAL, right now. " +
     "Quotes come from Uniswap's canonical QuoterV2 and each DEX router at one pinned block. " +
     "The honest answer is usually 'no_edge' - that IS the product. Costs $0.05 per call.",
   check_token_safety:
-    "Ask verify402 whether a token is safe to buy BEFORE the agent risks capital. " +
+    "Ask verify402 for a quote-based sellability check on a token BEFORE the agent risks capital. " +
     "Returns TRUST/CAUTION/AVOID with evidence: live contract facts, market liquidity, " +
-    "a USD-sized sell probe against every venue (honeypot test), round-trip cost at your " +
-    "intended size, and phantom-price detection. Costs $0.10 per call.",
+    "a USD-sized sell QUOTED through the configured venues' own routers (direct and WETH-routed), " +
+    "round-trip cost at your intended size, and phantom-price detection. It does NOT execute or " +
+    "simulate a transfer: transfer tax, blacklist, pause, and max-tx restrictions are listed in " +
+    "notChecked, not tested. Unconfigured venues are also named in notChecked. Costs $0.10 per call.",
   get_best_route:
-    "Ask verify402 what the chain would ACTUALLY pay for a swap: the full execution book " +
-    "(every venue, direct and WETH-routed) at one pinned block, best first. Costs $0.03 per call.",
+    "Ask verify402 what the chain would ACTUALLY pay for a swap: the full book from every " +
+    "configured venue (direct and WETH-routed) at one pinned block, best first. Aggregators and " +
+    "unconfigured DEXs are not included. Costs $0.03 per call.",
   verify_quote_fairness:
     "Audit a swap quote someone else gave you (aggregator, broker, bot) BEFORE signing. " +
-    "Returns fair / overpaying / too_good_to_be_true with the full chain book as evidence. " +
+    "Returns fair / overpaying / too_good_to_be_true with the configured-venue book as evidence. " +
     "Ask this before accepting ANY number you did not produce yourself. Costs $0.05 per call.",
   get_trade_depth:
     "Position sizing: measure how much of a token the chain ACTUALLY lets you trade - " +
-    "entry and exit across every venue at a ladder of USD sizes, per-size impact and " +
+    "entry and exit across every configured venue at a ladder of USD sizes, per-size impact and " +
     "round-trip cost, plus the largest size under your cost tolerance. Ask BEFORE choosing " +
     "a position size. Costs $0.05 per call.",
 };
@@ -248,13 +253,13 @@ async function main() {
     DESCRIPTIONS.verify_arbitrage,
     {
       target: z.string().describe('Token to buy and sell back, e.g. "WETH"'),
-      chainId: z.number().optional().describe("1 Ethereum, 42161 Arbitrum, 8453 Base (default 1)"),
+      chainId: z.number().int().describe("REQUIRED. 1 Ethereum, 42161 Arbitrum, 8453 Base. There is no default; omitting it returns 400 missing_chain."),
       base: z.string().optional().describe('Token to trade from, e.g. "USDC" (default USDC)'),
       size: z.number().optional().describe("Trade size in whole base units, e.g. 100000 (default 100000)"),
     },
     async (args) => {
       const res = await guardedPaidCall("/verify", () => paidApi.post("/verify", {
-        chainId: args.chainId ?? 1,
+        chainId: args.chainId,
         target: String(args.target ?? "WETH").toUpperCase(),
         base: String(args.base ?? "USDC").toUpperCase(),
         size: args.size ?? 100000,
@@ -268,13 +273,13 @@ async function main() {
     DESCRIPTIONS.check_token_safety,
     {
       tokenAddress: z.string().describe("ERC-20 contract address, or a known symbol like WETH"),
-      chainId: z.number().optional().describe("1 Ethereum, 42161 Arbitrum, 8453 Base (default 1)"),
+      chainId: z.number().int().describe("REQUIRED. 1 Ethereum, 42161 Arbitrum, 8453 Base. There is no default; omitting it returns 400 missing_chain."),
       intendedUsd: z.number().optional().describe("Size the agent plans to buy, in USD (default 500)"),
       offeredPriceUsd: z.number().optional().describe("Optional price per token someone offered you"),
     },
     async (args) => {
       const res = await guardedPaidCall("/safety", () => paidApi.post("/safety", {
-        chainId: args.chainId ?? 1,
+        chainId: args.chainId,
         tokenAddress: String(args.tokenAddress ?? "").trim(),
         intendedUsd: args.intendedUsd ?? 500,
         offeredPriceUsd: args.offeredPriceUsd ?? null,
@@ -290,11 +295,11 @@ async function main() {
       tokenIn: z.string().describe("Token symbol (e.g. USDC) or 0x address"),
       tokenOut: z.string().describe("Token symbol (e.g. WETH) or 0x address"),
       amountIn: z.string().describe("RAW base units of tokenIn, wei-scale, as a string"),
-      chainId: z.number().optional().describe("1 Ethereum, 42161 Arbitrum, 8453 Base (default 1)"),
+      chainId: z.number().int().describe("REQUIRED. 1 Ethereum, 42161 Arbitrum, 8453 Base. There is no default; omitting it returns 400 missing_chain."),
     },
     async (args) => {
       const res = await guardedPaidCall("/route", () => paidApi.post("/route", {
-        chainId: args.chainId ?? 1,
+        chainId: args.chainId,
         tokenIn: args.tokenIn,
         tokenOut: args.tokenOut,
         amountIn: args.amountIn,
@@ -312,11 +317,11 @@ async function main() {
       amountIn: z.string().describe("RAW units of tokenIn, as in the offer"),
       quotedOut: z.string().describe("RAW units of tokenOut you were OFFERED"),
       venueClaimed: z.string().optional().describe("Optional: who gave you the offer"),
-      chainId: z.number().optional().describe("1 Ethereum, 42161 Arbitrum, 8453 Base (default 1)"),
+      chainId: z.number().int().describe("REQUIRED. 1 Ethereum, 42161 Arbitrum, 8453 Base. There is no default; omitting it returns 400 missing_chain."),
     },
     async (args) => {
       const res = await guardedPaidCall("/quotecheck", () => paidApi.post("/quotecheck", {
-        chainId: args.chainId ?? 1,
+        chainId: args.chainId,
         tokenIn: args.tokenIn,
         tokenOut: args.tokenOut,
         amountIn: args.amountIn,
@@ -332,14 +337,14 @@ async function main() {
     DESCRIPTIONS.get_trade_depth,
     {
       tokenAddress: z.string().describe("Token you plan to buy (symbol or 0x address)"),
-      chainId: z.number().optional().describe("1 Ethereum, 42161 Arbitrum, 8453 Base (default 1)"),
+      chainId: z.number().int().describe("REQUIRED. 1 Ethereum, 42161 Arbitrum, 8453 Base. There is no default; omitting it returns 400 missing_chain."),
       baseSymbol: z.string().optional().describe("What you pay with (default USDC)"),
       sizesUsd: z.array(z.number()).optional().describe("Ladder of sizes in USD, max 6 (default 100, 1000, 10000, 100000)"),
       maxRoundTripPct: z.number().optional().describe("Your round-trip cost tolerance, default 1%"),
     },
     async (args) => {
       const res = await guardedPaidCall("/depth", () => paidApi.post("/depth", {
-        chainId: args.chainId ?? 1,
+        chainId: args.chainId,
         tokenAddress: args.tokenAddress,
         baseSymbol: args.baseSymbol ?? "USDC",
         sizesUsd: args.sizesUsd ?? null,

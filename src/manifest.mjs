@@ -114,13 +114,13 @@ export function buildServiceManifest({
             name: "check_token_safety",
             type: "paid",
             priceUsd: numPrice(prices.safety),
-            description: "Pre-trade token gate: TRUST/CAUTION/AVOID with contract facts, liquidity analysis, and USD-sized sell probe.",
+            description: "Pre-trade token gate: TRUST/CAUTION/AVOID with contract facts, liquidity analysis, and a quote-based sellability check. Does not execute a transfer; transfer restrictions are listed in notChecked.",
           },
           {
             name: "get_best_route",
             type: "paid",
             priceUsd: numPrice(prices.route),
-            description: "Execution book quoting pair across venues at one pinned block, best first.",
+            description: "Execution book quoting the pair across every configured venue at one pinned block, best first. Aggregators and unconfigured DEXs are excluded.",
           },
           {
             name: "verify_quote_fairness",
@@ -194,6 +194,7 @@ export function buildServiceManifest({
       { route: "/preflight", method: "POST", summary: "Free pre-signing PASS/CAUTION/BLOCK gate with HMAC receipt" },
       { route: "/preflight/verify", method: "POST", summary: "Validate HMAC receipt authenticity and expiration" },
       { route: "/health", method: "GET", summary: "Liveness and network mode check" },
+      { route: "/ready", method: "GET", summary: "Deep readiness: latest block read with a 3s timeout" },
       { route: "/info", method: "GET", summary: "Machine-readable capabilities and pricing" },
       { route: "/findings", method: "GET", summary: "Recent verifiable market observations" },
       { route: "/openapi.json", method: "GET", summary: "OpenAPI 3.1 contract" },
@@ -205,13 +206,23 @@ export function buildServiceManifest({
     ],
     operationalPolicies: {
       rateLimits: {
-        preflight: "60 requests/minute per IP, max concurrency 5",
+        preflight: "60 requests/minute per IP, max concurrency 8",
         paidEndpoints: "Guarded by x402 payment requirements",
       },
       idempotency: {
         header: "x-idempotency-key",
-        description: "Replays settled verdicts at zero cost within 300s window (max 3 replays). Content-hashed.",
+        description: "Replays a settled verdict at zero cost within a 600s window (max 3 replays). The key is the only credential: no payer identity is read from x-payment or payment-signature, and there is no content-hash companion alias. The key is bound to the canonical request body.",
         conflictStatus: 409,
+      },
+      requestValidation: {
+        chainId: "Required on every paid route and every transaction preflight. Missing => 400 missing_chain; wrong type => 400 invalid_chain; unsupported => 400 unsupported_chain. No silent default.",
+        honesty: "Every 200 and typed failure on a paid route includes non-empty checked[] and notChecked[].",
+      },
+      errors: {
+        publicCodes: ["bad_request", "missing_chain", "invalid_chain", "unsupported_chain", "rate_limited", "busy", "rpc_unavailable", "rpc_rate_limited", "internal_error"],
+        requestId: "Every error response carries requestId and x-request-id; the server log uses the same id.",
+        noProviderDetail: "Provider messages, RPC URLs, and API keys are never returned to callers.",
+        settlementOnFailure: "x402 settlement is cancelled for any response >=400, so a 503 is not charged.",
       },
       receipts: {
         type: "HMAC-SHA256",
@@ -224,7 +235,7 @@ export function buildServiceManifest({
       signingAuthority: "Client-side only. Verify402 never holds private keys, executes transactions, or initiates token transfers.",
       disclaimers: {
         verdictPass: "PASS indicates only that verified checks passed at the specified pinned block. It is not a counterparty audit or prompt-injection filter. Consult notChecked list.",
-        verdictTrust: "TRUST indicates contract passed heuristic checks, liquidity thresholds, and sell probe. Does not guarantee safety.",
+        verdictTrust: "TRUST indicates the contract facts, liquidity thresholds, and quote-based sellability check passed. It is not a transfer test or a safety guarantee; see notChecked.",
         noEdge: "Negative arbitrage outcome is the expected truthful result on liquid markets.",
         financialAdvice: "None of the output constitutes financial, trading, or investment advice.",
       },

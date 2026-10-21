@@ -37,8 +37,8 @@ curl -sS -X POST https://verify402.onrender.com/preflight \
 Returns `PASS` / `CAUTION` / `BLOCK`, typed reasons, exact `checked` and `notChecked` lists, pinned block number, and a verifiable 90-second HMAC receipt.
 
 A `PASS` means the listed checks passed at that block. It does **not** mean the
-transaction is safe, cannot drain funds, or that the token is not a honeypot.
-Read `notChecked` in the response.
+transaction is safe or cannot drain funds, and the paid token check is a
+quote-based sellability check, not a honeypot proof. Read `notChecked` in the response.
 
 ---
 
@@ -51,7 +51,7 @@ It works with **Claude Desktop**, **Cursor**, **Windsurf**, **Cline**, **OpenCod
 ### Step 1: Add the MCP Server to Your Agent
 
 #### Option A: Free Mode (Zero Config, No Wallet, No Key)
-Gives your AI agent the free **`preflight_gate`** tool. It checks payment challenges, token approvals, payee/amount, and transaction calldata at a fresh block before signing. Honeypot/sellability evidence is the paid `check_token_safety` check, not a free-gate guarantee.
+Gives your AI agent the free **`preflight_gate`** tool. It checks payment challenges, token approvals, payee/amount, and transaction calldata at a fresh block before signing. The paid `check_token_safety` check adds a quote-based sellability check; it does not execute a transfer and is not a honeypot guarantee.
 
 Paste this into your client config file:
 - **Claude Desktop**: `~/Library/Application Support/Claude/claude_desktop_config.json` (Mac) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows)
@@ -317,26 +317,36 @@ Response (abridged):
 ```json
 {
   "verdict": "TRUST",
-  "checked": ["contract", "market", "sellability", "liquidity"],
-  "notes": ["sellable via uni-v3-0.3% via hop, uniswap-v2 via hop, ...",
+  "quote_status": "ok",
+  "checked": ["contract", "market", "quote-based sellability", "liquidity"],
+  "notChecked": ["actual token transfer or sell execution", "transfer tax / fee-on-transfer",
+                 "blacklist / pause / max-tx restrictions", "venues not in config"],
+  "notes": ["quoteable sell via uni-v3-0.3% via hop, uniswap-v2 via hop, ...",
             "round trip in and out of $500 costs 1.42%"],
   "evidence": { "contract": {...}, "market": {...},
-                "sellability": { "canSell": true, "probedInUsd": 25 },
+                "sellability": { "canSell": true, "probedInUsd": 25,
+                                 "caveat": "quote-based only: a quote does not prove a transfer will succeed" },
                 "liquidity": { "roundTripCostPct": 1.42 } },
   "elapsedMs": 1434
 }
 ```
 
 `verdict` is one of:
-- `AVOID` — positively dangerous: cannot be exited at a realistic size, or the
-  contract is not a token at all
+- `AVOID` — positively dangerous: no configured venue can quote an exit at a
+  realistic size, or the contract is not a token at all
 - `CAUTION` — tradable, but with a stated cost or problem (thin pool,
   manufactured price, expensive round trip)
-- `TRUST` — every check passed; still not a promise of profit, only a record
-  that nothing measured was wrong
+- `TRUST` — every check that ran passed; still not a promise of profit, only a
+  record that nothing measured was wrong
+
+This is a **quote-based sellability check**. It asks the configured venues'
+own routers for a price; it does not execute or simulate a transfer, so
+transfer tax, blacklist, pause, and max-transaction restrictions are listed in
+`notChecked`, not silently assumed away. Venues that are not configured on the
+chain are also named in `notChecked`.
 
 Probes are USD-sized on purpose: an earlier version probed "half a token" and
-flagged SHIB — a $1B token — as a honeypot, because half a SHIB is dust no pool
+flagged SHIB — a $1B token — as unexitable, because half a SHIB is dust no pool
 can quote. The test suite and live calls caught that before it launched; every
 future verdict change must be explainable, not silent.
 
@@ -379,9 +389,8 @@ or any MCP client.
   arrives together with the payment confirmation (testnet receipt: tx
   `0x11121007bafec47f132763f42e2f58af6ebba7fba9c7ed1b5980d3f595a9324a`).
 - **Recovery — implemented (`x-idempotency-key`):** send the header on the FIRST call of an
-  operation, minting ONE key per operation (not per retry — though with double-keying even
-  fresh ids per retry are protected, see below). If the response is lost after settlement,
-  retrying returns the SAME verdict without requiring payment again, under two locks:
+  operation, minting ONE key per operation. If the response is lost after settlement,
+  retrying with the same key returns the SAME verdict without requiring payment again:
   10 minutes (max 3 replays). Caveats stated plainly: the key is the caller's secret
   (whoever presents it replays for free), the window is short by design so the 402 paywall
   stays intact, and replayed responses carry `recovery: { replayed: true, responseHash, replays }`.
@@ -393,31 +402,29 @@ or any MCP client.
     of the served bytes is an additional check. **Equal output does not identify an
     operation** — two requests that both resolve to `{"verdict":"no_match"}` are still
     distinct, and settling one never promotes the other. A failed, aborted or pending
-    settlement promotes nothing. The replay cap (3) is per operation, shared between the
-    caller key and the content-hash companion key — two aliases are ONE budget, not two.
-  - **Key/scope conflicts (rejected before payment or replay):** a key is bound to one
-    operation — its canonical request content plus, when the rail exposes it
-    (`payload.authorization.from`), the payer's scope. Presenting the same key with
-    **changed request content** or from a **different payer** returns `409 recovery_conflict`
-    (`conflict: "request_mismatch" | "scope_mismatch"`) *before* the paywall — never the
-    other operation's verdict, never a charge.
-  - **Double-keying:** the verdict is recorded under the caller's key *and* an implicit key
-    derived from the canonical request content. A caller that mints a fresh id on each retry
-    still replays free under the content hash. Two distinct asks that canonicalise identically
-    are the same question — sharing one verdict inside the window is determinism, not a bug.
-    The companion is a **same-caller** recovery alias, not a public cache: a companion hit is
-    only returned to a caller whose declared scope matches the scope recorded at staging.
-    Equal content alone is never permission to see another account's result.
+    settlement promotes nothing. The replay cap (3) is per operation, bound to the key.
+  - **The key is the only credential.** The service does **not** derive a payer identity
+    from `x-payment`, `payment-signature`, or `payload.authorization.from`; those headers are
+    unverified at the recovery layer. The facilitator-confirmed payer is stored as
+    `verified_payer` for audit only. A forged `authorization.from` cannot replay anything.
+  - **No companion alias.** An earlier design also recorded a verdict under a hash of the
+    canonical request content. That made a settled verdict readable by anyone who could
+    reproduce the body, so it was removed. A secret token returned only in the original
+    response cannot help a lost-response retry; the original key is the only secret that
+    survives, so it is the only one accepted. Reusing a key with **changed request content**
+    returns `409 recovery_conflict` (`conflict: "request_mismatch"`) *before* the paywall —
+    never the other operation's verdict, never a charge.
   - **After the window (typed, not silent):** expired verdicts leave a tombstone carrying the
     previous `responseHash` for 6 hours. A retry within the tombstone window re-measures with
     the paywall re-armed (there is no free measure after the window — anything else would be a
     loophole), but the response carries `recovery: { remeasured: true, previousResponseHash,
     expiredAt }`, so the calling agent can branch on "this operation was charged before and
     could not be replayed" instead of guessing.
-  - **Conformance controls:** `test/recovery.test.mjs` includes the review-requested controls
-    — two staged operations with byte-identical output do not cross-promote; promotion is
-    refused on failed/pending settle, a missing/empty transaction, or a missing `operationId`;
-    same key + changed content or scope is a conflict; a companion requires a matching scope.
+  - **Regression controls:** `test/recovery.test.mjs` covers forged `authorization.from`,
+    a different key with a known body, the victim's replay budget under forged traffic, and
+    legitimate replay. Two staged operations with byte-identical output do not cross-promote;
+    promotion is refused on failed/pending settle, a missing/empty transaction, or a missing
+    `operationId`.
 - **Evidence bundle — implemented (`verify402/evidence-bundle@1`):** every paid response
   carries `evidence_bundle: { requestHash, responseHash, pinnedBlock, mode, createdAt,
   payment.in }`. Both hashes are sha256 over canonical JSON (keys sorted recursively, no
@@ -429,6 +436,27 @@ or any MCP client.
   `MAX_DAILY_USD` (optional, `mcp-bridge/budget.mjs`) caps the whole UTC day across
   restarts via a local ledger. Attempted charges are counted before the payment is built —
   a spending guard should over-count, never under-count.
+
+## Errors, honesty, chainId, and readiness
+
+- **Honesty contract:** every `200` and every typed failure on `/verify`, `/safety`,
+  `/route`, `/quotecheck`, and `/depth` includes non-empty `checked[]` and
+  `notChecked[]`. `notChecked` names the real limits (unconfigured venues, transfer
+  restrictions, execution, MEV) rather than implying coverage that doesn't exist.
+- **Typed quote outcomes:** `quote_status` is `ok | partial | no_pool | failed`.
+  `transport` and `decode` failures return `ok:false` with HTTP `503` and never
+  become `AVOID`, `no_edge`, `unknown`, or `illiquid`. Only a genuine `no_pool` or
+  venue `revert` may make a leg unavailable.
+- **No settlement on failure:** the installed `@x402/express` middleware cancels
+  settlement for any response `>= 400`. A `503` (transport/decode/RPC) is not charged.
+- **Errors never leak:** responses carry a stable public code (`bad_request`,
+  `rpc_unavailable`, `rpc_rate_limited`, `internal_error`, …) plus a `requestId`.
+  Provider messages, RPC URLs, and API keys stay in the server log under the same id.
+- **chainId is required:** every paid route and every transaction preflight requires an
+  integer `chainId`. Missing => `400 missing_chain`; wrong type => `400 invalid_chain`;
+  unsupported => `400 unsupported_chain`. There is no silent Ethereum default.
+- **Readiness:** `/health` is liveness; `/ready` is a deep check that reads the latest
+  block with a 3-second timeout.
 
 ## First paid call, in ten lines
 

@@ -145,10 +145,10 @@ Value: 0
 Before executing, invoke verify402's preflight_gate. If the verdict is BLOCK or CAUTION with critical warnings, stop and warn me.
 ```
 
-### Honeypot & Token Audit
+### Quote-Based Token Sellability
 ```text
 Evaluate token 0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE using check_token_safety.
-Check for buy/sell taxes, contract mint functions, and liquidity locks.
+Use the quote-based sellability check at a realistic size, report the round-trip cost, and list notChecked (transfer tax, blacklist, pause, max-tx, unconfigured venues). Do not call it a honeypot proof.
 ```
 
 ### Arbitrage Verification

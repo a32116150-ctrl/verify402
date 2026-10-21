@@ -70,7 +70,7 @@ import { declareDiscoveryExtension } from "@x402/extensions/bazaar";
 | Route | Price (USD) | Bazaar `inputSchema` Declared | Example Output Included |
 |---|---|---|---|
 | `POST /verify` | $0.05 | `chainId`, `target`, `base`, `size`, `minNet` | `no_edge` with QuoterV2 / V2 router quotes & costs |
-| `POST /safety` | $0.10 | `chainId`, `tokenAddress`, `intendedUsd`, `offeredPriceUsd`, `baseSymbol` | `TRUST` with sell probe evidence & venue list |
+| `POST /safety` | $0.10 | `chainId`, `tokenAddress`, `intendedUsd`, `offeredPriceUsd`, `baseSymbol` | `TRUST` with quote-based sellability evidence, venue list, and notChecked transfer restrictions |
 | `POST /route` | $0.03 | `chainId`, `tokenIn`, `tokenOut`, `amountIn` | Best route & full venue book |
 | `POST /quotecheck` | $0.05 | `chainId`, `tokenIn`, `tokenOut`, `amountIn`, `quotedOut`, `venueClaimed` | Audit verdict (`fair`) & comparison metrics |
 | `POST /depth` | $0.05 | `chainId`, `tokenAddress`, `baseSymbol`, `maxRoundTripPct`, `sizesUsd` | Capacity in USD & per-size ladder |

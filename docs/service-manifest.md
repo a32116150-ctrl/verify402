@@ -44,7 +44,7 @@ The `integrations.mcp` section details how to connect via MCP:
 - **Tools:**
   - `preflight_gate`: Free pre-signing gate for payment requests and raw transactions.
   - `verify_arbitrage`: Paid ($0.05) cross-venue arbitrage reality check.
-  - `check_token_safety`: Paid ($0.10) token gate with live contract facts and USD sell probe.
+  - `check_token_safety`: Paid ($0.10) token gate with live contract facts and a quote-based sellability check (not a transfer simulation).
   - `get_best_route`: Paid ($0.03) execution book across DEX venues at one pinned block.
   - `verify_quote_fairness`: Paid ($0.05) third-party quote auditor.
   - `get_trade_depth`: Paid ($0.05) trade capacity and position sizing ladder.
