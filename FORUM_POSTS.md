@@ -27,8 +27,11 @@ promises anywhere. The credibility IS the negative result.
 >   `no_edge` — that's the product.
 > - `check_token_safety` ($0.10): pre-trade gate before buying any token —
 >   TRUST/CAUTION/AVOID with evidence: live contract calls, a USD-sized sell
->   probe against every venue (honeypot test done by actually quoting the
->   exit), round-trip cost at the intended size, phantom-price detection.
+>   quote-based sellability check across the configured venues (it asks
+>   quoters for a price; it does not execute a transfer), round-trip cost
+>   at the intended size, phantom-price detection. It does not check
+>   unconfigured venues, transfer tax, blacklist, pause, or
+>   max-transaction restrictions.
 > - `get_best_route` ($0.03) / `verify_quote_fairness` ($0.05): what the
 >   chain actually pays for a swap, and whether a number someone *offered*
 >   the agent is honest (fair / overpaying / too_good_to_be_true).
@@ -61,8 +64,10 @@ promises anywhere. The credibility IS the negative result.
 > block quotes: Uniswap's canonical QuoterV2 for V3, each router's own
 > getAmountsOut for V2, flash-loan premium and gas netted. Safety verdicts
 > are a pre-trade gate: contract facts from the live chain, market liquidity
-> and sell-share, a USD-sized sell probe against every venue (honeypot means
-> "cannot be exited", so we ask the chain by quoting the exit — not a flag or
+> and sell-share, a quote-based sellability check across the configured
+> venues (it asks quoters for a price; it does not execute a transfer).
+> It does not check unconfigured venues, transfer tax, blacklist, pause,
+> or max-transaction restrictions.
 > a score), a round-trip cost at the agent's intended size, and phantom-price
 > detection vs chain consensus.
 >
@@ -95,8 +100,10 @@ promises anywhere. The credibility IS the negative result.
 
 2. > The more useful tool agents need before every swap:
    > check_token_safety. TRUST/CAUTION/AVOID + evidence: real contract
-   > facts, $25-sized sell probe across 10+ venues (honeypot = can't exit —
-   > quoted, not scored), round-trip cost, phantom-price check. $0.10.
+> facts, a quote-based sellability check across the configured venues
+> (quoted, not scored; it does not execute a transfer). It does not
+> check unconfigured venues, transfer tax, blacklist, pause, or
+> max-transaction restrictions.
 
 3. > Everything reproducible: /findings is free and always no_edge on ETH
    > majors — every number checkable against Uniswap's QuoterV2 and each
