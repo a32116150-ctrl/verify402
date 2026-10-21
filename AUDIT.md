@@ -40,26 +40,35 @@ Six C-1-named regression tests in `test/recovery.test.mjs` now define the contra
 
 The old companion-alias and payer-scope assertions were removed by design. There is no longer a content-hash companion read, and no payer scope derived from `x-payment`, `payment-signature`, or `authorization.from` is trusted: those inputs are attacker-controlled. The only replay credential is the caller's original idempotency key plus a matching request fingerprint. Promotion still requires an operationId and a facilitator-confirmed settlement; the verified payer is stored as `verified_payer` for audit only and cannot authorize a read.
 
-The idempotency key is therefore a **bearer secret**. Mitigation: Hotfix 2 item 1's entropy requirement for caller-supplied idempotency keys; a key must be a high-entropy value, never a guessable request-derived string. Until item 1 enforces that requirement, callers should generate the key from a CSPRNG and treat it like a password.
+The idempotency key is therefore a **bearer secret**. Hotfix 2 item 1 now enforces the entropy requirement for caller-supplied keys: a key must be a UUID v4 or a high-entropy URL-safe/hex value, never a guessable request-derived string. Callers should still generate it from a CSPRNG and treat it like a password.
 
 ### Still open
 
 These were outside the approved hotfix scope. They are not silently marked done.
 
+H-2, H-3, H-5, H-7, M-1, M-3, M-4, L-1, and L-2 are resolved in Hotfix 2 below.
+
 | ID | Why it remains open |
 |---|---|
-| H-2 | `/safety` still does not fully thread one pinned block through every probe. |
-| H-3 | `/depth` still relies on registry decimals (or 18) for tokens outside the registry. |
-| H-5 | The MCP bridge does not yet send idempotency keys or implement recovery. |
-| H-7 | The agent card still trusts the request Host header. |
 | H-8 | Receipt verification is not yet bound to the caller's local intent. |
-| M-1 | Input validation and precision hardening is only partial (chainId is now strict). |
 | M-2 | Preflight rate limiting is still per-process; concurrency is capped, not global. |
-| M-3 | Recovery and usage state remain process-local. |
-| M-4 | Public docs were corrected for C-3/H-1/H-4, but a full discovery/runtime drift audit remains. |
-| L-1 | `quoteV2` exact 1:1 output handling was not changed. |
-| L-2 | Security headers, CORS policy, and graceful shutdown were not added. |
 | L-3 | `/findings` remains a free chain read without its own rate limit. |
+
+### Hotfix 2 — resolved 2026-10-21
+
+| Item | Finding | Resolution | Commit |
+|---|---|---|---|
+| 1 | C-1 key entropy. | Idempotency keys are bearer credentials. UUID v4 or at least 32 URL-safe/hex characters with at least 16 distinct characters are accepted; weak keys return `400 weak_idempotency_key` with `crypto.randomUUID()` guidance. No key still means normal pay-per-call. Raw keys are never logged. The secrecy, replay, and leaked-key contract is in README, OpenAPI, the manifest, `/info`, `llms.txt`, and the site docs. | `b3aa5fc` |
+| 2 | x402 version drift and settlement guard. | Root and MCP x402 packages are pinned exactly to `2.28.0`. The source guard remains, and a real `paymentMiddleware` + `ExactEvmScheme` test with a fake facilitator proves a `>=400` response never calls `settle` while a `200` does. | `4b807d9` |
+| 3 | H-2 pinned block. | One block is pinned through `preTradeCheck`, `tokenFacts`, `sellabilityProbe`, `quoteAllVenues`, and both round-trip legs on `/safety`, `/verify`, `/route`, `/quotecheck`, and `/depth`. The measurement block is canonical in `evidence_bundle`; the pre-fetch cache key was aligned. Fake-client regression test added. | `7ffacdd` |
+| 4 | H-3 depth decimals. | `/depth` uses real token decimals from `tokenFacts` for `gotTokens`. `impliedPriceBase` is the primary field; `impliedPriceUsd` remains only as a deprecated alias for known USD-stable bases, otherwise `null`. Six- and eight-decimal tests added. | `c1d7715` |
+| 5 | H-5 MCP recovery. | Every MCP paid operation generates one high-entropy `x-idempotency-key`, retries lost responses/timeouts with the same key, surfaces `recovery.replayed`, and never auto-retries `402`/`409`. Tests cover 402, lost-response replay, and no double payment. The package `files` list now includes `paid-call.mjs`, and a packaging regression test covers local runtime imports. | `ceb4770`, `31ffade` |
+| 6 | H-7 Host-derived identity. | Public identity never derives from `Host`. `AGENT_URL` is required and validated in mainnet (startup fails without it); testnet/local uses `TRUSTED_HOSTS` plus a default allowlist and returns `400 untrusted_host` otherwise. Forged-Host test added. | `ea9c6f3` |
+| 7 | M-1 numeric validation. | Every paid numeric input is validated at the route boundary with explicit ranges, JSON numbers only, BigInt bps/ratios, uint256 raw limits, and one `badRequest` helper with stable codes. A table-driven malformed-input test exercises every paid route and asserts no 500s. | `29788b0` |
+| 8 | L-1 exact 1:1 quote. | `quoteV2` accepts a legitimate `out == amountIn` result. Only zero and structurally wrong decodes fail. A stable-swap 1:1 test proves the shape guard is still active. | `a1d1317` |
+| 9 | M-3 process-local state. | Recovery and `/usage` are documented as process-local and lost on restart in README, `docs/service-manifest.md`, `/info`, OpenAPI, the manifest, and `llms.txt`. Mainnet now refuses startup without `PREFLIGHT_SECRET`. `.env.example` lists every discovered server, registration, test, and MCP env var, including `PREFLIGHT_SECRET`, `ROUTE_PRICE`, `QUOTECHECK_PRICE`, `DEPTH_PRICE`, `CDP_API_KEY_ID`, `CDP_API_KEY_SECRET`, `AGENT_URL`, and `TEST_OFFLINE`, with placeholders only. | `7cb6405` |
+| 10 | M-4 discovery drift. | `src/contract.mjs`, recovery, and preflight now supply shared TTL, concurrency, price, health/readiness-shape, and banned-claim values. Tests compare OpenAPI, manifest, `/info`, and live runtime for idempotency TTL, preflight concurrency, health/ready shapes, prices, and banned claims. Docs no longer quote fixed test counts; they point at `npm run test:counts`. Fixed TTL 300/600, concurrency 5/8, health fields, 409 wording, responseHash description, stale “NOT YET” publishing status, `DEPLOY.md` 5/5, and stale test counts. Added `/ready` to OpenAPI. | `21c6fbd` |
+| 11 | L-2 hygiene. | Every response sets `X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options`, and a static-site CSP; `x-powered-by` is disabled. Free read-only discovery GET/HEAD/OPTIONS allows any origin; paid routes and `/preflight` emit no wildcard. `SIGTERM`/`SIGINT` stop new connections, drain in-flight requests up to `SHUTDOWN_TIMEOUT_MS`, then exit 0, or force-close and exit 1 on timeout. Header/CORS and drain/timeout tests added. | `ca673fd` |
 
 ### Addendum — logging, offline mode, audit consistency
 
@@ -67,48 +76,19 @@ These were outside the approved hotfix scope. They are not silently marked done.
 |---|---|---|
 | A | Central log redaction for URLs, credentials, headers, API keys, and idempotency keys; raw viem/`HttpRequestError` and stacks are formatted through it. `DEPLOY_CHECKLIST.md` records the rotation gate. | `74d579c` |
 | B | `TEST_OFFLINE=1` uses one closed endpoint with no public fallback. `npm run test:offline` skips RPC-required tests; `npm run test:rpc` runs only those. Per-test classification lives in `test/rpc-manifest.json`; `npm run test:counts` derives counts from the sources. `quotecheck` no longer has a top-level RPC rejection. | `c952178` |
-| C | This section plus the current counts; section 2 is marked as the `4a8fb1c` historical baseline; the C-1 regression record is above. | this commit |
+| C | This section; section 2 is marked as the `4a8fb1c` historical baseline; the C-1 regression record is above. | `d55c1a2` |
 
 ### Verification counts
 
-Current counts are generated from the test sources and `test/rpc-manifest.json`; run:
+Counts are not maintained by hand. Run:
 
 ```bash
 npm run test:counts
 ```
 
-Result on 2026-10-21:
+That script derives per-file totals from the `check(...)` / `test(...)` declarations and the RPC subset from `test/rpc-manifest.json`. For the Hotfix 2 completion run, `npm test`, `npm run test:offline`, and `npm run test:counts` all exited 0. The raw summary lines are in the completion report; no fixed count is quoted here, so this section cannot go stale.
 
-| File | Tests | Offline | RPC-required |
-|---|---:|---:|---:|
-| `test/recovery.test.mjs` | 26 | 26 | 0 |
-| `test/measure-typed.test.mjs` | 10 | 10 | 0 |
-| `test/safety.test.mjs` | 7 | 7 | 0 |
-| `test/honesty.test.mjs` | 6 | 6 | 0 |
-| `test/preflight.test.mjs` | 33 | 33 | 0 |
-| `test/preflight-guard.test.mjs` | 8 | 8 | 0 |
-| `test/usage.test.mjs` | 13 | 13 | 0 |
-| `mcp-bridge/test/payment-policy.test.mjs` | 12 | 12 | 0 |
-| `test/http.test.mjs` | 14 | 14 | 0 |
-| `test/claims.test.mjs` | 6 | 6 | 0 |
-| `test/log-redaction.test.mjs` | 5 | 5 | 0 |
-| `test/offline-mode.test.mjs` | 1 | 1 | 0 |
-| `test/measure.test.mjs` | 5 | 0 | 5 |
-| `test/quotecheck.test.mjs` | 6 | 2 | 4 |
-| `test/depth.test.mjs` | 5 | 2 | 3 |
-| `test/discovery.test.mjs` | 5 | 5 | 0 |
-| **Total** | **162** | **150** | **12** |
-
-The two `depth` checks that reject invalid input before chain access, and the two `quotecheck` checks that reject an echo/zero offer before chain access, are offline. The remaining twelve tests require a mainnet RPC.
-
-`npm test` result:
-
-- **Offline phase:** 145 passed, 12 skipped (the RPC-required tests).
-- **RPC phase:** 12 passed, 4 skipped (the offline tests in the RPC files, already run in the offline phase).
-- **Discovery:** 5 passed.
-- **Discovery validation:** 33 metadata checks, 0 failed.
-- **Unique tests:** 162 passed, 0 failed. The 16 skip lines are mode exclusions, not failures or missing coverage.
-- **Offline safety:** `TEST_OFFLINE=1` forces a single closed endpoint with no public fallback; `test/offline-mode.test.mjs` pins that behavior.
+`npm test` runs the offline suite, the RPC-required suite, discovery tests, and `scripts/check-discovery.mjs`. `TEST_OFFLINE=1` still forces one closed endpoint with no public fallback.
 
 ### Public-facing text changed
 
@@ -122,7 +102,8 @@ The two `depth` checks that reject invalid input before chain access, and the tw
 
 ### Operational docs changed
 
-- `DEPLOY_CHECKLIST.md` (new): rotate any RPC key that may have appeared in old logs; verify `scheme://host/***`, `[REDACTED]`, and `idem:<8 hex>` in new logs; do not serve paid traffic if a full URL or key appears.
+- `DEPLOY_CHECKLIST.md`: paid always-on testnet/mainnet environment, pre-deploy gates, `npm run smoke` checks (including one paid testnet call), log checks, and a rollback plan. No deploy was performed.
+- `CHANGELOG.md`: Hotfix 2 entry and the recommendation to patch-bump `verify402-mcp` to `1.0.4` when publication is approved. Nothing was published.
 
 ---
 
@@ -139,7 +120,7 @@ The current paid product is narrower than its strongest marketing language, and 
 4. A transaction preflight with no `chainId` silently checks Ethereum (`chainId = 1`) instead of refusing or asking.
 5. The paid routes do not carry the same `checked` / `notChecked` honesty contract as `/preflight`, and some published claims (`every venue`, `honeypot test`, `pinned block`) are stronger than the implementation.
 
-**Test status:** `npm test` passed **137 / 137** on this commit. Sixteen of those checks require a mainnet RPC; 121 are offline/deterministic. The details and the exact split are in §2.
+**Test status (historical baseline at `4a8fb1c`):** the Phase 0 suite passed at that commit. Do not quote its count as current; run `npm run test:counts` for the source-derived split. The baseline table is preserved in §2 and marked historical.
 
 **Recommendation:** keep the free gate as the headline. Do not expand paid claims, pricing, or “trust layer” positioning until the critical findings in §6 are fixed and regression-tested. Phase 1 should start with correctness and failure classification, not new surface area.
 

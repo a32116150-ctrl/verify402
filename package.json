@@ -12,6 +12,7 @@
     "test:rpc": "TEST_RPC_ONLY=1 node test/measure.test.mjs && TEST_RPC_ONLY=1 node test/quotecheck.test.mjs && TEST_RPC_ONLY=1 node test/depth.test.mjs",
     "test:counts": "node scripts/test-counts.mjs",
     "check:discovery": "node scripts/check-discovery.mjs",
+    "smoke": "node scripts/smoke.mjs",
     "register": "node scripts/register-agent.mjs"
   },
   "dependencies": {
