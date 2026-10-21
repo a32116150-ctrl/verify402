@@ -141,5 +141,19 @@ await check("non-USD base: impliedPriceBase is present, impliedPriceUsd is null"
   assert.equal(rung.impliedPriceUsd, null, "the USD alias must not be claimed for a WETH base");
 });
 
+await check("round-trip tolerance is normalized to integer basis points", async () => {
+  const r = await depthProfile(1, {
+    tokenAddress: TARGET,
+    baseSymbol: "USDC",
+    sizesUsd: [100],
+    maxRoundTripPct: 2.5,
+  }, { clientFactory: () => makeClient(8), dexscreenerPair: async () => null });
+  assert.equal(r.ok, true, r.error);
+  assert.equal(r.maxRoundTripPct, 2.5);
+  assert.equal(r.maxRoundTripBps, "250");
+  assert.equal(Number.isInteger(r.ladder[0].roundTripCostBps), true);
+  assert.equal(r.ladder[0].underTolerance, r.ladder[0].roundTripCostBps <= 250);
+});
+
 console.log(`\ndepth-decimals: ${passed} passed, ${failed} failed\n`);
 process.exit(failed > 0 ? 1 : 0);

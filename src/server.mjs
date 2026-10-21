@@ -277,6 +277,44 @@ function paidFail(req, res, status, code, message, { kind = null, log = null, ex
   });
 }
 
+// One boundary for caller mistakes. Every 400 on a paid route goes through
+// here, so the public shape and the stable code cannot drift route by route.
+function badRequest(req, res, code, message, extra = {}) {
+  return paidFail(req, res, 400, code, message, { extra });
+}
+
+// Numeric inputs are JSON numbers, not strings/booleans/arrays. An omitted
+// optional field may take a default; an explicit null or wrong type is a 400.
+function numberField(value, name, {
+  min = -Infinity,
+  max = Infinity,
+  exclusiveMin = false,
+  integer = false,
+  fallback = undefined,
+} = {}) {
+  const v = value === undefined ? fallback : value;
+  const finite = typeof v === "number" && Number.isFinite(v);
+  const inRange = finite && (exclusiveMin ? v > min : v >= min) && v <= max;
+  if (!finite || !inRange || (integer && !Number.isInteger(v))) {
+    const left = exclusiveMin ? `> ${min}` : `>= ${min}`;
+    const right = Number.isFinite(max) ? ` and <= ${max}` : "";
+    throw new HttpError(400, `invalid_${name}`, `${name} must be a JSON number ${left}${right}${integer ? " (integer)" : ""}`);
+  }
+  return v;
+}
+
+// Percent inputs are converted to integer basis points before any comparison.
+// The boundary stays a JSON number for the public API; downstream ratios are
+// BigInt, so a tolerance is never a lossy float.
+function percentToBps(value, name, { max = 100 } = {}) {
+  const pct = numberField(value, name, { min: 0, max, exclusiveMin: true });
+  const bps = BigInt(Math.round(pct * 100));
+  if (bps <= 0n || bps > BigInt(Math.round(max * 100))) {
+    throw new HttpError(400, `invalid_${name}`, `${name} must be a percentage in (0, ${max}] with at least 0.01% precision`);
+  }
+  return bps;
+}
+
 // Map a typed engine result to an HTTP failure. Only transport/decode are hard
 // failures; no_pool/revert are market facts and stay 200 with ok:false.
 function hardFailureResponse(req, res, result) {
@@ -295,6 +333,7 @@ function hardFailureResponse(req, res, result) {
 
 function paidCatch(req, res, e) {
   if (e instanceof HttpError) {
+    if (e.status === 400) return badRequest(req, res, e.code, e.message);
     return paidFail(req, res, e.status, e.code, e.message);
   }
   const c = classifyError(e);
@@ -1439,23 +1478,24 @@ app.post("/verify", async (req, res) => {
     const chainId = requireChainId(body);
     const base = String(body.base ?? "USDC").toUpperCase();
     const target = String(body.target ?? "").toUpperCase();
-    const size = Number(body.size ?? DEFAULT_SIZE);
-    const minNet = Number(body.minNet ?? 0);
 
-    if (!target) return paidFail(req, res, 400, "missing_target", 'target is required, e.g. {"target":"WETH"}');
+    if (!target) return badRequest(req, res, "missing_target", 'target is required, e.g. {"target":"WETH"}');
     const c = CHAINS[chainId];
     const baseTok = c.tokens[base];
     const targetTok = c.tokens[target];
-    if (!baseTok) return paidFail(req, res, 400, "unknown_base", `unknown base ${base}`, { extra: { known: Object.keys(c.tokens) } });
-    if (!targetTok) return paidFail(req, res, 400, "unknown_target", `unknown target ${target}`, { extra: { known: Object.keys(c.tokens) } });
+    if (!baseTok) return badRequest(req, res, "unknown_base", `unknown base ${base}`, { known: Object.keys(c.tokens) });
+    if (!targetTok) return badRequest(req, res, "unknown_target", `unknown target ${target}`, { known: Object.keys(c.tokens) });
 
     const maxWhole = Number.MAX_SAFE_INTEGER / 10 ** baseTok.decimals;
-    if (!Number.isFinite(size) || size <= 0 || size > maxWhole) {
-      return paidFail(req, res, 400, "invalid_size", `size must be a positive number <= ${maxWhole}`);
-    }
-    if (!Number.isFinite(minNet) || minNet < 0 || minNet > maxWhole) {
-      return paidFail(req, res, 400, "invalid_minNet", `minNet must be a non-negative number <= ${maxWhole}`);
-    }
+    const size = numberField(body.size, "size", {
+      min: 0, max: maxWhole, exclusiveMin: true, fallback: DEFAULT_SIZE,
+    });
+    const minNet = numberField(body.minNet, "minNet", {
+      min: 0, max: maxWhole, fallback: 0,
+    });
+    const raw = BigInt(Math.round(size * 10 ** baseTok.decimals));
+    if (raw <= 0n) return badRequest(req, res, "invalid_size", "size rounds to zero raw units; use a larger amount");
+    const minNetRaw = BigInt(Math.round(minNet * 10 ** baseTok.decimals));
 
     let blockNumber;
     try {
@@ -1469,12 +1509,11 @@ app.post("/verify", async (req, res) => {
       return emitPaid(req, res, { ...cache.get(key), cache: { hit: true, pinnedBlock: Number(blockNumber) }, elapsedMs: Date.now() - started });
     }
 
-    const raw = BigInt(Math.round(size * 10 ** baseTok.decimals));
     const result = await measureRoundTrip(chainId, {
       baseSymbol: base,
       targetSymbol: target,
       size: raw,
-      minNet: BigInt(Math.round(minNet * 10 ** baseTok.decimals)),
+      minNet: minNetRaw,
       blockNumber,
     });
 
@@ -1501,23 +1540,21 @@ app.post("/safety", async (req, res) => {
     const body = req.body || {};
     const chainId = requireChainId(body);
     const tokenAddress = String(body.tokenAddress ?? "").trim();
-    const intendedUsd = Number(body.intendedUsd ?? 500);
-    const offeredPriceUsd = body.offeredPriceUsd != null ? Number(body.offeredPriceUsd) : null;
     const baseSymbol = String(body.baseSymbol ?? "USDC").toUpperCase();
 
     if (!tokenAddress) {
-      return paidFail(req, res, 400, "missing_tokenAddress", 'tokenAddress is required, e.g. {"tokenAddress":"0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE"}');
+      return badRequest(req, res, "missing_tokenAddress", 'tokenAddress is required, e.g. {"tokenAddress":"0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE"}');
     }
     const c = CHAINS[chainId];
     const baseTok = c.tokens[baseSymbol];
-    if (!baseTok) return paidFail(req, res, 400, "unknown_base", `unknown base ${baseSymbol}`, { extra: { known: Object.keys(c.tokens) } });
+    if (!baseTok) return badRequest(req, res, "unknown_base", `unknown base ${baseSymbol}`, { known: Object.keys(c.tokens) });
     const maxWhole = Number.MAX_SAFE_INTEGER / 10 ** baseTok.decimals;
-    if (!Number.isFinite(intendedUsd) || intendedUsd <= 0 || intendedUsd > maxWhole) {
-      return paidFail(req, res, 400, "invalid_intendedUsd", `intendedUsd must be a positive number <= ${maxWhole}`);
-    }
-    if (offeredPriceUsd != null && (!Number.isFinite(offeredPriceUsd) || offeredPriceUsd < 0)) {
-      return paidFail(req, res, 400, "invalid_offeredPriceUsd", "offeredPriceUsd must be a non-negative number when supplied");
-    }
+    const intendedUsd = numberField(body.intendedUsd, "intendedUsd", {
+      min: 0, max: maxWhole, exclusiveMin: true, fallback: 500,
+    });
+    const offeredPriceUsd = body.offeredPriceUsd != null
+      ? numberField(body.offeredPriceUsd, "offeredPriceUsd", { min: 0, max: maxWhole })
+      : null;
 
     // Same (route, params, block) cache key: two agents asking about the same
     // token in the same block share one set of probes.
@@ -1547,7 +1584,7 @@ app.post("/safety", async (req, res) => {
 
     if (hardFailureResponse(req, res, result)) return;
     if (result?.ok === false && result.kind === "bad_request") {
-      return paidFail(req, res, 400, "bad_request", result.error || "invalid token or parameters");
+      return badRequest(req, res, "bad_request", result.error || "invalid token or parameters");
     }
 
     cachePut(key, result);
@@ -1579,17 +1616,15 @@ app.post("/route", async (req, res) => {
       addrOut = String(body.tokenOut ?? "").trim();
     }
     if (!/^0x[0-9a-fA-F]{40}$/.test(addrIn) || !/^0x[0-9a-fA-F]{40}$/.test(addrOut)) {
-      return paidFail(req, res, 400, "invalid_token", "tokenIn/tokenOut must be a known symbol or a 0x address");
+      return badRequest(req, res, "invalid_token", "tokenIn/tokenOut must be a known symbol or a 0x address");
     }
     if (addrIn.toLowerCase() === addrOut.toLowerCase()) {
-      return paidFail(req, res, 400, "same_token", "tokenIn and tokenOut must differ");
+      return badRequest(req, res, "same_token", "tokenIn and tokenOut must differ");
     }
     try {
-      if (String(body.amountIn ?? "").length > 100) throw new Error();
-      amountIn = BigInt(body.amountIn);
-      if (amountIn <= 0n) throw new Error();
-    } catch {
-      return paidFail(req, res, 400, "invalid_amountIn", "amountIn must be a positive integer string in RAW units of tokenIn");
+      amountIn = parseRawPositive(body.amountIn, "amountIn");
+    } catch (e) {
+      return badRequest(req, res, "invalid_amountIn", e.message);
     }
 
     const client = clientFor(chainId);
@@ -1641,19 +1676,19 @@ app.post("/quotecheck", async (req, res) => {
     const required = ["tokenIn", "tokenOut", "amountIn", "quotedOut"];
     const missing = required.filter((k) => body[k] === undefined || body[k] === null || body[k] === "");
     if (missing.length) {
-      return paidFail(req, res, 400, "missing_fields", `missing fields: ${missing.join(", ")}`);
+      return badRequest(req, res, "missing_fields", `missing fields: ${missing.join(", ")}`);
     }
     let amountIn;
     let quotedOut;
     try {
       amountIn = parseRawPositive(body.amountIn, "amountIn");
     } catch (e) {
-      return paidFail(req, res, 400, "invalid_amountIn", e.message);
+      return badRequest(req, res, "invalid_amountIn", e.message);
     }
     try {
       quotedOut = parseRawPositive(body.quotedOut, "quotedOut");
     } catch (e) {
-      return paidFail(req, res, 400, "invalid_quotedOut", e.message);
+      return badRequest(req, res, "invalid_quotedOut", e.message);
     }
 
     // Cache by offered number: two agents auditing the same offer in the same
@@ -1681,7 +1716,7 @@ app.post("/quotecheck", async (req, res) => {
 
     if (hardFailureResponse(req, res, result)) return;
     if (result?.ok === false && result.kind === "bad_request") {
-      return paidFail(req, res, 400, "bad_request", result.error || "invalid token or parameters");
+      return badRequest(req, res, "bad_request", result.error || "invalid token or parameters");
     }
 
     cachePut(key, result);
@@ -1698,20 +1733,23 @@ app.post("/depth", async (req, res) => {
     const body = req.body || {};
     const chainId = requireChainId(body);
     const token = String(body.tokenAddress ?? "").trim();
-    if (!token) return paidFail(req, res, 400, "missing_tokenAddress", 'tokenAddress is required, e.g. {"tokenAddress":"WETH"}');
+    if (!token) return badRequest(req, res, "missing_tokenAddress", 'tokenAddress is required, e.g. {"tokenAddress":"WETH"}');
     const baseSymbol = String(body.baseSymbol ?? "USDC").toUpperCase();
-    const maxRoundTripPct = body.maxRoundTripPct != null ? Number(body.maxRoundTripPct) : 1.0;
-    if (!Number.isFinite(maxRoundTripPct) || maxRoundTripPct <= 0 || maxRoundTripPct > 100) {
-      return paidFail(req, res, 400, "invalid_maxRoundTripPct", "maxRoundTripPct must be a number in (0, 100]");
-    }
+    const maxRoundTripBps = percentToBps(body.maxRoundTripPct ?? 1.0, "maxRoundTripPct", { max: 100 });
     let sizesUsd = null;
     if (body.sizesUsd != null) {
-      if (!Array.isArray(body.sizesUsd) || !body.sizesUsd.length) {
-        return paidFail(req, res, 400, "invalid_sizesUsd", "sizesUsd must be a non-empty array of positive numbers, each <= 1,000,000 USD");
+      if (!Array.isArray(body.sizesUsd) || !body.sizesUsd.length || body.sizesUsd.length > 20) {
+        return badRequest(req, res, "invalid_sizesUsd", "sizesUsd must be a non-empty array of at most 20 positive numbers, each <= 1,000,000 USD");
       }
-      sizesUsd = body.sizesUsd.map(Number);
-      if (sizesUsd.some((s) => !Number.isFinite(s) || s <= 0 || s > 1_000_000)) {
-        return paidFail(req, res, 400, "invalid_sizesUsd", "sizesUsd must contain only positive numbers, each <= 1,000,000 USD");
+      try {
+        sizesUsd = body.sizesUsd.map((value) => numberField(value, "sizesUsd", {
+          min: 0, max: 1_000_000, exclusiveMin: true,
+        }));
+      } catch (e) {
+        if (e instanceof HttpError && e.status === 400) {
+          return badRequest(req, res, "invalid_sizesUsd", "sizesUsd must contain only positive JSON numbers, each <= 1,000,000 USD");
+        }
+        throw e;
       }
     }
 
@@ -1721,15 +1759,21 @@ app.post("/depth", async (req, res) => {
     } catch (e) {
       return paidCatch(req, res, e);
     }
-    const key = `depth:${chainId}:${token.toLowerCase()}:${baseSymbol}:${JSON.stringify(sizesUsd)}:${maxRoundTripPct}:${blockNumber}`;
+    const key = `depth:${chainId}:${token.toLowerCase()}:${baseSymbol}:${JSON.stringify(sizesUsd)}:${maxRoundTripBps}:${blockNumber}`;
     if (cache.has(key)) {
       return emitPaid(req, res, { ...cache.get(key), cache: { hit: true, pinnedBlock: Number(blockNumber) }, elapsedMs: Date.now() - started });
     }
 
-    const result = await depthProfile(chainId, { tokenAddress: token, baseSymbol, sizesUsd, maxRoundTripPct, blockNumber });
+    const result = await depthProfile(chainId, {
+      tokenAddress: token,
+      baseSymbol,
+      sizesUsd,
+      maxRoundTripBps,
+      blockNumber,
+    });
     if (hardFailureResponse(req, res, result)) return;
     if (result?.ok === false && result.kind === "bad_request") {
-      return paidFail(req, res, 400, "bad_request", result.error || "invalid token or parameters");
+      return badRequest(req, res, "bad_request", result.error || "invalid token or parameters");
     }
 
     cachePut(key, result);

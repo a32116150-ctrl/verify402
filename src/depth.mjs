@@ -75,6 +75,7 @@ export async function depthProfile(chainId, {
   baseSymbol = "USDC",
   sizesUsd = null,   // ladder in USD of base
   maxRoundTripPct = DEFAULT_TOLERANCE_PCT,
+  maxRoundTripBps = null,
   blockNumber = null,
 } = {}, { clientFactory = clientFor, dexscreenerPair = realDexscreenerPair } = {}) {
   const started = Date.now();
@@ -101,6 +102,12 @@ export async function depthProfile(chainId, {
     };
   }
   const baseIsUsdStable = USD_STABLES.has(String(baseSymbol).toUpperCase());
+  // Percent comparisons happen in integer basis points; a float tolerance can
+  // flip a rung at the boundary (e.g. 0.9999999 vs 1.0).
+  const toleranceBps = maxRoundTripBps == null
+    ? BigInt(Math.round(maxRoundTripPct * 100))
+    : BigInt(maxRoundTripBps);
+  const tolerancePct = Number(toleranceBps) / 100;
 
   // One pinned block for token facts and every rung. A ladder assembled from
   // different blocks is not one measurement.
@@ -211,9 +218,8 @@ export async function depthProfile(chainId, {
     const effective = Number(got) / Number(sizeRaw);
     if (smallestEffective === null) smallestEffective = effective;
 
-    const entryHuman = Number(sizeRaw) / 10 ** base.decimals;
-    const exitHuman = Number(exitRaw) / 10 ** base.decimals;
-    const roundTripCostPct = ((entryHuman - exitHuman) / entryHuman) * 100;
+    const roundTripCostBps = ((sizeRaw - exitRaw) * 10_000n) / sizeRaw;
+    const roundTripCostPct = Number(roundTripCostBps) / 100;
     const impactPct = smallestEffective > 0 ? Math.max(0, (1 - effective / smallestEffective) * 100) : null;
 
     // gotTokens uses the token's OWN decimals() read at the pinned block, not
@@ -235,7 +241,8 @@ export async function depthProfile(chainId, {
       impliedPriceUsd: baseIsUsdStable ? impliedPriceBase : null,
       impactPct,
       roundTripCostPct,
-      underTolerance: roundTripCostPct <= maxRoundTripPct,
+      roundTripCostBps: Number(roundTripCostBps),
+      underTolerance: roundTripCostBps <= toleranceBps,
     });
   }
 
@@ -244,8 +251,8 @@ export async function depthProfile(chainId, {
   const capacity = usable.length ? usable[usable.length - 1].sizeUsd : 0;
   notes.push(
     capacity > 0
-      ? `largest size with round-trip cost <= ${maxRoundTripPct}%: $${capacity.toLocaleString()}`
-      : `NOT EVEN THE SMALLEST RUNG stays under a ${maxRoundTripPct}% round trip - this pair is effectively untradeable for a cost-aware agent`
+      ? `largest size with round-trip cost <= ${tolerancePct}%: $${capacity.toLocaleString()}`
+      : `NOT EVEN THE SMALLEST RUNG stays under a ${tolerancePct}% round trip - this pair is effectively untradeable for a cost-aware agent`
   );
   if (ds) {
     notes.push(`market context: $${Math.round(ds.liquidityUsd ?? 0)} liquidity, $${Math.round(ds.volume24hUsd ?? 0)} 24h volume (dexscreener)`);
@@ -264,7 +271,8 @@ export async function depthProfile(chainId, {
     unavailable_reason: quoteStatus === "no_pool" ? "no_pool" : quoteStatus === "partial" ? "some_venues_no_pool" : null,
     token: { address: target, base: baseSymbol, chainId },
     blockNumber: Number(pinnedBlock),
-    maxRoundTripPct,
+    maxRoundTripPct: tolerancePct,
+    maxRoundTripBps: toleranceBps.toString(),
     capacityUsd: capacity,
     ladder,
     checked: honesty.checked,

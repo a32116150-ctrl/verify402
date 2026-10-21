@@ -54,6 +54,17 @@ async function post(path, body, headers = {}) {
   return { status: r.status, headers: r.headers, body: json };
 }
 
+async function postRaw(path, raw, headers = {}) {
+  const r = await fetch(`${base}${path}`, {
+    method: "POST",
+    headers: { "content-type": "application/json", ...headers },
+    body: raw,
+  });
+  let json = null;
+  try { json = await r.json(); } catch { /* non-JSON is itself a failure below */ }
+  return { status: r.status, headers: r.headers, body: json };
+}
+
 function getWithHost(port, path, host) {
   return new Promise((resolve, reject) => {
     const req = http.request({ host: "127.0.0.1", port, path, headers: { host } }, (res) => {
@@ -139,6 +150,59 @@ await check("400: weak idempotency keys are rejected before any work", async () 
   // The recommended format still reaches the (closed) chain and fails closed.
   const r = await post("/verify", { chainId: 1, target: "WETH" }, { "x-idempotency-key": randomUUID() });
   assert.equal(r.status, 503);
+});
+
+await check("400: malformed numeric inputs are typed on every paid route (no 500s)", async () => {
+  const cases = [
+    ["/verify", { chainId: 1, target: "WETH", size: "100" }, "invalid_size"],
+    ["/verify", { chainId: 1, target: "WETH", size: true }, "invalid_size"],
+    ["/verify", { chainId: 1, target: "WETH", size: {} }, "invalid_size"],
+    ["/verify", { chainId: 1, target: "WETH", size: 0 }, "invalid_size"],
+    ["/verify", { chainId: 1, target: "WETH", size: -1 }, "invalid_size"],
+    ["/verify", { chainId: 1, target: "WETH", size: 1e12 }, "invalid_size"],
+    ["/verify", { chainId: 1, target: "WETH", minNet: "0" }, "invalid_minNet"],
+    ["/verify", { chainId: 1, target: "WETH", minNet: true }, "invalid_minNet"],
+    ["/verify", { chainId: 1, target: "WETH", minNet: -1 }, "invalid_minNet"],
+    ["/safety", { chainId: 1, tokenAddress: "WETH", intendedUsd: "500" }, "invalid_intendedUsd"],
+    ["/safety", { chainId: 1, tokenAddress: "WETH", intendedUsd: true }, "invalid_intendedUsd"],
+    ["/safety", { chainId: 1, tokenAddress: "WETH", intendedUsd: 0 }, "invalid_intendedUsd"],
+    ["/safety", { chainId: 1, tokenAddress: "WETH", intendedUsd: 1e12 }, "invalid_intendedUsd"],
+    ["/safety", { chainId: 1, tokenAddress: "WETH", offeredPriceUsd: "1" }, "invalid_offeredPriceUsd"],
+    ["/safety", { chainId: 1, tokenAddress: "WETH", offeredPriceUsd: -1 }, "invalid_offeredPriceUsd"],
+    ["/safety", { chainId: 1, tokenAddress: "WETH", offeredPriceUsd: true }, "invalid_offeredPriceUsd"],
+    ["/route", { chainId: 1, tokenIn: "USDC", tokenOut: "WETH", amountIn: "1.5" }, "invalid_amountIn"],
+    ["/route", { chainId: 1, tokenIn: "USDC", tokenOut: "WETH", amountIn: "0" }, "invalid_amountIn"],
+    ["/route", { chainId: 1, tokenIn: "USDC", tokenOut: "WETH", amountIn: "-1" }, "invalid_amountIn"],
+    ["/route", { chainId: 1, tokenIn: "USDC", tokenOut: "WETH", amountIn: "abc" }, "invalid_amountIn"],
+    ["/route", { chainId: 1, tokenIn: "USDC", tokenOut: "WETH", amountIn: true }, "invalid_amountIn"],
+    ["/route", { chainId: 1, tokenIn: "USDC", tokenOut: "WETH", amountIn: "9".repeat(79) }, "invalid_amountIn"],
+    ["/quotecheck", { chainId: 1, tokenIn: "USDC", tokenOut: "WETH", amountIn: "0", quotedOut: "1" }, "invalid_amountIn"],
+    ["/quotecheck", { chainId: 1, tokenIn: "USDC", tokenOut: "WETH", amountIn: "1", quotedOut: "0" }, "invalid_quotedOut"],
+    ["/quotecheck", { chainId: 1, tokenIn: "USDC", tokenOut: "WETH", amountIn: 1.5, quotedOut: "1" }, "invalid_amountIn"],
+    ["/quotecheck", { chainId: 1, tokenIn: "USDC", tokenOut: "WETH", amountIn: "1", quotedOut: "9".repeat(79) }, "invalid_quotedOut"],
+    ["/depth", { chainId: 1, tokenAddress: "WETH", maxRoundTripPct: "1" }, "invalid_maxRoundTripPct"],
+    ["/depth", { chainId: 1, tokenAddress: "WETH", maxRoundTripPct: true }, "invalid_maxRoundTripPct"],
+    ["/depth", { chainId: 1, tokenAddress: "WETH", maxRoundTripPct: 0 }, "invalid_maxRoundTripPct"],
+    ["/depth", { chainId: 1, tokenAddress: "WETH", maxRoundTripPct: 101 }, "invalid_maxRoundTripPct"],
+    ["/depth", { chainId: 1, tokenAddress: "WETH", sizesUsd: "100" }, "invalid_sizesUsd"],
+    ["/depth", { chainId: 1, tokenAddress: "WETH", sizesUsd: [] }, "invalid_sizesUsd"],
+    ["/depth", { chainId: 1, tokenAddress: "WETH", sizesUsd: [0] }, "invalid_sizesUsd"],
+    ["/depth", { chainId: 1, tokenAddress: "WETH", sizesUsd: ["100"] }, "invalid_sizesUsd"],
+    ["/depth", { chainId: 1, tokenAddress: "WETH", sizesUsd: [true] }, "invalid_sizesUsd"],
+    ["/depth", { chainId: 1, tokenAddress: "WETH", sizesUsd: [1e7] }, "invalid_sizesUsd"],
+    ["/depth", { chainId: 1, tokenAddress: "WETH", sizesUsd: Array(21).fill(1) }, "invalid_sizesUsd"],
+  ];
+  for (const [route, body, code] of cases) {
+    const r = await post(route, body);
+    assert.equal(r.status, 400, `${route} ${JSON.stringify(body)} must be 400, got ${r.status}`);
+    assert.equal(r.body.error, code, `${route} ${JSON.stringify(body)} code`);
+    assert.equal(typeof r.body.requestId, "string");
+    honesty(r.body);
+  }
+
+  const infinite = await postRaw("/verify", '{"chainId":1,"target":"WETH","size":1e400}');
+  assert.equal(infinite.status, 400);
+  assert.equal(infinite.body.error, "invalid_size");
 });
 
 await check("200/503 honesty: every paid route returns checked[] and notChecked[]", async () => {
