@@ -394,6 +394,19 @@ or any MCP client.
   10 minutes (max 3 replays). Caveats stated plainly: the key is the caller's secret
   (whoever presents it replays for free), the window is short by design so the 402 paywall
   stays intact, and replayed responses carry `recovery: { replayed: true, responseHash, replays }`.
+  - **Key strength (required):** use `crypto.randomUUID()` or at least 32 URL-safe
+    characters (`A-Z`, `a-z`, `0-9`, `_`, `-`) with at least 16 distinct characters.
+    Short, repeated, sequential, or low-entropy keys are rejected with
+    `400 weak_idempotency_key` and guidance to generate a key. Requests without a key
+    keep working exactly as before; they simply do not get recovery.
+  - **The key is a secret.** A leaked key allows anyone to replay the settled verdict
+    until the 10-minute window closes or the 3-replay cap is reached. Do not put it in
+    logs, URLs, screenshots, or public issue reports. If it leaks, use a new key for the
+    next operation; the old key cannot be revoked except by the short TTL/cap.
+  - **What recovery does not guarantee:** it is not a durable ledger and does not
+    survive a process restart; it does not prove payment, refund a failed call, replay
+    after the TTL or cap, cross instances, or recover a response if the caller lost the
+    key. It only returns the exact settled response bytes while the record is live.
   - **Settlement-gated (fail-closed):** a verdict record only becomes replayable
     **after the facilitator confirms the settlement** (official x402 `onAfterSettle`
     hook). Promotion is keyed on a server-generated `operationId` carried in the
@@ -466,7 +479,7 @@ or any MCP client.
 4. Read the payment instructions from the `payment-required` response header.
 5. Build an x402 payment for ≤ the stated price (Node example: `mcp-bridge/first-payment.mjs`; MCP users: `mcp-bridge/`).
 6. Re-send the same request with the `payment` header. The verdict arrives with the settlement response.
-7. On a retry/restart, add `x-idempotency-key: <random-32-hex>` to step 3 so lost responses replay free instead of paying twice.
+7. On a retry/restart, add `x-idempotency-key: <crypto.randomUUID()>` to step 3 so lost responses replay free instead of paying twice. The key is a secret; a leaked key allows replay until the TTL/cap.
 8. Verify the receipt: `evidence_bundle.responseHash` must equal sha256(canonical JSON of the body minus `evidence_bundle`, `recovery`, `cache`, `elapsedMs`).
 9. Cap your own wallet: `MAX_PAYMENT_USD` (per call) and `MAX_DAILY_USD` (per day) in the bridge `.env`.
 10. Repeat the call in the same block and compare `evidence_bundle.responseHash` — determinism of the measurement. An `edge` verdict should be raced, not trusted.

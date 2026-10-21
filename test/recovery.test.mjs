@@ -12,7 +12,7 @@
 
 import {
   canonicalStable, requestHash, recordSettlement, promoteSettlement, replayFor,
-  lookupRecovery, evidenceBundle, expiredRecoveryInfo,
+  lookupRecovery, evidenceBundle, expiredRecoveryInfo, validateIdempotencyKey,
   IDEMPOTENCY_TTL_MS, IDEMPOTENCY_MAX_REPLAYS, sha256Hex, _setNow,
 } from "../src/recovery.mjs";
 
@@ -57,6 +57,40 @@ check("requestHash differs across route or body", () => {
 
   assert(requestHash("/verify", { target: "WETH" }) !== requestHash("/safety", { target: "WETH" }));
   assert(requestHash("/verify", { target: "WETH" }) !== requestHash("/verify", { target: "USDC" }));
+
+});
+
+check("idempotency key: UUID v4 and strong URL-safe values are accepted", () => {
+
+  const uuid = "3f2c7a1e-5b8d-4c6f-9a4e-7b2d9c1f6a3e";
+  assert(validateIdempotencyKey(uuid).ok, "UUID v4 must be accepted");
+  assert(validateIdempotencyKey(uuid.toUpperCase()).ok, "UUID v4 is case-insensitive");
+
+  const hex = "9f2c7a1e5b8d3c6f0a4e7b2d9c1f6a3e";
+  assert(hex.length >= 32, "test fixture is long enough");
+  assert(validateIdempotencyKey(hex).ok, "32-char high-distinct hex must be accepted");
+
+  const base64url = "Zx9_Qw3-Er7_Ty1-Ui5_Op2-As8_Df4L";
+  assert(validateIdempotencyKey(base64url).ok, "URL-safe base64url must be accepted");
+
+});
+
+check("idempotency key: short, repeated, low-distinct and sequential values are rejected", () => {
+
+  const weak = [
+    "test-1",
+    "a".repeat(64),
+    "0123456789".repeat(4),
+    "9f2c7a1e5b8d3c6f9f2c7a1e5b8d3c6f",
+    "abcdefghijklmnopqrstuvwxyz012345",
+  ];
+  for (const key of weak) {
+    const result = validateIdempotencyKey(key);
+    assert(!result.ok, `must reject ${JSON.stringify(key.slice(0, 12))}...`);
+    assert(!result.message.includes(key), "the rejection message must not echo the key");
+  }
+
+  assert(!validateIdempotencyKey("3f2c7a1e-5b8d-1c6f-9a4e-7b2d9c1f6a3e").ok, "UUID v1 is not v4");
 
 });
 

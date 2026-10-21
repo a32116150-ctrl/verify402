@@ -48,7 +48,7 @@ const ERROR_SCHEMA = {
   type: "object",
   required: ["error", "message", "requestId"],
   properties: {
-    error: { type: "string", description: "Stable public code: bad_request, missing_chain, invalid_chain, unsupported_chain, rate_limited, busy, rpc_unavailable, rpc_rate_limited, internal_error." },
+    error: { type: "string", description: "Stable public code: bad_request, weak_idempotency_key, missing_chain, invalid_chain, unsupported_chain, rate_limited, busy, rpc_unavailable, rpc_rate_limited, internal_error." },
     code: { type: "string", description: "Machine-readable sub-code (for example invalid_size)." },
     message: { type: "string", description: "Public-safe message. Never contains a provider error, RPC URL, or API key." },
     requestId: { type: "string", description: "Correlates this response with the server-side log line. Also returned as x-request-id." },
@@ -93,8 +93,8 @@ const IDEMPOTENCY_HEADER = {
   in: "header",
   required: false,
   description:
-    "Optional secret idempotency key. A settled verdict is cached under this key and can be replayed up to 3 times within 600s at zero charge. This key is the ONLY replay credential: no payer identity is read from x-payment or payment-signature. Changing the request body with the same key returns 409 Conflict.",
-  schema: { type: "string" },
+    "Optional secret idempotency key. A settled verdict is cached under this key and can be replayed up to 3 times within 600s at zero charge. This key is the ONLY replay credential: no payer identity is read from x-payment or payment-signature. Use crypto.randomUUID() or at least 32 URL-safe characters (A-Z, a-z, 0-9, _, -) with at least 16 distinct characters; weak keys return 400 weak_idempotency_key. A leaked key allows replay until the TTL/replay cap. Omitting the header keeps normal pay-per-call behavior. Changing the request body with the same key returns 409 Conflict.",
+  schema: { type: "string", minLength: 32 },
 };
 
 const PAYMENT_PROOF_HEADER = {
@@ -119,7 +119,7 @@ function paidOperation({ price, operationId, summary, tag, inputSchema, outputSc
       "3. Client signs payment authorization for USDC on Base (`eip155:8453`) or Solana.",
       "4. Retry original request with proof in `x-payment` or `payment-signature` header.",
       "5. Receive 200 OK with reproducible `evidence_bundle`.",
-      "\n**Idempotency & Replay:** Supply `x-idempotency-key` on the first call. A settled verdict can be replayed up to 3 times within 600s at zero charge. The key is the only replay credential; no payer identity is derived from an unverified payment header.",
+      "\n**Idempotency & Replay:** Supply `x-idempotency-key` on the first call. A settled verdict can be replayed up to 3 times within 600s at zero charge. The key is the only replay credential; no payer identity is derived from an unverified payment header. Use `crypto.randomUUID()` or at least 32 URL-safe random characters with at least 16 distinct characters; weak keys return `400 weak_idempotency_key`. The key is a secret: a leaked key allows replay until the TTL/replay cap. Omitting it keeps normal pay-per-call behavior.",
       "\n**Safety boundary:** Truth checks measure chain state at one pinned block. They do not predict future blocks, guarantee arbitrage execution, or endorse tokens as risk-free.",
     ].join("\n"),
     security: [],
@@ -143,7 +143,7 @@ function paidOperation({ price, operationId, summary, tag, inputSchema, outputSc
         content: { "application/json": { schema: outputSchema } },
       },
       400: {
-        description: "Bad Request: Malformed payload, missing/invalid/unsupported chainId (400 missing_chain), or non-existent token address. The response includes requestId and both checked/notChecked.",
+        description: "Bad Request: Malformed payload, missing/invalid/unsupported chainId (400 missing_chain), non-existent token address, or a weak idempotency key (400 weak_idempotency_key). The response includes requestId and both checked/notChecked.",
         content: { "application/json": { schema: ERROR_SCHEMA } },
       },
       402: {

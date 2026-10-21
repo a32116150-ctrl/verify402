@@ -211,15 +211,18 @@ export function buildServiceManifest({
       },
       idempotency: {
         header: "x-idempotency-key",
-        description: "Replays a settled verdict at zero cost within a 600s window (max 3 replays). The key is the only credential: no payer identity is read from x-payment or payment-signature, and there is no content-hash companion alias. The key is bound to the canonical request body.",
+        description: "Replays a settled verdict at zero cost within a 600s window (max 3 replays). The key is the only credential: no payer identity is read from x-payment or payment-signature, and there is no content-hash companion alias. The key is bound to the canonical request body. Use crypto.randomUUID() or at least 32 URL-safe characters with at least 16 distinct characters; weak keys return 400 weak_idempotency_key. The key is a secret: a leaked key allows replay until the TTL/replay cap. Omitting it keeps normal pay-per-call behavior.",
         conflictStatus: 409,
+        weakKeyStatus: 400,
+        secret: "Treat the key as a bearer credential. A leaked key allows anyone to replay the settled verdict until the 10-minute window closes or the 3-replay cap is reached.",
+        doesNotGuarantee: "Recovery is not a durable ledger, does not survive a restart, does not prove payment or refund a failed call, and does not replay after the TTL/cap. If the caller loses the key, recovery is unavailable.",
       },
       requestValidation: {
         chainId: "Required on every paid route and every transaction preflight. Missing => 400 missing_chain; wrong type => 400 invalid_chain; unsupported => 400 unsupported_chain. No silent default.",
         honesty: "Every 200 and typed failure on a paid route includes non-empty checked[] and notChecked[].",
       },
       errors: {
-        publicCodes: ["bad_request", "missing_chain", "invalid_chain", "unsupported_chain", "rate_limited", "busy", "rpc_unavailable", "rpc_rate_limited", "internal_error"],
+        publicCodes: ["bad_request", "weak_idempotency_key", "missing_chain", "invalid_chain", "unsupported_chain", "rate_limited", "busy", "rpc_unavailable", "rpc_rate_limited", "internal_error"],
         requestId: "Every error response carries requestId and x-request-id; the server log uses the same id.",
         noProviderDetail: "Provider messages, RPC URLs, and API keys are never returned to callers.",
         settlementOnFailure: "x402 settlement is cancelled for any response >=400, so a 503 is not charged.",

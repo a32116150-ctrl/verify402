@@ -11,6 +11,7 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { readFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
 
 process.env.X402_MODE = "testnet";
 process.env.BYPASS_PAYMENT = "1";
@@ -98,6 +99,30 @@ await check("400: missing token fields are typed bad requests", async () => {
   }
 });
 
+await check("400: weak idempotency keys are rejected before any work", async () => {
+  const weak = [
+    "test-1",
+    "a".repeat(64),
+    "0123456789".repeat(4),
+    "9f2c7a1e5b8d3c6f9f2c7a1e5b8d3c6f",
+    "abcdefghijklmnopqrstuvwxyz012345",
+  ];
+  for (const key of weak) {
+    const r = await post("/verify", { chainId: 1, target: "WETH" }, { "x-idempotency-key": key });
+    assert.equal(r.status, 400, `${key.slice(0, 12)} must be 400`);
+    assert.equal(r.body.error, "weak_idempotency_key");
+    assert.equal(r.body.code, "weak_idempotency_key");
+    assert.equal(typeof r.body.requestId, "string");
+    assert.match(r.body.message, /crypto\.randomUUID|random/i);
+    assert.ok(!JSON.stringify(r.body).includes(key), "the weak key must not be echoed");
+    honesty(r.body);
+  }
+
+  // The recommended format still reaches the (closed) chain and fails closed.
+  const r = await post("/verify", { chainId: 1, target: "WETH" }, { "x-idempotency-key": randomUUID() });
+  assert.equal(r.status, 503);
+});
+
 await check("200/503 honesty: every paid route returns checked[] and notChecked[]", async () => {
   // The chain is unreadable in this process, so every valid paid request must
   // fail closed with 503. This exercises each route's failure boundary.
@@ -109,7 +134,7 @@ await check("200/503 honesty: every paid route returns checked[] and notChecked[
     ["/depth", { chainId: 1, tokenAddress: "WETH" }],
   ];
   for (const [route, body] of cases) {
-    const key = `fail-key-${route}`;
+    const key = randomUUID();
     const r = await post(route, body, { "x-idempotency-key": key });
     assert.equal(r.status, 503, `${route} status`);
     assert.ok(["rpc_unavailable", "rpc_rate_limited"].includes(r.body.error), `${route} code`);
@@ -132,7 +157,7 @@ await check("the installed x402 middleware cancels settlement for every >=400 re
 });
 
 await check("409: a settled idempotency key with changed content conflicts before any work", async () => {
-  const key = "http-conflict-key";
+  const key = randomUUID();
   const rh = requestHash("/verify", { chainId: 1, target: "WETH" });
   recordSettlement(key, { verdict: "no_edge" }, null, { settledNow: true, requestHash: rh });
 

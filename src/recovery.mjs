@@ -32,6 +32,95 @@ import { createHash, randomUUID } from "node:crypto";
 export const IDEMPOTENCY_TTL_MS = 10 * 60 * 1000;   // 10 minutes
 export const IDEMPOTENCY_MAX_REPLAYS = 3;
 export const IDEMPOTENCY_MAX_KEYS = 1000;
+
+// The idempotency key is a bearer credential: anyone who presents it can replay
+// a settled verdict until the TTL/replay cap. Reject low-entropy keys before
+// they can be used, while keeping "no key" exactly as it was.
+const UUID_V4_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const UUID_SHAPE_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const URL_SAFE_KEY_RE = /^[A-Za-z0-9_-]+$/;
+const MIN_IDEMPOTENCY_KEY_LENGTH = 32;
+const MIN_IDEMPOTENCY_DISTINCT = 16;
+
+const SEQUENTIAL_SOURCES = [
+  "0123456789",
+  "abcdefghijklmnopqrstuvwxyz",
+  "abcdefghijklmnopqrstuvwxyz0123456789",
+  "abcdefghijklmnopqrstuvwxyz1234567890",
+  "0123456789abcdefghijklmnopqrstuvwxyz",
+];
+
+function isRepeatedBlock(value) {
+  for (let size = 1; size <= value.length / 2; size++) {
+    if (value.length % size !== 0) continue;
+    if (value.slice(0, size).repeat(value.length / size) === value) return true;
+  }
+  return false;
+}
+
+function isSequentialPattern(value) {
+  const lower = value.toLowerCase();
+  return SEQUENTIAL_SOURCES.some((source) => {
+    const repeated = source.repeat(Math.ceil(lower.length / source.length) + 1);
+    return repeated.includes(lower) || [...repeated].reverse().join("").includes(lower);
+  });
+}
+
+/**
+ * Validate a caller-supplied idempotency key.
+ *
+ * Accepted:
+ *   - a UUID v4, or
+ *   - at least 32 URL-safe base64/hex characters with at least 16 distinct
+ *     characters, not a repeated block and not a sequential pattern.
+ *
+ * Returns `{ ok: true, key }` or `{ ok: false, message }`. The message never
+ * contains the key.
+ */
+export function validateIdempotencyKey(raw) {
+  const key = String(raw ?? "").trim();
+  if (!key) return { ok: false, message: "idempotency key is empty" };
+  if (UUID_V4_RE.test(key)) return { ok: true, key };
+  if (UUID_SHAPE_RE.test(key)) {
+    return {
+      ok: false,
+      message:
+        "idempotency key must be a UUID v4; use crypto.randomUUID() (or at least 32 URL-safe random characters with at least 16 distinct characters)",
+    };
+  }
+
+  if (key.length < MIN_IDEMPOTENCY_KEY_LENGTH) {
+    return {
+      ok: false,
+      message:
+        "idempotency key is too short; use crypto.randomUUID() or at least 32 URL-safe characters (A-Z, a-z, 0-9, _, -) with at least 16 distinct characters",
+    };
+  }
+  if (!URL_SAFE_KEY_RE.test(key)) {
+    return {
+      ok: false,
+      message:
+        "idempotency key must be URL-safe (A-Z, a-z, 0-9, _, -); use crypto.randomUUID() or a base64url/hex value",
+    };
+  }
+  if (new Set(key).size < MIN_IDEMPOTENCY_DISTINCT) {
+    return {
+      ok: false,
+      message:
+        "idempotency key has too little entropy; use crypto.randomUUID() or a random value with at least 16 distinct characters",
+    };
+  }
+  if (isRepeatedBlock(key) || isSequentialPattern(key)) {
+    return {
+      ok: false,
+      message:
+        "idempotency key looks sequential or repeated; use crypto.randomUUID() or a cryptographically random value",
+    };
+  }
+  return { ok: true, key };
+}
 // After the replay window closes, the expired verdict is kept as a tombstone
 // for this long. A retry within the tombstone window still re-measures (the
 // paywall re-arms — anything else would be a free-measure loophole), but the

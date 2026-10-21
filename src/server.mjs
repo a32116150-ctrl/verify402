@@ -32,6 +32,7 @@ import {
   IDEMPOTENCY_TTL_MS, IDEMPOTENCY_MAX_REPLAYS,
   recordSettlement, promoteSettlement, lookupRecovery,
   evidenceBundle, requestHash, expiredRecoveryInfo,
+  validateIdempotencyKey,
 } from "./recovery.mjs";
 import {
   preflight, verifyReceipt, PreflightError,
@@ -144,10 +145,25 @@ if (BYPASS_PAYMENT && MODE === "mainnet") {
 // `x-payment` / `payment-signature`; those headers are unverified at this
 // layer. The settled record's verified payer comes only from the facilitator.
 app.use((req, res, next) => {
-  const key = String(req.get("x-idempotency-key") || req.get("idempotency-key") || "").trim();
+  const rawKey = String(req.get("x-idempotency-key") || req.get("idempotency-key") || "").trim();
   // /preflight is free and issues its own receipt; it does not participate in
   // paid-settlement recovery, where a reused key would 409 the gate.
-  if (key && req.method === "POST" && !req.path.startsWith("/.well-known") && !req.path.startsWith("/preflight")) {
+  if (rawKey && req.method === "POST" && !req.path.startsWith("/.well-known") && !req.path.startsWith("/preflight")) {
+    // The key is a bearer credential. A short, repeated, or sequential value is
+    // guessable, so reject it before it can be bound to an operation.
+    const keyCheck = validateIdempotencyKey(rawKey);
+    if (!keyCheck.ok) {
+      const h = honestFailure(req.path, null);
+      res.set("Cache-Control", "no-store");
+      return res.status(400).json({
+        error: "weak_idempotency_key",
+        code: "weak_idempotency_key",
+        message: keyCheck.message,
+        requestId: req.requestId,
+        ...h,
+      });
+    }
+    const key = keyCheck.key;
     // A key is bound to one operation's canonical request content. Reuse with
     // different content is a conflict, rejected before payment — never a wrong
     // answer and never a free read.
@@ -1107,7 +1123,9 @@ app.get("/", (req, res) => {
       "Call a paid route with no payment to receive HTTP 402 and payment instructions.",
       "Preflight is free and fail-closed: if the chain cannot be read, it returns 503 and no receipt.",
       "Send x-idempotency-key on the first call: within 10 min a retry of a paid call",
-      "replays the SAME verdict with no second charge (3 replays max).",
+      "replays the SAME verdict with no second charge (3 replays max). Use crypto.randomUUID();",
+      "weak keys are rejected with 400 weak_idempotency_key. The key is a secret: a leaked key",
+      "allows replay until the TTL/cap. Recovery is process-local and does not survive a restart.",
       "Every paid response carries an evidence_bundle (requestHash/responseHash/pinnedBlock).",
       "",
     ].join("\n"),
@@ -1349,6 +1367,7 @@ app.get("/info", (_req, res) => {
     recovery: {
       header: "x-idempotency-key",
       behavior: "Send this header on the FIRST call of an operation. If the response is lost after settlement, retrying with the same header returns the SAME verdict within the TTL without requiring payment again. Records are promoted to replayable ONLY after your settlement is confirmed by the facilitator: a failed or pending settlement leaves no free replay (fail-closed).",
+      keyStrength: "Use crypto.randomUUID() or at least 32 URL-safe characters (A-Z, a-z, 0-9, _, -) with at least 16 distinct characters. Weak keys return 400 weak_idempotency_key. Omitting the header keeps normal pay-per-call behavior.",
       ttlMinutes: 10,
       maxReplays: 3,
       maxReplaysNote: "the cap is per operation, bound to the caller's key",
@@ -1357,7 +1376,8 @@ app.get("/info", (_req, res) => {
       requestBinding: "The key is bound to the canonical request body; reusing it for a different operation returns 409 recovery_conflict before payment.",
       afterWindow: "expired verdicts leave a tombstone holding the previous responseHash for 6 hours; a retry re-measures with the paywall re-armed and the response carries recovery.remeasured + previousResponseHash so agents can branch instead of guessing",
       delegatedSpend: "the caps here are client-side for the signer that constructs the payment; spend through wallets delegated to OTHER agents is outside this contract and governed by the delegating owner's own controls",
-      warn: "The key is the caller's secret: whoever presents it can replay the verdict for free. Do not log it publicly.",
+      warn: "The key is the caller's secret: whoever presents it can replay the verdict for free until the TTL/replay cap. Do not log it publicly. A leaked key cannot be revoked; use a new key for the next operation.",
+      doesNotGuarantee: "Recovery is not a durable ledger and does not survive a restart; it does not prove payment, refund a failed call, cross instances, or replay after the TTL/cap, and it cannot help if the caller lost the key.",
     },
     evidence_bundle: {
       spec: "verify402/evidence-bundle@1",

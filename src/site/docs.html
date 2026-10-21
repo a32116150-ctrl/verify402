@@ -65,7 +65,7 @@
           <p class="code-cap">1 · Ask without paying</p>
 <pre><span class="c">curl -X POST</span> https://verify402.onrender.com/verify \
   -H <span class="g">"Content-Type: application/json"</span> \
-  -H <span class="g">"x-idempotency-key: my-op-1"</span> \
+  -H <span class="g">"x-idempotency-key: 3f2c7a1e-5b8d-4c6f-9a4e-7b2d9c1f6a3e"</span> \
   -d <span class="y">'{"pair":"USDC/WETH","dex":"uniswap-v3","sizeUsd":100000}'</span>
 
 <span class="c"># → HTTP 402 Payment Required</span>
@@ -79,7 +79,7 @@
         </div>
         <div class="callout" style="margin-top:24px">
           <h3>Send x-idempotency-key on the first call</h3>
-          <p>If the connection dies after settlement, the retry with the same key replays the same bytes for free — within ten minutes, three replays max. The key is the cheapest insurance on this rail.</p>
+          <p>If the connection dies after settlement, the retry with the same key replays the same bytes for free — within ten minutes, three replays max. Use <code class="inline">crypto.randomUUID()</code> or at least 32 URL-safe random characters with at least 16 distinct characters; weak keys are rejected with <code class="inline">400 weak_idempotency_key</code>. The key is a secret: anyone who has it can replay the settled verdict until the window or cap closes. It does not prove payment or survive a process restart.</p>
         </div>
       </article>
 
@@ -101,7 +101,7 @@
           </table>
         </div>
         <h3 style="margin-top:32px">The recovery contract, in one paragraph</h3>
-        <p class="small" style="margin-top:10px">A settlement is <b>staged</b>, not recorded, when payment succeeds. It is <b>promoted</b> only by the official <code class="inline">onAfterSettle</code> hook, keyed on a server-generated <code class="inline">operationId</code> carried in the response and requiring a confirmed settle with a transaction reference — with the hash of the actual response bytes as an additional check. <b>Equal output does not identify an operation</b>: two requests that both return <code class="inline">no_match</code> are still distinct, and settling one never promotes the other. A failed or pending settlement promotes nothing; staged-unpromoted records age out silently after five minutes; the replay cap is per operation, bound to the caller's key. Reusing a key with changed request content is a <code class="inline">409</code> conflict resolved before the paywall — never the other operation's answer, never a charge. The original idempotency key is the only replay credential; no payer identity is read from <code class="inline">x-payment</code> or <code class="inline">authorization.from</code>, and the old content-hash companion alias has been removed. Two parts of this were broken in public by an independent auditor and fixed the same day: commit <a class="textlink" href="https://github.com/a32116150-ctrl/verify402/commit/4bf3c9c" rel="noopener">4bf3c9c</a>, then hardened after the x402 spec review (<a class="textlink" href="https://github.com/x402-foundation/x402/pull/3848" rel="noopener">#3848</a>).</p>
+        <p class="small" style="margin-top:10px">A settlement is <b>staged</b>, not recorded, when payment succeeds. It is <b>promoted</b> only by the official <code class="inline">onAfterSettle</code> hook, keyed on a server-generated <code class="inline">operationId</code> carried in the response and requiring a confirmed settle with a transaction reference — with the hash of the actual response bytes as an additional check. <b>Equal output does not identify an operation</b>: two requests that both return <code class="inline">no_match</code> are still distinct, and settling one never promotes the other. A failed or pending settlement promotes nothing; staged-unpromoted records age out silently after five minutes; the replay cap is per operation, bound to the caller's key. Reusing a key with changed request content is a <code class="inline">409</code> conflict resolved before the paywall — never the other operation's answer, never a charge. The original idempotency key is the only replay credential; no payer identity is read from <code class="inline">x-payment</code> or <code class="inline">authorization.from</code>, and the old content-hash companion alias has been removed. The key is a bearer secret: a leaked key allows replay until the TTL/replay cap, and recovery does not prove payment or survive a restart. Two parts of this were broken in public by an independent auditor and fixed the same day: commit <a class="textlink" href="https://github.com/a32116150-ctrl/verify402/commit/4bf3c9c" rel="noopener">4bf3c9c</a>, then hardened after the x402 spec review (<a class="textlink" href="https://github.com/x402-foundation/x402/pull/3848" rel="noopener">#3848</a>).</p>
       </article>
 
       <hr class="divider" style="margin:44px 0">
