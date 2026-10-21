@@ -15,12 +15,23 @@
 // Every call is pinned to ONE block number, so both legs of a round trip are
 // measured against the same instant. A round trip assembled from two different
 // blocks can show profit that never coexisted.
+//
+// Failure classification (audit C-2) is part of the contract:
+//   ok        a real quote
+//   no_pool   the venue has no pool / cannot fill; legitimate market fact
+//   revert    the venue reverted; legitimate market fact
+//   transport the provider/network failed; NEVER a market fact
+//   decode    the provider returned undecodable data; NEVER a market fact
+//
+// Only no_pool/revert may become "unavailable". transport/decode abort the
+// measurement with ok:false and a 503 at the route boundary, so a provider
+// outage can never be sold as AVOID / no_edge / unknown / illiquid.
 
 import { createPublicClient, http, fallback, decodeFunctionResult, encodeFunctionData } from "viem";
 import * as viemChains from "viem/chains";
 import { chain, resolveToken, DEFAULT_GAS_UNITS } from "./config.mjs";
 
-const QUOTER_V2_ABI = [
+export const QUOTER_V2_ABI = [
   {
     inputs: [
       {
@@ -47,7 +58,7 @@ const QUOTER_V2_ABI = [
   },
 ];
 
-const V2_ROUTER_ABI = [
+export const V2_ROUTER_ABI = [
   {
     inputs: [
       { name: "amountIn", type: "uint256" },
@@ -83,10 +94,37 @@ export function clientFor(chainId) {
   return client;
 }
 
+/** Stable, public-safe classification of a provider/contract error. */
+export function classifyQuoteError(error) {
+  const names = [error?.name, error?.cause?.name, error?.cause?.cause?.name].filter(Boolean).join(" ");
+  const msg = String(error?.shortMessage || error?.details || error?.message || error || "");
+  if (/decode|returned values|could not decode|cannot decode|abi/i.test(`${names} ${msg}`)) {
+    return { kind: "decode", detail: msg };
+  }
+  if (/CallExecutionError/i.test(names) || /execution reverted|revert|panic/i.test(msg)) {
+    return { kind: "revert", detail: msg };
+  }
+  if (/rate limit|too many requests|429/i.test(msg)) {
+    return { kind: "transport", reason: "rate_limited", detail: msg };
+  }
+  return { kind: "transport", reason: "network", detail: msg };
+}
+
+export function quoteOk(amountOut) {
+  return { ok: true, amountOut };
+}
+
+export function quoteFail(kind, detail = null, reason = null) {
+  return { ok: false, kind, detail, reason };
+}
+
+export function isHardQuoteFailure(result) {
+  return result && result.ok === false && (result.kind === "transport" || result.kind === "decode");
+}
+
 /**
  * Quote an exact-input V3 swap through Uniswap's canonical QuoterV2.
- * Returns null when the pool does not exist or cannot fill the size - both of
- * which are legitimate "this venue is not available" answers, not errors.
+ * Returns a typed result: ok / no_pool / revert / transport / decode.
  */
 export async function quoteV3(client, { quoter, tokenIn, tokenOut, amountIn, fee, blockNumber }) {
   try {
@@ -96,12 +134,18 @@ export async function quoteV3(client, { quoter, tokenIn, tokenOut, amountIn, fee
       args: [{ tokenIn, tokenOut, amountIn, fee, sqrtPriceLimitX96: 0n }],
     });
     const raw = await client.call({ to: quoter, data, blockNumber });
-    if (!raw.data) return null;
-    const decoded = decodeFunctionResult({ abi: QUOTER_V2_ABI, functionName: "quoteExactInputSingle", data: raw.data });
+    if (!raw?.data || raw.data === "0x") return quoteFail("no_pool", "empty data from quoter");
+    let decoded;
+    try {
+      decoded = decodeFunctionResult({ abi: QUOTER_V2_ABI, functionName: "quoteExactInputSingle", data: raw.data });
+    } catch (e) {
+      return quoteFail("decode", e?.message || String(e));
+    }
     const out = decoded[0];
-    return out > 0n ? out : null;
-  } catch {
-    return null;
+    return out > 0n ? quoteOk(out) : quoteFail("no_pool", "quoter returned zero");
+  } catch (e) {
+    const c = classifyQuoteError(e);
+    return quoteFail(c.kind, c.detail, c.reason ?? null);
   }
 }
 
@@ -118,8 +162,14 @@ export async function quoteV2(client, { router, tokenIn, tokenOut, amountIn, blo
       args: [amountIn, route],
     });
     const raw = await client.call({ to: router, data, blockNumber });
-    if (!raw.data) return null;
-    const decoded = decodeFunctionResult({ abi: V2_ROUTER_ABI, functionName: "getAmountsOut", data: raw.data });
+    if (!raw?.data || raw.data === "0x") return quoteFail("no_pool", "empty data from router");
+
+    let decoded;
+    try {
+      decoded = decodeFunctionResult({ abi: V2_ROUTER_ABI, functionName: "getAmountsOut", data: raw.data });
+    } catch (e) {
+      return quoteFail("decode", e?.message || String(e));
+    }
 
     // getAmountsOut returns uint256[] = [amountIn, amountOut, ...]. viem hands
     // back a single declared output UNWRAPPED, so `decoded` is usually the
@@ -128,16 +178,19 @@ export async function quoteV2(client, { router, tokenIn, tokenOut, amountIn, blo
     // the INPUT amount, which on the sell leg read as 41 trillion USDC of
     // profit. Find the actual uint256[] wherever it sits.
     const amounts = findUintArray(decoded);
-    if (!amounts || amounts.length < 2) return null;
+    if (!amounts || amounts.length < 2) return quoteFail("decode", "getAmountsOut did not return a uint256[]");
     const out = amounts[amounts.length - 1];
 
     // Structural guard: no router can hand back exactly what it was given.
     // If it does, this decode is wrong, and a wrong decode here is invented
-    // profit - the one bug this engine must never ship.
-    if (!(out > 0n) || out === amountIn) return null;
-    return out;
-  } catch {
-    return null;
+    // profit - the one bug this engine must never ship. We keep this as a
+    // market-unavailable result (the L-1 edge case is tracked separately)
+    // rather than a 503, because it is a decode-shape guard, not an outage.
+    if (!(out > 0n) || out === amountIn) return quoteFail("no_pool", "echo guard: amountOut equals amountIn");
+    return quoteOk(out);
+  } catch (e) {
+    const c = classifyQuoteError(e);
+    return quoteFail(c.kind, c.detail, c.reason ?? null);
   }
 }
 
@@ -157,7 +210,6 @@ function findUintArray(res) {
   return null;
 }
 
-/** Every venue this chain knows about, quoted for one direction, at one block. */
 /**
  * Quote an exact-input V3 swap across a multi-hop path, leg by leg through
  * QuoterV2 itself, with every leg pinned to ONE block so the quote is
@@ -176,15 +228,18 @@ export async function quoteV3Path(client, { quoter, path, amountIn, fee, blockNu
         fee,
         blockNumber: bn,
       });
-      if (out === null || !(out > 0n)) return null;
-      amount = out;
+      if (!out.ok) return out;
+      if (!(out.amountOut > 0n)) return quoteFail("no_pool", "leg returned zero");
+      amount = out.amountOut;
     }
-    return amount;
-  } catch {
-    return null;
+    return quoteOk(amount);
+  } catch (e) {
+    const c = classifyQuoteError(e);
+    return quoteFail(c.kind, c.detail, c.reason ?? null);
   }
 }
 
+/** Every configured venue this chain knows about, at one block. */
 export async function quoteAllVenues(client, chainId, { tokenIn, tokenOut, amountIn, blockNumber, intermediates = [] }) {
   const c = chain(chainId);
 
@@ -221,7 +276,7 @@ export async function quoteAllVenues(client, chainId, { tokenIn, tokenOut, amoun
         venue: `${r.label} via ${v.symbol ?? "hop"}`,
         kind: "v2",
         fee: r.feeBps * 100,
-        run: () => quoteV2(client, { router: r.address, tokenIn, tokenOut: tokenOut, amountIn, blockNumber, path: [tokenIn, v.address, tokenOut] }),
+        run: () => quoteV2(client, { router: r.address, tokenIn, tokenOut, amountIn, blockNumber, path: [tokenIn, v.address, tokenOut] }),
       })),
       ...c.v3Fees.map((fee) => ({
         venue: `uni-v3-${fee / 10_000}% via ${v.symbol ?? "hop"}`,
@@ -236,16 +291,46 @@ export async function quoteAllVenues(client, chainId, { tokenIn, tokenOut, amoun
 
   const quoted = [];
   const unavailable = [];
+  const failures = [];
   settled.forEach((res, i) => {
     const j = jobs[i];
-    const amountOut = res.status === "fulfilled" ? res.value : null;
-    if (amountOut === null) unavailable.push({ venue: j.venue, reason: "no pool or cannot fill size" });
-    else quoted.push({ venue: j.venue, kind: j.kind, fee: j.fee, amountOut });
+    let result;
+    if (res.status === "fulfilled") {
+      result = res.value;
+    } else {
+      const c = classifyQuoteError(res.reason);
+      result = quoteFail(c.kind, c.detail, c.reason ?? null);
+    }
+    if (result?.ok && result.amountOut != null) {
+      quoted.push({ venue: j.venue, kind: j.kind, fee: j.fee, amountOut: result.amountOut, status: "ok" });
+    } else if (result?.kind === "no_pool" || result?.kind === "revert") {
+      unavailable.push({
+        venue: j.venue,
+        status: result.kind,
+        reason: result.kind === "no_pool" ? "no pool or cannot fill size" : "venue reverted (no pool or cannot fill size)",
+      });
+    } else {
+      failures.push({
+        venue: j.venue,
+        kind: result?.kind ?? "transport",
+        reason: result?.reason ?? null,
+        // Keep the provider detail server-side only. Routes log failures and
+        // return a sanitized 503; never echo this to a caller.
+        detail: result?.detail ?? null,
+      });
+    }
   });
 
   // Best first: the whole point is to find the most you can get.
   quoted.sort((a, b) => (b.amountOut > a.amountOut ? 1 : b.amountOut < a.amountOut ? -1 : 0));
-  return { quoted, unavailable };
+  const hard = failures.find((f) => f.kind === "transport" || f.kind === "decode") ?? null;
+  return {
+    quoted,
+    unavailable,
+    failures,
+    hard_failure: hard,
+    quote_status: hard ? "failed" : quoted.length ? "ok" : "no_pool",
+  };
 }
 
 /** Price of the chain's gas token in USD, using the same engine. */
@@ -253,11 +338,12 @@ export async function gasTokenPriceUsd(client, chainId, blockNumber) {
   const c = chain(chainId);
   const weth = c.tokens[c.gasToken];
   const usdc = c.tokens.USDC;
-  if (!weth || !usdc) return null;
+  if (!weth || !usdc) return quoteFail("no_pool", "gas token or USDC is not configured");
 
   // Try each fee tier; the deepest pool wins. Same-block, so it is consistent
-  // with the rest of the measurement.
-  const outs = await Promise.all(
+  // with the rest of the measurement. A transport/decode failure in ANY tier
+  // aborts: using a partial set could understate gas and invent an edge.
+  const results = await Promise.all(
     c.v3Fees.map((fee) =>
       quoteV3(client, {
         quoter: c.quoterV2,
@@ -269,45 +355,93 @@ export async function gasTokenPriceUsd(client, chainId, blockNumber) {
       })
     )
   );
-  const best = outs.filter((o) => o !== null).sort((a, b) => (b > a ? 1 : b < a ? -1 : 0))[0];
-  if (!best) return null;
-  return { usd: Number(best) / 10 ** usdc.decimals, feeUsed: c.v3Fees[outs.indexOf(best)] };
+  const hard = results.find((r) => isHardQuoteFailure(r));
+  if (hard) return hard;
+  const quoted = results
+    .map((r, i) => (r.ok ? { amountOut: r.amountOut, fee: c.v3Fees[i] } : null))
+    .filter(Boolean)
+    .sort((a, b) => (b.amountOut > a.amountOut ? 1 : b.amountOut < a.amountOut ? -1 : 0));
+  if (!quoted.length) return quoteFail("no_pool", "no gas-token/USDC pool answered");
+  return {
+    ok: true,
+    usd: Number(quoted[0].amountOut) / 10 ** usdc.decimals,
+    feeUsed: quoted[0].fee,
+    quote_status: results.some((r) => !r.ok) ? "partial" : "ok",
+  };
 }
 
 const STABLES = new Set(["USDC", "USDT", "DAI"]);
 
+function unavailableReason(book) {
+  if (book.hard_failure) return book.hard_failure.kind;
+  if (!book.quoted.length) return "no_pool";
+  return book.unavailable.length ? "some_venues_no_pool" : null;
+}
+
+function failedMeasurement(chainId, kind, { reason = null, detail = null, blockNumber = null, unavailable = [] } = {}) {
+  return {
+    ok: false,
+    kind,
+    reason: reason || (kind === "no_pool"
+      ? "no configured venue could quote this pair at this size"
+      : "the chain could not be read, so no verdict was issued"),
+    quote_status: kind === "no_pool" || kind === "revert" ? "no_pool" : "failed",
+    unavailable_reason: kind,
+    chainId,
+    blockNumber: blockNumber == null ? null : Number(blockNumber),
+    unavailable,
+    ...(detail ? { _detail: detail } : {}),
+  };
+}
+
 /**
  * The measurement: buy `target` with `size` of base on the best venue, sell it
  * back on the best venue, net off every cost we can see, and say whether it
- * pays.
+ * pays. `clientFactory` is injectable for offline tests.
  */
-export async function measureRoundTrip(chainId, { baseSymbol = "USDC", targetSymbol, size, minNet = 0n, gasUnits = DEFAULT_GAS_UNITS, venues = null } = {}) {
+export async function measureRoundTrip(chainId, {
+  baseSymbol = "USDC",
+  targetSymbol,
+  size,
+  minNet = 0n,
+  gasUnits = DEFAULT_GAS_UNITS,
+  venues = null,
+} = {}, { clientFactory = clientFor } = {}) {
   const c = chain(chainId);
   const base = resolveToken(chainId, baseSymbol);
   const target = resolveToken(chainId, targetSymbol);
-  const client = clientFor(chainId);
+  const client = clientFactory(chainId);
 
-  const blockNumber = await client.getBlockNumber();
-  const block = await client.getBlock({ blockNumber });
+  let blockNumber;
+  let block;
+  try {
+    blockNumber = await client.getBlockNumber();
+    block = await client.getBlock({ blockNumber });
+  } catch (e) {
+    const failure = classifyQuoteError(e);
+    return failedMeasurement(chainId, failure.kind, { detail: failure.detail });
+  }
 
-  // --- leg 1: base -> target, on every venue
+  // --- leg 1: base -> target, on every configured venue
   const buySide = await quoteAllVenues(client, chainId, {
     tokenIn: base.address,
     tokenOut: target.address,
     amountIn: size,
     blockNumber,
   });
+  if (buySide.hard_failure) {
+    return failedMeasurement(chainId, buySide.hard_failure.kind, {
+      blockNumber,
+      detail: buySide.hard_failure.detail,
+    });
+  }
 
   if (!buySide.quoted.length) {
-    return {
-      ok: false,
-      reason: "No venue on this chain could quote the buy leg. Either the pair does not exist here or every pool is too thin for this size.",
-      chainId,
-      blockNumber: Number(blockNumber),
-      base: { symbol: baseSymbol, address: base.address, decimals: base.decimals },
-      target: { symbol: targetSymbol, address: target.address, decimals: target.decimals },
+    return failedMeasurement(chainId, "no_pool", {
+      blockNumber,
+      reason: "No configured venue on this chain could quote the buy leg. Either the pair does not exist here or every pool is too thin for this size.",
       unavailable: buySide.unavailable,
-    };
+    });
   }
 
   const buy = buySide.quoted[0];
@@ -320,15 +454,19 @@ export async function measureRoundTrip(chainId, { baseSymbol = "USDC", targetSym
     amountIn: midAmount,
     blockNumber,
   });
+  if (sellSide.hard_failure) {
+    return failedMeasurement(chainId, sellSide.hard_failure.kind, {
+      blockNumber,
+      detail: sellSide.hard_failure.detail,
+    });
+  }
 
   if (!sellSide.quoted.length) {
-    return {
-      ok: false,
-      reason: "No venue could quote the sell leg for the exact amount the buy leg produces.",
-      chainId,
-      blockNumber: Number(blockNumber),
+    return failedMeasurement(chainId, "no_pool", {
+      blockNumber,
+      reason: "No configured venue could quote the sell leg for the exact amount the buy leg produces.",
       unavailable: sellSide.unavailable,
-    };
+    });
   }
 
   const sell = sellSide.quoted[0];
@@ -336,12 +474,30 @@ export async function measureRoundTrip(chainId, { baseSymbol = "USDC", targetSym
   // --- arithmetic
   const gross = sell.amountOut - size;
 
-  const eth = await gasTokenPriceUsd(client, chainId, blockNumber);
-  const gasPrice = await client.getGasPrice();
+  const gasQuote = await gasTokenPriceUsd(client, chainId, blockNumber);
+  if (isHardQuoteFailure(gasQuote)) {
+    return failedMeasurement(chainId, gasQuote.kind, { blockNumber, detail: gasQuote.detail });
+  }
+  if (!gasQuote.ok) {
+    return failedMeasurement(chainId, "no_pool", {
+      blockNumber,
+      reason: "The gas token could not be priced at this block, so costs cannot be netted.",
+      unavailable: [{ venue: "gas-token/usdc", status: "no_pool", reason: "no gas price pool" }],
+    });
+  }
 
+  let gasPrice;
+  try {
+    gasPrice = await client.getGasPrice();
+  } catch (e) {
+    const failure = classifyQuoteError(e);
+    return failedMeasurement(chainId, failure.kind, { blockNumber, detail: failure.detail });
+  }
+
+  const eth = gasQuote;
   let gasBase = 0n;
   let gasUsd = null;
-  if (eth) {
+  if (eth?.ok) {
     // gasUsd = gasUnits * gasPrice(wei) / 1e18 * ethUsd
     gasUsd = (Number(gasUnits) * Number(gasPrice) * eth.usd) / 1e18;
     if (STABLES.has(baseSymbol)) {
@@ -364,9 +520,14 @@ export async function measureRoundTrip(chainId, { baseSymbol = "USDC", targetSym
   const verdict =
     net > BigInt(minNet) ? "edge" : gross > 0n ? "no_edge_costs_ate_it" : "no_edge";
 
+  const allUnavailable = [...buySide.unavailable, ...sellSide.unavailable];
+  const quote_status = allUnavailable.length ? "partial" : "ok";
+
   return {
     ok: true,
     verdict,
+    quote_status,
+    unavailable_reason: allUnavailable.length ? "some_venues_no_pool" : null,
     chainId,
     chainName: c.name,
     blockNumber: Number(blockNumber),
@@ -396,7 +557,7 @@ export async function measureRoundTrip(chainId, { baseSymbol = "USDC", targetSym
       quoted: buySide.quoted.length + sellSide.quoted.length,
       buySide: buySide.quoted.map((q) => ({ venue: q.venue, outRaw: q.amountOut.toString() })),
       sellSide: sellSide.quoted.map((q) => ({ venue: q.venue, outRaw: q.amountOut.toString() })),
-      unavailable: [...buySide.unavailable, ...sellSide.unavailable],
+      unavailable: allUnavailable,
     },
     method: {
       quoting: "V3 via Uniswap QuoterV2; V2 via router getAmountsOut",
