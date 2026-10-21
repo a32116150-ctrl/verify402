@@ -70,6 +70,10 @@ if (MODE === "mainnet" && !AGENT_URL) {
   process.exit(1);
 }
 const TRUSTED_HOSTS = parseTrustedHosts(process.env.TRUSTED_HOSTS, { agentUrl: AGENT_URL });
+if (MODE === "mainnet" && !String(process.env.PREFLIGHT_SECRET || "").trim()) {
+  logError("REFUSING TO START: X402_MODE=mainnet requires PREFLIGHT_SECRET, so preflight receipts remain verifiable across restarts and instances.");
+  process.exit(1);
+}
 
 const NETWORKS =
   MODE === "mainnet"
@@ -1189,7 +1193,7 @@ app.get("/", (req, res) => {
       "Send x-idempotency-key on the first call: within 10 min a retry of a paid call",
       "replays the SAME verdict with no second charge (3 replays max). Use crypto.randomUUID();",
       "weak keys are rejected with 400 weak_idempotency_key. The key is a secret: a leaked key",
-      "allows replay until the TTL/cap. Recovery is process-local and does not survive a restart.",
+      "allows replay until the TTL/cap. Recovery records and /usage counters are process-local and lost on restart/deploy; state is not shared across instances.",
       "Every paid response carries an evidence_bundle (requestHash/responseHash/pinnedBlock).",
       "",
     ].join("\n"),
@@ -1245,6 +1249,12 @@ app.get("/info", (_req, res) => {
       price: "free",
       scope: "this process instance; resets on restart or deploy",
       note: "Anonymous free-gate call counts. Not a unique-agent count; paid settlements are the identity-backed signal.",
+    },
+    state_persistence: {
+      scope: "process-local",
+      lostOnRestart: true,
+      appliesTo: ["recovery", "/usage"],
+      warning: "Recovery records and /usage counters are process-local: they live only in this process. A restart or deploy loses both: a previously settled idempotency key may be charged again, and usage counts reset. State is not shared across instances.",
     },
     payment: { protocol: "x402", scheme: "exact", acceptsExample: accepts(PRICE)[0] },
     chains: Object.entries(CHAINS).map(([id, c]) => ({
@@ -1441,7 +1451,7 @@ app.get("/info", (_req, res) => {
       afterWindow: "expired verdicts leave a tombstone holding the previous responseHash for 6 hours; a retry re-measures with the paywall re-armed and the response carries recovery.remeasured + previousResponseHash so agents can branch instead of guessing",
       delegatedSpend: "the caps here are client-side for the signer that constructs the payment; spend through wallets delegated to OTHER agents is outside this contract and governed by the delegating owner's own controls",
       warn: "The key is the caller's secret: whoever presents it can replay the verdict for free until the TTL/replay cap. Do not log it publicly. A leaked key cannot be revoked; use a new key for the next operation.",
-      doesNotGuarantee: "Recovery is not a durable ledger and does not survive a restart; it does not prove payment, refund a failed call, cross instances, or replay after the TTL/cap, and it cannot help if the caller lost the key.",
+      doesNotGuarantee: "Recovery is not a durable ledger and does not survive a restart; recovery and usage state are process-local and lost on restart/deploy, so it does not prove payment, refund a failed call, cross instances, or replay after the TTL/cap, and it cannot help if the caller lost the key.",
     },
     evidence_bundle: {
       spec: "verify402/evidence-bundle@1",

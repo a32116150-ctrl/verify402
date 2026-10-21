@@ -189,6 +189,8 @@ export function buildOpenapi(prices) {
         "Machine-payable truth service for AI agents: free pre-signing preflight safety gate plus paid, evidence-backed on-chain truth checks paid per call via x402 in USDC on Base or Solana.",
       "x-guidance":
         "Call POST /preflight for free before signing any payment request or raw transaction. It answers PASS/CAUTION/BLOCK with typed reasons, checked/notChecked lists, and a 90-second HMAC receipt. For market truth questions, use the paid POST routes (/verify, /safety, /route, /quotecheck, /depth). Paid routes use x402 exact settlement (0.03-0.10 USDC) and return an evidence_bundle with pinnedBlock, requestHash, and responseHash for cryptographic auditability. The 402 challenge is authoritative for prices.",
+      "x-state-persistence":
+        "Recovery records and /usage counters are process-local and lost on restart or deploy; they are not shared across instances. A previously settled idempotency key may be charged again after a restart.",
       contact: {
         name: "verify402 Maintainers",
         url: "https://github.com/a32116150-ctrl/verify402",

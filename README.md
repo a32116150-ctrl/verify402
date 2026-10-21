@@ -391,6 +391,11 @@ or any MCP client.
 
 ## Settlement, response delivery, and recovery (honest contract)
 
+> **Process-local state (important):** recovery records and `/usage` counters live
+> only in this process. A restart or deploy loses both: a previously settled
+> idempotency key may be charged again, and usage counts reset. Neither is
+> shared across instances.
+
 - **Delivery:** the verdict is returned inside the settlement response — the paid answer
   arrives together with the payment confirmation (testnet receipt: tx
   `0x11121007bafec47f132763f42e2f58af6ebba7fba9c7ed1b5980d3f595a9324a`).
@@ -412,7 +417,8 @@ or any MCP client.
   - **What recovery does not guarantee:** it is not a durable ledger and does not
     survive a process restart; it does not prove payment, refund a failed call, replay
     after the TTL or cap, cross instances, or recover a response if the caller lost the
-    key. It only returns the exact settled response bytes while the record is live.
+    key. `/usage` counters are likewise process-local and reset on restart. Recovery
+    only returns the exact settled response bytes while the record is live.
   - **Settlement-gated (fail-closed):** a verdict record only becomes replayable
     **after the facilitator confirms the settlement** (official x402 `onAfterSettle`
     hook). Promotion is keyed on a server-generated `operationId` carried in the

@@ -217,6 +217,11 @@ export function buildServiceManifest({
         secret: "Treat the key as a bearer credential. A leaked key allows anyone to replay the settled verdict until the 10-minute window closes or the 3-replay cap is reached.",
         doesNotGuarantee: "Recovery is not a durable ledger, does not survive a restart, does not prove payment or refund a failed call, and does not replay after the TTL/cap. If the caller loses the key, recovery is unavailable.",
       },
+      statePersistence: {
+        scope: "process-local",
+        appliesTo: ["recovery", "/usage"],
+        warning: "Recovery records and /usage counters are process-local and live only in this process; they are lost on restart or deploy. A previously settled idempotency key may be charged again, and usage counts reset. State is not shared across instances.",
+      },
       requestValidation: {
         chainId: "Required on every paid route and every transaction preflight. Missing => 400 missing_chain; wrong type => 400 invalid_chain; unsupported => 400 unsupported_chain. No silent default.",
         honesty: "Every 200 and typed failure on a paid route includes non-empty checked[] and notChecked[].",

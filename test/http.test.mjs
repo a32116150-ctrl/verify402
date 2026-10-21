@@ -303,6 +303,11 @@ await check("/info and /llms.txt describe quote-based sellability and no banned 
   assert.match(info.chainIdRequired, /missing_chain/);
   assert.match(info.recovery.noCompanionAlias, /no content-hash companion/i);
   assert.equal(info.readiness.path, "/ready");
+  assert.equal(info.state_persistence.scope, "process-local");
+  assert.equal(info.state_persistence.lostOnRestart, true);
+  assert.match(info.state_persistence.warning, /process-local/i);
+  assert.match(info.state_persistence.warning, /restart or deploy/i);
+  assert.match(info.state_persistence.warning, /not shared across instances/i);
 
   const llmsRes = await fetch(`${base}/llms.txt`);
   assert.equal(llmsRes.status, 200);
@@ -320,6 +325,8 @@ await check("/openapi.json requires chainId and documents typed 503s", async () 
   assert.ok(input.required.includes("chainId"), "/verify requires chainId");
   assert.ok(input.properties.chainId.description.includes("no silent default"));
   assert.match(post.responses["503"].description, /not charged|settlement/i);
+  assert.match(doc.info["x-state-persistence"], /process-local/i);
+  assert.match(doc.info["x-state-persistence"], /lost on restart or deploy/i);
 });
 
 await check("agent card rejects a forged Host and never reflects it", async () => {
@@ -423,6 +430,36 @@ await check("mainnet refuses to start without AGENT_URL", async () => {
   });
   assert.equal(code, 1);
   assert.match(logs.join(""), /AGENT_URL/);
+});
+
+await check("mainnet refuses to start without PREFLIGHT_SECRET", async () => {
+  const logs = [];
+  const child = spawn(process.execPath, ["src/server.mjs"], {
+    cwd: new URL("..", import.meta.url).pathname,
+    env: {
+      ...process.env,
+      X402_MODE: "mainnet",
+      FACILITATOR_URL: "https://facilitator.payai.network",
+      AGENT_URL: "https://fixed.example",
+      PREFLIGHT_SECRET: "",
+      BYPASS_PAYMENT: "",
+    },
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  child.stdout.on("data", (d) => logs.push(String(d)));
+  child.stderr.on("data", (d) => logs.push(String(d)));
+  const code = await new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      child.kill("SIGTERM");
+      reject(new Error(`server did not exit:\n${logs.join("")}`));
+    }, 5000);
+    child.on("exit", (exitCode) => {
+      clearTimeout(timer);
+      resolve(exitCode);
+    });
+  });
+  assert.equal(code, 1);
+  assert.match(logs.join(""), /PREFLIGHT_SECRET/);
 });
 
 server.close();
