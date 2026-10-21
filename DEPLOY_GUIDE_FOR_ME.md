@@ -1,5 +1,45 @@
 # Deploy Guide For Me (Plain Language)
 
+## If I already have the service running on Render
+
+Do these steps before pushing anything.
+
+1. Open the Render dashboard.
+2. Click the existing `verify402` web service.
+3. Click "Environment" or "Environment Variables".
+4. Look for `X402_MODE`.
+   - If it says `testnet`, the live service is on testnet.
+   - If it says `mainnet`, the live service is on mainnet.
+   - If it is missing, treat the service as testnet because the code defaults to testnet.
+5. Compare the listed variables with the required list in section B.
+6. Add every missing variable now, before any push:
+   - Testnet required: `X402_MODE=testnet`, `FACILITATOR_URL=https://x402.org/facilitator`, `PAY_TO_EVM`, `PAY_TO_SVM`, and `PREFLIGHT_SECRET`.
+   - Mainnet required: `X402_MODE=mainnet`, `AGENT_URL`, `PREFLIGHT_SECRET`, `FACILITATOR_URL`, `PAY_TO_EVM`, and `PAY_TO_SVM`.
+   - If using Coinbase CDP, also add `CDP_API_KEY_ID` and `CDP_API_KEY_SECRET`.
+7. Save the environment changes.
+8. Upgrade the instance to a paid always-on plan before pushing:
+   - Click "Settings".
+   - Find "Instance Type" or "Plan".
+   - Change from Free to a paid always-on instance.
+   - Save.
+9. Only after the variables are saved and the plan is paid, push the new commit.
+10. Open "Deploys" or "Events" and watch the new deploy.
+11. A healthy boot line looks like:
+    `verify402 listening on http://localhost:...`
+    It must not say `REFUSING TO START`.
+12. Open `https://<your-live-url>/health` and confirm `ok: true`.
+13. If the deploy fails to start, click the previous deploy and choose "Rollback" or redeploy the previous commit. Then repeat steps 10-12.
+
+### Warning if the live service is currently on mainnet
+
+The version currently running on mainnet is the older vulnerable version. Set
+`AGENT_URL`, `PREFLIGHT_SECRET`, and `FACILITATOR_URL` first, before pushing.
+Do not push first and fix variables later: the new code refuses to start without
+those variables, which can leave the service down or keep the old vulnerable
+version running.
+
+---
+
 This guide assumes you only use web dashboards. Do not put any secret in the repo,
 in chat, or in a screenshot. Use placeholders and keep real values in Render only.
 
