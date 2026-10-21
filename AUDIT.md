@@ -987,3 +987,10 @@ No code has been changed. This file is the Phase 0 deliverable for review.
 | 4. Hosting status note | `d018fd8` | Added to README and `/info`. |
 | 5. Free-tier survival checklist | `2db466f` | Added to deploy guide. |
 | 6. Verification | no code change | `npm test`, `npm run test:offline`, and `npm run test:counts` passed; counts are `205 193 12`. |
+
+## Wake-time and existing-service safety
+
+| Item | Commit | Notes |
+|---|---|---|
+| Task 1. Show wake time | `2803d59` | Post-deploy prints `wake: ready/FAILED, ms, attempts`; added offline test. |
+| Task 2. Existing-service safety | `fd50b0f` | Added Render existing-service steps and mainnet warning. |
