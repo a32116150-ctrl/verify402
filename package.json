@@ -7,7 +7,7 @@
   "license": "Apache-2.0",
   "scripts": {
     "start": "node src/server.mjs",
-    "test": "npm run test:offline && npm run test:rpc && node test/discovery.test.mjs && node scripts/check-discovery.mjs && node test/env-example.test.mjs",
+    "test": "npm run test:offline && npm run test:rpc && node test/discovery.test.mjs && node scripts/check-discovery.mjs && node test/env-example.test.mjs && node test/smoke.test.mjs",
     "test:offline": "TEST_OFFLINE=1 node test/offline-mode.test.mjs && TEST_OFFLINE=1 node test/x402-settlement.test.mjs && TEST_OFFLINE=1 node test/pinned-block.test.mjs && TEST_OFFLINE=1 node test/depth-decimals.test.mjs && TEST_OFFLINE=1 node test/recovery.test.mjs && TEST_OFFLINE=1 node test/measure-typed.test.mjs && TEST_OFFLINE=1 node test/safety.test.mjs && TEST_OFFLINE=1 node test/honesty.test.mjs && TEST_OFFLINE=1 node test/preflight.test.mjs && TEST_OFFLINE=1 node test/preflight-guard.test.mjs && TEST_OFFLINE=1 node test/usage.test.mjs && TEST_OFFLINE=1 node --test mcp-bridge/test/payment-policy.test.mjs mcp-bridge/test/paid-call.test.mjs && TEST_OFFLINE=1 node test/http.test.mjs && TEST_OFFLINE=1 node test/shutdown.test.mjs && TEST_OFFLINE=1 node test/claims.test.mjs && TEST_OFFLINE=1 node test/log-redaction.test.mjs && TEST_OFFLINE=1 node test/measure.test.mjs && TEST_OFFLINE=1 node test/quotecheck.test.mjs && TEST_OFFLINE=1 node test/depth.test.mjs",
     "test:rpc": "TEST_RPC_ONLY=1 node test/measure.test.mjs && TEST_RPC_ONLY=1 node test/quotecheck.test.mjs && TEST_RPC_ONLY=1 node test/depth.test.mjs",
     "test:counts": "node scripts/test-counts.mjs",
