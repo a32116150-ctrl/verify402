@@ -976,3 +976,14 @@ No code has been changed. This file is the Phase 0 deliverable for review.
 | 7. Smoke hardening | `c3e30b1` | Expanded smoke checks and added offline tests. |
 | 8. Post-deploy runner | `5eb616f` | Added `scripts/post-deploy-check.mjs` and `npm run post-deploy`. |
 | 9. Deploy readiness | `4f18b4f` | Added `DEPLOY_READINESS.md`. |
+
+## Free-tier constraint update
+
+| Item | Commit | Notes |
+|---|---|---|
+| 1. Free-tier docs rewrite | `b09ad12` | Render free instance, testnet-only rule, env-before-push. |
+| 2. Mainnet always-on guard | `84f2d5e` | Startup refuses mainnet without `MAINNET_ALWAYS_ON_CONFIRMED=yes` or `REQUIRE_ALWAYS_ON=1`, or if `ALLOW_MAINNET_ON_FREE_TIER` is set. |
+| 3. Cold-start wake | `4762cfb` | Smoke and post-deploy wake `/health` before checks. |
+| 4. Hosting status note | `d018fd8` | Added to README and `/info`. |
+| 5. Free-tier survival checklist | `2db466f` | Added to deploy guide. |
+| 6. Verification | no code change | `npm test`, `npm run test:offline`, and `npm run test:counts` passed; counts are `205 193 12`. |
