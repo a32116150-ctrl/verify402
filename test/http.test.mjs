@@ -311,6 +311,41 @@ await check("/health stays liveness-only and advertises /ready", async () => {
   assert.deepEqual(Object.keys(body).sort(), [...HEALTH_OK_KEYS].sort());
 });
 
+await check("security headers cover HTML and API routes and x-powered-by is disabled", async () => {
+  for (const [path, accept] of [["/", "text/html"], ["/docs", "text/html"], ["/openapi.json", "application/json"]]) {
+    const r = await fetch(`${base}${path}`, { headers: { accept } });
+    assert.equal(r.status, 200, `${path} status`);
+    assert.equal(r.headers.get("x-powered-by"), null, `${path} x-powered-by`);
+    assert.equal(r.headers.get("x-content-type-options"), "nosniff", `${path} nosniff`);
+    assert.equal(r.headers.get("referrer-policy"), "strict-origin-when-cross-origin", `${path} referrer policy`);
+    assert.equal(r.headers.get("x-frame-options"), "DENY", `${path} frame protection`);
+    const csp = r.headers.get("content-security-policy") || "";
+    assert.match(csp, /default-src 'self'/);
+    assert.match(csp, /script-src 'self'/);
+    assert.match(csp, /frame-ancestors 'none'/);
+    assert.match(csp, /https:\/\/fonts\.googleapis\.com/);
+  }
+});
+
+await check("CORS allows free GET discovery but never a wildcard on paid routes", async () => {
+  const discovery = await fetch(`${base}/openapi.json`);
+  assert.equal(discovery.headers.get("access-control-allow-origin"), "*");
+  const health = await fetch(`${base}/health`);
+  assert.equal(health.headers.get("access-control-allow-origin"), "*");
+  const preflight = await fetch(`${base}/openapi.json`, { method: "OPTIONS" });
+  assert.equal(preflight.status, 204);
+  assert.equal(preflight.headers.get("access-control-allow-origin"), "*");
+  assert.match(preflight.headers.get("access-control-allow-methods") || "", /GET/);
+
+  const paid = await post("/verify", { chainId: 1, target: "WETH", size: 1000 });
+  assert.ok(paid.status >= 400, "paid route must reject the unpaid test call");
+  assert.equal(paid.headers.get("access-control-allow-origin"), null);
+  const paidOptions = await fetch(`${base}/verify`, { method: "OPTIONS" });
+  assert.equal(paidOptions.headers.get("access-control-allow-origin"), null);
+  const freeWrite = await fetch(`${base}/preflight`, { method: "OPTIONS" });
+  assert.equal(freeWrite.headers.get("access-control-allow-origin"), null);
+});
+
 await check("/info and /llms.txt describe quote-based sellability and no banned overclaims", async () => {
   const infoRes = await fetch(`${base}/info`);
   assert.equal(infoRes.status, 200);
@@ -460,6 +495,8 @@ await check("402: an unpaid paid route returns a payment challenge, never a verd
       body: JSON.stringify({ chainId: 1, target: "WETH", size: 1000 }),
     });
     assert.equal(r.status, 402);
+    assert.equal(r.headers.get("access-control-allow-origin"), null, "paid 402 must not carry a CORS wildcard");
+    assert.equal(r.headers.get("x-powered-by"), null);
     const body = await r.json().catch(() => ({}));
     assert.ok(!body.verdict, "a 402 must not contain a verdict");
     const challenge = r.headers.get("payment-required") || r.headers.get("www-authenticate") || "";

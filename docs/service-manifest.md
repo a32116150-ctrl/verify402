@@ -66,6 +66,9 @@ The `paymentRequirements` section specifies:
 - **Rate Limits:** `POST /preflight` enforces 60 requests/minute per IP with a concurrency cap of 8.
 - **Idempotency:** Callers can provide `x-idempotency-key` on paid routes. A settled verdict is cached and replayable up to 3 times within 600 seconds without incurring a second charge. Use `crypto.randomUUID()` or at least 32 URL-safe characters with at least 16 distinct characters; weak keys return `400 weak_idempotency_key`. The key is a secret: a leaked key allows replay until the TTL/replay cap. Recovery is not a durable ledger and does not survive a restart.
 - **Receipts:** Preflight responses include an HMAC-SHA256 receipt valid for 90 seconds (configurable 15–300s). `POST /preflight/verify` re-checks the HMAC and expiry.
+- **CORS:** Free read-only discovery (`GET`/`HEAD`/`OPTIONS`) allows any origin. Paid routes and free writes send no `Access-Control-Allow-Origin`; use a server-side client.
+- **Security headers:** Every response sets `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `X-Frame-Options: DENY`, and a static-site CSP. `x-powered-by` is disabled.
+- **Shutdown:** `SIGTERM`/`SIGINT` stop new connections, drain in-flight requests up to `SHUTDOWN_TIMEOUT_MS` (default 10000ms), then exit `0`; a drain timeout force-closes and exits `1`.
 
 ---
 

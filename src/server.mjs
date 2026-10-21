@@ -32,6 +32,7 @@ import {
   PRICE_DEFAULTS,
   PREFLIGHT_RATE_PER_MIN,
   PREFLIGHT_MAX_IN_FLIGHT,
+  SHUTDOWN_TIMEOUT_MS_DEFAULT,
 } from "./contract.mjs";
 import {
   IDEMPOTENCY_TTL_MS, IDEMPOTENCY_MAX_REPLAYS,
@@ -123,12 +124,72 @@ if (MODE === "mainnet" && process.env.FACILITATOR_URL?.includes("api.cdp.coinbas
 }
 
 const PORT = Number(process.env.PORT || 4021);
+const SHUTDOWN_TIMEOUT_MS = (() => {
+  const parsed = Number(process.env.SHUTDOWN_TIMEOUT_MS || SHUTDOWN_TIMEOUT_MS_DEFAULT);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : SHUTDOWN_TIMEOUT_MS_DEFAULT;
+})();
 
 // ----------------------------------------------------------------- app -----
 const app = express();
 // We run behind a proxy (Render): without this, req.protocol reports http and
 // the agent-registration file would advertise the wrong scheme.
 app.set("trust proxy", 1);
+app.disable("x-powered-by");
+
+// Security headers are set before any route so static HTML, JSON discovery,
+// paid responses, and errors all carry the same baseline.
+const CONTENT_SECURITY_POLICY = [
+  "default-src 'self'",
+  "script-src 'self'",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src https://fonts.gstatic.com",
+  "img-src 'self' data:",
+  "connect-src 'self'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+].join("; ");
+app.use((_req, res, next) => {
+  res.set("X-Content-Type-Options", "nosniff");
+  res.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.set("X-Frame-Options", "DENY");
+  res.set("Content-Security-Policy", CONTENT_SECURITY_POLICY);
+  next();
+});
+
+// CORS is deliberately narrow. Free, read-only discovery may be fetched by a
+// browser from any origin; paid and state-changing routes emit no ACAO at all.
+// Agents call paid routes server-side, so a wildcard there would only widen the
+// attack surface without enabling a supported client.
+const DISCOVERY_GET_PATHS = new Set([
+  "/",
+  "/health",
+  "/ready",
+  "/info",
+  "/usage",
+  "/findings",
+  "/openapi.json",
+  "/llms.txt",
+  "/robots.txt",
+  "/sitemap.xml",
+  "/.well-known/verify402.json",
+  "/.well-known/x402",
+  "/.well-known/agent-card.json",
+  "/.well-known/agent-registration.json",
+  "/.well-known/402index-verify.txt",
+]);
+app.use((req, res, next) => {
+  if (!DISCOVERY_GET_PATHS.has(req.path)) return next();
+  if (req.method !== "GET" && req.method !== "HEAD" && req.method !== "OPTIONS") return next();
+  res.set("Access-Control-Allow-Origin", "*");
+  res.set("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS");
+  res.set("Access-Control-Allow-Headers", "Accept, Content-Type");
+  res.set("Access-Control-Max-Age", "86400");
+  if (req.method === "OPTIONS") return res.status(204).end();
+  next();
+});
+
 app.use(express.json({ limit: "64kb" }));
 app.use(requestIdMiddleware);
 
@@ -784,7 +845,6 @@ app.get("/llms.txt", (_req, res) => {
 
 // Canonical machine-readable service manifest for agent discovery systems.
 app.get("/.well-known/verify402.json", (_req, res) => {
-  res.set("Access-Control-Allow-Origin", "*");
   res.set("Cache-Control", "public, max-age=300");
   res.json(
     buildServiceManifest({
@@ -809,7 +869,6 @@ app.get("/.well-known/verify402.json", (_req, res) => {
 // Prices are injected from the same strings the 402 middleware uses, so the
 // metadata and the runtime challenge cannot drift apart.
 app.get("/openapi.json", (_req, res) => {
-  res.set("Access-Control-Allow-Origin", "*");
   res.set("Cache-Control", "public, max-age=300");
   res.json(buildOpenapi({
     verify: PRICE,
@@ -825,7 +884,6 @@ app.get("/openapi.json", (_req, res) => {
 // entry is a pointer, so the 402 challenge (not this file) stays authoritative
 // for price and terms. Free resources are deliberately excluded.
 app.get("/.well-known/x402", (_req, res) => {
-  res.set("Access-Control-Allow-Origin", "*");
   res.set("Cache-Control", "public, max-age=300");
   res.json({
     x402Version: 2,
@@ -1804,8 +1862,10 @@ export { app };
 
 const IS_MAIN = Boolean(process.argv[1]) && import.meta.url === pathToFileURL(process.argv[1]).href;
 if (IS_MAIN) {
-  app.listen(PORT, () => {
-    logInfo(`\nverify402 listening on http://localhost:${PORT}`);
+  const server = app.listen(PORT, () => {
+    const address = server.address();
+    const listeningPort = address && typeof address === "object" ? address.port : PORT;
+    logInfo(`\nverify402 listening on http://localhost:${listeningPort}`);
     logInfo(`  mode        : ${MODE}  (${NETWORKS.label})`);
     logInfo(`  /preflight  : free   (should I sign this payment or transaction?)`);
     logInfo(`  /verify     : ${PRICE}   (is this arbitrage real?)`);
@@ -1821,4 +1881,36 @@ if (IS_MAIN) {
     // should spend its boot time measuring, not making the first visitor wait.
     refreshFindings().catch((e) => logWarn("findings prewarm failed", e));
   });
+
+  // Graceful shutdown: stop accepting new connections immediately, let active
+  // requests finish, and force-close only when the drain deadline expires.
+  let shuttingDown = false;
+  function shutdown(signal) {
+    if (shuttingDown) {
+      logWarn(`received ${signal} while already shutting down; forcing close`);
+      server.closeAllConnections?.();
+      process.exit(1);
+    }
+    shuttingDown = true;
+    logInfo(`received ${signal}; draining in-flight requests (timeout ${SHUTDOWN_TIMEOUT_MS}ms)`);
+    const timer = setTimeout(() => {
+      logError(`graceful shutdown timed out after ${SHUTDOWN_TIMEOUT_MS}ms; forcing close`);
+      server.closeAllConnections?.();
+      process.exit(1);
+    }, SHUTDOWN_TIMEOUT_MS);
+    timer.unref();
+    server.close((err) => {
+      clearTimeout(timer);
+      if (err) {
+        logError("graceful shutdown failed", err);
+        process.exit(1);
+      }
+      logInfo("graceful shutdown complete");
+      process.exit(0);
+    });
+    // Keep-alive sockets with no active request must not hold the drain open.
+    server.closeIdleConnections?.();
+  }
+  process.once("SIGTERM", () => shutdown("SIGTERM"));
+  process.once("SIGINT", () => shutdown("SIGINT"));
 }

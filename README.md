@@ -454,7 +454,7 @@ or any MCP client.
   carries `evidence_bundle: { requestHash, responseHash, pinnedBlock, mode, createdAt,
   payment.in }`. Both hashes are sha256 over canonical JSON (keys sorted recursively, no
   whitespace). `requestHash` covers `{ route, body }`; `responseHash` covers the response
-  body excluding `evidence_bundle`, `recovery`, `cache`, `elapsedMs`. Reference
+  body excluding `evidence_bundle`, `recovery`, `cache`, `elapsedMs`, and `operationId`. Reference
   implementation of the canonical form: `src/recovery.mjs` (`canonicalStable`), tests in
   `test/recovery.test.mjs`.
 - **Payment caps (bridge/client):** `MAX_PAYMENT_USD` caps one payment at signature time;
@@ -482,6 +482,18 @@ or any MCP client.
   unsupported => `400 unsupported_chain`. There is no silent Ethereum default.
 - **Readiness:** `/health` is liveness; `/ready` is a deep check that reads the latest
   block with a 3-second timeout.
+- **Security headers:** every response sets `X-Content-Type-Options: nosniff`,
+  `Referrer-Policy: strict-origin-when-cross-origin`, `X-Frame-Options: DENY`, and a
+  Content-Security-Policy written for the static site (self-hosted scripts, Google
+  Fonts, no framing). `x-powered-by` is disabled.
+- **CORS:** free read-only discovery (`GET`/`HEAD`/`OPTIONS` on `/info`, `/health`,
+  `/ready`, `/openapi.json`, `/llms.txt`, and `/.well-known/*`) allows any origin so
+  browser-based explorers can read it. Paid routes and free writes (`/preflight`) send
+  no `Access-Control-Allow-Origin`; agents call them server-side, and a wildcard there
+  would widen exposure without supporting a real client.
+- **Shutdown:** `SIGTERM`/`SIGINT` stop new connections immediately, drain in-flight
+  requests for up to `SHUTDOWN_TIMEOUT_MS` (default 10000), then exit `0`. A drain
+  timeout force-closes connections and exits `1` so a stuck deploy is visible.
 
 ## First paid call, in ten lines
 

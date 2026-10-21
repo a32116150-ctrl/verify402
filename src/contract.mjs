@@ -14,6 +14,7 @@ export const PRICE_DEFAULTS = Object.freeze({
 
 export const PREFLIGHT_RATE_PER_MIN = 60;
 export const PREFLIGHT_MAX_IN_FLIGHT = 8;
+export const SHUTDOWN_TIMEOUT_MS_DEFAULT = 10000;
 
 export const HEALTH_OK_KEYS = Object.freeze([
   "ok",

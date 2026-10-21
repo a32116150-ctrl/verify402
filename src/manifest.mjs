@@ -11,6 +11,7 @@ import {
   HEALTH_OK_KEYS,
   READY_OK_KEYS,
   READY_FAILURE_KEYS,
+  SHUTDOWN_TIMEOUT_MS_DEFAULT,
 } from "./contract.mjs";
 
 const IDEMPOTENCY_TTL_SECONDS = IDEMPOTENCY_TTL_MS / 1000;
@@ -264,6 +265,23 @@ export function buildServiceManifest({
         type: "HMAC-SHA256",
         defaultTtlSeconds: DEFAULT_TTL_SECONDS,
         rangeSeconds: `${MIN_TTL_SECONDS}-${MAX_TTL_SECONDS}`,
+      },
+      cors: {
+        discovery: "GET, HEAD, and OPTIONS on free read-only discovery paths allow Access-Control-Allow-Origin: *.",
+        paid: "Paid routes and free writes (/preflight) send no Access-Control-Allow-Origin header. Call them from a server-side client.",
+      },
+      securityHeaders: {
+        xPoweredBy: false,
+        xContentTypeOptions: "nosniff",
+        referrerPolicy: "strict-origin-when-cross-origin",
+        xFrameOptions: "DENY",
+        contentSecurityPolicy: "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'",
+      },
+      shutdown: {
+        signals: ["SIGTERM", "SIGINT"],
+        drainTimeoutEnv: "SHUTDOWN_TIMEOUT_MS",
+        defaultDrainTimeoutMs: SHUTDOWN_TIMEOUT_MS_DEFAULT,
+        forcedExitCode: 1,
       },
     },
     securityBoundaries: {
