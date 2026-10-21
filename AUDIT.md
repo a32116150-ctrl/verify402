@@ -962,3 +962,17 @@ This is the single largest test gap. `safety.mjs` is the most claim-sensitive mo
 The free preflight gate is a credible product and the right headline. The paid measurement engine is real but currently overclaims in three places: venue coverage, honeypot/sellability, and failure classification. The recovery companion bug is the most urgent because it breaks the paid trust boundary directly. Fix C-1 through C-3 and H-1/H-2/H-4, add the missing safety and HTTP tests, then proceed with the phased plan.
 
 No code has been changed. This file is the Phase 0 deliverable for review.
+
+## Fix-up and live-readiness pass
+
+| Item | Commit | Notes |
+|---|---|---|
+| 1. Stale claims | `b40294b` | Removed retired "honeypot test"/"every venue" wording from registration and forum copy. |
+| 2. Claims test coverage | `acbc449` | Claims scan now covers all tracked text files except `AUDIT.md` and `CHANGELOG.md`. |
+| 3. Price pinning | `be42032` | Added literal default-price assertions independent of `PRICE_DEFAULTS`. |
+| 4. Test count labels | no code change | `test:counts` is correct: `paid-call.test.mjs` has 7 top-level tests; the earlier `19` was the combined `node --test` total for payment-policy + paid-call. |
+| 5. `.env.example` | `86f9397` | Added template header and `test/env-example.test.mjs`. |
+| 6. CORS documentation | `2bb08ac` | Documented cross-origin behavior in OpenAPI. |
+| 7. Smoke hardening | `c3e30b1` | Expanded smoke checks and added offline tests. |
+| 8. Post-deploy runner | `5eb616f` | Added `scripts/post-deploy-check.mjs` and `npm run post-deploy`. |
+| 9. Deploy readiness | `4f18b4f` | Added `DEPLOY_READINESS.md`. |
