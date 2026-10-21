@@ -73,6 +73,24 @@ test("discovery: canonical service manifest matches implemented tools and runtim
     assert.ok(toolNames.has(expected), `Manifest must include tool ${expected}`);
   }
 
+  // Pinned default prices: these literals are deliberately independent of PRICE_DEFAULTS.
+  // A price change must change this test deliberately; do not derive these from PRICE_DEFAULTS.
+  const pinnedDefaultPrices = {
+    verify: 0.05,
+    safety: 0.10,
+    route: 0.03,
+    quotecheck: 0.05,
+    depth: 0.05,
+  };
+  assert.equal(PRICE_DEFAULTS.verify, "$0.05");
+  assert.equal(PRICE_DEFAULTS.safety, "$0.10");
+  assert.equal(PRICE_DEFAULTS.route, "$0.03");
+  assert.equal(PRICE_DEFAULTS.quotecheck, "$0.05");
+  assert.equal(PRICE_DEFAULTS.depth, "$0.05");
+  for (const [key, expectedUsd] of Object.entries(pinnedDefaultPrices)) {
+    assert.equal(Number(PRICE_DEFAULTS[key].replace(/^\$/, "")), expectedUsd);
+  }
+
   // Price parity comes from the same defaults the server and manifest use.
   const expectedPrices = Object.fromEntries(
     Object.entries(PRICE_DEFAULTS).map(([key, value]) => [key, Number(value.replace(/^\$/, ""))])
