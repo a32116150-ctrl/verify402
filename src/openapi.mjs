@@ -385,7 +385,7 @@ export function buildOpenapi(prices) {
             "Evaluates structural validity, recipient allowlists, spend caps, approval limits, revert simulation, and block freshness.",
             "Returns PASS / CAUTION / BLOCK with typed reasons, checked/notChecked lists, pinned block number, and an HMAC receipt (valid for 90s).",
             "\n**Security disclaimer:** A PASS indicates that the specific checks in `checked` passed. It is not an audit, does not screen sanctions, does not audit the counterparty, does not scan tool descriptions or responses for prompt injection, and does not guarantee the intent is safe. Always inspect `notChecked`.",
-            "\n**Rate limits:** 60 requests/minute per IP, max concurrency of 5.",
+            "\n**Rate limits:** 60 requests/minute per IP, max concurrency of 8.",
           ].join("\n"),
           requestBody: {
             required: true,
@@ -431,6 +431,20 @@ export function buildOpenapi(prices) {
                     ttlSeconds: { type: "integer", default: 90, minimum: 15, maximum: 300, description: "Receipt lifetime in seconds." },
                   },
                   additionalProperties: true,
+                  allOf: [
+                    {
+                      if: {
+                        properties: { kind: { const: "transaction" } },
+                        required: ["kind"],
+                      },
+                      then: {
+                        required: ["chainId"],
+                        properties: {
+                          chainId: { type: "integer", description: "Required for kind=transaction. Missing => 400 missing_chain; non-integer => 400 invalid_chain; unsupported => 400 unsupported_chain. There is no chain-1 default." },
+                        },
+                      },
+                    },
+                  ],
                 },
                 example: {
                   kind: "payment",

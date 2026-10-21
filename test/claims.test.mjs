@@ -87,6 +87,10 @@ check("chainId has no silent default in OpenAPI or the MCP bridge", () => {
   const mcp = read("mcp-bridge/index.mjs");
   assert.ok(!/chainId:\s*args\.chainId\s*\?\?\s*1/.test(mcp), "MCP bridge must not default chainId to 1");
   assert.match(mcp, /REQUIRED/);
+  assert.match(openapi, /kind: \{ const: "transaction" \}[\s\S]*?required: \["chainId"\]/,
+    "transaction preflight schema must conditionally require chainId");
+  assert.match(openapi, /concurrency of 8/);
+  assert.match(read("docs/service-manifest.md"), /concurrency cap of 8/);
 });
 
 check("recovery documentation no longer advertises a companion alias", () => {

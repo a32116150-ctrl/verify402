@@ -61,7 +61,7 @@ The `paymentRequirements` section specifies:
 
 ### 3. Operational Policies
 
-- **Rate Limits:** `POST /preflight` enforces 60 requests/minute per IP with a concurrency cap of 5.
+- **Rate Limits:** `POST /preflight` enforces 60 requests/minute per IP with a concurrency cap of 8.
 - **Idempotency:** Callers can provide `x-idempotency-key` on paid routes. A settled verdict is cached and replayable up to 3 times within 300 seconds without incurring a second charge.
 - **Receipts:** Preflight responses include an HMAC-SHA256 receipt valid for 90 seconds (configurable 15–300s). `POST /preflight/verify` re-checks the HMAC and expiry.
 
