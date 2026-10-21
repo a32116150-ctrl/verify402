@@ -487,10 +487,9 @@ or any MCP client.
   Content-Security-Policy written for the static site (self-hosted scripts, Google
   Fonts, no framing). `x-powered-by` is disabled.
 - **CORS:** free read-only discovery (`GET`/`HEAD`/`OPTIONS` on `/info`, `/health`,
-  `/ready`, `/openapi.json`, `/llms.txt`, and `/.well-known/*`) allows any origin so
-  browser-based explorers can read it. Paid routes and free writes (`/preflight`) send
-  no `Access-Control-Allow-Origin`; agents call them server-side, and a wildcard there
-  would widen exposure without supporting a real client.
+  `/ready`, `/openapi.json`, `/llms.txt`, and `/.well-known/*`) allows any origin.
+  `POST /preflight` and paid routes send no `Access-Control-Allow-Origin`; browser-based
+  agents must use a server-side client, the MCP bridge, or an SDK.
 - **Shutdown:** `SIGTERM`/`SIGINT` stop new connections immediately, drain in-flight
   requests for up to `SHUTDOWN_TIMEOUT_MS` (default 10000), then exit `0`. A drain
   timeout force-closes connections and exits `1` so a stuck deploy is visible.

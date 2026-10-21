@@ -96,5 +96,14 @@ check("the public service description names transport/decode as failures, not ve
   assert.match(text, /no verdict/i);
 });
 
+check("CORS behavior is documented where agents read it", () => {
+  for (const file of ["README.md", "docs/ai-agent-guide.md", "docs/service-manifest.md", "src/openapi.mjs"]) {
+    const text = read(file);
+    assert.match(text, /free read-only discovery/i, file);
+    assert.match(text, /allow(s)? any origin/i, file);
+    assert.match(text, /no `Access-Control-Allow-Origin`|no Access-Control-Allow-Origin/i, file);
+  }
+});
+
 console.log(`\nclaims: ${passed} passed, ${failed} failed\n`);
 if (failed) process.exit(1);

@@ -161,3 +161,7 @@ Run verify_arbitrage to determine if this opportunity actually has an edge after
 ```text
 A bot offered to swap 5,000 USDC for 1.74 WETH. Run verify_quote_fairness to see if this is an honest market rate or an overpayment.
 ```
+
+## CORS
+
+Free read-only discovery (`GET`/`HEAD`/`OPTIONS`) allows any origin. `POST /preflight` and paid routes send no `Access-Control-Allow-Origin`; browser-based agents must use a server-side client, the MCP bridge, or an SDK.
