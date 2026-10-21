@@ -675,7 +675,7 @@ export function buildOpenapi(prices) {
           summary: "Largest size that still clears your cost tolerance",
           tag: "Truth",
           guidance:
-            "Position sizing: quotes entry and exit at multiple USD sizes, reporting impact %, round-trip cost %, and max fillable capacityUsd. transport/decode failures return HTTP 503 with no depth verdict.",
+            "Position sizing: quotes entry and exit at multiple USD sizes, reporting impact %, round-trip cost %, and max fillable capacityUsd. Each rung reports gotTokens using the token's real on-chain decimals, impliedPriceBase (base units per token), and impliedPriceUsd only when the base is a known USD stable (deprecated alias; null otherwise). transport/decode failures return HTTP 503 with no depth verdict.",
           inputSchema: {
             type: "object",
             required: ["chainId", "tokenAddress"],

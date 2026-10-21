@@ -23,23 +23,16 @@
 // failure aborts with ok:false and a 503; only no_pool/revert may produce an
 // "unfillable / illiquid" rung.
 
-import { chain, resolveToken } from "./config.mjs";
+import { resolveToken } from "./config.mjs";
 import { clientFor, quoteAllVenues, classifyQuoteError } from "./measure.mjs";
 import { tokenFacts } from "./safety.mjs";
 import { dexscreenerPair as realDexscreenerPair } from "./dexscreener.mjs";
 import { paidHonesty, unconfiguredVenues } from "./honesty.mjs";
 
-// Local helper so the human "gotTokens / impliedPriceUsd" figures are right
-// without duplicating the chain config here.
-function chainTokenDecimals(chainId, address) {
-  try {
-    const c = chain(chainId);
-    const hit = Object.values(c.tokens).find((t) => t.address.toLowerCase() === address.toLowerCase());
-    return hit ? hit.decimals : null;
-  } catch {
-    return null;
-  }
-}
+// Local helper so the human "gotTokens" figures are right without duplicating
+// the chain config here. The token's real decimals come from tokenFacts()
+// above; this only supplies a symbol for configured tokens when one is needed.
+const USD_STABLES = new Set(["USDC", "USDT", "DAI"]);
 
 const DEFAULT_SIZES_USD = [100, 1_000, 10_000, 100_000];
 const DEFAULT_TOLERANCE_PCT = 1.0;
@@ -107,6 +100,7 @@ export async function depthProfile(chainId, {
       notes,
     };
   }
+  const baseIsUsdStable = USD_STABLES.has(String(baseSymbol).toUpperCase());
 
   // One pinned block for token facts and every rung. A ladder assembled from
   // different blocks is not one measurement.
@@ -222,6 +216,13 @@ export async function depthProfile(chainId, {
     const roundTripCostPct = ((entryHuman - exitHuman) / entryHuman) * 100;
     const impactPct = smallestEffective > 0 ? Math.max(0, (1 - effective / smallestEffective) * 100) : null;
 
+    // gotTokens uses the token's OWN decimals() read at the pinned block, not
+    // the config registry. An unlisted 6- or 8-decimal token otherwise gets a
+    // 10^12 error in its price. The deprecated impliedPriceUsd alias is only
+    // meaningful when the base really is a USD stable.
+    const gotTokens = Number(got) / 10 ** facts.decimals;
+    const impliedPriceBase = gotTokens > 0 ? sizeUsd / gotTokens : null;
+
     ladder.push({
       sizeUsd,
       fillable: true,
@@ -229,10 +230,9 @@ export async function depthProfile(chainId, {
       unavailable_reason: (buy.unavailable.length || sellBack.unavailable.length) ? "some_venues_no_pool" : null,
       buyVenue: bestBuy.venue,
       sellVenue: bestSell.venue,
-      gotTokens: Number(got) / 10 ** (chainTokenDecimals(chainId, target) ?? 18),
-      impliedPriceUsd: base.decimals >= 0
-        ? (sizeUsd) / (Number(got) / 10 ** (chainTokenDecimals(chainId, target) ?? 18))
-        : null,
+      gotTokens,
+      impliedPriceBase,
+      impliedPriceUsd: baseIsUsdStable ? impliedPriceBase : null,
       impactPct,
       roundTripCostPct,
       underTolerance: roundTripCostPct <= maxRoundTripPct,
