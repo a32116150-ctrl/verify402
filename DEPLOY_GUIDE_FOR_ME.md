@@ -1,0 +1,134 @@
+# Deploy Guide For Me (Plain Language)
+
+This guide assumes you only use web dashboards. Do not put any secret in the repo,
+in chat, or in a screenshot. Use placeholders and keep real values in Render only.
+
+## A. Create a new RPC key and add it only in Render
+
+1. Open your RPC provider dashboard in a browser.
+2. Find the project or app that currently holds the old RPC key.
+3. Click "Create API key", "Create key", or the equivalent button.
+4. Give it a clear name such as `verify402-render-new`.
+5. Copy the new key or full endpoint URL into your password manager. Do not paste it into chat, GitHub, or a commit.
+6. Open the Render dashboard.
+7. Open the verify402 web service.
+8. Click "Environment" or "Environment Variables".
+9. Add or update only these variables with the new private endpoint:
+   - `ETH_RPC_URL` = `https://...your-new-key...`
+   - `ARB_RPC_URL` = `https://...your-new-key...` (if you use Arbitrum)
+   - `BASE_RPC_URL` = `https://...your-new-key...` (if you use Base)
+10. Save the environment changes.
+11. Do not revoke the old key yet.
+12. Deploy or restart the service so the new key is used.
+13. Open `https://<your-live-url>/ready` and confirm it shows `ok: true` and a recent block number.
+14. After the new key is confirmed working, return to the RPC provider dashboard.
+15. Revoke or delete the old key.
+16. Never put the new key in the repo, in logs, or in chat.
+
+## B. Create the Render web service from GitHub
+
+1. Open Render and click "New".
+2. Click "Web Service".
+3. Connect your GitHub account if Render asks.
+4. Select the verify402 repository.
+5. Choose the branch you want to deploy, usually `master`.
+6. Choose a paid, always-on instance. Do not use a free sleeping instance.
+7. Set the build command to `npm install`.
+8. Set the start command to `npm start`.
+9. Set the health check path to `/health`.
+10. Open the Environment section.
+11. Add the variables below. Variables marked SECRET must be generated or copied into Render only, never into the repo.
+
+Required variables:
+
+- `X402_MODE` = `testnet` for the first deploy. Use `mainnet` only later.
+- `FACILITATOR_URL` = `https://x402.org/facilitator` for testnet.
+- `AGENT_URL` = `https://your-render-url.example` (SECRET-ish public origin; set your canonical URL)
+- `TRUSTED_HOSTS` = `your-render-url.example,localhost,127.0.0.1`
+- `PREFLIGHT_SECRET` = a long random secret. Generate it in your password manager as at least 32 random characters; 64 hex characters is ideal. Do not use a short word or reuse another secret.
+- `PAY_TO_EVM` = your testnet receiving wallet address.
+- `PAY_TO_SVM` = your testnet receiving wallet address.
+- `PORT` = leave unset unless Render requires a value; Render usually provides it.
+- `READY_CHAIN_ID` = `1`
+- `SHUTDOWN_TIMEOUT_MS` = `10000`
+
+Optional variables:
+
+- `ETH_RPC_URL`, `ARB_RPC_URL`, `BASE_RPC_URL` = your private RPC endpoints.
+- `PRICE`, `SAFETY_PRICE`, `ROUTE_PRICE`, `QUOTECHECK_PRICE`, `DEPTH_PRICE` = leave unset to use defaults.
+
+Never set these in Render:
+
+- `BYPASS_PAYMENT=1`
+- `TEST_OFFLINE=1`
+- `TEST_RPC_ONLY=1`
+- `TEST_OFFLINE_RPC_URL=...`
+- `SMOKE_PAID=1`
+- `SMOKE_BASE_URL=...`
+- `EVM_PRIVATE_KEY=...`
+
+12. Click "Create Web Service".
+13. Wait until Render shows the service as live.
+14. Open `https://<your-live-url>/health` and confirm it says `ok: true`.
+
+## C. Start on testnet first, then switch to mainnet later
+
+### Testnet values
+
+Use these exact values for the first live deploy:
+
+- `X402_MODE` = `testnet`
+- `FACILITATOR_URL` = `https://x402.org/facilitator`
+- `AGENT_URL` = `https://<your-testnet-render-url>`
+- `TRUSTED_HOSTS` = `<your-testnet-render-url>,localhost,127.0.0.1`
+- `PREFLIGHT_SECRET` = your long random secret
+- `PAY_TO_EVM` = testnet receiving wallet
+- `PAY_TO_SVM` = testnet receiving wallet
+- `READY_CHAIN_ID` = `1`
+
+Do not set `BYPASS_PAYMENT=1`.
+
+### Switch to mainnet later only after these checks pass
+
+1. Confirm testnet `/health` reports `mode: "testnet"`.
+2. Confirm testnet `/ready` returns `ok: true` and a recent block.
+3. Run the free smoke test successfully.
+4. Optionally run one paid testnet call with `SMOKE_PAID=1` only against a testnet URL.
+5. Confirm `/info`, `/openapi.json`, `/.well-known/verify402.json`, `/.well-known/x402`, and `/llms.txt` look correct.
+6. In Render, change only these variables for mainnet:
+   - `X402_MODE` = `mainnet`
+   - `FACILITATOR_URL` = your mainnet facilitator URL
+   - `AGENT_URL` = `https://<your-mainnet-render-url>`
+   - `TRUSTED_HOSTS` = `<your-mainnet-render-url>,localhost,127.0.0.1`
+   - `PREFLIGHT_SECRET` = your long random secret
+   - `PAY_TO_EVM` = mainnet receiving wallet
+   - `PAY_TO_SVM` = mainnet receiving wallet
+   - `CDP_API_KEY_ID` = your CDP key ID, if using Coinbase CDP
+   - `CDP_API_KEY_SECRET` = your CDP key secret, if using Coinbase CDP
+7. Save and redeploy.
+8. Confirm `/health` reports `mode: "mainnet"`.
+9. Confirm `/ready` returns `ok: true`.
+10. Run the free smoke test against the mainnet URL.
+
+## D. Roll back in Render if something breaks
+
+1. Open the Render dashboard.
+2. Open the verify402 web service.
+3. Click "Deploys" or "Events".
+4. Find the previous working deploy.
+5. Click "Rollback" or redeploy that previous commit.
+6. Wait until Render shows the service as live.
+7. Open `/health` and `/ready`.
+8. Run the smoke test again.
+9. If the problem involved a leaked key, rotate that key even after rollback.
+10. Record the failed deploy and restored deploy in your notes.
+
+## E. What to paste back
+
+Paste the live URL to OpenCode. Then run this exact command from the project folder, replacing `<url>` with your live URL:
+
+```bash
+SMOKE_BASE_URL=<url> npm run post-deploy
+```
+
+Paste the full output back to OpenCode.
