@@ -260,7 +260,7 @@ test("a settlement on a different network than the signed requirement is rejecte
   assert.match(verdict.reason, /not the expected/);
 });
 
-test("a settlement credited to a different payer is rejected", () => {
+test("a settlement credited to another payer is rejected", () => {
   const verdict = validateSettlementReceipt(receipt(), {
     expectedNetwork: DEMO_NETWORK,
     expectedPayer: "0x2222222222222222222222222222222222222222",

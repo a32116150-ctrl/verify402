@@ -117,10 +117,9 @@ export function buildServiceManifest({
         transport: "stdio",
         packageIdentifier: "verify402-mcp",
         npmUrl: "https://www.npmjs.com/package/verify402-mcp",
-        // This source tree is an UNPUBLISHED 1.0.5 candidate. The only
-        // installable artifact is the immutable npm 1.0.4, so the usable
-        // fields point there; the 1.0.5 commands are labelled as planned and
-        // must not be presented as currently usable.
+        // npm 1.0.5 is published from the approved source commit; these fields
+        // describe the artifact a user can install today. The MCP Registry entry
+        // is a separate release step and is not claimed here.
         releaseStatus: RELEASE_STATUS,
         publishedVersion: PUBLISHED_VERSION,
         tarballUrl: `https://registry.npmjs.org/verify402-mcp/-/verify402-mcp-${PUBLISHED_VERSION}.tgz`,
@@ -129,12 +128,6 @@ export function buildServiceManifest({
         // a version-specific URL would 404 until that human step completes.
         registryUrl: "https://registry.modelcontextprotocol.io/v0.1/servers/io.github.a32116150-ctrl%2Fverify402-mcp/versions",
         quickInstallCommand: `npx -y verify402-mcp@${PUBLISHED_VERSION}`,
-        plannedVersion: RELEASE_VERSION,
-        plannedInstallCommand: `npx -y verify402-mcp@${RELEASE_VERSION}`,
-        plannedTarballUrl: `https://registry.npmjs.org/verify402-mcp/-/verify402-mcp-${RELEASE_VERSION}.tgz`,
-        plannedInstallNote:
-          `Planned only: no ${RELEASE_VERSION} artifact exists yet. Use these values only ` +
-          `after the npm publish completes and the artifact contents and metadata are verified.`,
         tools: [
           {
             name: "preflight_gate",
@@ -184,7 +177,7 @@ export function buildServiceManifest({
             name: "EVM_PRIVATE_KEY",
             description: mode === "mainnet"
               ? "Private key for a dedicated hot wallet. Required only for the 5 paid tools; omit for free-only preflight_gate. This instance is configured for Base mainnet USDC; mainnet operation requires separate readiness verification."
-              : `Private key for a dedicated hot wallet. Required only for the 5 paid tools; omit for free-only preflight_gate. The published verify402-mcp@${PUBLISHED_VERSION} package defaults paid calls to Base mainnet; the unpublished ${RELEASE_VERSION} candidate in this repository defaults to Base Sepolia testnet (${DEMO_NETWORK}). Set VERIFY402_NETWORKS explicitly and fund only Base Sepolia testnet USDC for this service's demo.`,
+              : `Private key for a dedicated hot wallet. Required only for the 5 paid tools; omit for free-only preflight_gate. This release (verify402-mcp@${PUBLISHED_VERSION}) defaults paid calls to Base Sepolia testnet (${DEMO_NETWORK}) for the public demo. Base mainnet (${MAINNET_NETWORK}) is an explicit opt-in for a separate deployment and is not enabled by this release. Fund only Base Sepolia testnet USDC for this demo.`,
             isRequired: false,
             isSecret: true,
           },
@@ -194,11 +187,9 @@ export function buildServiceManifest({
             isRequired: false,
             isSecret: false,
             default: DEMO_NETWORK,
-            // The immutable npm 1.0.4 defaults paid calls to Base mainnet; the
-            // 1.0.5 candidate in this tree defaults to Base Sepolia testnet.
-            // Keep the two facts separate so neither is reported as the other.
-            publishedPackageDefault: MAINNET_NETWORK,
-            candidatePackageDefault: DEMO_NETWORK,
+            // The published 1.0.5 package defaults to Base Sepolia testnet.
+            // Base mainnet remains an explicit opt-in, not the demo default.
+            publishedPackageDefault: DEMO_NETWORK,
             demoValue: mode === "mainnet" ? MAINNET_NETWORK : DEMO_NETWORK,
           },
           {

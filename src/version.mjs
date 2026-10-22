@@ -5,14 +5,13 @@
 export const RELEASE_VERSION = "1.0.5";
 
 // The version a user can actually install from the public npm registry today.
-// 1.0.4 is immutable and must never be republished. Everything in this tree
-// describes 1.0.5 as a CANDIDATE until a human creates, verifies, and publishes
-// the artifact; public install instructions must therefore point at this
-// version, not at RELEASE_VERSION.
-export const PUBLISHED_VERSION = "1.0.4";
+// 1.0.5 was published from commit fc1654964969f340a32c0420d5b5a3852f055310; the
+// immutable 1.0.4 package must never be republished. Public install
+// instructions point at this version.
+export const PUBLISHED_VERSION = "1.0.5";
 
 // Machine-readable statement of where this source tree sits in the release
-// process. "candidate-unpublished" means: not on npm, not in the MCP registry,
-// and not deployed, until a human completes the runbook in
+// process. "published" means the npm artifact exists and was verified. The MCP
+// Registry entry and the Render deployment remain separate approval gates in
 // PUBLISH_STEPS_FOR_ME.md.
-export const RELEASE_STATUS = "candidate-unpublished";
+export const RELEASE_STATUS = "published";

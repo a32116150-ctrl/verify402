@@ -5,7 +5,7 @@
 // OpenAPI examples, and the x402 discovery manifest from hardcoding the demo
 // rail while the process is actually configured for another mode.
 
-import { PUBLISHED_VERSION, RELEASE_VERSION } from "./version.mjs";
+import { PUBLISHED_VERSION } from "./version.mjs";
 
 export const DEMO_BASE_URL = "https://verify402.onrender.com";
 export const DEMO_NETWORK = "eip155:84532";
@@ -124,15 +124,13 @@ export function buildPreflightPaymentNetworks(mode = "testnet") {
 export function buildLlmsText({
   mode = "testnet",
   baseUrl = DEMO_BASE_URL,
-  releaseVersion = RELEASE_VERSION,
   publishedVersion = PUBLISHED_VERSION,
 } = {}) {
   const rail = paymentRail(mode);
   const envLine = rail.testnet
     ? `  Public demo: set VERIFY402_NETWORKS=${rail.evmNetwork}; omit EVM_PRIVATE_KEY`
     : `  Mainnet: set VERIFY402_NETWORKS=${rail.evmNetwork} explicitly; omit EVM_PRIVATE_KEY`;
-  // Public install text must reference the artifact a user can actually
-  // download. The source tree's version is a candidate and stays a note.
+  // Public install text references the published artifact.
   const installVersion = `@${publishedVersion}`;
 
   return [
@@ -188,7 +186,6 @@ export function buildLlmsText({
     "- /sitemap.xml — XML sitemap for public documentation indexers.",
     "- MCP bridge package: verify402-mcp (stdio transport)",
     `  Install the published package: npx -y verify402-mcp${installVersion}`,
-    `  Candidate source here: ${releaseVersion} is unpublished; install it only after its npm artifact exists and is verified.`,
     envLine,
     "  for the free gate only.",
     "  npm: https://www.npmjs.com/package/verify402-mcp",

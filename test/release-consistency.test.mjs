@@ -65,6 +65,7 @@ test("release metadata uses one version across package, lockfile, registry, mani
   const manifest = buildServiceManifest({ mode: "testnet" });
   const openapi = buildOpenapi(PRICE_DEFAULTS);
 
+  assert.equal(PUBLISHED_VERSION, RELEASE_VERSION, "the published npm version must match the release identity");
   assert.equal(pkg.version, RELEASE_VERSION);
   assert.equal(lock.version, RELEASE_VERSION);
   assert.equal(lock.packages[""].version, RELEASE_VERSION);
@@ -80,7 +81,6 @@ test("release metadata uses one version across package, lockfile, registry, mani
   const testnetLlms = buildLlmsText({
     mode: "testnet",
     baseUrl: "https://verify402.onrender.com",
-    releaseVersion: RELEASE_VERSION,
   });
   assert.match(
     testnetLlms,
@@ -89,13 +89,8 @@ test("release metadata uses one version across package, lockfile, registry, mani
   );
   assert.doesNotMatch(
     testnetLlms,
-    new RegExp(`npx -y verify402-mcp@${RELEASE_VERSION.replaceAll(".", "\\.")}`),
-    "runtime /llms.txt must not present the unpublished candidate as installable",
-  );
-  assert.match(
-    testnetLlms,
-    new RegExp(`${RELEASE_VERSION.replaceAll(".", "\\.")} is unpublished`),
-    "runtime /llms.txt must name the candidate as unpublished",
+    /unpublished|candidate/i,
+    "runtime /llms.txt must not describe the published release as a candidate",
   );
   assert.doesNotMatch(
     read("src/payment-mode.mjs"),
@@ -106,8 +101,8 @@ test("release metadata uses one version across package, lockfile, registry, mani
   assert.match(mcpPage, new RegExp(`verify402-mcp v${PUBLISHED_VERSION.replaceAll(".", "\\.")}`));
   assert.doesNotMatch(
     mcpPage,
-    new RegExp(`verify402-mcp v${RELEASE_VERSION.replaceAll(".", "\\.")}`),
-    "the /mcp page must not present the candidate as the published version",
+    /candidate\s*·\s*unpublished/i,
+    "the /mcp page must not present the published version as a candidate",
   );
 
   // The /info response definition must itself declare the top-level release
@@ -124,19 +119,23 @@ test("release metadata uses one version across package, lockfile, registry, mani
   assert.equal(
     manifest.integrations.mcp.releaseStatus,
     RELEASE_STATUS,
-    "manifest must state that the source tree is an unpublished candidate",
+    "manifest must state the published release status",
   );
   assert.equal(manifest.integrations.mcp.publishedVersion, PUBLISHED_VERSION);
-  assert.equal(manifest.integrations.mcp.plannedVersion, RELEASE_VERSION);
+  assert.equal(
+    Object.hasOwn(manifest.integrations.mcp, "plannedVersion"),
+    false,
+    "the published manifest must not carry planned-only fields",
+  );
 });
 
-test("MCP Registry metadata truthfully describes the 1.0.5 default network", () => {
+test("MCP Registry metadata truthfully describes the published 1.0.5 release", () => {
   const server = json("server.json");
   const env = server.packages?.[0]?.environmentVariables ?? [];
   const network = env.find((entry) => entry.name === "VERIFY402_NETWORKS");
   assert.ok(network, "server.json must document VERIFY402_NETWORKS");
 
-  // The registry entry describes the upcoming source release. Its built-in
+  // The registry entry describes the published 1.0.5 release. Its built-in
   // runtime default is Base Sepolia testnet; Base mainnet is an explicit opt-in.
   assert.equal(Object.hasOwn(network, "default"), true, "server.json must declare the 1.0.5 default network");
   assert.equal(network.default, DEMO_NETWORK);
@@ -150,6 +149,12 @@ test("MCP Registry metadata truthfully describes the 1.0.5 default network", () 
   assert.ok(evmPrivateKey, "server.json must document EVM_PRIVATE_KEY");
   assert.equal(evmPrivateKey.isRequired, false);
   assert.match(evmPrivateKey.description, /Base Sepolia/);
+  assert.match(evmPrivateKey.description, new RegExp(RELEASE_VERSION.replaceAll(".", "\\.")));
+  assert.doesNotMatch(
+    evmPrivateKey.description,
+    /unpublished|candidate/i,
+    "server.json must not describe the published release as a candidate",
+  );
 
   // The top-level description must not imply the published package is a
   // testnet-only demo.
@@ -245,8 +250,12 @@ test("runtime metadata follows the configured mode instead of hardcoding the dem
   assert.equal(Object.hasOwn(registryNetwork(testnetManifest), "default"), true);
   assert.equal(registryNetwork(testnetManifest).default, DEMO_NETWORK);
   assert.equal(registryNetwork(testnetManifest).isRequired, false);
-  assert.equal(registryNetwork(testnetManifest).publishedPackageDefault, MAINNET_NETWORK);
-  assert.equal(registryNetwork(testnetManifest).candidatePackageDefault, DEMO_NETWORK);
+  assert.equal(registryNetwork(testnetManifest).publishedPackageDefault, DEMO_NETWORK);
+  assert.equal(
+    Object.hasOwn(registryNetwork(testnetManifest), "candidatePackageDefault"),
+    false,
+    "the published manifest must not carry a separate candidate default",
+  );
   assert.equal(registryNetwork(testnetManifest).demoValue, DEMO_NETWORK);
   assert.equal(registryNetwork(mainnetManifest).default, DEMO_NETWORK);
   assert.equal(registryNetwork(mainnetManifest).demoValue, MAINNET_NETWORK);
@@ -254,12 +263,10 @@ test("runtime metadata follows the configured mode instead of hardcoding the dem
   const testnetLlms = buildLlmsText({
     mode: "testnet",
     baseUrl: "https://testnet.example",
-    releaseVersion: RELEASE_VERSION,
   });
   const mainnetLlms = buildLlmsText({
     mode: "mainnet",
     baseUrl: "https://mainnet.example",
-    releaseVersion: RELEASE_VERSION,
   });
   assert.match(testnetLlms, /testnet USDC/);
   assert.match(testnetLlms, /eip155:84532/);
@@ -440,7 +447,7 @@ test("payment proof documentation uses PAYMENT-SIGNATURE and preserves the legac
   assert.equal(example.payment.asset, TESTNET_USDC);
 });
 
-test("public install docs pin the published package, not the candidate", () => {
+test("public install docs pin the published package 1.0.5", () => {
   for (const rel of [
     "README.md",
     "examples/ONBOARDING.md",
@@ -464,22 +471,20 @@ test("public install docs pin the published package, not the candidate", () => {
     tarball.pathname,
     new RegExp(`verify402-mcp-${PUBLISHED_VERSION.replaceAll(".", "\\.")}\\.tgz$`),
   );
-  assert.doesNotMatch(mcp.quickInstallCommand, new RegExp(RELEASE_VERSION.replaceAll(".", "\\.")));
-  assert.doesNotMatch(tarball.pathname, new RegExp(RELEASE_VERSION.replaceAll(".", "\\.")));
-
-  const planned = new URL(mcp.plannedTarballUrl);
-  assert.match(planned.pathname, new RegExp(`verify402-mcp-${RELEASE_VERSION.replaceAll(".", "\\.")}\\.tgz$`));
-  assert.match(mcp.plannedInstallNote, /only after/i);
+  assert.equal(mcp.quickInstallCommand, `npx -y verify402-mcp@${PUBLISHED_VERSION}`);
+  assert.equal(mcp.publishedVersion, PUBLISHED_VERSION);
+  assert.equal(
+    Object.hasOwn(mcp, "plannedTarballUrl"),
+    false,
+    "the published manifest must not carry planned-only fields",
+  );
 
   const registry = new URL(mcp.registryUrl);
   assert.equal(registry.hostname, "registry.modelcontextprotocol.io");
   assert.match(registry.pathname, /\/versions$/, "registry URL must resolve before and after the manual publish");
 });
 
-const CANDIDATE_QUALIFIER =
-  /candidate|unpublished|not published|planned|after publication|after the npm publish|after its npm artifact/i;
-
-test("public surfaces never present 1.0.5 as already published", () => {
+test("public surfaces describe 1.0.5 as published and never link a non-existent tag", () => {
   for (const rel of [
     "README.md",
     "examples/ONBOARDING.md",
@@ -487,35 +492,36 @@ test("public surfaces never present 1.0.5 as already published", () => {
     "src/site/mcp.html",
   ]) {
     const text = read(rel);
+    assert.match(text, /published/i, `${rel} must describe the release as published`);
     for (const [index, line] of text.split("\n").entries()) {
       if (!line.includes(RELEASE_VERSION)) continue;
-      assert.match(
+      assert.doesNotMatch(
         line,
-        CANDIDATE_QUALIFIER,
-        `${rel}:${index + 1} mentions ${RELEASE_VERSION} without saying it is an unpublished candidate: ${line.trim()}`,
+        /candidate|unpublished|not published yet|planned|after publication|after the npm publish|after its npm artifact/i,
+        `${rel}:${index + 1} must not describe published ${RELEASE_VERSION} as a candidate: ${line.trim()}`,
       );
     }
-    assert.doesNotMatch(
-      text,
-      /Published on npm[^.\n]*\b1\.0\.5\b/i,
-      `${rel} must not claim that npm published 1.0.5`,
-    );
     assert.doesNotMatch(text, /releases\/tag\/mcp-v1\.0\.5/, `${rel} must not link a tag that does not exist`);
   }
 });
 
-test("registry metadata describes the candidate without claiming publication", () => {
+test("registry metadata describes the published 1.0.5 package without claiming registry publication", () => {
   const server = json("server.json");
   assert.equal(server.version, RELEASE_VERSION);
   const pkg = server.packages[0];
   assert.equal(pkg.version, RELEASE_VERSION);
   const description = pkg.environmentVariables.find((entry) => entry.name === "EVM_PRIVATE_KEY").description;
-  assert.match(description, /unpublished/i);
-  assert.match(description, /candidate/i);
-  assert.doesNotMatch(description, /The published verify402-mcp@1\.0\.5/i);
-  assert.match(description, /only after/i);
-  // The immutable 1.0.4 default is stated truthfully as mainnet.
-  assert.match(description, /1\.0\.4 defaults to Base mainnet/i);
+  assert.match(description, new RegExp(RELEASE_VERSION.replaceAll(".", "\\.")));
+  assert.match(description, /Base Sepolia/);
+  assert.match(description, /Base mainnet/);
+  assert.doesNotMatch(description, /unpublished|candidate/i);
+  assert.doesNotMatch(description, /defaults to Base mainnet/i, "this release must not claim a mainnet default");
+  assert.match(description, /not enabled by this release/i);
+  assert.doesNotMatch(
+    `${server.description} ${description}`,
+    /registry entry (?:is|has been) published|listed on the .*registry/i,
+    "server.json must not claim the registry publication is complete",
+  );
 });
 
 test("every advertised paid MCP tool is bound to one paid route in the bridge", async () => {
