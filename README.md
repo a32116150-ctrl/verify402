@@ -47,6 +47,16 @@ A `PASS` means the listed checks passed at that block. It does **not** mean the
 transaction is safe or cannot drain funds, and the paid token check is a
 quote-based sellability check, not a honeypot proof. Read `notChecked` in the response.
 
+### Test the free gate (3 testers wanted)
+
+I’m looking for three developers building AI agents, MCP tools, or x402 payment integrations to run 3–5 real intents and report what breaks. The public demo uses Base Sepolia testnet only; no wallet or paid test is required.
+
+- [5-minute testing guide](TESTING.md)
+- [Open a tester feedback issue](https://github.com/a32116150-ctrl/verify402/issues/new?template=tester-feedback.yml)
+- [Full onboarding notes](examples/ONBOARDING.md)
+
+The most useful finding is a **false PASS**: an intent the gate allowed that you believe is unsafe.
+
 ---
 
 ## 🤖 Using verify402 with AI Agents (Step-by-Step)
