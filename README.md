@@ -14,6 +14,8 @@
 
 ---
 
+[![verify402 MCP server](https://mcprush.com/badge/verify402-mcp/card.svg)](https://mcprush.com/to/verify402-mcp?ref=badge)
+
 
 ## 30-Second Quickstart
 
