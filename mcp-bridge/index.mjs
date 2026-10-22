@@ -31,13 +31,24 @@ import { config } from "dotenv";
 import { z } from "zod";
 import { installConsoleRedaction, logInfo, logError } from "./log.mjs";
 import { paidPost } from "./paid-call.mjs";
+import { fileURLToPath } from "node:url";
+import { realpathSync } from "node:fs";
+import { AsyncLocalStorage } from "node:async_hooks";
 
 installConsoleRedaction();
-config();
 
-const VERSION = "1.0.4";
+// Only the process entry point loads the operator's `.env`. Importing this
+// module (tests, tooling) must never read the wallet file.
+const IS_MAIN = isMainModule();
+if (IS_MAIN) config();
+
+const VERSION = "1.0.5";
 const EVM_PRIVATE_KEY = process.env.EVM_PRIVATE_KEY;
-const SERVER_URL = process.env.VERIFY402_URL || "https://verify402.onrender.com";
+// Normalise once so the axios base URL, the payment policy prefix, and the
+// per-tool expected resource are all the same string (no trailing slash).
+const SERVER_URL = (process.env.VERIFY402_URL || "https://verify402.onrender.com")
+  .trim()
+  .replace(/\/+$/, "");
 // Tell the server which client made the call. This is a label, not an identity:
 // it helps separate MCP use from generic HTTP probes without collecting keys or
 // wallet addresses.
@@ -59,6 +70,37 @@ const MAX_PAYMENT_USD = Number(process.env.MAX_PAYMENT_USD || 0.25);
 // registered only when a wallet is configured.
 const PAID_ENABLED = Boolean(EVM_PRIVATE_KEY);
 
+// Each paid MCP tool is bound to exactly one paid API route. This map is local,
+// trusted configuration: a 402 challenge can never choose which resource a tool
+// is allowed to pay for. The pre-sign guard compares the challenge's resource
+// against the route of the tool that is currently running.
+export const PAID_TOOL_ROUTES = Object.freeze({
+  verify_arbitrage: "/verify",
+  check_token_safety: "/safety",
+  get_best_route: "/route",
+  verify_quote_fairness: "/quotecheck",
+  get_trade_depth: "/depth",
+});
+
+// Carries the current tool's expected resource from the tool handler to the
+// pre-sign hook. AsyncLocalStorage keeps concurrent tool calls isolated and is
+// the only channel the guard trusts for the expected resource.
+const paymentContext = new AsyncLocalStorage();
+
+function paidCallContext(tool) {
+  const route = PAID_TOOL_ROUTES[tool];
+  if (!route) throw new Error(`unknown paid tool: ${String(tool)}`);
+  return { tool, route, expectedResource: `${SERVER_URL}${route}` };
+}
+
+/**
+ * Run `run` as the given paid tool. Exported so tests can drive the real
+ * binding without starting the MCP transport.
+ */
+export function runWithPaidTool(tool, run) {
+  return paymentContext.run(paidCallContext(tool), run);
+}
+
 if (process.argv.includes("--help") || process.argv.includes("-h")) {
   console.log(`verify402-mcp — MCP server for verify402
 
@@ -73,7 +115,7 @@ Environment:
   MAX_PAYMENT_USD   cap on one x402 payment (default 0.25)
   MAX_DAILY_USD     optional cap for the UTC day, persisted in a small ledger
   SPEND_LEDGER_PATH optional ledger path (default .spend-ledger.json)
-  VERIFY402_NETWORKS  comma-separated EVM networks for paid calls (default eip155:8453)
+  VERIFY402_NETWORKS  comma-separated EVM networks for paid calls (default eip155:84532, Base Sepolia testnet; eip155:8453 only by explicit opt-in)
   VERIFY402_PAY_TO    EVM payee the 402 must name (default the verify402 payee)
   VERIFY402_RESOURCE_PREFIX  resource origin/prefix the 402 must match (default VERIFY402_URL)
 
@@ -89,14 +131,12 @@ if (process.argv.includes("--version") || process.argv.includes("-v")) {
 }
 
 // ---------------------------------------------------------------- payment ---
-async function createPaidClient() {
+export function createBridgeClientFromEnv() {
   if (!Number.isFinite(MAX_PAYMENT_USD) || MAX_PAYMENT_USD <= 0) {
     throw new Error("MAX_PAYMENT_USD must be a positive number");
   }
-  const policy = createPaymentPolicy({
-    networks: process.env.VERIFY402_NETWORKS || DEFAULT_NETWORKS,
-    payTo: process.env.VERIFY402_PAY_TO || DEFAULT_PAY_TO,
-    resourcePrefix: process.env.VERIFY402_RESOURCE_PREFIX || SERVER_URL,
+  const policy = createPaymentPolicyFromEnv({
+    resourcePrefix: SERVER_URL,
     paidRoutes: Object.keys(DEFAULT_PRICES),
   });
   const account = privateKeyToAccount(EVM_PRIVATE_KEY);
@@ -108,12 +148,29 @@ async function createPaidClient() {
   for (const network of policy.allowedNetworks) {
     client.register(network, new ExactEvmScheme(account));
   }
-  client.onBeforePaymentCreation((context) => policy.checkBeforeSign(context));
+  // Full-challenge guard (version, every EVM offer, canonical asset/domain,
+  // payee, amount cap, timeout, EIP-3009) plus the resource/route layer. It
+  // runs after the SDK has selected a requirement and before the signer.
+  // The expected resource is resolved per invocation from the tool handler
+  // context, never from the 402 challenge.
+  client.onBeforePaymentCreation(
+    createPaymentGuard(policy, {
+      maxAmountUsd: MAX_PAYMENT_USD,
+      expectedResource: () => paymentContext.getStore()?.expectedResource,
+    }),
+  );
   logInfo(
     `paid policy: networks=${policy.allowedNetworks.join(",")} ` +
       `payee=${policy.allowedPayTo} resources=${policy.resourcePrefix} ` +
       `{${policy.paidRoutes.join(",")}}`,
   );
+  return client;
+}
+
+export async function createBridgePaidClient(client = createBridgeClientFromEnv()) {
+  if (!Number.isFinite(MAX_PAYMENT_USD) || MAX_PAYMENT_USD <= 0) {
+    throw new Error("MAX_PAYMENT_USD must be a positive number");
+  }
   const axiosInstance = axios.create({ baseURL: SERVER_URL, timeout: 120_000, maxRedirects: 0, headers: CLIENT_HEADERS });
   return wrapAxiosWithPayment(axiosInstance, client);
 }
@@ -123,20 +180,36 @@ async function createPaidClient() {
 // (optional) caps the whole UTC day across restarts, persisted in a tiny
 // ledger file. Attempted charges are counted conservatively (before payment).
 import { createDailyBudget, DEFAULT_PRICES } from "./budget.mjs";
-import { createPaymentPolicy, DEFAULT_NETWORKS, DEFAULT_PAY_TO } from "./payment-policy.mjs";
+import { createPaymentGuard, createPaymentPolicyFromEnv } from "./payment-policy.mjs";
 const dailyBudget = createDailyBudget({
   maxDailyUsd: process.env.MAX_DAILY_USD,
 });
 
-async function guardedPaidCall(route, run) {
-  if (dailyBudget.enabled) dailyBudget.assert(route);
-  const res = await run();
+async function guardedPaidCall(tool, run) {
+  const context = paidCallContext(tool);
+  if (dailyBudget.enabled) dailyBudget.assert(context.route);
+  const res = await paymentContext.run(context, run);
   if (res?.data?.recovery?.replayed) {
     // Visible to the operator without exposing the bearer key. The same flag
     // is already in the JSON returned to the MCP client.
-    logInfo(`${route}: recovery.replayed=true (settled verdict returned without a second charge)`);
+    logInfo(`${context.route}: recovery.replayed=true (settled verdict returned without a second charge)`);
   }
   return res;
+}
+
+/**
+ * Run one paid MCP tool. The route is resolved from local tool configuration
+ * (PAID_TOOL_ROUTES), recorded in the async context, and used for both the HTTP
+ * request and the pre-sign expected-resource check, so the 402 challenge can
+ * never redirect a tool to a different paid resource.
+ */
+export async function runPaidTool({ tool, client, body }) {
+  if (!Object.hasOwn(PAID_TOOL_ROUTES, tool)) {
+    throw new Error(`unknown paid tool: ${String(tool)}`);
+  }
+  if (!client) throw new Error(`paid client is not configured for tool ${tool}`);
+  const route = PAID_TOOL_ROUTES[tool];
+  return guardedPaidCall(tool, () => paidPost(client, route, body));
 }
 
 // ------------------------------------------------------------------ tools ---
@@ -177,7 +250,7 @@ const DESCRIPTIONS = {
 };
 
 async function main() {
-  const paidApi = PAID_ENABLED ? await createPaidClient() : null;
+  const paidApi = PAID_ENABLED ? await createBridgePaidClient() : null;
 
   const server = new McpServer({ name: "verify402", version: VERSION });
 
@@ -190,7 +263,7 @@ async function main() {
       from: z.string().optional().describe("The wallet that will sign. Strongly recommended: enables simulation and balance checks."),
       payment: z.object({
         scheme: z.string().optional().describe('x402 scheme, normally "exact"'),
-        network: z.string().describe('CAIP-2 network, e.g. "eip155:8453" or "solana:..."'),
+        network: z.string().describe('CAIP-2 network, e.g. "eip155:84532" for the public demo or "solana:..."'),
         asset: z.string().describe("Token address or mint, e.g. canonical USDC on that network"),
         amount: z.string().describe("RAW amount in the asset's smallest unit, as a string"),
         payTo: z.string().describe("Recipient address from the 402 challenge"),
@@ -267,12 +340,16 @@ async function main() {
       size: z.number().optional().describe("Trade size in whole base units, e.g. 100000 (default 100000)"),
     },
     async (args) => {
-      const res = await guardedPaidCall("/verify", () => paidPost(paidApi, "/verify", {
-        chainId: args.chainId,
-        target: String(args.target ?? "WETH").toUpperCase(),
-        base: String(args.base ?? "USDC").toUpperCase(),
-        size: args.size ?? 100000,
-      }));
+      const res = await runPaidTool({
+        tool: "verify_arbitrage",
+        client: paidApi,
+        body: {
+          chainId: args.chainId,
+          target: String(args.target ?? "WETH").toUpperCase(),
+          base: String(args.base ?? "USDC").toUpperCase(),
+          size: args.size ?? 100000,
+        },
+      });
       return { content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }] };
     },
   );
@@ -287,12 +364,16 @@ async function main() {
       offeredPriceUsd: z.number().optional().describe("Optional price per token someone offered you"),
     },
     async (args) => {
-      const res = await guardedPaidCall("/safety", () => paidPost(paidApi, "/safety", {
-        chainId: args.chainId,
-        tokenAddress: String(args.tokenAddress ?? "").trim(),
-        intendedUsd: args.intendedUsd ?? 500,
-        offeredPriceUsd: args.offeredPriceUsd ?? null,
-      }));
+      const res = await runPaidTool({
+        tool: "check_token_safety",
+        client: paidApi,
+        body: {
+          chainId: args.chainId,
+          tokenAddress: String(args.tokenAddress ?? "").trim(),
+          intendedUsd: args.intendedUsd ?? 500,
+          offeredPriceUsd: args.offeredPriceUsd ?? null,
+        },
+      });
       return { content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }] };
     },
   );
@@ -307,12 +388,16 @@ async function main() {
       chainId: z.number().int().describe("REQUIRED. 1 Ethereum, 42161 Arbitrum, 8453 Base. There is no default; omitting it returns 400 missing_chain."),
     },
     async (args) => {
-      const res = await guardedPaidCall("/route", () => paidPost(paidApi, "/route", {
-        chainId: args.chainId,
-        tokenIn: args.tokenIn,
-        tokenOut: args.tokenOut,
-        amountIn: args.amountIn,
-      }));
+      const res = await runPaidTool({
+        tool: "get_best_route",
+        client: paidApi,
+        body: {
+          chainId: args.chainId,
+          tokenIn: args.tokenIn,
+          tokenOut: args.tokenOut,
+          amountIn: args.amountIn,
+        },
+      });
       return { content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }] };
     },
   );
@@ -329,14 +414,18 @@ async function main() {
       chainId: z.number().int().describe("REQUIRED. 1 Ethereum, 42161 Arbitrum, 8453 Base. There is no default; omitting it returns 400 missing_chain."),
     },
     async (args) => {
-      const res = await guardedPaidCall("/quotecheck", () => paidPost(paidApi, "/quotecheck", {
-        chainId: args.chainId,
-        tokenIn: args.tokenIn,
-        tokenOut: args.tokenOut,
-        amountIn: args.amountIn,
-        quotedOut: args.quotedOut,
-        venueClaimed: args.venueClaimed ?? null,
-      }));
+      const res = await runPaidTool({
+        tool: "verify_quote_fairness",
+        client: paidApi,
+        body: {
+          chainId: args.chainId,
+          tokenIn: args.tokenIn,
+          tokenOut: args.tokenOut,
+          amountIn: args.amountIn,
+          quotedOut: args.quotedOut,
+          venueClaimed: args.venueClaimed ?? null,
+        },
+      });
       return { content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }] };
     },
   );
@@ -352,13 +441,17 @@ async function main() {
       maxRoundTripPct: z.number().optional().describe("Your round-trip cost tolerance, default 1%"),
     },
     async (args) => {
-      const res = await guardedPaidCall("/depth", () => paidPost(paidApi, "/depth", {
-        chainId: args.chainId,
-        tokenAddress: args.tokenAddress,
-        baseSymbol: args.baseSymbol ?? "USDC",
-        sizesUsd: args.sizesUsd ?? null,
-        maxRoundTripPct: args.maxRoundTripPct ?? 1.0,
-      }));
+      const res = await runPaidTool({
+        tool: "get_trade_depth",
+        client: paidApi,
+        body: {
+          chainId: args.chainId,
+          tokenAddress: args.tokenAddress,
+          baseSymbol: args.baseSymbol ?? "USDC",
+          sizesUsd: args.sizesUsd ?? null,
+          maxRoundTripPct: args.maxRoundTripPct ?? 1.0,
+        },
+      });
       return { content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }] };
     },
   );
@@ -373,7 +466,23 @@ async function main() {
   );
 }
 
-main().catch((e) => {
-  logError("bridge failed", e);
-  process.exit(1);
-});
+// True only when this file is the process entry point. The published package
+// is installed through a `bin` symlink, so both sides are compared by real
+// path: Node resolves import.meta.url through the symlink but keeps the
+// symlink path in process.argv[1].
+function isMainModule() {
+  const entry = process.argv[1];
+  if (!entry) return false;
+  try {
+    return realpathSync(entry) === realpathSync(fileURLToPath(import.meta.url));
+  } catch {
+    return false;
+  }
+}
+
+if (IS_MAIN) {
+  main().catch((e) => {
+    logError("bridge failed", e);
+    process.exit(1);
+  });
+}

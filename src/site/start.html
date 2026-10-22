@@ -61,7 +61,7 @@
       <article id="payment">
         <p class="eyebrow">01 · A good payment</p>
         <h2 style="margin-top:14px">One curl. A real PASS.</h2>
-        <p class="lead" style="margin-top:14px">This is a canonical x402 payment request: 0.01 USDC on Base mainnet, a known payee, a known resource. Paste it as-is.</p>
+        <p class="lead" style="margin-top:14px">This is a canonical x402 payment request: 0.01 testnet USDC on Base Sepolia, a known payee, a known resource. Paste it as-is. The analysis reads mainnet chain data; this demo's payment rail is testnet-only.</p>
         <div style="margin-top:24px">
           <p class="code-cap">POST /preflight · free</p>
 <pre><span class="c">curl -sS -X POST</span> https://verify402.onrender.com/preflight \
@@ -70,8 +70,8 @@
     "kind": "payment",
     "payment": {
       "scheme": "exact",
-      "network": "eip155:8453",
-      "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "network": "eip155:84532",
+      "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
       "amount": "10000",
       "payTo": "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb",
       "resource": "https://verify402.onrender.com/verify",
@@ -80,7 +80,7 @@
     "policy": { "maxAmountUsd": 0.25 }
   }'</span></pre>
         </div>
-        <p class="small muted" style="margin-top:14px"><code class="inline">amount</code> is in raw units: <code class="inline">10000</code> = 0.01 USDC (6 decimals). Free hosting sleeps: the first call after a pause can take ~30 seconds.</p>
+        <p class="small muted" style="margin-top:14px"><code class="inline">amount</code> is in raw units: <code class="inline">10000</code> = 0.01 testnet USDC (6 decimals). Free hosting sleeps: the first call after a pause can take ~30 seconds. This is the free gate: no payment is sent.</p>
         <div style="margin-top:24px">
           <p class="code-cap">Response · abbreviated</p>
 <pre>{
@@ -257,7 +257,7 @@
         <a href="/findings">/findings</a>
       </div>
     </div>
-    <p class="legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Mainnet-armed; the only settlement ever recorded is the operator's own testnet transaction. No external buyer yet. Prices are per call, paid in USDC over x402; /preflight is free.</p>
+    <p class="legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data; demo payments are testnet. The only settlement ever recorded is the operator's own testnet transaction. No external buyer yet. Prices are per call, paid in testnet USDC over x402; /preflight is free.</p>
   </div>
 </footer>
 

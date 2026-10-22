@@ -2,20 +2,20 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.a32116150-ctrl/verify402-mcp",
   "title": "verify402",
-  "description": "Preflight safety gate and x402 on-chain truth verification tools for AI agents",
+  "description": "Free x402 preflight gate plus paid on-chain truth checks for AI agents.",
   "websiteUrl": "https://verify402.onrender.com",
   "repository": {
     "url": "https://github.com/a32116150-ctrl/verify402",
     "source": "github",
     "subfolder": "mcp-bridge"
   },
-  "version": "1.0.4",
+  "version": "1.0.5",
   "packages": [
     {
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "verify402-mcp",
-      "version": "1.0.4",
+      "version": "1.0.5",
       "transport": {
         "type": "stdio"
       },
@@ -28,9 +28,16 @@
         },
         {
           "name": "EVM_PRIVATE_KEY",
-          "description": "Private key for a dedicated hot wallet with USDC. Omit for the free preflight_gate only. Never use a main wallet.",
+          "description": "Private key for a dedicated hot wallet. Omit for the free preflight_gate only. This registry entry describes the unpublished verify402-mcp@1.0.5 candidate, which defaults paid calls to Base Sepolia testnet (eip155:84532); the currently published verify402-mcp@1.0.4 defaults to Base mainnet. Publish this entry only after the 1.0.5 npm artifact exists and is verified. For the public demo fund only Base Sepolia testnet USDC. Never use a main wallet.",
           "isRequired": false,
           "isSecret": true
+        },
+        {
+          "name": "VERIFY402_NETWORKS",
+          "description": "Comma-separated EVM payment networks for paid calls. Default Base Sepolia testnet (eip155:84532); set eip155:8453 explicitly for Base mainnet. The supported network-to-canonical-asset map is constrained to Base Sepolia and Base mainnet.",
+          "isRequired": false,
+          "isSecret": false,
+          "default": "eip155:84532"
         },
         {
           "name": "MAX_PAYMENT_USD",

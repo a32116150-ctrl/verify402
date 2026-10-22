@@ -2,9 +2,9 @@
 
 **Protocol Version:** x402 v2 (`@x402/core@^2.28.0`, `@x402/express@^2.28.0`, `@x402/extensions@^2.28.0`)
 **Extension:** x402 Bazaar Discovery (`declareDiscoveryExtension`)
-**Production Host:** `https://verify402.onrender.com`
-**Deployment Mode:** Mainnet (`X402_MODE=mainnet`)
-**Networks:** Base mainnet (`eip155:8453`) & Solana mainnet (`solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp`)
+**Public Demo Host:** `https://verify402.onrender.com`
+**Deployment Mode:** Testnet (`X402_MODE=testnet`) for payments; analysis reads mainnet chain data
+**Networks:** Base Sepolia (`eip155:84532`) & Solana devnet (`solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1`)
 
 ---
 
@@ -12,7 +12,7 @@
 
 x402 Bazaar is an extension to the x402 HTTP payment protocol designed to enable autonomous agents and crawler indexes to dynamically discover machine-payable APIs without out-of-band documentation.
 
-When an unauthenticated agent makes an HTTP request to any paid route without an `x-payment` or `payment-signature` header, Verify402 returns HTTP `402 Payment Required`. Within the 402 challenge response body:
+When an unauthenticated agent makes an HTTP request to any paid route without a `PAYMENT-SIGNATURE` header (the current x402 v2 proof header; legacy `x-payment` is also accepted), Verify402 returns HTTP `402 Payment Required`. Within the 402 challenge response body:
 1. `accepts`: Enumerates the payment parameters (scheme, network, asset, atomic amount, payee address, timeout).
 2. `extensions.bazaar`: Contains rich, machine-readable discovery metadata declaring:
    - `method`: HTTP method (`POST`)
@@ -79,7 +79,7 @@ import { declareDiscoveryExtension } from "@x402/extensions/bazaar";
 
 ## 3. Verification Procedure
 
-To inspect and verify that Bazaar metadata is emitted correctly by the live production server, issue an unpaid request to any paid route:
+To inspect and verify that Bazaar metadata is emitted correctly by the live public demo, issue an unpaid request to any paid route:
 
 ```bash
 # Verify POST /verify emits Bazaar discovery extension
@@ -110,7 +110,8 @@ The HTTP status code must be `402 Payment Required`.
 
 ### Facilitator Architecture
 - **Settlement Role:** In x402, facilitators are non-custodial settlement processors: they verify payer signatures and coordinate transaction broadcasts.
-- **Mainnet Configuration:** Verify402 supports keyless mainnet settlement via PayAI (`https://facilitator.payai.network`) and Coinbase CDP (`createCdpFacilitatorClient`).
+- **Current public demo:** testnet settlement through the public `https://x402.org/facilitator`.
+- **Explicit mainnet (separate deployment only):** Verify402 can support keyless mainnet settlement via PayAI (`https://facilitator.payai.network`) and Coinbase CDP (`createCdpFacilitatorClient`), but this is not the public demo and requires separate readiness verification.
 - **External Catalog Indexing:**
   - Some third-party facilitators and aggregators (e.g. x402scan, 402 Index) crawl hosts either via DNS TXT records (`draft-hawkins-x402-dns-discovery-02`), `.well-known/x402`, or OpenAPI documents (`/openapi.json`).
   - Neither PayAI nor CDP provides a synchronous "confirm indexed" submission API.

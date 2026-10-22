@@ -69,12 +69,14 @@
   -d <span class="y">'{"pair":"USDC/WETH","dex":"uniswap-v3","sizeUsd":100000}'</span>
 
 <span class="c"># → HTTP 402 Payment Required</span>
-<span class="c">#   accepts: eip155:8453 (USDC) or solana:… (USDC), payTo, amount, maxTimeoutSeconds</span></pre>
+<span class="c">#   accepts: eip155:84532 (Base Sepolia testnet USDC) or solana:EtWTR… (devnet USDC)</span>
+<span class="c">#   payTo, amount, maxTimeoutSeconds; the 402 challenge is authoritative</span></pre>
         </div>
         <div style="margin-top:24px">
           <p class="code-cap">2 · Pay and retry with proof</p>
 <pre><span class="c"># x402 clients (e.g. @x402/fetch) do this automatically:</span>
-<span class="c">#   read the 402 → sign the exact payment → retry with X-PAYMENT</span>
+<span class="c">#   read the 402 → sign the exact payment → retry with PAYMENT-SIGNATURE</span>
+<span class="c">#   (x402 v2; the legacy X-PAYMENT header is also accepted)</span>
 <span class="c"># The retry returns the verdict with an evidence_bundle.</span></pre>
         </div>
         <div class="callout" style="margin-top:24px">
@@ -129,8 +131,8 @@
     "from": "0xYourWallet",
     "payment": {
       "scheme": "exact",
-      "network": "eip155:8453",
-      "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "network": "eip155:84532",
+      "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
       "amount": "10000",
       "payTo": "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb",
       "resource": "https://verify402.onrender.com/verify"
@@ -231,7 +233,7 @@
         <a href="/findings">/findings</a>
       </div>
     </div>
-    <p class="legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Mainnet-armed; the only settlement ever recorded is the operator's own testnet transaction. No external buyer yet. Prices are per call, paid in USDC over x402.</p>
+    <p class="legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data; demo payments are testnet. The only settlement ever recorded is the operator's own testnet transaction. No external buyer yet. Prices are per call, paid in testnet USDC over x402.</p>
   </div>
 </footer>
 

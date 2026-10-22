@@ -10,6 +10,8 @@
 [![x402 v2](https://img.shields.io/badge/x402-v2%20exact-purple.svg)](https://github.com/x402-foundation/x402)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
+> **Demo scope:** the public demo settles payments in **Base Sepolia testnet USDC**. The analysis itself reads mainnet chain data (Ethereum, Arbitrum, Base). This is not a mainnet payment service, and no testnet payment is mainnet revenue.
+
 ---
 
 ## 30-Second Quickstart
@@ -24,8 +26,8 @@ curl -sS -X POST https://verify402.onrender.com/preflight \
     "kind": "payment",
     "payment": {
       "scheme": "exact",
-      "network": "eip155:8453",
-      "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "network": "eip155:84532",
+      "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
       "amount": "10000",
       "payTo": "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb",
       "resource": "https://verify402.onrender.com/verify"
@@ -33,6 +35,8 @@ curl -sS -X POST https://verify402.onrender.com/preflight \
     "policy": { "maxAmountUsd": 0.25 }
   }'
 ```
+
+This example uses the **public demo's Base Sepolia testnet USDC** (`eip155:84532`), not mainnet. The free gate is only validating the request shape; it is not a payment. The paid analysis routes read mainnet chain data (Ethereum, Arbitrum, Base), but the demo does not settle mainnet payments.
 
 Returns `PASS` / `CAUTION` / `BLOCK`, typed reasons, exact `checked` and `notChecked` lists, pinned block number, and a verifiable 90-second HMAC receipt.
 
@@ -74,7 +78,7 @@ Paste this into your client config file:
 ```
 
 #### Option B: Paid Mode (Unlocks 5 Deep Truth Checks)
-Unlocks the 5 on-chain truth checks (`verify_arbitrage`, `check_token_safety`, `get_best_route`, `verify_quote_fairness`, `get_trade_depth`). The agent pays per call via x402 in USDC.
+Unlocks the 5 on-chain truth checks (`verify_arbitrage`, `check_token_safety`, `get_best_route`, `verify_quote_fairness`, `get_trade_depth`). The agent pays per call via x402 in **testnet USDC** on the public demo. The analysis still reads mainnet chain data; only the payment rail is testnet.
 
 ```json
 {
@@ -87,13 +91,15 @@ Unlocks the 5 on-chain truth checks (`verify_arbitrage`, `check_token_safety`, `
         "EVM_PRIVATE_KEY": "0xYOUR_HOT_WALLET_PRIVATE_KEY",
         "MAX_PAYMENT_USD": "0.25",
         "MAX_DAILY_USD": "1.00",
-        "VERIFY402_NETWORKS": "eip155:8453",
+        "VERIFY402_NETWORKS": "eip155:84532",
         "VERIFY402_PAY_TO": "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb"
       }
     }
   }
 }
 ```
+
+`VERIFY402_NETWORKS=eip155:84532` is the Base Sepolia testnet rail the live demo offers. Do **not** change it to `eip155:8453` to make a test pass: the bridge would refuse the live 402 challenge rather than spend mainnet funds. Mainnet settlement is an explicit future deployment choice, not a demo default.
 
 ---
 
@@ -104,14 +110,27 @@ If you want your agent to use the paid truth tools, follow these 4 steps to set 
 1. **Create a Dedicated Hot Wallet**:
    - Generate a brand new EVM address using MetaMask, Rabby, or CLI (`cast wallet new`).
    - ⚠️ **NEVER USE YOUR MAIN WALLET OR COLD VAULT.** Treat this wallet like physical petty cash.
-2. **Fund with USDC on Base (EIP-155:8453)**:
-   - Send $2 to $10 of USDC on the Base network to your new hot wallet.
+2. **Fund with testnet USDC on Base Sepolia (EIP-155:84532)**:
+   - Send a small amount of **Base Sepolia testnet USDC** to your new hot wallet. Do not fund it with mainnet assets for the public demo.
    - The tools cost tiny fixed amounts per call: `$0.03` (route), `$0.05` (arbitrage/quotecheck/depth), `$0.10` (token safety).
-3. **Fund with Gas (ETH on Base)**:
-   - Send ~$0.50 worth of ETH on Base for token approvals / gas overhead.
+3. **Fund with testnet Gas (Base Sepolia ETH)**:
+   - Send a small amount of Base Sepolia testnet ETH for gas overhead if your client needs it.
 4. **Export the Private Key**:
    - Copy the wallet's private key (hex string starting with `0x`) into the `EVM_PRIVATE_KEY` field in your MCP config.
    - *Client-Side Guardrails*: The bridge enforces `MAX_PAYMENT_USD` (hard cap per call, default $0.25) and `MAX_DAILY_USD` (daily budget cap) before any signature can be created. This caps what the bridge can authorize; it is **not** protection against a compromised private key.
+
+#### Mainnet is explicit (not the demo default)
+
+The public demo is testnet-only for payments. A future mainnet deployment must opt in deliberately, with a mainnet facilitator, an always-on paid host, and a mainnet-funded wallet:
+
+```bash
+# Only for a future mainnet deployment. Do not use these values against the public demo.
+X402_MODE=mainnet
+VERIFY402_NETWORKS=eip155:8453
+VERIFY402_PAY_TO=0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb
+```
+
+Setting `VERIFY402_NETWORKS=eip155:8453` while pointing at the public demo is a configuration error: the live 402 offers `eip155:84532`, so the bridge fails closed instead of paying. See `MAINNET_SWITCH_CHECKLIST.md` before any mainnet deployment.
 
 ---
 
@@ -376,18 +395,30 @@ or any MCP client.
 
 - **Free gate only:** omit `EVM_PRIVATE_KEY`; the server registers only
   `preflight_gate` and nothing can be charged.
-- **Paid tools:** add a dedicated hot wallet with USDC. The bridge signs the x402
+- **Paid tools:** add a dedicated hot wallet with testnet USDC for the public
+  demo (mainnet only in an explicit deployment). The bridge signs the x402
   payment only — never a trade — and enforces `MAX_PAYMENT_USD` (default $0.25)
   inside the x402 client before a signature exists. It also requires an
   allowlisted EVM network, the verify402 payee, and a known paid resource on the
   configured server, and refuses redirects. `MAX_DAILY_USD` is optional.
-- **Install:** `npx -y verify402-mcp@latest` from the public npm registry.
-  The pinned GitHub release tarball remains an optional fallback:
-  `npx -y --package=https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.4/verify402-mcp-1.0.4.tgz verify402-mcp`.
-  No npm account is required to run the published package. Client configs, the
-  exact OpenCode V2 shape, and the release command are at
+- **Install:** `npx -y verify402-mcp@latest` from the public npm registry
+  (currently `1.0.4`). For a pinned install of the published package, use
+  `npx -y verify402-mcp@1.0.4`; its npm tarball is
+  `https://registry.npmjs.org/verify402-mcp/-/verify402-mcp-1.0.4.tgz`. No npm
+  account is required to run the published package. Client configs, the exact
+  OpenCode V2 shape, and the release command are at
   [`/mcp`](https://verify402.onrender.com/mcp). See also
-  `mcp-bridge/README.md`.
+  `mcp-bridge/README.md` for the source-tree testnet default. The
+  already-published npm `1.0.4` package is immutable and its built-in runtime
+  default is Base mainnet (`eip155:8453`); its README may still show the
+  original generic mainnet example. Use the explicit testnet block above.
+  The source tree in this repository is the `1.0.5` **candidate** and defaults
+  to Base Sepolia testnet (`eip155:84532`), but `1.0.5` is **not published
+  yet**: no npm tarball, tag, or registry entry exists for it. These values are
+  planned and may be used only after publication is independently verified:
+  `npx -y verify402-mcp@1.0.5` (planned) and
+  `https://registry.npmjs.org/verify402-mcp/-/verify402-mcp-1.0.5.tgz` (planned).
+  Do not depend on them today.
 
 ## Settlement, response delivery, and recovery (honest contract)
 
@@ -499,9 +530,9 @@ or any MCP client.
 1. `GET  https://verify402.onrender.com/info` — prices, endpoints, recovery contract.
 2. `GET  https://verify402.onrender.com/findings` — free verdicts on majors; see the honest `no_edge` baseline.
 3. `POST /verify` with your question (`{"chainId":1,"target":"WETH","size":100000}`) and no payment → HTTP 402.
-4. Read the payment instructions from the `payment-required` response header.
-5. Build an x402 payment for ≤ the stated price (Node example: `mcp-bridge/first-payment.mjs`; MCP users: `mcp-bridge/`).
-6. Re-send the same request with the `payment` header. The verdict arrives with the settlement response.
+4. Read the payment instructions from the `PAYMENT-REQUIRED` response header.
+5. Build an x402 payment for ≤ the stated price (Node example: `mcp-bridge/first-payment.mjs`; MCP users: `mcp-bridge/`). On the public demo, pay the testnet challenge (`eip155:84532`); do not substitute a mainnet payment.
+6. Re-send the same request with the proof in the `PAYMENT-SIGNATURE` header (x402 v2; the legacy `x-payment` header is also accepted). The verdict arrives with the settlement response.
 7. On a retry/restart, add `x-idempotency-key: <crypto.randomUUID()>` to step 3 so lost responses replay free instead of paying twice. The key is a secret; a leaked key allows replay until the TTL/cap.
 8. Verify the receipt: `evidence_bundle.responseHash` must equal sha256(canonical JSON of the body minus `evidence_bundle`, `recovery`, `cache`, `elapsedMs`).
 9. Cap your own wallet: `MAX_PAYMENT_USD` (per call) and `MAX_DAILY_USD` (per day) in the bridge `.env`.

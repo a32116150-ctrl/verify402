@@ -11,20 +11,35 @@
 import { spawn } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { realpathSync } from "node:fs";
+import { decodePaymentRequiredHeader } from "@x402/core/http";
+
+import {
+  DEFAULT_PAY_TO,
+  DEMO_NETWORK,
+  DEMO_USDC,
+  validatePaymentChallenge,
+} from "../mcp-bridge/payment-policy.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DEFAULT_BASE_URL = "https://verify402.onrender.com";
+const PAID_SMOKE_PATH = "/route";
+const DEFAULT_PAID_MAX_USD = 0.03;
 
 export function normalizeBaseUrl(raw) {
   return String(raw || DEFAULT_BASE_URL).trim().replace(/\/+$/, "");
 }
 
+// The public service's payment rail is Base Sepolia testnet. Preflight is
+// free, but using the offered network keeps the smoke fixture aligned with the
+// live challenge and prevents a mainnet-looking example from becoming the
+// documented default.
 const PREFLIGHT_INTENT = {
   kind: "payment",
   payment: {
     scheme: "exact",
-    network: "eip155:8453",
-    asset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    network: "eip155:84532",
+    asset: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
     amount: "10000",
     payTo: "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb",
     resource: null,
@@ -36,8 +51,8 @@ const BLOCK_INTENT = {
   kind: "payment",
   payment: {
     scheme: "exact",
-    network: "eip155:8453",
-    asset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    network: "eip155:84532",
+    asset: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
     amount: "1000000000",
     payTo: "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb",
     resource: null,
@@ -50,6 +65,71 @@ const MISSING_CHAIN_INTENT = {
   transaction: { to: "0x0000000000000000000000000000000000000001", value: "0", data: "0x" },
   policy: { maxValueUsd: 1 },
 };
+
+function headerValue(value) {
+  if (Array.isArray(value)) return value[0];
+  return value;
+}
+
+// The x402 v2 challenge arrives as base64 of compact JSON in the
+// PAYMENT-REQUIRED header. Accept only canonical standard base64: a fixed
+// alphabet, exact padding, a length divisible by four, and a decoded value that
+// re-encodes to the identical string. The re-encode check rejects base64url,
+// trailing garbage, and non-canonical trailing bits that Node's lenient
+// decoder would silently ignore.
+function isCanonicalBase64(value) {
+  if (typeof value !== "string" || value === "") return false;
+  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(value)) return false;
+  if (value.length % 4 !== 0) return false;
+  return Buffer.from(value, "base64").toString("base64") === value;
+}
+
+function parseChallengeJson(text) {
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return null;
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+  if (!Array.isArray(parsed.accepts)) return null;
+  return parsed;
+}
+
+function decodeCanonicalChallenge(value) {
+  if (!isCanonicalBase64(value)) return null;
+  try {
+    return parseChallengeJson(Buffer.from(value, "base64").toString("utf8"));
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Parse a 402 challenge strictly from the authoritative x402 v2 header.
+ * Body is never used to authorise payment or to override a header. Encoding is
+ * validated before decoding, so an invalid header aborts before any payer is
+ * spawned.
+ */
+export function parsePaymentChallenge(paymentRequiredHeader, json, text) {
+  void json;
+  void text;
+  const header = headerValue(paymentRequiredHeader);
+  if (header == null) return null;
+  const encoded = String(header).trim();
+  if (!isCanonicalBase64(encoded)) return null;
+  // Prefer the installed SDK decoder once the encoding is known to be
+  // canonical, so protocol changes in the SDK are picked up.
+  try {
+    const parsed = decodePaymentRequiredHeader(encoded);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed) && Array.isArray(parsed.accepts)) {
+      return parsed;
+    }
+  } catch {
+    /* fall through to the local canonical decoder */
+  }
+  return decodeCanonicalChallenge(encoded);
+}
 
 async function rawRequest(fetchImpl, baseUrl, method, route, body = null, headers = {}) {
   const res = await fetchImpl(`${baseUrl}${route}`, {
@@ -89,12 +169,23 @@ export async function wakeService({ baseUrl, fetchImpl = fetch, timeoutMs = 9000
   return { ok: false, attempts: retries, elapsedMs, error: lastError };
 }
 
-export async function runSmoke({ baseUrl, env = process.env, fetchImpl = fetch, log = console.log, spawnImpl = spawn } = {}) {
+export async function runSmoke({
+  baseUrl,
+  env = process.env,
+  fetchImpl = fetch,
+  log = console.log,
+  spawnImpl = spawn,
+  // Callers that must stay free (for example the post-deploy checker) pass
+  // allowPaid:false. It is a hard gate: an inherited SMOKE_PAID=1 cannot
+  // enable the paid branch or spawn the paying child process.
+  allowPaid = env.SMOKE_PAID === "1",
+} = {}) {
   const base = normalizeBaseUrl(baseUrl || env.SMOKE_BASE_URL || env.VERIFY402_URL);
-  const paid = env.SMOKE_PAID === "1";
+  const paid = allowPaid === true && env.SMOKE_PAID === "1";
   const agentUrl = env.AGENT_URL || base;
   const expectedHost = new URL(agentUrl).host;
   const results = [];
+  let spawnCount = 0;
 
   async function check(name, fn) {
     try {
@@ -167,11 +258,21 @@ export async function runSmoke({ baseUrl, env = process.env, fetchImpl = fetch, 
   });
 
   await check("paid route returns 402 challenge without CORS wildcard", async () => {
-    const { res, json } = await rawRequest(fetchImpl, base, "POST", "/verify", { chainId: 1, target: "WETH", size: 100 });
+    const { res, json, text } = await rawRequest(fetchImpl, base, "POST", "/verify", { chainId: 1, target: "WETH", size: 100 });
     if (res.status !== 402) throw new Error(`expected 402, got ${res.status}`);
     const paymentRequired = res.headers.get("payment-required");
-    if (!paymentRequired && (!json || Object.keys(json).length === 0 && !json?.accepts)) {
-      throw new Error("missing payment requirements");
+    const challenge = parsePaymentChallenge(paymentRequired, json, text);
+    if (!challenge) throw new Error("missing payment requirements");
+    const accepts = Array.isArray(challenge.accepts) ? challenge.accepts : [];
+    const evmEntries = accepts.filter((entry) => String(entry?.network ?? "").startsWith("eip155:"));
+    if (evmEntries.length === 0) throw new Error("402 challenge has no EVM payment requirement");
+    for (const evm of evmEntries) {
+      if (evm.network !== DEMO_NETWORK) {
+        throw new Error(`demo EVM payment rail is ${evm.network}, expected ${DEMO_NETWORK} (Base Sepolia)`);
+      }
+      if (String(evm.asset ?? "").toLowerCase() !== DEMO_USDC.toLowerCase()) {
+        throw new Error(`demo EVM asset is ${evm.asset ?? "(missing)"}, expected Base Sepolia USDC`);
+      }
     }
     if (res.headers.get("access-control-allow-origin") !== null) {
       throw new Error("paid route sent a CORS wildcard");
@@ -185,10 +286,79 @@ export async function runSmoke({ baseUrl, env = process.env, fetchImpl = fetch, 
   });
 
   if (paid) {
-    await check("paid mode guard", async () => {
-      if (!health || health.mode !== "testnet") throw new Error("target is not a testnet instance");
+    let paidConfig = null;
+
+    // This is a control-flow gate, not a recorded assertion. A failed
+    // prerequisite returns BEFORE the payer can be spawned; a `check()` entry
+    // that merely records FAIL is not a security boundary.
+    const abortPaid = (reason) => {
+      results.push({ name: "paid mode preflight", ok: false, error: reason });
+      log(`  paid mode preflight ... ABORT (${reason})`);
+    };
+
+    try {
+      if (!wake.ok) throw new Error("service did not wake");
+      if (!health) throw new Error("/health was not read");
+      if (health.mode !== "testnet") {
+        throw new Error(`target /health mode is ${health.mode ?? "(missing)"}, expected testnet`);
+      }
+
+      const failed = results.filter((result) => !result.ok).map((result) => result.name);
+      if (failed.length > 0) {
+        throw new Error(`required free checks failed: ${failed.join(", ")}`);
+      }
+
       if (!env.EVM_PRIVATE_KEY) throw new Error("EVM_PRIVATE_KEY is required");
-    });
+
+      const paidMaxUsd = Number(env.MAX_PAYMENT_USD || DEFAULT_PAID_MAX_USD);
+      if (!Number.isFinite(paidMaxUsd) || paidMaxUsd <= 0) {
+        throw new Error("MAX_PAYMENT_USD must be a positive number");
+      }
+      const expectedPayTo =
+        env.SMOKE_EXPECTED_PAY_TO !== undefined
+          ? env.SMOKE_EXPECTED_PAY_TO
+          : env.VERIFY402_PAY_TO !== undefined
+            ? env.VERIFY402_PAY_TO
+            : DEFAULT_PAY_TO;
+      const expectedPayToTrimmed = String(expectedPayTo).trim();
+      if (env.SMOKE_EXPECTED_PAY_TO !== undefined && expectedPayToTrimmed === "") {
+        throw new Error("no valid expected payee is configured");
+      }
+      if (expectedPayToTrimmed === "") {
+        throw new Error("no valid expected payee is configured");
+      }
+      const expectedResource = `${base}${PAID_SMOKE_PATH}`;
+
+      const { res, json, text } = await rawRequest(fetchImpl, base, "POST", PAID_SMOKE_PATH, {
+        chainId: 1,
+        tokenIn: "USDC",
+        tokenOut: "WETH",
+        amountIn: "1000000",
+      });
+      if (res.status !== 402) {
+        throw new Error(`paid ${PAID_SMOKE_PATH} expected 402, got ${res.status}`);
+      }
+      const challenge = parsePaymentChallenge(res.headers.get("payment-required"), json, text);
+      if (!challenge) {
+        throw new Error(`paid ${PAID_SMOKE_PATH} returned no parseable 402 challenge in the PAYMENT-REQUIRED header`);
+      }
+
+      const validation = validatePaymentChallenge(challenge, {
+        allowedNetworks: [DEMO_NETWORK],
+        allowedPayTo: expectedPayToTrimmed,
+        expectedResource,
+        maxAmountUsd: paidMaxUsd,
+      });
+      if (!validation.ok) throw new Error(validation.reason);
+
+      paidConfig = { paidMaxUsd, expectedPayTo: expectedPayToTrimmed };
+      results.push({ name: "paid mode preflight", ok: true });
+      log("  paid mode preflight ... PASS");
+    } catch (error) {
+      abortPaid(error?.message ?? String(error));
+      log("smoke: FAIL");
+      return { ok: false, results, failures: results.filter((result) => !result.ok), spawnCount };
+    }
 
     await check("paid testnet /route call", async () => {
       const child = spawnImpl(process.execPath, ["first-payment.mjs"], {
@@ -196,10 +366,16 @@ export async function runSmoke({ baseUrl, env = process.env, fetchImpl = fetch, 
         env: {
           ...env,
           VERIFY402_URL: base,
-          MAX_PAYMENT_USD: env.MAX_PAYMENT_USD || "0.03",
+          // The payer independently enforces this too. Setting it here means
+          // an inherited VERIFY402_NETWORKS cannot widen the paid smoke.
+          VERIFY402_NETWORKS: DEMO_NETWORK,
+          VERIFY402_PAY_TO: paidConfig.expectedPayTo,
+          VERIFY402_RESOURCE_PREFIX: base,
+          MAX_PAYMENT_USD: String(paidConfig.paidMaxUsd),
         },
         stdio: "inherit",
       });
+      spawnCount += 1;
       const code = await new Promise((resolve, reject) => {
         child.once("error", reject);
         child.once("exit", (exitCode, signal) => resolve(exitCode ?? (signal ? 1 : 0)));
@@ -210,7 +386,7 @@ export async function runSmoke({ baseUrl, env = process.env, fetchImpl = fetch, 
 
   const ok = results.every((result) => result.ok);
   log(ok ? "smoke: PASS" : "smoke: FAIL");
-  return { ok, results, failures: results.filter((result) => !result.ok) };
+  return { ok, results, failures: results.filter((result) => !result.ok), spawnCount };
 }
 
 export async function main() {
@@ -218,7 +394,19 @@ export async function main() {
   process.exit(result.ok ? 0 : 1);
 }
 
-const isMain = Boolean(process.argv[1]) && import.meta.url === new URL(`file://${process.argv[1]}`).href;
+// True only when this file is the process entry point, compared by real path so
+// a symlinked invocation still counts as "run as a script".
+function isMainModule() {
+  const entry = process.argv[1];
+  if (!entry) return false;
+  try {
+    return realpathSync(entry) === realpathSync(fileURLToPath(import.meta.url));
+  } catch {
+    return false;
+  }
+}
+
+const isMain = isMainModule();
 if (isMain) {
   main().catch((error) => {
     console.error(error?.stack || error);

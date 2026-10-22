@@ -4,6 +4,15 @@
 
 import { IDEMPOTENCY_MAX_REPLAYS, IDEMPOTENCY_TTL_MS } from "./recovery.mjs";
 import { DEFAULT_TTL_SECONDS, MAX_TTL_SECONDS, MIN_TTL_SECONDS } from "./preflight.mjs";
+import { PUBLISHED_VERSION, RELEASE_STATUS, RELEASE_VERSION } from "./version.mjs";
+import {
+  DEMO_NETWORK,
+  MAINNET_NETWORK,
+  TESTNET_USDC,
+  MAINNET_USDC,
+  TESTNET_SVM,
+  MAINNET_SVM,
+} from "./payment-mode.mjs";
 import {
   PRICE_DEFAULTS,
   PREFLIGHT_RATE_PER_MIN,
@@ -18,7 +27,7 @@ const IDEMPOTENCY_TTL_SECONDS = IDEMPOTENCY_TTL_MS / 1000;
 
 export function buildServiceManifest({
   baseUrl = "https://verify402.onrender.com",
-  mode = "mainnet",
+  mode = "testnet",
   prices = {
     verify: PRICE_DEFAULTS.verify,
     safety: PRICE_DEFAULTS.safety,
@@ -38,15 +47,15 @@ export function buildServiceManifest({
     mode === "mainnet"
       ? [
           {
-            id: "eip155:8453",
+            id: MAINNET_NETWORK,
             name: "Base mainnet",
-            asset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+            asset: MAINNET_USDC,
             symbol: "USDC",
             decimals: 6,
             payTo: payTo.evm,
           },
           {
-            id: "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
+            id: MAINNET_SVM,
             name: "Solana mainnet",
             asset: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
             symbol: "USDC",
@@ -56,15 +65,15 @@ export function buildServiceManifest({
         ]
       : [
           {
-            id: "eip155:84532",
+            id: DEMO_NETWORK,
             name: "Base Sepolia",
-            asset: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+            asset: TESTNET_USDC,
             symbol: "USDC",
             decimals: 6,
             payTo: payTo.evm,
           },
           {
-            id: "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1",
+            id: TESTNET_SVM,
             name: "Solana devnet",
             asset: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
             symbol: "USDC",
@@ -79,7 +88,7 @@ export function buildServiceManifest({
     title: "verify402 — Machine-Payable Truth Service for AI Agents",
     description:
       "Free fail-closed pre-signing gate plus x402-payable on-chain truth verification: arbitrage reality, token safety, execution book, quote fairness, and trade capacity measured at pinned blocks.",
-    version: "1.0.3",
+    version: RELEASE_VERSION,
     license: "Apache-2.0",
     canonicalUrl: baseUrl,
     repository: {
@@ -108,10 +117,24 @@ export function buildServiceManifest({
         transport: "stdio",
         packageIdentifier: "verify402-mcp",
         npmUrl: "https://www.npmjs.com/package/verify402-mcp",
-        tarballUrl: "https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.4/verify402-mcp-1.0.4.tgz",
+        // This source tree is an UNPUBLISHED 1.0.5 candidate. The only
+        // installable artifact is the immutable npm 1.0.4, so the usable
+        // fields point there; the 1.0.5 commands are labelled as planned and
+        // must not be presented as currently usable.
+        releaseStatus: RELEASE_STATUS,
+        publishedVersion: PUBLISHED_VERSION,
+        tarballUrl: `https://registry.npmjs.org/verify402-mcp/-/verify402-mcp-${PUBLISHED_VERSION}.tgz`,
         registryName: "io.github.a32116150-ctrl/verify402-mcp",
-        registryUrl: "https://registry.modelcontextprotocol.io/v0.1/servers/io.github.a32116150-ctrl%2Fverify402-mcp/versions/1.0.4",
-        quickInstallCommand: "npx -y verify402-mcp",
+        // The version list resolves before and after the manual registry publish;
+        // a version-specific URL would 404 until that human step completes.
+        registryUrl: "https://registry.modelcontextprotocol.io/v0.1/servers/io.github.a32116150-ctrl%2Fverify402-mcp/versions",
+        quickInstallCommand: `npx -y verify402-mcp@${PUBLISHED_VERSION}`,
+        plannedVersion: RELEASE_VERSION,
+        plannedInstallCommand: `npx -y verify402-mcp@${RELEASE_VERSION}`,
+        plannedTarballUrl: `https://registry.npmjs.org/verify402-mcp/-/verify402-mcp-${RELEASE_VERSION}.tgz`,
+        plannedInstallNote:
+          `Planned only: no ${RELEASE_VERSION} artifact exists yet. Use these values only ` +
+          `after the npm publish completes and the artifact contents and metadata are verified.`,
         tools: [
           {
             name: "preflight_gate",
@@ -159,9 +182,24 @@ export function buildServiceManifest({
           },
           {
             name: "EVM_PRIVATE_KEY",
-            description: "Private key for a dedicated hot wallet with USDC on Base. Required only for the 5 paid tools; omit for free-only preflight_gate.",
+            description: mode === "mainnet"
+              ? "Private key for a dedicated hot wallet. Required only for the 5 paid tools; omit for free-only preflight_gate. This instance is configured for Base mainnet USDC; mainnet operation requires separate readiness verification."
+              : `Private key for a dedicated hot wallet. Required only for the 5 paid tools; omit for free-only preflight_gate. The published verify402-mcp@${PUBLISHED_VERSION} package defaults paid calls to Base mainnet; the unpublished ${RELEASE_VERSION} candidate in this repository defaults to Base Sepolia testnet (${DEMO_NETWORK}). Set VERIFY402_NETWORKS explicitly and fund only Base Sepolia testnet USDC for this service's demo.`,
             isRequired: false,
             isSecret: true,
+          },
+          {
+            name: "VERIFY402_NETWORKS",
+            description: `Comma-separated EVM payment networks the bridge may pay. Default is Base Sepolia testnet (${DEMO_NETWORK}); set ${MAINNET_NETWORK} explicitly for Base mainnet. The supported network-to-canonical-asset map is constrained to Base Sepolia and Base mainnet.`,
+            isRequired: false,
+            isSecret: false,
+            default: DEMO_NETWORK,
+            // The immutable npm 1.0.4 defaults paid calls to Base mainnet; the
+            // 1.0.5 candidate in this tree defaults to Base Sepolia testnet.
+            // Keep the two facts separate so neither is reported as the other.
+            publishedPackageDefault: MAINNET_NETWORK,
+            candidatePackageDefault: DEMO_NETWORK,
+            demoValue: mode === "mainnet" ? MAINNET_NETWORK : DEMO_NETWORK,
           },
           {
             name: "MAX_PAYMENT_USD",
@@ -185,12 +223,17 @@ export function buildServiceManifest({
       },
     },
     paymentRequirements: {
+      mode,
       scheme: "exact",
       protocol: "x402 v2",
-      facilitators: [
-        "https://facilitator.payai.network (Base + Solana mainnet, keyless)",
-        "Coinbase CDP x402 facilitator (via CDP_API_KEY_ID)",
-      ],
+      facilitators: mode === "mainnet"
+        ? [
+            "https://facilitator.payai.network (Base + Solana mainnet, keyless)",
+            "Coinbase CDP x402 facilitator (via CDP_API_KEY_ID)",
+          ]
+        : [
+            "Configured testnet facilitator; the live 402 challenge is authoritative",
+          ],
       supportedNetworks: networks,
       pricing: {
         verify: { route: "/verify", priceUsd: numPrice(prices.verify), atomicAmountUsdc: atomicUsdc(prices.verify) },

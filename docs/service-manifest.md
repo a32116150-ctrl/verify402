@@ -39,8 +39,9 @@ Agents, crawlers, and frameworks can fetch `https://verify402.onrender.com/.well
 The `integrations.mcp` section details how to connect via MCP:
 - **Transport:** `stdio`
 - **Package Identifier:** `verify402-mcp`
-- **Tarball URL:** Published GitHub release asset for direct `npx` execution without local cloning.
+- **Tarball URL:** npm package tarball (`https://registry.npmjs.org/verify402-mcp/-/verify402-mcp-1.0.4.tgz`) for direct `npx` execution without local cloning. A GitHub release asset is optional and is not required for installation.
 - **Registry Name:** `io.github.a32116150-ctrl/verify402-mcp` (matches official MCP Registry name).
+- **Published package boundary:** npm `verify402-mcp@1.0.4` is immutable and its built-in paid-call default is Base mainnet (`eip155:8453`). The manifest declares no `VERIFY402_NETWORKS` default and marks it required. For the public Base Sepolia demo, clients must set `VERIFY402_NETWORKS=eip155:84532` explicitly. The local source-tree default is testnet, but that is a future-package change, not a change to the published artifact.
 - **Tools:**
   - `preflight_gate`: Free pre-signing gate for payment requests and raw transactions.
   - `verify_arbitrage`: Paid ($0.05) cross-venue arbitrage reality check.
@@ -53,11 +54,12 @@ The `integrations.mcp` section details how to connect via MCP:
 
 The `paymentRequirements` section specifies:
 - **Scheme:** `exact` (standard x402 v2 payment)
-- **Networks:**
-  - Base mainnet (`eip155:8453`), USDC asset `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`
-  - Solana mainnet (`solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp`), USDC mint `EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v`
-- **Facilitators:** PayAI (`https://facilitator.payai.network`) and Coinbase CDP.
-- **Headers:** 402 challenge serves `WWW-Authenticate: x402`. Retries include proof in `x-payment` or `payment-signature`.
+- **Networks (public demo):**
+  - Base Sepolia (`eip155:84532`), testnet USDC asset `0x036CbD53842c5426634e7929541eC2318f3dCF7e`
+  - Solana devnet (`solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1`), testnet USDC mint `4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU`
+- **Facilitator (public demo):** the public `https://x402.org/facilitator`.
+- **Explicit mainnet:** a separate future deployment may use Base mainnet (`eip155:8453`) and Solana mainnet with a production facilitator such as PayAI or Coinbase CDP. It requires separate readiness verification and is not the demo default.
+- **Headers:** 402 challenge serves `WWW-Authenticate: x402`. Retries include proof in `PAYMENT-SIGNATURE` (current x402 v2 header); the legacy `x-payment` alias is also accepted.
 
 ### 3. Operational Policies
 

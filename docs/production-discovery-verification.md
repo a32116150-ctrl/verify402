@@ -1,9 +1,15 @@
 # Verify402 — Production Discovery Verification & Publication Report
 
 **Audit Date:** 2026-10-20
+**Status:** **Historical snapshot.** The live demo has since moved to
+`X402_MODE=testnet` (Base Sepolia `eip155:84532` + Solana devnet) for payments
+while still reading mainnet chain data for analysis. npm is at
+`verify402-mcp@1.0.4`; the MCP Registry and the deployed service remain on
+`1.0.3` until the manual release steps in `PUBLISH_STEPS_FOR_ME.md` are done.
+Do not use the version or mainnet-payment status below as current.
 **Repository:** [https://github.com/a32116150-ctrl/verify402](https://github.com/a32116150-ctrl/verify402)
 **Production URL:** [https://verify402.onrender.com](https://verify402.onrender.com)
-**Active Production Mode:** `mainnet` (Base mainnet `eip155:8453` + Solana mainnet `solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp`)
+**Active Production Mode at audit time:** `mainnet` (Base mainnet `eip155:8453` + Solana mainnet `solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp`)
 
 ---
 

@@ -6,6 +6,9 @@
 
 import { IDEMPOTENCY_MAX_REPLAYS, IDEMPOTENCY_TTL_MS } from "./recovery.mjs";
 import { DEFAULT_TTL_SECONDS, MAX_TTL_SECONDS, MIN_TTL_SECONDS } from "./preflight.mjs";
+import { DEFAULT_SIZE } from "./config.mjs";
+import { RELEASE_VERSION } from "./version.mjs";
+import { DEMO_BASE_URL, paymentRail } from "./payment-mode.mjs";
 import {
   HEALTH_OK_KEYS,
   READY_OK_KEYS,
@@ -70,35 +73,37 @@ const ERROR_SCHEMA = {
   additionalProperties: true,
 };
 
-const PAYMENT_REQUIRED_SCHEMA = {
-  type: "object",
-  required: ["accepts"],
-  properties: {
-    x402Version: { type: "integer", example: 2 },
-    error: { type: "string", example: "Payment Required" },
-    accepts: {
-      type: "array",
-      items: {
-        type: "object",
-        required: ["scheme", "network", "asset", "amount", "payTo"],
-        properties: {
-          scheme: { type: "string", example: "exact" },
-          price: { type: "string", example: "$0.05" },
-          network: { type: "string", example: "eip155:8453" },
-          asset: { type: "string", description: "Token contract address or mint (USDC canonical)." },
-          amount: { type: "string", description: "Amount in atomic token units (e.g. 50000 = 0.05 USDC, 6 decimals)." },
-          payTo: { type: "string", description: "Recipient address for the payment." },
-          maxTimeoutSeconds: { type: "integer", example: 60 },
+function paymentRequiredSchema(rail) {
+  return {
+    type: "object",
+    required: ["accepts"],
+    properties: {
+      x402Version: { type: "integer", example: 2 },
+      error: { type: "string", example: "Payment Required" },
+      accepts: {
+        type: "array",
+        items: {
+          type: "object",
+          required: ["scheme", "network", "asset", "amount", "payTo"],
+          properties: {
+            scheme: { type: "string", example: "exact" },
+            price: { type: "string", example: "$0.05" },
+            network: { type: "string", example: rail.evmNetwork },
+            asset: { type: "string", description: "Token contract address or mint (canonical USDC for the configured network).", example: rail.evmAsset },
+            amount: { type: "string", description: "Amount in atomic token units (e.g. 50000 = 0.05 USDC, 6 decimals)." },
+            payTo: { type: "string", description: "Recipient address for the payment." },
+            maxTimeoutSeconds: { type: "integer", example: 60 },
+          },
         },
       },
+      extensions: {
+        type: "object",
+        description: "x402 Bazaar discovery metadata declaring input schema and example responses.",
+        additionalProperties: true,
+      },
     },
-    extensions: {
-      type: "object",
-      description: "x402 Bazaar discovery metadata declaring input schema and example responses.",
-      additionalProperties: true,
-    },
-  },
-};
+  };
+}
 
 const IDEMPOTENCY_HEADER = {
   name: "x-idempotency-key",
@@ -110,15 +115,24 @@ const IDEMPOTENCY_HEADER = {
 };
 
 const PAYMENT_PROOF_HEADER = {
+  name: "PAYMENT-SIGNATURE",
+  in: "header",
+  required: false,
+  description:
+    "Base64-encoded x402 v2 payment authorization proof submitted on retry after receiving a 402 challenge. This is the current header; legacy x-payment is also accepted.",
+  schema: { type: "string" },
+};
+
+const LEGACY_PAYMENT_PROOF_HEADER = {
   name: "x-payment",
   in: "header",
   required: false,
   description:
-    "Base64-encoded x402 payment authorization proof submitted on retry after receiving a 402 challenge. Can alternatively be passed via payment-signature.",
+    "Legacy alias for PAYMENT-SIGNATURE, retained for clients that have not migrated to x402 v2. Either header may carry the same base64-encoded proof.",
   schema: { type: "string" },
 };
 
-function paidOperation({ price, operationId, summary, tag, inputSchema, outputSchema = OUTPUT_SCHEMA, guidance, exampleRequest }) {
+function paidOperation({ price, operationId, summary, tag, inputSchema, outputSchema = OUTPUT_SCHEMA, guidance, exampleRequest, rail }) {
   return {
     tags: [tag],
     operationId,
@@ -128,8 +142,8 @@ function paidOperation({ price, operationId, summary, tag, inputSchema, outputSc
       "\n**Payment flow (x402 exact):**",
       "1. Make POST request without payment.",
       "2. Receive 402 Payment Required with challenge parameters (`accepts` array).",
-      "3. Client signs payment authorization for USDC on Base (`eip155:8453`) or Solana.",
-      "4. Retry original request with proof in `x-payment` or `payment-signature` header.",
+      "3. Client signs payment authorization for USDC on the network named by the 402 challenge. " + rail.paidFlowNote,
+      "4. Retry original request with proof in the `PAYMENT-SIGNATURE` header (x402 v2). The legacy `x-payment` header is also accepted.",
       "5. Receive 200 OK with reproducible `evidence_bundle`.",
       `\n**Idempotency & Replay:** Supply \`x-idempotency-key\` on the first call. A settled verdict can be replayed up to ${IDEMPOTENCY_MAX_REPLAYS} times within ${IDEMPOTENCY_TTL_SECONDS}s at zero charge. The key is the only replay credential; no payer identity is derived from an unverified payment header. Use \`crypto.randomUUID()\` or at least 32 URL-safe random characters with at least 16 distinct characters; weak keys return \`400 weak_idempotency_key\`. The key is a secret: a leaked key allows replay until the TTL/replay cap. Omitting it keeps normal pay-per-call behavior.`,
       "\n**Safety boundary:** Truth checks measure chain state at one pinned block. They do not predict future blocks, guarantee arbitrage execution, or endorse tokens as risk-free.",
@@ -139,7 +153,7 @@ function paidOperation({ price, operationId, summary, tag, inputSchema, outputSc
       price: { mode: "fixed", currency: "USD", amount: price },
       protocols: [{ x402: {} }],
     },
-    parameters: [IDEMPOTENCY_HEADER, PAYMENT_PROOF_HEADER],
+    parameters: [IDEMPOTENCY_HEADER, PAYMENT_PROOF_HEADER, LEGACY_PAYMENT_PROOF_HEADER],
     requestBody: {
       required: true,
       content: {
@@ -166,7 +180,7 @@ function paidOperation({ price, operationId, summary, tag, inputSchema, outputSc
             schema: { type: "string", example: "x402" },
           },
         },
-        content: { "application/json": { schema: PAYMENT_REQUIRED_SCHEMA } },
+        content: { "application/json": { schema: paymentRequiredSchema(rail) } },
       },
       409: {
         description: "Conflict: the same idempotency key was reused with different request parameters. Recovery binds one key to one canonical request body.",
@@ -186,21 +200,21 @@ function paidOperation({ price, operationId, summary, tag, inputSchema, outputSc
 
 const chainId = {
   type: "integer",
-  description: "Required EVM chain id: 1 Ethereum mainnet, 42161 Arbitrum One, 8453 Base mainnet, 84532 Base Sepolia (testnet mode). There is no silent default; missing => 400 missing_chain.",
+  description: "Required EVM chain id: 1 Ethereum mainnet, 42161 Arbitrum One, 8453 Base, 84532 Base Sepolia. There is no silent default; missing => 400 missing_chain.",
 };
 
-export function buildOpenapi(prices) {
+export function buildOpenapi(prices, { mode = "testnet", baseUrl = DEMO_BASE_URL } = {}) {
   const usd = (p) => String(p).replace(/^\$/, "");
+  const rail = paymentRail(mode);
 
   return {
     openapi: "3.1.0",
     info: {
       title: "verify402",
-      version: "1.0.3",
-      description:
-        "Machine-payable truth service for AI agents: free pre-signing preflight safety gate plus paid, evidence-backed on-chain truth checks paid per call via x402 in USDC on Base or Solana.",
+      version: RELEASE_VERSION,
+      description: rail.openapiDescription,
       "x-guidance":
-        "Call POST /preflight for free before signing any payment request or raw transaction. It answers PASS/CAUTION/BLOCK with typed reasons, checked/notChecked lists, and a 90-second HMAC receipt. For market truth questions, use the paid POST routes (/verify, /safety, /route, /quotecheck, /depth). Paid routes use x402 exact settlement (0.03-0.10 USDC) and return an evidence_bundle with pinnedBlock, requestHash, and responseHash for cryptographic auditability. The 402 challenge is authoritative for prices. CORS: free read-only discovery GET/HEAD/OPTIONS routes allow any origin; POST /preflight and paid routes send no Access-Control-Allow-Origin, so browser-based agents must use a server-side client, the MCP bridge, or an SDK.",
+        "Call POST /preflight for free before signing any payment request or raw transaction. It answers PASS/CAUTION/BLOCK with typed reasons, checked/notChecked lists, and a 90-second HMAC receipt. For market truth questions, use the paid POST routes (/verify, /safety, /route, /quotecheck, /depth). Paid routes use x402 exact settlement (0.03-0.10 USDC) and return an evidence_bundle with pinnedBlock, requestHash, and responseHash for cryptographic auditability. The 402 challenge is authoritative for prices and the payment network. CORS: free read-only discovery GET/HEAD/OPTIONS routes allow any origin; POST /preflight and paid routes send no Access-Control-Allow-Origin, so browser-based agents must use a server-side client, the MCP bridge, or an SDK.",
       "x-state-persistence":
         "Recovery records and /usage counters are process-local and lost on restart or deploy; they are not shared across instances. A previously settled idempotency key may be charged again after a restart.",
       contact: {
@@ -215,8 +229,8 @@ export function buildOpenapi(prices) {
     },
     servers: [
       {
-        url: "https://verify402.onrender.com",
-        description: "Production server (Base mainnet / Solana mainnet)",
+        url: baseUrl,
+        description: rail.serverDescription,
       },
     ],
     tags: [
@@ -241,10 +255,10 @@ export function buildOpenapi(prices) {
                     required: [...HEALTH_OK_KEYS],
                     properties: {
                       ok: { type: "boolean", const: true },
-                      mode: { type: "string", enum: ["mainnet", "testnet"], example: "mainnet" },
+                      mode: { type: "string", enum: ["mainnet", "testnet"], example: rail.mode },
                       price: { type: "string", example: "$0.05" },
                       preflight: { type: "string", example: "free" },
-                      networks: { type: "string", example: "Base mainnet / Solana mainnet" },
+                      networks: { type: "string", example: rail.label },
                       ready: { type: "string", example: "/ready" },
                     },
                   },
@@ -316,9 +330,12 @@ export function buildOpenapi(prices) {
                 "application/json": {
                   schema: {
                     type: "object",
-                    required: ["name", "prices", "preflight", "recovery", "state_persistence", "readiness", "chains", "endpoints"],
+                    required: ["name", "version", "mode", "prices", "preflight", "recovery", "state_persistence", "readiness", "chains", "endpoints"],
                     properties: {
                       name: { type: "string", example: "verify402" },
+                      version: { type: "string", const: RELEASE_VERSION, description: "Release identity reported by the live service." },
+                      mode: { type: "string", enum: ["mainnet", "testnet"], example: rail.mode },
+                      networks: { type: "string", example: rail.label },
                       description: { type: "string" },
                       prices: { type: "object", additionalProperties: { type: "string" } },
                       preflight: {
@@ -506,7 +523,7 @@ export function buildOpenapi(prices) {
                       description: "Payment challenge object (required when kind=payment).",
                       properties: {
                         scheme: { type: "string", example: "exact" },
-                        network: { type: "string", example: "eip155:8453", description: "CAIP-2 network string." },
+                        network: { type: "string", example: rail.evmNetwork, description: `CAIP-2 network string. This ${rail.mode} instance offers ${rail.shortLabel}; use the network named in the live 402 challenge.` },
                         asset: { type: "string", description: "Asset contract address or mint." },
                         amount: { type: "string", description: "Atomic units (e.g. 10000 = 0.01 USDC, 6 decimals)." },
                         payTo: { type: "string", description: "Recipient address." },
@@ -555,11 +572,11 @@ export function buildOpenapi(prices) {
                   kind: "payment",
                   payment: {
                     scheme: "exact",
-                    network: "eip155:8453",
-                    asset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+                    network: rail.evmNetwork,
+                    asset: rail.evmAsset,
                     amount: "10000",
                     payTo: "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb",
-                    resource: "https://verify402.onrender.com/verify",
+                    resource: `${baseUrl}/verify`,
                   },
                   policy: { maxAmountUsd: 0.25 },
                 },
@@ -683,6 +700,7 @@ export function buildOpenapi(prices) {
       },
       "/verify": {
         post: paidOperation({
+          rail,
           price: usd(prices.verify),
           operationId: "verifyArbitrage",
           summary: "Is this cross-venue arbitrage real right now?",
@@ -696,7 +714,7 @@ export function buildOpenapi(prices) {
               chainId,
               base: { type: "string", default: "USDC", description: "Base currency token symbol or address." },
               target: { type: "string", minLength: 1, description: "Target token symbol or 0x address (e.g. WETH)." },
-              size: { type: "number", exclusiveMinimum: 0, default: 1000, description: "Trade size in base token units." },
+              size: { type: "number", exclusiveMinimum: 0, default: DEFAULT_SIZE, description: `Trade size in base token units. Defaults to ${DEFAULT_SIZE}; the 402 challenge price is per call, not per size.` },
               minNet: { type: "number", default: 0, description: "Minimum net profit in base token units to declare an edge." },
             },
             additionalProperties: true,
@@ -706,6 +724,7 @@ export function buildOpenapi(prices) {
       },
       "/safety": {
         post: paidOperation({
+          rail,
           price: usd(prices.safety),
           operationId: "checkTokenSafety",
           summary: "Pre-trade token gate: TRUST / CAUTION / AVOID (quote-based sellability)",
@@ -729,6 +748,7 @@ export function buildOpenapi(prices) {
       },
       "/route": {
         post: paidOperation({
+          rail,
           price: usd(prices.route),
           operationId: "getBestRoute",
           summary: "Every configured venue quoting this pair at one pinned block, best first",
@@ -751,6 +771,7 @@ export function buildOpenapi(prices) {
       },
       "/quotecheck": {
         post: paidOperation({
+          rail,
           price: usd(prices.quotecheck),
           operationId: "verifyQuoteFairness",
           summary: "Audit someone else's quote: fair / overpaying / too_good_to_be_true",
@@ -775,6 +796,7 @@ export function buildOpenapi(prices) {
       },
       "/depth": {
         post: paidOperation({
+          rail,
           price: usd(prices.depth),
           operationId: "getTradeDepth",
           summary: "Largest size that still clears your cost tolerance",

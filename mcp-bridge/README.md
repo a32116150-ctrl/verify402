@@ -5,8 +5,18 @@ agent signs a payment or a chain transaction, plus five paid on-chain checks
 paid per call over x402.
 
 Works with Claude Desktop, Cursor, OpenCode, and any MCP client that speaks
-stdio. The free gate needs **no wallet**. The paid tools use a dedicated hot
-wallet that pays in USDC; the bridge never signs or sends a trade.
+stdio. The free gate needs **no wallet**. The public demo's paid tools use a
+dedicated hot wallet funded with **Base Sepolia testnet USDC** (`eip155:84532`).
+The analysis reads mainnet chain data, but the demo never settles mainnet
+payments. The bridge never signs or sends a trade.
+
+> **Published package note:** npm `verify402-mcp@1.0.4` is immutable and its
+> published README predates this source-tree testnet default. Its built-in
+> runtime default is Base mainnet (`eip155:8453`). The explicit
+> `VERIFY402_NETWORKS=eip155:84532` block below is required with that package
+> for the public demo; a future patch release is needed to update the npm page
+> and change the built-in default. This source tree is `1.0.5` and already
+> defaults to Base Sepolia testnet, but `1.0.5` is not published yet.
 
 ## Tools
 
@@ -85,11 +95,12 @@ To enable the 5 deep on-chain truth checks (`verify_arbitrage`, `check_token_saf
 1. **Create a Dedicated Hot Wallet**:
    - Create a brand new wallet in MetaMask, Rabby, or via `cast wallet new`.
    - ⚠️ **SECURITY WARNING**: Never use your primary personal wallet, cold storage, or vault.
-2. **Fund the Wallet on Base (EIP-155:8453)**:
-   - **USDC**: Transfer $2 to $10 of USDC on Base (the bridge pays per call: $0.03 to $0.10).
-   - **Gas (ETH on Base)**: Transfer ~$0.50 worth of ETH on Base for minimal gas allowances if needed.
+2. **Fund the Wallet on Base Sepolia testnet (EIP-155:84532)**:
+   - **USDC**: Get Base Sepolia testnet USDC from a faucet (the bridge pays per call: $0.03 to $0.10 in testnet USDC).
+   - **Gas (ETH on Base Sepolia)**: Get a small amount of Base Sepolia testnet ETH for gas if your client needs it. No mainnet funds are required for the public demo.
 3. **Configure Environment Variables in Your MCP Client**:
    - Set `EVM_PRIVATE_KEY` to the 64-character private key of the hot wallet.
+   - Set `VERIFY402_NETWORKS` to `eip155:84532` (Base Sepolia testnet).
    - Set safety caps `MAX_PAYMENT_USD` (e.g., `"0.25"`) and `MAX_DAILY_USD` (e.g., `"1.00"`).
 
 **Paid Configuration Block (Claude Desktop, Cursor, Cline, Windsurf)**:
@@ -104,7 +115,7 @@ To enable the 5 deep on-chain truth checks (`verify_arbitrage`, `check_token_saf
         "EVM_PRIVATE_KEY": "0xYOUR_HOT_WALLET_PRIVATE_KEY",
         "MAX_PAYMENT_USD": "0.25",
         "MAX_DAILY_USD": "1.00",
-        "VERIFY402_NETWORKS": "eip155:8453",
+        "VERIFY402_NETWORKS": "eip155:84532",
         "VERIFY402_PAY_TO": "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb"
       }
     }
@@ -125,6 +136,7 @@ In `opencode.jsonc` (or `~/.config/opencode/opencode.jsonc`):
         "environment": {
           "VERIFY402_URL": "https://verify402.onrender.com",
           "EVM_PRIVATE_KEY": "{env:EVM_PRIVATE_KEY}",
+          "VERIFY402_NETWORKS": "eip155:84532",
           "MAX_PAYMENT_USD": "0.25",
           "MAX_DAILY_USD": "1.00"
         }
@@ -163,9 +175,20 @@ Once configured, your agent automatically sees the tools in its context. You can
   server and a known paid route, on an allowlisted EVM network, to the
   verify402 payee. It accepts only recognized default assets (USDC), caps the
   amount at `MAX_PAYMENT_USD`, and refuses redirects.
+- The whole 402 challenge is checked, not just the option the client picks:
+  every offered requirement must use an allowlisted network, the configured
+  payee, the canonical USDC contract **and** the canonical EIP-712 domain for
+  that network, an `extra.assetTransferMethod` of `eip3009`, a
+  `maxTimeoutSeconds` that is a positive integer no greater than `300`, and an
+  amount inside the cap. A challenge that also offers Base mainnet is refused
+  as a whole rather than filtered down to the testnet option. The client also
+  proves that the requirement it signs is the exact object the server sent.
 - The allowlist can be narrowed or pointed at another deployment with
   `VERIFY402_NETWORKS`, `VERIFY402_PAY_TO`, and `VERIFY402_RESOURCE_PREFIX`.
-  Defaults are Base mainnet and the public verify402 payee.
+  The source-tree defaults are Base Sepolia testnet (`eip155:84532`) and the
+  public verify402 payee. `VERIFY402_NETWORKS` is constrained to the supported
+  map (`eip155:84532`, `eip155:8453`); an explicitly empty value fails closed
+  instead of falling back to a default.
 - `MAX_PAYMENT_USD` is enforced inside the x402 client, before a signature
   exists; removing it is a security regression. The caps limit what the bridge
   can authorize; they do **not** protect a compromised private key.
@@ -176,6 +199,23 @@ Once configured, your agent automatically sees the tools in its context. You can
   signing mistakes, not every scam.
 - Use the [reference executor](https://github.com/a32116150-ctrl/verify402/blob/master/examples/preflight-guard.mjs)
   when you want enforcement rather than advice.
+
+## Explicit mainnet configuration (not the public demo)
+
+Mainnet settlement is a separate deployment choice, not a bridge or demo
+default. Do not point this client at mainnet until the service-side mainnet
+readiness checks, facilitator, always-on host, and wallet funding have been
+verified independently.
+
+```bash
+# Only for a deliberate mainnet deployment, never against the public demo.
+VERIFY402_NETWORKS=eip155:8453
+VERIFY402_PAY_TO=<the payee named by the mainnet 402>
+```
+
+The public demo offers `eip155:84532`; a mainnet-only policy will refuse that
+challenge instead of silently spending mainnet funds. The reverse is also
+enforced: the demo policy refuses a mainnet-only challenge.
 
 ## Development
 

@@ -56,7 +56,7 @@ Startup guards:
 Pre-switch checks:
 1. `/health` returns `ok: true`.
 2. `/ready` returns `ok: true` and a recent block.
-3. `SMOKE_BASE_URL=<url> npm run post-deploy` passes.
+3. Do **not** use `npm run post-deploy` as a mainnet pass: it accepts `EXPECTED_MODE=testnet` only and asserts the Base Sepolia demo rail. Mainnet deployment checks are not implemented yet; use the free `/health`, `/ready`, and `/preflight` checks plus manual 402 review.
 4. No `BYPASS_PAYMENT=1` is set.
 5. `AGENT_URL` is the canonical origin, not the request Host.
 

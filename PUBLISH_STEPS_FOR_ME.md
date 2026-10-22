@@ -1,50 +1,354 @@
-# Publish verify402-mcp 1.0.4 (for me)
+# Release verify402-mcp 1.0.5 (candidate) — for me
 
-Do not publish until you approve. These steps publish the package only; they do not deploy the service.
+Status today: the working tree is an **unpublished `1.0.5` candidate**.
 
-## Before publishing
+- npm `verify402-mcp@1.0.4` is published and immutable.
+- The MCP Registry currently serves its earlier reference; it does **not** carry a
+  `1.0.5` entry.
+- The live service has not been validated against this candidate.
 
-1. Open a terminal in the repository root.
-2. Confirm the working tree is clean: `git status --short` should print nothing.
-3. Confirm the package version is `1.0.4`: open `mcp-bridge/package.json`.
-4. Confirm `server.json` also says `1.0.4`.
-5. Run `npm test` and make sure it exits 0.
-6. Run `cd mcp-bridge && npm pack --dry-run`.
-7. Confirm the dry-run file list includes `paid-call.mjs`, `log.mjs`, `budget.mjs`, `payment-policy.mjs`, `index.mjs`, `README.md`, `LICENSE`, and `NOTICE`.
-8. Confirm the dry-run file list does not include `.env`, test files, or secrets.
+Nothing below has been performed by the repair pass. Do these steps only after
+you approve them, and in this order. Each step is a gate: do not start the next
+one until the previous one has been verified. No command here runs
+automatically: the first push is the traceability gate in step 4, and the
+deploy push is step 10.
 
-## Log in to npm
+## 1. Account for the immutable npm 1.0.4 package
 
-9. Run `npm login`.
-10. If asked for a username, use your npm account username.
-11. If asked for a password, use your npm account password.
-12. If asked for an email, use the email on the npm account.
-13. If asked for a one-time password or 2FA code, open your authenticator app and enter the current 6-digit code.
-14. Run `npm whoami` and confirm it prints your npm username.
+From the repository root:
 
-## Publish
+```bash
+npm view verify402-mcp version dist.tarball gitHead
+npm view verify402-mcp@1.0.4 version
+```
 
-15. Run `cd mcp-bridge`.
-16. Run `npm publish`.
-17. If npm asks for a 2FA code, enter the current code from your authenticator app.
-18. Wait for the command to finish. Do not close the terminal while it runs.
+Expected: `1.0.4`, a registry tarball URL, and a published `gitHead`. npm
+`1.0.4` is immutable and identifies commit `248923f` as its source. Do **not**
+republish, overwrite, or unpublish it.
 
-## Verify
+The working tree intentionally contains post-1.0.4 repair changes: the bridge
+default is now Base Sepolia testnet and the README/env examples are testnet.
+Those changes are not in the published 1.0.4 tarball, so its runtime files will
+not all match this working tree. That mismatch is expected here; do not treat
+it as permission to republish 1.0.4. The published package's built-in runtime
+default is Base mainnet (`eip155:8453`) and remains safe for the public demo
+only when the client explicitly sets `VERIFY402_NETWORKS=eip155:84532`.
 
-19. Open `https://www.npmjs.com/package/verify402-mcp` in a browser.
-20. Confirm the version shown is `1.0.4`.
-21. Confirm `latest` points to `1.0.4`.
-22. Run `npm view verify402-mcp version` and confirm it prints `1.0.4`.
+If the npm runtime itself should carry the testnet default, that is what the
+`1.0.5` candidate does. Do not attach the new source to the existing `1.0.4`
+version.
 
-## Update MCP Registry entry (if one exists)
+## 2. Validate and inspect the candidate
 
-23. Open the MCP Registry publisher documentation or dashboard for `io.github.a32116150-ctrl/verify402-mcp`.
-24. Publish or update the entry using `server.json` version `1.0.4`.
-25. Confirm the registry shows version `1.0.4` and status active.
+All of these are offline and make no network request:
 
-## If something goes wrong
+```bash
+git status --short
+node scripts/test-counts.mjs
+TEST_OFFLINE=1 npm run test:offline
+node scripts/check-discovery.mjs
+node -e "console.log(require('./server.json').version, require('./mcp-bridge/package.json').version)"
+```
 
-26. If publish fails because the version already exists, do not overwrite it. Bump to the next patch version and repeat the checks.
-27. If authentication fails, run `npm login` again and retry.
-28. If 2FA fails, wait for the next code and retry.
-29. Do not run `npm publish` with `--force`.
+Expected: the release identity is `1.0.5` in the source metadata, every offline
+test passes, and discovery validation passes. Stop on any failure.
+
+Review the public release surfaces before continuing. They must describe
+`1.0.5` as an unpublished candidate and must not claim that npm or the registry
+already serves it:
+
+- `src/site/mcp.html` (the public `/mcp` page)
+- the service manifest served at `/.well-known/verify402.json`
+- `server.json` (the registry entry for the candidate)
+- `README.md`, `examples/ONBOARDING.md`, `mcp-bridge/llms-install.md`
+
+## 3. Review and commit the repository changes
+
+Use explicit paths, never `git add -A`:
+
+```bash
+git status --short
+git diff
+```
+
+Commit the reviewed files, including the `1.0.5` candidate metadata, testnet
+demo docs, and the release-consistency and bridge-tool tests. Do not include
+`.env` files, secrets, generated tarballs, or `VERIFY402_HANDOFF.md` unless you
+intend to publish that review.
+
+**Do not push this commit yet.** In this runbook, pushing `master` is a
+deployment action, not a bookkeeping step. `render.yaml` does not set
+`autoDeploy`, so the repository alone does not establish whether the Render
+dashboard is configured to deploy on push. Keep the commit local until the
+traceability gate in step 4 is satisfied.
+
+npm publication (step 6) requires the approved commit to be publicly
+traceable, but it does not require a push to `master`; the registry publish
+(step 8) requires no push at all.
+
+## 4. Make the approved commit publicly traceable without deploying — dashboard gate
+
+npm records the local `HEAD` as `gitHead`, so the approved commit must exist on
+the public GitHub remote before npm publication. It must not be pushed to a ref
+that deploys. If the exact SHA is already public on a ref the dashboard confirms
+is not deployed, verify that and skip the push.
+
+**Repository evidence cannot decide this.** `render.yaml` has no `branch` and no
+`autoDeploy` key, and the only GitHub workflow is `.github/workflows/test.yml`
+(tests on a push to `master` and on pull requests; no deploy). The deploy
+branch, auto-deploy, and preview settings live in the Render dashboard. Do not
+treat `render.yaml` as proof that a push is inert.
+
+Open the Render dashboard for the live `verify402` service and record all of
+the following:
+
+1. **Settings → Build & Deploy → Branch** — the connected repository and the
+   exact branch. Confirm the repository is `a32116150-ctrl/verify402`, and
+   record the branch even if it looks like `master`.
+2. **Auto-Deploy** — on or off (the UI may label it "Auto-Deploy", "On Commit",
+   or "Deploy on push").
+3. **Preview Environments / pull-request previews** — enabled or disabled.
+4. **Blueprint sync / auto-sync** — whether a push or a `render.yaml` change can
+   trigger a sync.
+5. **Current deployed commit** — the SHA the service runs now, so you can prove
+   afterwards that no unintended deploy happened.
+
+Then take exactly one path:
+
+- **Auto-deploy is off, no preview environment will deploy, and no
+  push-triggered blueprint sync is enabled:** push the approved commit to
+  `master`, then re-check the dashboard and confirm the deployed SHA did **not**
+  change.
+
+  ```bash
+  git push origin master
+  ```
+
+- **Auto-deploy is on, the connected branch is exactly `master`, and preview
+  environments / PR deploys are disabled:** push the approved commit to a
+  dedicated branch that is neither `master` nor the connected deploy branch
+  (record the branch name you create), then verify that the GitHub commit page
+  for the SHA resolves. Leave `master` untouched and confirm in the dashboard
+  that no deploy started.
+
+  ```bash
+  git push origin HEAD:refs/heads/<the-branch-you-recorded>
+  ```
+- **Anything else** — the connected branch is not `master`, the auto-deploy or
+  preview settings cannot be read, or no branch can be confirmed non-deploying:
+  **stop.** Do not push any branch and do not publish npm; without a publicly
+  traceable commit, npm publication must not proceed. Resolve the dashboard
+  setting first.
+
+Never push `master` in this step while auto-deploy is on; `master` is reserved
+for the deploy gate in step 10. This runbook does not verify the dashboard
+settings itself; it requires you to record them.
+
+## 5. Create and verify the npm 1.0.5 artifact
+
+Do **not** publish in this step. Build the artifact locally and inspect it.
+
+```bash
+cd mcp-bridge
+npm ci
+npm test
+npm pack --dry-run
+npm pack
+tar -tzf verify402-mcp-1.0.5.tgz
+```
+
+Then verify, from the tarball contents:
+
+- the version in `package/package.json` is `1.0.5`;
+- `package/index.mjs`, `payment-policy.mjs`, `paid-call.mjs`, `budget.mjs`,
+  `log.mjs`, `README.md`, `.env.example`, `LICENSE`, and `NOTICE` are present;
+- the bridge default is Base Sepolia (`eip155:84532`) and mainnet requires an
+  explicit `VERIFY402_NETWORKS=eip155:8453`;
+- importing `package/index.mjs` does not load a `.env` file;
+- the MCP tool binding maps each paid tool to exactly one paid route.
+
+Delete the local tarball after inspection. Nothing is published yet.
+
+## 6. Publish npm 1.0.5 — only after explicit approval
+
+Step 4 must have made the exact commit being published publicly traceable, and
+step 5 must have verified the artifact. Confirm the commit first:
+
+```bash
+git rev-parse HEAD
+git status --short
+```
+
+The printed SHA must be the one you pushed in step 4, and the working tree must
+be clean. Then:
+
+```bash
+cd mcp-bridge
+npm publish
+npm view verify402-mcp version dist.tarball gitHead
+npm view verify402-mcp@1.0.5 version
+```
+
+Expected: `1.0.5`, a resolvable tarball, and a `gitHead` equal to the SHA above
+that resolves on GitHub. Do not publish from an unpushed commit. npm versions
+are immutable: never republish, overwrite, or unpublish `1.0.5` after this step.
+
+## 7. Transition the release metadata to published 1.0.5 — separate approval, only after step 6 is verified
+
+Do not start this step until step 6 has printed `1.0.5` for both the latest
+version and the pinned version. Before that point the tree must keep describing
+`1.0.5` as an unpublished candidate. This metadata update is its own approval
+gate; the npm publication does not approve it.
+
+Once the npm package exists, update the repository from `candidate-unpublished`
+to "published `1.0.5`" in one metadata commit:
+
+- `src/version.mjs` — set `PUBLISHED_VERSION = "1.0.5"` and change
+  `RELEASE_STATUS` from the candidate value to the published/released value.
+- `src/manifest.mjs` — published release status, published version, tarball
+  URL, quick-install command, and the published-package default; keep planned
+  fields only where they still describe something real.
+- `src/payment-mode.mjs` — the generated `/llms.txt` install line and any
+  "unpublished candidate" note.
+- `src/site/mcp.html` — hero, lead, registry callout, and install snippets.
+- `README.md`, `examples/ONBOARDING.md`, `mcp-bridge/llms-install.md` — move the
+  install pins from `1.0.4` to `1.0.5`.
+- `server.json` — replace the "unpublished candidate" wording with
+  published-`1.0.5` wording. Registry metadata must never call a published
+  version unpublished.
+- `test/release-consistency.test.mjs` — re-point the published-version
+  assertions and the "never present 1.0.5 as already published" checks at the
+  new state. The current tests pin `1.0.4` and are expected to fail until this
+  update; that failure is the guard, not a reason to weaken the test.
+
+Re-run the offline gates, inspect the diff, and commit with explicit paths:
+
+```bash
+TEST_OFFLINE=1 npm run test:offline
+node scripts/check-discovery.mjs
+node scripts/test-counts.mjs
+git status --short
+git diff
+```
+
+Do not push this commit yet; step 10 covers deployment. The metadata commit must
+also be publicly traceable before it is deployed; publish it to the same
+non-deploying branch from step 4 if one was used, or keep it local until the
+deploy gate.
+
+Known limitation: the already-published npm tarball is immutable, so the
+README and install text embedded in `1.0.5` reflect the pre-publication state.
+The repository copies updated here are what the registry metadata, the public
+site, and the deployment use. If the npm page still shows candidate wording,
+that is a limitation of the immutable artifact — do not republish `1.0.5` to
+work around it.
+
+## 8. Publish the MCP Registry entry — separate approval, only when the npm 1.0.5 artifact exists
+
+Steps 6 and 7 must both be complete and verified first. This registry
+publication is its own approval gate; npm publication and the metadata update
+do not approve it. The checked-in
+`server.json` must already describe a **published** `1.0.5`: `VERIFY402_NETWORKS`
+defaults to Base Sepolia testnet (`eip155:84532`), it is optional, and Base
+mainnet (`eip155:8453`) is an explicit opt-in. Do not publish the entry if it
+still contains candidate or "unpublished" wording.
+
+```bash
+mcp-publisher login github   # only if this machine is not already authenticated
+mcp-publisher validate server.json
+mcp-publisher publish server.json
+```
+
+If `mcp-publisher validate` rejects the metadata, **stop** and correct the
+metadata. Do not fabricate fields to satisfy the validator, and do not publish
+the entry against the immutable `1.0.4` version.
+
+## 9. Verify the actual 1.0.5 registry version
+
+```bash
+curl -s "https://registry.modelcontextprotocol.io/v0.1/servers/io.github.a32116150-ctrl%2Fverify402-mcp/versions/1.0.5"
+```
+
+Expected: a `server` object with `version: "1.0.5"`, the Base Sepolia default in
+its environment-variable metadata, active status, and no "unpublished
+candidate" wording. A `1.0.4` or `1.0.3` response is not proof that this step
+succeeded.
+
+## 10. Deploy only after a separate approval
+
+Deployment is a separate decision. Step 4 may have pushed the approved commit to
+a branch that was confirmed non-deploying, or to `master` with auto-deploy off;
+no earlier step deploys or changes the live service.
+
+Re-check the Render dashboard settings recorded in step 4 (connected branch,
+auto-deploy, preview environments). If any of them changed, stop and repeat
+step 4. If you cannot still verify them, do not push `master`.
+
+- **The approved commit is on a non-deploying branch:** merge it into the
+  connected deploy branch (`master`, when the dashboard confirms that) with a
+  fast-forward merge, so the deployed SHA is the approved commit. If a merge
+  commit is unavoidable, record its SHA and deploy that. This is the first
+  intentional push to `master`.
+- **Auto-deploy off:** push or merge to `master`, then trigger the deploy from
+  the dashboard and confirm the deployed SHA.
+- **Auto-deploy on:** the push or merge itself deploys; watch the dashboard and
+  record the deployed SHA.
+
+Deploy only the approved, traceable SHA. If the metadata commit exists, it is
+the one to deploy, because it carries the published-1.0.5 surfaces.
+
+```bash
+git log --oneline -2
+```
+
+Then run the free-only post-deploy check:
+
+```bash
+SMOKE_BASE_URL=https://verify402.onrender.com \
+  EXPECTED_VERSION=1.0.5 EXPECTED_MODE=testnet \
+  npm run post-deploy
+```
+
+Expected: all checks pass, `/health` says `testnet`, `/info` shows
+`mcp.version: "1.0.5"`, `/openapi.json` shows `info.version: "1.0.5"`, the
+landing page does not advertise a mainnet demo, and `/llms.txt` describes the
+testnet payment rail and the published-package install. The dashboard's
+deployed commit must equal the metadata commit, or the recorded merge commit
+that contains it.
+
+Do not assert that the live service still reports its previous version after a
+push unless you have verified that with `/info` or `/health`. With auto-deploy
+on, the push changes the live service immediately, and a green post-deploy run
+is the only evidence that it succeeded.
+
+Do not make a paid call as part of this checklist. The free gate and the
+post-deploy checks are sufficient to verify the release surfaces.
+
+## If something is wrong
+
+- **npm already has 1.0.5:** do not overwrite or unpublish it. Fix forward with
+  a new patch version after approval.
+- **The published runtime differs from local:** stop and treat the difference as
+  a new code change requiring a new package version and a new release.
+- **The registry or live service is still on an earlier version:** that is
+  expected until the human steps above are completed. Never claim those
+  external artifacts are updated before verifying them.
+- **GitHub does not resolve the approved SHA:** stop before npm publication.
+  Confirm the push landed on the intended non-deploying branch and that no
+  history rewrite removed it. A local-only commit is not publicly traceable.
+- **The push is rejected as non-fast-forward:** stop. Do not force-push a
+  shared branch; reconcile the history deliberately and re-run the checks.
+- **The Render dashboard shows a branch other than the one you assumed:** stop.
+  Do not push any branch and do not deploy until the connected branch and
+  auto-deploy behavior are understood.
+- **A push from step 4 started a deploy:** the branch was not actually
+  non-deploying. Stop, verify the live version with `/info`, keep npm and the
+  registry gates closed if they are still pending, and record the early
+  deployment instead of announcing the release.
+- **npm 1.0.5 exists but metadata still says unpublished:** stop. Complete the
+  metadata transition in step 7 and publish the registry entry only from that
+  state; do not deploy a tree that calls the published version unpublished.
+- **A public page claims 1.0.5 is published:** after step 6 this is only true
+  once step 7 has updated the tree; before that, revert the claim. The source
+  tree is a candidate until step 6 succeeds and the step 7 metadata commit is
+  in place.

@@ -75,11 +75,25 @@ mcp-publisher validate server.json
 
 Note: The MCP Registry strictly limits the `description` field to 100 characters.
 
+The checked-in `server.json` describes the **source** release (`1.0.5`), whose
+runtime default is Base Sepolia testnet (`eip155:84532`). It therefore declares
+that default explicitly and keeps `VERIFY402_NETWORKS` optional; Base mainnet
+(`eip155:8453`) is an opt-in. This metadata is only truthful once a `1.0.5`
+package artifact actually exists and is published: the registry entry must
+never be used to claim that the immutable npm `1.0.4` package — whose runtime
+default is Base mainnet — defaults to testnet. Publish the registry entry only
+for the version that is really published.
+
 ## Step 6: Publish to the registry
 
 ```bash
 mcp-publisher publish server.json
 ```
+
+The metadata is validated before publication. If `mcp-publisher validate`
+rejects it, stop: registry publication is blocked until the metadata is
+corrected, and the published version must still match the artifact that
+exists.
 
 ## Step 7: Verify the listing
 
@@ -127,12 +141,22 @@ do not publish.
 
 ## Current status
 
-Current release: `verify402-mcp@1.0.3` is published on npm and listed in the
-official MCP Registry. This hotfix does **not** publish a new package.
+Current release: `verify402-mcp@1.0.4` is published on npm and is `latest`.
+That version is immutable, maps to git commit `248923f`, and its built-in
+runtime default for paid calls is Base mainnet (`eip155:8453`). The source tree
+now defaults to Base Sepolia testnet, but those changes are not in the
+published `1.0.4` tarball and require a future patch release.
+
+The official MCP Registry still lists `1.0.3`. Publishing the checked-in
+`server.json` at `1.0.5` is a manual release step and is allowed only after a
+`1.0.5` artifact exists and is published, and only if the publisher accepts the
+metadata as written. If it does not, registry publication is blocked until the
+metadata or the release is corrected. This repository does **not** publish
+packages or registry entries automatically.
 
 | Step | Status |
 |---|---|
-| `server.json` created | DONE |
+| `server.json` created | DONE — local manifest is `1.0.5`, testnet default declared |
 | `mcpName` in package.json | DONE |
-| Published to npm | DONE — `verify402-mcp@1.0.3` is live and tagged `latest` |
-| Published to MCP Registry | DONE — `io.github.a32116150-ctrl/verify402-mcp` v1.0.3 is active |
+| Published to npm | DONE — `verify402-mcp@1.0.4` is live and tagged `latest` (immutable) |
+| Published to MCP Registry | PENDING — registry still serves active `v1.0.3`; publish `1.0.5` only after a `1.0.5` artifact is published |

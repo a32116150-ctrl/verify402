@@ -2,14 +2,29 @@
 
 Rule: X402_MODE=testnet only on free instances. Mainnet requires an always-on paid instance.
 
+## Immutable npm 1.0.4 boundary
+
+- Published `verify402-mcp@1.0.4` is immutable and maps to `248923f`; its built-in paid-call default is Base mainnet (`eip155:8453`).
+- This source tree is `1.0.5` and defaults the bridge to Base Sepolia (`eip155:84532`). That is a future-package change, not a change to the published artifact.
+- `server.json` and the service manifest therefore describe the **source** release: `VERIFY402_NETWORKS` is optional with an explicit `eip155:84532` default, and Base mainnet is an opt-in (`eip155:8453`). Do not publish registry metadata that claims `1.0.4` defaults to testnet.
+- The `1.0.5` package is a plan only until an artifact is built, published, and verified. Do not attach this source tree to the existing `1.0.4` version or move the `mcp-v1.0.4` tag.
+
+## Mode-aware runtime metadata and the static site
+
+- `/info`, `/llms.txt`, OpenAPI, the agent card, the service manifest, and `/.well-known/x402` are built from the configured `X402_MODE`; a mainnet-mode process does not publish testnet payment copy.
+- The static HTML pages remain an explicitly testnet-demo site. They are not rendered mode-aware. A mainnet deployment must not treat those pages as evidence that mainnet settlement was validated.
+- Mainnet settlement mechanics are preserved but were not exercised by this repair. Mainnet is **not** claimed production-ready.
+
 ## Verified offline
 
-- `npm test` passed: offline suite, RPC suite, discovery tests, discovery script, env-example test, claims test, smoke offline tests.
-- `npm run test:offline` passed; only the 12 RPC-dependent tests were skipped.
-- `npm run test:counts` reports `TOTAL 197 185 12`.
+- `npm run test:offline` passed in this repair pass. The 12 RPC-dependent tests were skipped.
+- `node test/discovery.test.mjs` (7/7), `node scripts/check-discovery.mjs` (35/35), `node test/env-example.test.mjs`, `node test/smoke.test.mjs` (20/20), `node test/release-consistency.test.mjs` (10/10), `node test/post-deploy.test.mjs` (11/11), `node test/policy-reconcile.test.mjs` (11/11), and the bridge policy/payer/bridge-client tests (79/79) passed.
+- `npm run test:counts` reports `TOTAL 312 300 12`; `test:offline` now includes smoke, discovery, env-example, and the cross-layer policy reconciliation.
+- Full `npm test` and `npm run test:rpc` were **not** rerun in this repair pass; they require live RPC access and are not claimed as passed here.
+- No paid call, live RPC read, or deployment was performed in this repair pass; the paid smoke, the settlement receipt, and the live 402 are unverified against a real service.
 - Idempotency TTL, preflight limits, prices, health/ready shapes, and banned claims are checked across OpenAPI, manifest, and runtime constants.
 - Security headers, CORS behavior, graceful shutdown, and startup guards are covered by automated tests.
-- MCP package dry-run includes `paid-call.mjs` and every import of `index.mjs`.
+- The discovery test verifies the published MCP package includes `paid-call.mjs` and every local runtime import of `index.mjs`.
 
 ## Verified only after deploy
 
@@ -17,12 +32,12 @@ Rule: X402_MODE=testnet only on free instances. Mainnet requires an always-on pa
 - Real RPC provider behavior under production traffic.
 - Live document consistency across `/info`, `/openapi.json`, `/.well-known/verify402.json`, `/.well-known/x402`, and `/llms.txt`.
 - Live security headers and absence of `x-powered-by` on the deployed host/CDN.
-- Optional one real paid call with `SMOKE_PAID=1` on a testnet target only.
+- Optional one real paid call with `SMOKE_PAID=1` on a testnet target only, via `npm run smoke`. `npm run post-deploy` is always free-only and rejects any `EXPECTED_MODE` other than `testnet`; mainnet deployment checks are not implemented there yet.
 
 Run after deploy:
 
 ```sh
-SMOKE_BASE_URL=<url> npm run post-deploy
+SMOKE_BASE_URL=<url> EXPECTED_VERSION=1.0.4 EXPECTED_MODE=testnet npm run post-deploy
 ```
 
 Paste the full output to the reviewer.
@@ -65,11 +80,11 @@ Common optional values:
 1. Revert the deployed commit or redeploy the previous known-good commit.
 2. Restore the previous host environment if it changed.
 3. Confirm `/health`, `/ready`, and `/preflight` work.
-4. Run `SMOKE_BASE_URL=<url> npm run post-deploy`.
+4. Run `SMOKE_BASE_URL=<url> EXPECTED_VERSION=<rollback version> EXPECTED_MODE=testnet npm run post-deploy` (the default expects `1.0.4`, so a `1.0.3` rollback must state its own expected version).
 5. If an RPC key was rotated, keep the old key until rollback is complete, then revoke it.
 
 ## Actions requiring your account access
 
 1. Open the host dashboard and set or update the environment variables listed above.
 2. Open the RPC provider dashboard and create or revoke RPC keys.
-3. Run `npm login` and publish `verify402-mcp` only after explicitly approving the recommended `1.0.3` to `1.0.4` patch bump.
+3. `verify402-mcp@1.0.4` is already published on npm and is `latest`; do not republish it. The remaining release actions are human-only: push the local commits, do **not** move the `mcp-v1.0.4` tag onto those newer commits (npm maps 1.0.4 to `248923f`; use a future patch for source changes), publish `server.json` for `1.0.5` only after a `1.0.5` artifact exists, and deploy the service. Until those actions happen, GitHub, the MCP Registry, and the live service remain on `1.0.3` even though local metadata is `1.0.5`.

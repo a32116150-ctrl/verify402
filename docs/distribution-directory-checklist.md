@@ -24,7 +24,7 @@ This checklist tracks official and third-party registry listings for Verify402. 
 | **x402 Bazaar Discovery** | Protocol Discovery | **IMPLEMENTED** | Active in 402 challenge responses across all 5 paid routes |
 | **402 Index** | x402 Directory | **VERIFIED** | Active via `/.well-known/402index-verify.txt` domain proof |
 | **ERC-8004 Agent Card** | A2A Discovery | **IMPLEMENTED** | Active via `/.well-known/agent-card.json` |
-| **Smithery.ai** | MCP Directory | **PREPARED** | Ready for submission; `verify402-mcp@1.0.3` is on npm |
+| **Smithery.ai** | MCP Directory | **PREPARED** | Ready for submission; `verify402-mcp@1.0.4` is on npm |
 | **Glama.ai** | MCP Registry | **PREPARED** | Submission text prepared for web form submission |
 | **PulseMCP** | MCP Index | **PREPARED** | Submission payload prepared for review |
 | **Cursor Directory** | Client Configs | **PREPARED** | Tested client configuration prepared |

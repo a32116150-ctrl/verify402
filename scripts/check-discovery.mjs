@@ -17,6 +17,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { buildOpenapi } from "../src/openapi.mjs";
 import { buildServiceManifest } from "../src/manifest.mjs";
+import { RELEASE_VERSION } from "../src/version.mjs";
 import { DEFAULT_PRICES } from "../mcp-bridge/budget.mjs";
 import { PRICE_DEFAULTS } from "../src/contract.mjs";
 
@@ -48,7 +49,7 @@ try {
   assert(serverJson.$schema != null, "server.json has $schema defined");
   assert(serverJson.name === "io.github.a32116150-ctrl/verify402-mcp", `server.json name is ${serverJson.name}`);
   assert(serverJson.description.length <= 100, `server.json description is <= 100 chars (current: ${serverJson.description.length})`);
-  assert(serverJson.version === "1.0.4", `server.json version is 1.0.4 (current: ${serverJson.version})`);
+  assert(serverJson.version === RELEASE_VERSION, `server.json version is ${RELEASE_VERSION} (current: ${serverJson.version})`);
   assert(Array.isArray(serverJson.packages) && serverJson.packages.length > 0, "server.json has packages defined");
   assert(serverJson.packages[0].transport.type === "stdio", "transport type is stdio");
 } catch (e) {
@@ -69,6 +70,9 @@ console.log("\n[2/4] Checking Cross-Component Price Consistency...");
 
 const manifest = buildServiceManifest();
 const openapi = buildOpenapi(PRICE_DEFAULTS);
+
+assert(manifest.version === RELEASE_VERSION, `manifest version is ${RELEASE_VERSION} (current: ${manifest.version})`);
+assert(openapi.info.version === RELEASE_VERSION, `openapi version is ${RELEASE_VERSION} (current: ${openapi.info.version})`);
 
 const EXPECTED_PRICES = Object.fromEntries(
   Object.entries(PRICE_DEFAULTS).map(([key, value]) => [`/${key}`, Number(value.replace(/^\$/, ""))])

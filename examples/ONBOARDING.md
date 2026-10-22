@@ -12,6 +12,10 @@ Live: **https://verify402.onrender.com**
 
 > Free hosting: the first call after a sleep can take ~30 s. Run the curl once
 > to warm it; later calls are fast.
+>
+> The public demo settles payments in **Base Sepolia testnet USDC**
+> (`eip155:84532`). The analysis reads mainnet chain data; this is not a
+> mainnet payment service. The free gate itself never moves funds.
 
 ---
 
@@ -24,8 +28,8 @@ curl -sS -X POST https://verify402.onrender.com/preflight \
     "kind": "payment",
     "payment": {
       "scheme": "exact",
-      "network": "eip155:8453",
-      "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "network": "eip155:84532",
+      "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
       "amount": "10000",
       "payTo": "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb",
       "resource": "https://verify402.onrender.com/verify",
@@ -35,8 +39,10 @@ curl -sS -X POST https://verify402.onrender.com/preflight \
   }'
 ```
 
-`amount` is in raw units: `10000` = **0.01 USDC** (6 decimals). `network`
-`eip155:8453` is Base mainnet. `asset` is canonical USDC on Base.
+`amount` is in raw units: `10000` = **0.01 testnet USDC** (6 decimals).
+`network` `eip155:84532` is Base Sepolia, the public demo's payment rail.
+`asset` is canonical testnet USDC on Base Sepolia. The analysis routes still
+read mainnet chain data; only the payment rail is testnet.
 
 You should get:
 
@@ -115,9 +121,10 @@ Receipts expire after 90 seconds by default (15–300 configurable via
 Warm the `npx` cache once:
 
 ```bash
-npx -y --package=https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.4/verify402-mcp-1.0.4.tgz \
-  verify402-mcp --help
+npx -y verify402-mcp@1.0.4 --help
 ```
+
+This pins the published `1.0.4` package. The `1.0.5` source in this repository is an unpublished candidate; move the pin only after it is published and verified.
 
 Then add it to Claude Desktop / Cursor (`.cursor/mcp.json`):
 
@@ -126,11 +133,7 @@ Then add it to Claude Desktop / Cursor (`.cursor/mcp.json`):
   "mcpServers": {
     "verify402": {
       "command": "npx",
-      "args": [
-        "-y",
-        "--package=https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.4/verify402-mcp-1.0.4.tgz",
-        "verify402-mcp"
-      ],
+      "args": ["-y", "verify402-mcp@1.0.4"],
       "env": { "VERIFY402_URL": "https://verify402.onrender.com" }
     }
   }

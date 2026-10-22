@@ -63,6 +63,7 @@
         <p class="hero-note">
           <span><span class="dot"></span>Official MCP Registry: <a href="https://registry.modelcontextprotocol.io/" class="textlink" target="_blank" rel="noopener">active</a></span>
           <span>npm: <a href="https://www.npmjs.com/package/verify402-mcp" class="textlink" target="_blank" rel="noopener">verify402-mcp v1.0.4</a></span>
+          <span>1.0.5 candidate · unpublished</span>
           <span>Free gate · no wallet</span>
         </p>
       </div>
@@ -104,7 +105,7 @@
           </tbody>
         </table>
       </div>
-      <p class="small muted" style="margin-top:20px">Paid calls are USDC over x402. The bridge signs the payment only — it never signs or sends a trade — and it only pays a 402 from the configured server, on an allowlisted network, to the verify402 payee.</p>
+      <p class="small muted" style="margin-top:20px">Paid calls are testnet USDC over x402 for the public demo. The bridge signs the payment only — it never signs or sends a trade — and it only pays a 402 from the configured server, on an allowlisted network, to the verify402 payee.</p>
     </div>
   </section>
 
@@ -113,7 +114,7 @@
       <div class="sec-head">
         <p class="eyebrow">Install</p>
         <h2>Start with the free gate. Add the wallet later.</h2>
-        <p class="lead">Published to the public npm registry and the official Model Context Protocol Registry. Run directly with <code class="inline">npx</code> without cloning or building.</p>
+        <p class="lead">The npm package is published to the public registry and listed in the official Model Context Protocol Registry, so you can run it directly with <code class="inline">npx</code> without cloning or building. The published version is <strong>1.0.4</strong>; the <strong>1.0.5</strong> source in this repository is a candidate release that is not published yet.</p>
       </div>
 
       <div class="proof-grid" style="margin-top:40px">
@@ -125,7 +126,7 @@
         <div class="pcard2">
           <p class="tag"><span class="dot"></span>Mode 2 · paid tools</p>
           <h3>A dedicated hot wallet.</h3>
-          <p>Add a wallet with USDC on the payment network. <code class="inline">MAX_PAYMENT_USD</code> caps one payment at signature time; <code class="inline">MAX_DAILY_USD</code> caps the UTC day. Never use a main wallet.</p>
+          <p>For the public demo, add a wallet with <strong>Base Sepolia testnet USDC</strong> and set <code class="inline">VERIFY402_NETWORKS=eip155:84532</code>. <code class="inline">MAX_PAYMENT_USD</code> caps one payment at signature time; <code class="inline">MAX_DAILY_USD</code> caps the UTC day. Never use a main wallet. The analysis reads mainnet chain data, but payment is testnet-only; mainnet settlement is an explicit future deployment choice.</p>
         </div>
       </div>
 
@@ -136,7 +137,7 @@
 
       <div class="callout good" style="margin-top:24px">
         <h3>Official MCP Registry &amp; npm Distribution</h3>
-        <p>Published on npm as <a class="textlink" href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener"><strong>verify402-mcp</strong></a> (version 1.0.4) and listed on the official Model Context Protocol Registry as <code class="inline">io.github.a32116150-ctrl/verify402-mcp</code>. Machine agents can also fetch the machine-readable <a class="textlink" href="/.well-known/verify402.json">service manifest</a> and <a class="textlink" href="/openapi.json">OpenAPI 3.1 specification</a>.</p>
+        <p>Published on npm as <a class="textlink" href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener"><strong>verify402-mcp</strong></a> (version 1.0.4) and listed on the official Model Context Protocol Registry as <code class="inline">io.github.a32116150-ctrl/verify402-mcp</code>. The repository source is the <strong>1.0.5 candidate</strong>: it is <strong>not on npm</strong> and has <strong>no registry entry yet</strong>, so a 1.0.5 install is planned only. Machine agents can also fetch the machine-readable <a class="textlink" href="/.well-known/verify402.json">service manifest</a> and <a class="textlink" href="/openapi.json">OpenAPI 3.1 specification</a>.</p>
       </div>
 
       <article id="claude" style="margin-top:44px">
@@ -194,7 +195,7 @@
 
       <div class="callout" style="margin-top:32px">
         <h3>Alternative install options</h3>
-        <p>If you prefer a pinned release tarball: <code class="inline">npx -y --package=https://github.com/a32116150-ctrl/verify402/releases/download/mcp-v1.0.4/verify402-mcp-1.0.4.tgz verify402-mcp</code>. From source: <code class="inline">git clone https://github.com/a32116150-ctrl/verify402</code>, then <code class="inline">cd verify402/mcp-bridge &amp;&amp; npm ci</code>.</p>
+        <p>If you prefer a pinned npm version: <code class="inline">npx -y verify402-mcp@1.0.4</code>. From source: <code class="inline">git clone https://github.com/a32116150-ctrl/verify402</code>, then <code class="inline">cd verify402/mcp-bridge &amp;&amp; npm ci</code>. The published npm tarball is <code class="inline">https://registry.npmjs.org/verify402-mcp/-/verify402-mcp-1.0.4.tgz</code>. Planned for the 1.0.5 candidate, to be used only after publication is independently verified: <code class="inline">npx -y verify402-mcp@1.0.5</code> and <code class="inline">https://registry.npmjs.org/verify402-mcp/-/verify402-mcp-1.0.5.tgz</code>.</p>
       </div>
     </div>
   </section>
@@ -249,7 +250,7 @@
           <p>When the agent needs a measurement, the same server pays per call over x402. No subscription.</p>
         </div>
       </div>
-      <p class="small muted" style="margin-top:24px">Install from the public npm registry with <code class="inline">npx -y verify402-mcp@latest</code>; the versioned GitHub release tarball above is an optional fallback. Package name: <code class="inline">verify402-mcp</code>. License: Apache-2.0 — keep the copyright notice, license, and <code class="inline">NOTICE</code> file when redistributing. Source: <a class="textlink" href="https://github.com/a32116150-ctrl/verify402/tree/master/mcp-bridge" rel="noopener">mcp-bridge</a>.</p>
+      <p class="small muted" style="margin-top:24px">Install from the public npm registry with <code class="inline">npx -y verify402-mcp@latest</code>; the pinned npm version above is the reproducible alternative. Package name: <code class="inline">verify402-mcp</code>. License: Apache-2.0 — keep the copyright notice, license, and <code class="inline">NOTICE</code> file when redistributing. Source: <a class="textlink" href="https://github.com/a32116150-ctrl/verify402/tree/master/mcp-bridge" rel="noopener">mcp-bridge</a>.</p>
     </div>
   </section>
 
@@ -289,7 +290,7 @@
         <a href="/findings">/findings</a>
       </div>
     </div>
-    <p class="legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Mainnet-armed; the only settlement ever recorded is the operator's own testnet transaction. No external buyer yet. Prices are per call, paid in USDC over x402; /preflight is free. The MCP server pays for calls only; it never signs a trade.</p>
+    <p class="legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data; demo payments are testnet. The only settlement ever recorded is the operator's own testnet transaction. No external buyer yet. Prices are per call, paid in testnet USDC over x402; /preflight is free. The MCP server pays for calls only; it never signs a trade.</p>
   </div>
 </footer>
 

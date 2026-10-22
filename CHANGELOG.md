@@ -3,6 +3,68 @@
 All notable changes to verify402. This file records repository changes; it does
 not imply a deploy or an npm publish.
 
+## Unreleased — 1.0.5 (source only, not published)
+
+This release is a **source-tree** release. No npm version, git tag, GitHub
+release, MCP Registry entry, or deployment was produced for it. The published
+npm package is still `verify402-mcp@1.0.4`, which is immutable.
+
+### Security
+
+- The 402 challenge is now validated as a whole before any signature exists.
+  Every offered requirement must use an allowlisted EVM network, the
+  configured payee, the canonical USDC contract *and* the canonical EIP-712
+  domain for that network, pin EIP-3009, and stay inside the per-payment cap.
+  A challenge that also offers Base mainnet is refused as a whole instead of
+  being filtered down to the testnet option.
+- `maxTimeoutSeconds` is validated as a positive integer no greater than
+  `300`. The SDK signs `validBefore = now + maxTimeoutSeconds`, so a missing,
+  string, fractional, zero, negative, or unbounded value is now refused rather
+  than turned into a long-lived transferable authorization.
+- Signing extensions are closed by default. `extra.assetTransferMethod` must
+  be `eip3009`; `permit2` and any unvalidated `extra` key are refused. The
+  `extra` allowlist is `name`, `version`, `assetTransferMethod`, `paymentFlow`.
+- `VERIFY402_NETWORKS` is constrained to an explicit supported map
+  (`eip155:84532` Base Sepolia, `eip155:8453` Base mainnet). An arbitrary
+  `eip155:<chainId>` is refused instead of inferred from an asset the SDK
+  happens to recognise. Base mainnet stays an explicit opt-in; the default is
+  Base Sepolia testnet.
+- An explicitly empty `VERIFY402_NETWORKS` or `VERIFY402_PAY_TO` fails closed
+  instead of silently falling back to a default.
+- The 402 resource must be an exact `origin + path` match with no query, no
+  fragment, and no trailing-slash normalisation, and it must be one of the
+  configured paid routes.
+- The payer proves that the requirement it signs is the exact object the SDK
+  selected out of the 402 challenge. A substituted or mutated requirement is
+  refused, and the selected requirement is re-validated immediately before
+  signing.
+- The paid smoke reads the 402 challenge from the `PAYMENT-REQUIRED` header
+  only. The response body is never used to authorise or override a payment, and
+  the paid branch aborts before the payer is spawned when the header is
+  missing, malformed, or refused by the shared policy.
+- The paid smoke now requires genuine settlement evidence: a decodable
+  `PAYMENT-RESPONSE` receipt whose settlement succeeded, on the expected
+  network, with a transaction hash, and with a matching payer and amount when
+  the receipt reports them. A paid run without that evidence exits non-zero.
+
+### Release metadata
+
+- The source version is `1.0.5` consistently across the package manifest, the
+  lockfile, `server.json`, the service manifest, OpenAPI, the version module,
+  the site, and the release-consistency assertions.
+- The registry and manifest metadata now describe the real 1.0.5 default
+  (Base Sepolia testnet, `isRequired: false`) instead of claiming a
+  testnet default for the mainnet-defaulted 1.0.4 artifact.
+
+### Tests
+
+- New offline regression tests cover the `maxTimeoutSeconds` boundaries, the
+  installed bridge's real x402 client path with a fake signer (a refused
+  challenge never reaches the signer), the settlement-receipt gate, the
+  header-first 402 parser, and a cross-layer reconciliation that requires the
+  shared validator, the standalone payer, the installed bridge, and the paid
+  smoke to reach the same accept/refuse decision for the same fixture.
+
 ## Unreleased — Hotfix 2 (2026-10-21)
 
 ### Security
@@ -71,18 +133,20 @@ not imply a deploy or an npm publish.
 - Offline mode still uses one closed endpoint with no public fallback;
   RPC-required tests are classified in `test/rpc-manifest.json`.
 
-### `verify402-mcp` version recommendation
+### `verify402-mcp` 1.0.4 release status
 
-**Recommend a patch bump from `1.0.3` to `1.0.4` when publishing is approved.**
-Do not publish in this hotfix.
+`verify402-mcp@1.0.4` was published to npm on 2026-10-21 and is the `latest`
+tag. Do not publish 1.0.4 again and do not overwrite 1.0.3; npm versions are
+immutable. The patch was backward compatible: no MCP tool names, inputs, or
+existing response fields were removed, and it added the missing `paid-call.mjs`
+package file.
 
-Why a patch:
-
-- The change is backward compatible: no MCP tool names, inputs, or existing
-  response fields were removed.
-- It fixes retry/recovery behavior and adds the missing `paid-call.mjs` package
-  file. `1.0.3` is already published and must not be overwritten.
-- A minor or major version would suggest a new tool surface or a breaking
-  contract change, and there is neither.
-
-No npm publish and no deploy were performed for this entry.
+The focused repair pass reconciles local package and lockfile metadata, the
+service manifest, OpenAPI, `/info`, the `/mcp` page, and onboarding docs at
+`1.0.4`. It also changes the source-tree bridge default to Base Sepolia
+testnet and fails closed on a mainnet-only challenge. That runtime change is
+**not** in the immutable published `1.0.4` package: npm `1.0.4` still defaults
+to mainnet, so public-demo clients must set `VERIFY402_NETWORKS=eip155:84532`
+until a future patch release is approved. It does not push, tag, publish, or
+deploy. GitHub, the MCP Registry, and the live service remain on `1.0.3` until
+the human-only steps in `PUBLISH_STEPS_FOR_ME.md` are completed.

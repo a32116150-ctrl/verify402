@@ -20,7 +20,7 @@ npx -y verify402-mcp --help
 |---|---|---|
 | **Requires Wallet?** | ❌ No | ✅ Yes (Dedicated hot wallet) |
 | **Requires Private Key?** | ❌ No | ✅ Yes (`EVM_PRIVATE_KEY`) |
-| **Requires Crypto / Gas?** | ❌ No | ✅ Yes (USDC on Base + ~$0.50 ETH) |
+| **Requires Crypto / Gas?** | ❌ No | ✅ Yes (Base Sepolia testnet USDC + a little testnet ETH for the public demo) |
 | **Tools Included** | `preflight_gate` | `preflight_gate`, `verify_arbitrage`, `check_token_safety`, `get_best_route`, `verify_quote_fairness`, `get_trade_depth` |
 | **Cost** | **$0.00** | $0.03 – $0.10 per call via x402 |
 
@@ -99,19 +99,20 @@ If you want the agent to use paid truth checks:
   ```
 - **CRITICAL RULE**: Never use your main wallet, treasury, or cold storage.
 
-### Step 2: Fund with USDC on Base
-- Network: **Base (Chain ID 8453)**
-- Asset: **USDC** (`0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`)
-- Recommended starting balance: **$3.00 to $10.00 USDC**
-- Typical check prices:
+### Step 2: Fund with Testnet USDC on Base Sepolia
+- Network: **Base Sepolia testnet (Chain ID 84532)**
+- Asset: **testnet USDC** (`0x036CbD53842c5426634e7929541eC2318f3dCF7e`)
+- Get testnet USDC from a Base Sepolia faucet. Do not send mainnet funds to the public-demo wallet.
+- Recommended starting balance: a small amount of testnet USDC is enough for several calls.
+- Typical check prices (paid in testnet USDC for the public demo):
   - `get_best_route`: **$0.03**
   - `verify_arbitrage`: **$0.05**
   - `verify_quote_fairness`: **$0.05**
   - `get_trade_depth`: **$0.05**
   - `check_token_safety`: **$0.10**
 
-### Step 3: Fund with Gas
-- Send **$0.50 worth of ETH on Base** to the wallet address to handle any approval transactions.
+### Step 3: Fund with Testnet Gas
+- Send a small amount of **Base Sepolia testnet ETH** to the wallet address if your client needs gas for approvals. The public demo does not require mainnet ETH.
 
 ### Step 4: Add Environment Variables & Budget Caps
 In your MCP config `env` block, add:
@@ -119,7 +120,7 @@ In your MCP config `env` block, add:
 "EVM_PRIVATE_KEY": "0xYOUR_HOT_WALLET_KEY",
 "MAX_PAYMENT_USD": "0.25",
 "MAX_DAILY_USD": "1.00",
-"VERIFY402_NETWORKS": "eip155:8453",
+"VERIFY402_NETWORKS": "eip155:84532",
 "VERIFY402_PAY_TO": "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb"
 ```
 
@@ -128,6 +129,8 @@ In your MCP config `env` block, add:
 - **`MAX_DAILY_USD`**: Tracks cumulative daily spending and halts when the cap is reached.
 - **USDC-Only Default**: Rejects payment requests in unknown or non-standard tokens.
 - **Payee Whitelist**: Refuses payments to addresses other than `VERIFY402_PAY_TO`.
+
+> **Explicit mainnet (not the public demo):** Mainnet settlement is a separate deployment choice that requires a mainnet facilitator, an always-on paid host, and separate readiness verification. Only then set `VERIFY402_NETWORKS=eip155:8453` and fund a mainnet wallet. The public demo offers `eip155:84532`; a mainnet-only bridge configuration will refuse that challenge instead of spending mainnet funds.
 
 ---
 

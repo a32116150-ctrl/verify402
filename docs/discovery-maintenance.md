@@ -48,19 +48,24 @@ Tools are exposed through both REST endpoints (`src/server.mjs`) and the MCP Bri
 
 ## 3. When Releasing a New Version
 
-1. Bump `version` in:
-   - Root `package.json`
-   - `mcp-bridge/package.json`
+1. Bump `RELEASE_VERSION` in `src/version.mjs`; the service manifest,
+   OpenAPI, `/info`, and `/mcp` metadata read or are checked against it.
+   Also bump:
+   - `mcp-bridge/package.json` and `mcp-bridge/package-lock.json`
    - `server.json` (top-level and `packages[].version`)
-   - `src/manifest.mjs` (`version: "x.y.z"`)
-   - `src/openapi.mjs` (`info.version: "x.y.z"`)
-2. Build and publish release asset to GitHub releases:
-   `https://github.com/a32116150-ctrl/verify402/releases/download/mcp-vX.Y.Z/verify402-mcp-X.Y.Z.tgz`
-3. If publishing to npm:
+   - the literal version shown in `src/site/mcp.html`
+   - `test/release-consistency.test.mjs` expectations through `RELEASE_VERSION`
+2. Publish the npm package first (if this version is not already published):
    ```bash
    cd mcp-bridge
    npm publish --access public
    ```
+   The installable artifact is the npm tarball:
+   `https://registry.npmjs.org/verify402-mcp/-/verify402-mcp-X.Y.Z.tgz`.
+   A GitHub release asset is optional; do not link it from public docs until
+   the release actually exists.
+3. Do not republish an existing npm version. If the version is already on npm
+   and runtime files differ, stop and release a new patch version instead.
 4. If publishing to the MCP Registry:
    ```bash
    mcp-publisher validate server.json
@@ -71,7 +76,9 @@ Tools are exposed through both REST endpoints (`src/server.mjs`) and the MCP Bri
 
 ## 4. When Adding a Supported Blockchain or Network
 
-Verify402 supports Base mainnet and Solana mainnet. If adding another chain (e.g. Arbitrum, Polygon):
+Verify402's analysis supports Ethereum, Base, and Arbitrum; payment rails include
+Base Sepolia / Solana devnet for the public demo and Base / Solana mainnet only
+for an explicit future deployment. If adding another chain (e.g. Polygon):
 1. Configure chain in `src/config.mjs` (`CHAINS`).
 2. Add network CAIP-2 identifier to `NETWORKS` in `src/server.mjs`.
 3. Update `src/manifest.mjs` (`supportedNetworks`).

@@ -10,6 +10,8 @@ import { fileURLToPath } from "node:url";
 
 import { buildOpenapi } from "../src/openapi.mjs";
 import { buildServiceManifest } from "../src/manifest.mjs";
+import { RELEASE_VERSION } from "../src/version.mjs";
+import { DEFAULT_SIZE } from "../src/config.mjs";
 import { DEFAULT_PRICES } from "../mcp-bridge/budget.mjs";
 import {
   PRICE_DEFAULTS,
@@ -32,15 +34,29 @@ test("discovery: server.json complies with MCP Registry specification", () => {
 
   const server = JSON.parse(fs.readFileSync(serverPath, "utf8"));
   assert.equal(server.name, "io.github.a32116150-ctrl/verify402-mcp");
-  assert.equal(server.version, "1.0.4");
+  assert.equal(server.version, RELEASE_VERSION);
   assert.ok(server.description.length <= 100, `description length ${server.description.length} must be <= 100 chars`);
   assert.equal(server.websiteUrl, "https://verify402.onrender.com");
   assert.ok(Array.isArray(server.packages) && server.packages.length > 0);
   assert.equal(server.packages[0].transport.type, "stdio");
 
+  const networkEnv = server.packages[0].environmentVariables?.find(
+    (entry) => entry.name === "VERIFY402_NETWORKS",
+  );
+  assert.ok(networkEnv, "server.json must document VERIFY402_NETWORKS");
+  assert.equal(Object.hasOwn(networkEnv, "default"), true, "server.json must declare the 1.0.5 default network");
+  assert.equal(networkEnv.default, "eip155:84532");
+  assert.equal(networkEnv.isRequired, false);
+  assert.match(networkEnv.description, /Base Sepolia/);
+  assert.match(networkEnv.description, /Base mainnet/);
+
   const mcpPkg = JSON.parse(fs.readFileSync(path.join(ROOT, "mcp-bridge", "package.json"), "utf8"));
   assert.equal(mcpPkg.mcpName, server.name, "mcp-bridge package.json mcpName must match server.json");
   assert.equal(mcpPkg.version, server.version, "mcp-bridge package.json version must match server.json");
+
+  const lock = JSON.parse(fs.readFileSync(path.join(ROOT, "mcp-bridge", "package-lock.json"), "utf8"));
+  assert.equal(lock.version, mcpPkg.version, "mcp-bridge package-lock version must match package.json");
+  assert.equal(lock.packages[""].version, mcpPkg.version, "mcp-bridge lock root package version must match package.json");
 });
 
 test("discovery: canonical service manifest matches implemented tools and runtime pricing", () => {
@@ -48,6 +64,7 @@ test("discovery: canonical service manifest matches implemented tools and runtim
 
   assert.equal(manifest.name, "verify402");
   assert.equal(manifest.schemaVersion, "1.0.0");
+  assert.equal(manifest.version, RELEASE_VERSION);
   assert.equal(manifest.canonicalUrl, "https://verify402.onrender.com");
 
   const tools = manifest.integrations.mcp.tools;
@@ -106,6 +123,8 @@ test("discovery: openapi specification defines all public routes and response co
   const openapi = buildOpenapi(PRICE_DEFAULTS);
 
   assert.equal(openapi.openapi, "3.1.0");
+  assert.equal(openapi.info.version, RELEASE_VERSION);
+  assert.equal(openapi.paths["/verify"].post.requestBody.content["application/json"].schema.properties.size.default, DEFAULT_SIZE);
   assert.ok(openapi.info.title, "OpenAPI has title");
 
   const requiredPaths = [
@@ -143,7 +162,8 @@ test("discovery: openapi specification defines all public routes and response co
 
     const paramNames = postOp.parameters.map((p) => p.name);
     assert.ok(paramNames.includes("x-idempotency-key"), `${r} must document x-idempotency-key`);
-    assert.ok(paramNames.includes("x-payment"), `${r} must document x-payment header`);
+    assert.ok(paramNames.includes("PAYMENT-SIGNATURE"), `${r} must document the x402 v2 payment proof header`);
+    assert.ok(paramNames.includes("x-payment"), `${r} must document the legacy x-payment header`);
   }
 });
 

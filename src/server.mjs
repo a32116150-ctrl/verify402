@@ -47,6 +47,16 @@ import {
 } from "./preflight.mjs";
 import { buildOpenapi } from "./openapi.mjs";
 import { buildServiceManifest } from "./manifest.mjs";
+import { RELEASE_VERSION } from "./version.mjs";
+import {
+  buildAgentDescription,
+  buildInfoHosting,
+  buildLlmsText,
+  buildPreflightPaymentExample,
+  buildPreflightPaymentNetworks,
+  DEMO_BASE_URL,
+  paymentRail,
+} from "./payment-mode.mjs";
 import { parseAgentUrl, parseTrustedHosts, resolvePublicBaseUrl } from "./public-url.mjs";
 import { recordPreflight, usageSnapshot } from "./usage.mjs";
 import {
@@ -71,6 +81,10 @@ if (!AGENT_URL_CHECK.ok) {
   process.exit(1);
 }
 const AGENT_URL = AGENT_URL_CHECK.value;
+// The configured public origin for runtime metadata. Mainnet requires an
+// explicit AGENT_URL; testnet falls back to the documented demo origin.
+const PUBLIC_BASE_URL = AGENT_URL || DEMO_BASE_URL;
+const RAIL = paymentRail(MODE);
 if (MODE === "mainnet" && !AGENT_URL) {
   logError("REFUSING TO START: X402_MODE=mainnet requires AGENT_URL (e.g. https://verify402.example). The agent card must not derive its identity from the Host header.");
   process.exit(1);
@@ -95,10 +109,7 @@ if (MODE === "mainnet") {
   }
 }
 
-const NETWORKS =
-  MODE === "mainnet"
-    ? { evm: "eip155:8453", svm: "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp", label: "Base mainnet / Solana mainnet" }
-    : { evm: "eip155:84532", svm: "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1", label: "Base Sepolia / Solana devnet" };
+const NETWORKS = { evm: RAIL.evmNetwork, svm: RAIL.svmNetwork, label: RAIL.label };
 
 const PAY_TO_EVM = process.env.PAY_TO_EVM || "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb";
 const PAY_TO_SVM = process.env.PAY_TO_SVM || "BdcsYodhwWUhLTuL5FJ3m8D4u4wVy8KMw7vAvPVucAbJ";
@@ -661,19 +672,7 @@ function registrationFile(base) {
   const file = {
     type: "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
     name: "verify402",
-    description:
-      "Machine-payable truth service for AI agents. POST /preflight is the free pre-signing " +
-      "gate: validate an x402 payment request or a chain transaction and get PASS / CAUTION / " +
-      "BLOCK with a short-lived receipt bound to the exact intent. POST /verify measures whether a claimed " +
-      "cross-venue arbitrage is real (pinned-block quotes from Uniswap QuoterV2 and each " +
-      "router's own math; the honest answer is usually no_edge). POST /safety is a pre-trade " +
-      "gate: contract facts, market liquidity and scam signals, a quote-based sellability " +
-      "check through the configured venues' own routers, round-trip cost at the intended size, " +
-      "and phantom-price detection. It does not execute a transfer; transfer restrictions and " +
-      "unconfigured venues are named in notChecked. " +
-      "TRUST / CAUTION / AVOID with evidence. Per-call x402 payment, USDC on Base or Solana. " +
-      "An MCP server (verify402-mcp, stdio) exposes the free gate and all five checks to any " +
-      "MCP client; install at /mcp. No profitability is ever promised; the service reports what it measured.",
+    description: buildAgentDescription(MODE),
     image: `${base}/agent-icon.svg`,
     services: [
       { name: "web", endpoint: base },
@@ -689,7 +688,7 @@ function registrationFile(base) {
     url: base,
     defaultInputModes: ["application/json"],
     defaultOutputModes: ["application/json"],
-    capabilities: { transports: ["http"], x402: { supported: true, network: "base", asset: "USDC" } },
+    capabilities: { transports: ["http"], x402: { supported: true, network: NETWORKS.evm, asset: "USDC" } },
     skills: [
       { id: "preflight", name: "preflight", description: "Free pre-signing gate for any x402 payment request or chain transaction: PASS / CAUTION / BLOCK, typed reasons, checked/notChecked, and a short-lived receipt bound to the exact intent and a fresh pinned block. Call before signing." },
       { id: "verify", name: "verify", description: "Cross-venue arbitrage truth check: pinned-block quotes from both sides, three-state verdict (edge / no_edge / no_edge_costs_ate_it), evidence included." },
@@ -791,69 +790,11 @@ app.get("/sitemap.xml", (_req, res) => {
 app.get("/llms.txt", (_req, res) => {
   res.set("Cache-Control", "public, max-age=300");
   res.type("text/plain").send(
-    [
-      "# verify402",
-      "",
-      "> Per-call truth checks for trading agents. Free pre-signing gate plus",
-      "> paid, evidence-backed verdicts: is this arbitrage real, is this token",
-      "> safe, is this quote fair, and how much can my size move.",
-      "",
-      "Live: https://verify402.onrender.com",
-      "Quickstart: https://verify402.onrender.com/start",
-      "Interactive Docs: https://verify402.onrender.com/docs",
-      "MCP Information: https://verify402.onrender.com/mcp",
-      "Code: https://github.com/a32116150-ctrl/verify402",
-      "",
-      "## Free, no key, no wallet",
-      "",
-      "- POST /preflight — PASS / CAUTION / BLOCK for a payment or a chain",
-      "  transaction, with typed reasons, the checks that ran, the checks that",
-      "  did not, and a short-lived HMAC receipt (90s default).",
-      "- POST /preflight/verify — recompute a receipt. Tampered or expired",
-      "  receipts return valid: false.",
-      "- GET /findings — free published verdicts.",
-      "- GET /health — liveness and network configuration.",
-      "- GET /info — JSON capabilities and pricing.",
-      "",
-      "## Paid, x402 exact, USDC on Base mainnet or Solana",
-      "",
-      "Each paid call returns a verdict with reproducible evidence and an",
-      "evidence_bundle (requestHash, responseHash, pinnedBlock). The 402",
-      "challenge is authoritative for price and payee.",
-      "",
-      "- POST /verify — 0.05 USDC. Is this cross-venue arbitrage real at one",
-      "  pinned block? Most common honest answer: no_edge.",
-      "- POST /safety — 0.10 USDC. Token gate: TRUST / CAUTION / AVOID, with a",
-      "  quote-based sellability check on the configured venues. It does not execute",
-      "  a transfer; transfer restrictions and unconfigured venues are in notChecked.",
-      "- POST /route — 0.03 USDC. Every configured venue quoting tokenIn to tokenOut at",
-      "  one pinned block, best first.",
-      "- POST /quotecheck — 0.05 USDC. Audit someone else's quote: fair /",
-      "  overpaying / too_good_to_be_true / unknown.",
-      "- POST /depth — 0.05 USDC. Largest size that still clears your cost",
-      "  tolerance; capacityUsd.",
-      "",
-      "## Machine-readable Manifests & Discovery",
-      "",
-      "- /.well-known/verify402.json — Canonical machine-readable service manifest.",
-      "- /openapi.json — OpenAPI 3.1 contract with x-payment-info on every paid route.",
-      "- /.well-known/x402 — x402 capability manifest (draft-hawkins-x402-dns-discovery-02).",
-      "- /.well-known/agent-card.json — A2A agent card (ERC-8004).",
-      "- /sitemap.xml — XML sitemap for public documentation indexers.",
-      "- MCP bridge package: verify402-mcp (stdio transport)",
-      "  Install: npx -y verify402-mcp",
-      "  npm: https://www.npmjs.com/package/verify402-mcp",
-      "  Official MCP Registry: io.github.a32116150-ctrl/verify402-mcp",
-      "",
-      "## Honest boundary & Security",
-      "",
-      "No profit promises. The most common verdict is no_edge, and that",
-      "negative result is the product. Verdicts ship with the pinned",
-      "block and cryptographic hashes needed to reproduce or refute them.",
-      "A PASS on preflight does not mean a transaction is universally safe;",
-      "always inspect the 'notChecked' array for unverified assumptions.",
-      "",
-    ].join("\n"),
+    buildLlmsText({
+      mode: MODE,
+      baseUrl: PUBLIC_BASE_URL,
+      releaseVersion: RELEASE_VERSION,
+    }),
   );
 });
 
@@ -862,7 +803,7 @@ app.get("/.well-known/verify402.json", (_req, res) => {
   res.set("Cache-Control", "public, max-age=300");
   res.json(
     buildServiceManifest({
-      baseUrl: "https://verify402.onrender.com",
+      baseUrl: PUBLIC_BASE_URL,
       mode: MODE,
       prices: {
         verify: PRICE,
@@ -890,6 +831,9 @@ app.get("/openapi.json", (_req, res) => {
     route: ROUTE_PRICE,
     quotecheck: QUOTECHECK_PRICE,
     depth: DEPTH_PRICE,
+  }, {
+    mode: MODE,
+    baseUrl: PUBLIC_BASE_URL,
   }));
 });
 
@@ -907,38 +851,38 @@ app.get("/.well-known/x402", (_req, res) => {
       "Per-call truth checks for trading agents: arbitrage reality, token safety, execution book, quote fairness, and trade capacity. Free preflight gate; paid verdicts return reproducible evidence, not profit promises.",
     resources: [
       {
-        url: "https://verify402.onrender.com/verify",
+        url: `${PUBLIC_BASE_URL}/verify`,
         method: "POST",
         description:
           "Is this cross-venue arbitrage real at one pinned block? Returns a verdict with full evidence; the most common honest answer is no_edge.",
       },
       {
-        url: "https://verify402.onrender.com/safety",
+        url: `${PUBLIC_BASE_URL}/safety`,
         method: "POST",
         description:
           "Pre-trade token gate: TRUST / CAUTION / AVOID, with live contract facts and a quote-based sellability check on the configured venues. Does not execute a transfer; transfer restrictions are in notChecked.",
       },
       {
-        url: "https://verify402.onrender.com/route",
+        url: `${PUBLIC_BASE_URL}/route`,
         method: "POST",
         description:
           "Every configured venue quoting tokenIn to tokenOut at one pinned block, direct and WETH-routed, best first. Aggregators and unconfigured DEXs are excluded.",
       },
       {
-        url: "https://verify402.onrender.com/quotecheck",
+        url: `${PUBLIC_BASE_URL}/quotecheck`,
         method: "POST",
         description:
           "Audit a quote someone else gave you: fair / overpaying / too_good_to_be_true / unknown, with the venue book as evidence.",
       },
       {
-        url: "https://verify402.onrender.com/depth",
+        url: `${PUBLIC_BASE_URL}/depth`,
         method: "POST",
         description:
           "Largest size that still clears your cost tolerance: per-size entry and exit quotes, impact, round-trip cost, and capacityUsd.",
       },
     ],
     attestation: { type: "none" },
-    docs: "https://verify402.onrender.com/start",
+    docs: `${PUBLIC_BASE_URL}/start`,
     contact: "a32116150@gmail.com",
     updated: "2026-10-19T00:00:00Z",
   });
@@ -1308,6 +1252,9 @@ app.get("/ready", async (req, res) => {
 app.get("/info", (_req, res) => {
   res.json({
     name: "verify402",
+    version: RELEASE_VERSION,
+    mode: MODE,
+    networks: NETWORKS.label,
     description:
       "Machine-payable truth service. /preflight is the free pre-signing gate: validate an x402 payment request or a chain transaction and get PASS / CAUTION / BLOCK with typed reasons and a short-lived receipt. /verify measures whether a cross-venue arbitrage round trip is profitable; /safety is a pre-trade gate with a quote-based sellability check, not a honeypot proof. All quotes come from Uniswap's canonical QuoterV2 and each venue's own router, never from our own reimplementation of venue mathematics. The MCP server (verify402-mcp) exposes the gate and the five checks as native tools; install at /mcp.",
     prices: {
@@ -1331,12 +1278,14 @@ app.get("/info", (_req, res) => {
       appliesTo: ["recovery", "/usage"],
       warning: "Recovery records and /usage counters are process-local: they live only in this process. A restart or deploy loses both: a previously settled idempotency key may be charged again, and usage counts reset. State is not shared across instances.",
     },
-    hosting: {
-      status: "Demo instance runs on a free host: first request after idle can take about a minute; testnet only.",
-      freeTier: true,
-      coldStartSeconds: 60,
+    hosting: buildInfoHosting(MODE),
+    payment: {
+      protocol: "x402",
+      scheme: "exact",
+      network: NETWORKS.evm,
+      networkLabel: NETWORKS.label,
+      acceptsExample: accepts(PRICE)[0],
     },
-    payment: { protocol: "x402", scheme: "exact", acceptsExample: accepts(PRICE)[0] },
     chains: Object.entries(CHAINS).map(([id, c]) => ({
       chainId: Number(id),
       name: c.name,
@@ -1350,15 +1299,11 @@ app.get("/info", (_req, res) => {
         price: "free",
         body: {
           kind: "payment",
-          payment: {
-            scheme: "exact",
-            network: "eip155:8453",
-            asset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-            amount: "10000",
-            payTo: "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb",
-            resource: "https://verify402.onrender.com/verify",
-            maxTimeoutSeconds: 60,
-          },
+          payment: buildPreflightPaymentExample({
+            mode: MODE,
+            baseUrl: PUBLIC_BASE_URL,
+            payTo: PAY_TO_EVM,
+          }),
           from: "0x...",
           policy: { maxAmountUsd: 0.25, allowedPayTo: ["0x..."] },
         },
@@ -1472,7 +1417,7 @@ app.get("/info", (_req, res) => {
       defaultTtlSeconds: DEFAULT_TTL_SECONDS,
       limits: { perMinutePerIp: PREFLIGHT_RATE_PER_MIN, maxInFlight: PREFLIGHT_MAX_IN_FLIGHT },
       intents: ["payment", "transaction"],
-      paymentNetworks: "EVM (1, 42161, 8453, 84532, 11155111) + Solana mainnet/devnet",
+      paymentNetworks: buildPreflightPaymentNetworks(MODE),
       transactionChains: Object.keys(CHAINS).map(Number),
       verdicts: {
         PASS: "every check in `checked` passed at this fresh pinned block",
@@ -1509,10 +1454,10 @@ app.get("/info", (_req, res) => {
     },
     mcp: {
       package: "verify402-mcp",
-      version: "1.0.3",
+      version: RELEASE_VERSION,
       license: "Apache-2.0",
       transport: "stdio",
-      install: "https://verify402.onrender.com/mcp",
+      install: `${PUBLIC_BASE_URL}/mcp`,
       freeTool: "preflight_gate",
       paidTools: ["verify_arbitrage", "check_token_safety", "get_best_route", "verify_quote_fairness", "get_trade_depth"],
       freeOnlyWithoutWallet: true,

@@ -96,12 +96,13 @@ Never set any of these in a paid deploy:
 The script is `scripts/smoke.mjs` (`npm run smoke`). It always checks `/health`,
 `/ready`, a free preflight call, and `/preflight/verify` with the returned
 receipt. `SMOKE_PAID=1` additionally buys exactly one `/route` answer on a
-**testnet** instance and refuses to run against mainnet.
+**testnet** instance. It aborts before spawning the payer if the target or the
+402 challenge is not testnet; a recorded failed assertion is not the gate.
 
 Free checks:
 
 ```bash
-SMOKE_BASE_URL=https://<testnet-or-mainnet-host> npm run smoke
+SMOKE_BASE_URL=https://<testnet-host> npm run smoke
 ```
 
 Expected output ends with `smoke: PASS`. It verifies:
@@ -109,7 +110,9 @@ Expected output ends with `smoke: PASS`. It verifies:
 - `/health` returns `ok: true`;
 - `/ready` returns 200, `ok: true`, `ready: true`, an integer chain ID and block;
 - `POST /preflight` returns a three-state verdict, a receipt, and `checked`/`notChecked`;
-- `POST /preflight/verify` accepts the receipt it just issued.
+- `POST /preflight/verify` accepts the receipt it just issued;
+- the 402 EVM rail is `eip155:84532` (Base Sepolia testnet). The smoke script is
+  demo/testnet-only and is not a mainnet validation tool.
 
 One paid testnet call:
 
@@ -121,9 +124,18 @@ SMOKE_BASE_URL=https://<testnet-host> SMOKE_PAID=1 MAX_PAYMENT_USD=0.03 npm run 
 Requirements:
 
 - The target `/health` must report `mode: "testnet"`; the script aborts otherwise.
+- Every required free check must pass before the paid path starts.
 - `EVM_PRIVATE_KEY` must be set for a buyer wallet holding Base Sepolia USDC.
 - `MAX_PAYMENT_USD` must cover the configured `/route` price (default cap in the
   smoke script is `0.03`).
+- The `/route` 402 challenge must be a valid x402 v2 challenge for the requested
+  endpoint, offer only `eip155:84532` on the EVM rail, name the expected payee
+  (`SMOKE_EXPECTED_PAY_TO` or `VERIFY402_PAY_TO`, default the verify402 payee),
+  use Base Sepolia USDC, and stay within the cap. A mixed challenge that also
+  offers Base mainnet is refused as a whole.
+- `mcp-bridge/first-payment.mjs` independently enforces the same network,
+  resource, amount, and payee rules before signing. The smoke script is not the
+  only boundary.
 - The paid call prints the settlement receipt. Verify the buyer debit and seller
   credit on the testnet explorer before declaring the deploy good.
 
@@ -163,4 +175,4 @@ separate, explicit operator decision.
 
 ## Post-deploy verification
 
-- Run `SMOKE_BASE_URL=<url> npm run post-deploy` and paste the full output to the reviewer.
+- Run `SMOKE_BASE_URL=<testnet url> EXPECTED_MODE=testnet npm run post-deploy` and paste the full output to the reviewer. This checker rejects any other mode; mainnet deployment checks are not implemented yet.
