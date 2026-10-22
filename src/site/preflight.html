@@ -170,6 +170,7 @@
   <span class="y">"receipt"</span>: {
     <span class="y">"spec"</span>: <span class="g">"verify402/preflight-receipt@1"</span>,
     <span class="y">"intentHash"</span>: <span class="g">"…"</span>,
+    <span class="y">"requestHash"</span>: <span class="g">"…"</span>,
     <span class="y">"blockNumber"</span>: <span class="g">48277717</span>,
     <span class="y">"expiresAt"</span>: <span class="g">"2026-10-19T…Z"</span>,
     <span class="y">"signature"</span>: <span class="g">"…"</span>
@@ -255,7 +256,7 @@
       <div class="sec-head">
         <p class="eyebrow">Receipts</p>
         <h2>A receipt an executor can actually check.</h2>
-        <p class="lead">Every response carries a short-lived HMAC-signed receipt. The intent hash binds the exact normalized request; the fresh block pins the chain state; the expiry bounds reuse.</p>
+        <p class="lead">Every response carries a short-lived HMAC-signed receipt. The intent hash binds the exact normalized request, the request hash binds the original body, the fresh block pins the chain state, and the expiry bounds reuse.</p>
       </div>
       <div class="steps" style="margin-top:40px">
         <div class="step">
@@ -266,7 +267,7 @@
         <div class="step">
           <p class="n">02</p>
           <h3>Verify the receipt</h3>
-          <p><code class="inline">POST /preflight/verify</code> recomputes the HMAC and checks the expiry. No chain call.</p>
+          <p><code class="inline">POST /preflight/verify</code> recomputes the HMAC, checks the expiry, and re-hashes the caller's normalized <code class="inline">intent</code> and original <code class="inline">request</code>. Require both <code class="inline">intentBound</code> and <code class="inline">requestBound</code>; a receipt-only check stays compatible but is unbound. No chain call.</p>
         </div>
         <div class="step">
           <p class="n">03</p>

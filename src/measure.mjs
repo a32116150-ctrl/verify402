@@ -29,7 +29,7 @@
 
 import { createPublicClient, http, fallback, decodeFunctionResult, encodeFunctionData } from "viem";
 import * as viemChains from "viem/chains";
-import { chain, resolveToken, DEFAULT_GAS_UNITS } from "./config.mjs";
+import { chain, readinessChain, resolveToken, DEFAULT_GAS_UNITS } from "./config.mjs";
 
 export const QUOTER_V2_ABI = [
   {
@@ -104,6 +104,61 @@ export function clientFor(chainId) {
   const client = createPublicClient({ chain: viemChain, transport });
   clients.set(chainId, client);
   return client;
+}
+
+// Readiness has its own client cache and its own chain map. It must not share
+// measurement clients: /ready only needs the latest block, and adding Base
+// Sepolia here must not make it a paid-route venue. The outer /ready gate still
+// caps the whole check at 3s, so this transport uses no retries.
+const readinessClients = new Map();
+
+export function readinessClientFor(chainId) {
+  if (readinessClients.has(chainId)) return readinessClients.get(chainId);
+  const c = readinessChain(chainId);
+  const offline = process.env.TEST_OFFLINE === "1";
+  const offlineUrl = process.env.TEST_OFFLINE_RPC_URL || "http://127.0.0.1:1/offline-rpc";
+  const configured = process.env.READY_RPC_URL || process.env[c.rpcEnv];
+  const url = offline ? offlineUrl : (configured || c.rpcDefault);
+  const viemChain = viemChains[c.viemChain];
+  if (!viemChain) throw new Error(`readiness chain ${c.name} is not available in this viem build`);
+  const client = createPublicClient({
+    chain: viemChain,
+    transport: http(url, { retryCount: 0, timeout: 3_000 }),
+  });
+  readinessClients.set(chainId, client);
+  return client;
+}
+
+// Deep readiness: prove the configured endpoint is on the expected chain, then
+// read a block. The chain-ID check catches a mispointed RPC (for example,
+// mainnet behind READY_CHAIN_ID=84532) that would otherwise look "ready".
+// The timeout covers both calls together, so a slow endpoint cannot hold /ready
+// open past the platform's probe deadline.
+export async function readinessProbe(chainId, { timeoutMs = 3_000, client } = {}) {
+  readinessChain(chainId);
+  const rpc = client || readinessClientFor(chainId);
+  let timer;
+  const deadline = new Promise((_, reject) => {
+    timer = setTimeout(
+      () => reject(new Error(`readiness probe exceeded ${timeoutMs}ms`)),
+      timeoutMs,
+    );
+  });
+  try {
+    return await Promise.race([
+      (async () => {
+        const rpcChainId = Number(await rpc.getChainId());
+        if (rpcChainId !== Number(chainId)) {
+          throw new Error(`readiness RPC reports chain ${rpcChainId}, expected ${chainId}`);
+        }
+        const blockNumber = Number(await rpc.getBlockNumber());
+        return { chainId: Number(chainId), rpcChainId, blockNumber };
+      })(),
+      deadline,
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /** Stable, public-safe classification of a provider/contract error. */

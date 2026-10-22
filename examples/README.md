@@ -1,9 +1,11 @@
 # Reference executor
 
-`preflight-guard.mjs` is a dependency-free, deny-by-default wrapper around the
+`preflight-guard.mjs` is a small repo-local, deny-by-default wrapper around the
 free gate. It holds no key and sends nothing: it calls `POST /preflight`,
 refuses `BLOCK`, refuses `CAUTION` until you acknowledge it, verifies the
-receipt with `POST /preflight/verify`, and only then calls **your** signer.
+receipt with `POST /preflight/verify`, checks the request hash locally, and
+only then calls **your** signer. Receipt verification is mandatory; there is no
+`verify:false` bypass.
 
 ```js
 import { guardAndSign } from "./preflight-guard.mjs";
@@ -29,7 +31,8 @@ await guardAndSign({
 ```
 
 - `BLOCK`, a missing receipt, an expired receipt, a failed `/preflight/verify`,
-  or a 503 from the gate all throw **before** `sign` is called.
+  a receipt that is not bound to this caller's request/intent, or a 503 from
+  the gate all throw **before** `sign` is called.
 - `CAUTION` requires `acknowledgeCaution: true`. That is a decision, not a pass;
   log the reasons.
 - The intent is cloned and deep-frozen before the gate, and that same object is

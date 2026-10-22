@@ -240,9 +240,9 @@ export function buildServiceManifest({
     },
     freeEndpoints: [
       { route: "/preflight", method: "POST", summary: "Free pre-signing PASS/CAUTION/BLOCK gate with HMAC receipt" },
-      { route: "/preflight/verify", method: "POST", summary: "Validate HMAC receipt authenticity and expiration" },
+      { route: "/preflight/verify", method: "POST", summary: "Validate HMAC, expiry, and optional intent/request bindings" },
       { route: "/health", method: "GET", summary: "Liveness and network mode check" },
-      { route: "/ready", method: "GET", summary: "Deep readiness: latest block read with a 3s timeout" },
+      { route: "/ready", method: "GET", summary: "Deep readiness: verify eth_chainId, then read the latest block within 3s" },
       { route: "/info", method: "GET", summary: "Machine-readable capabilities and pricing" },
       { route: "/findings", method: "GET", summary: "Recent verifiable market observations" },
       { route: "/openapi.json", method: "GET", summary: "OpenAPI 3.1 contract" },
@@ -299,6 +299,7 @@ export function buildServiceManifest({
         type: "HMAC-SHA256",
         defaultTtlSeconds: DEFAULT_TTL_SECONDS,
         rangeSeconds: `${MIN_TTL_SECONDS}-${MAX_TTL_SECONDS}`,
+        binding: "Signed intentHash and requestHash. requestHash is additive within verify402/preflight-receipt@1; older receipts stay signature-valid but are unbound. Receipt-only verification returns intentBound:false and requestBound:false.",
       },
       cors: {
         discovery: "GET, HEAD, and OPTIONS on free read-only discovery paths allow Access-Control-Allow-Origin: *.",

@@ -11,9 +11,11 @@
 // alias has been removed entirely.
 
 import {
-  canonicalStable, requestHash, recordSettlement, promoteSettlement, replayFor,
-  lookupRecovery, evidenceBundle, expiredRecoveryInfo, validateIdempotencyKey,
-  IDEMPOTENCY_TTL_MS, IDEMPOTENCY_MAX_REPLAYS, sha256Hex, _setNow,
+  canonicalStable, requestHash, recordSettlement, promoteSettlement, abandonSettlement,
+  replayFor, lookupRecovery, reserveRecovery, releaseRecovery,
+  evidenceBundle, expiredRecoveryInfo, validateIdempotencyKey,
+  IDEMPOTENCY_TTL_MS, IDEMPOTENCY_MAX_REPLAYS, IDEMPOTENCY_STAGE_TTL_MS,
+  sha256Hex, _setNow,
 } from "../src/recovery.mjs";
 
 let passed = 0;
@@ -102,6 +104,51 @@ check("STAGED record is NOT replayable — a failed settlement leaves nothing fr
   assert(replayFor("fail-key") === null, "unpromoted key must be inert");
   assert(replayFor("fail-companion") === null, "there is no companion key to replay");
   assert(expiredRecoveryInfo("fail-key") === null, "nothing settled -> no tombstone");
+
+});
+
+check("concurrent same-key requests: one reservation wins, the other is pending", () => {
+
+  const rh = requestHash("/verify", { target: "WETH" });
+  const first = reserveRecovery({ key: "reserve-key", requestHash: rh });
+  assert(typeof first.token === "string", "first request owns the key");
+  const second = reserveRecovery({ key: "reserve-key", requestHash: rh });
+  assert(second.pending === true && second.token === undefined, "second request must not do the work");
+
+  const elsewhere = reserveRecovery({ key: "reserve-key", requestHash: requestHash("/verify", { target: "USDC" }) });
+  assert(elsewhere.conflict === "request_mismatch", "changed content under a reserved key conflicts");
+
+  assert(releaseRecovery("reserve-key", "wrong-token") === false, "a non-owner cannot release");
+  assert(releaseRecovery("reserve-key", first.token) === true, "the owner releases");
+  assert(reserveRecovery({ key: "reserve-key", requestHash: rh }).token, "the key is usable after release");
+
+});
+
+check("staged records are pending, not invisible, until the stage TTL", () => {
+
+  let T = 7_000_000;
+  _setNow(() => T);
+  const payload = { verdict: "no_edge", n: 1 };
+  recordSettlement("stage-pending", payload);
+  assert(lookupRecovery({ key: "stage-pending" })?.pending === "settlement_pending",
+    "a staged operation must block duplicate work");
+  assert(replayFor("stage-pending") === null, "but it must never replay before settlement");
+
+  T += IDEMPOTENCY_STAGE_TTL_MS + 1;
+  assert(lookupRecovery({ key: "stage-pending" }) === null,
+    "after the stage TTL an unresolved record stops blocking");
+  _setNow(() => Date.now());
+
+});
+
+check("an explicitly failed settlement abandons the staged record", () => {
+
+  const payload = { verdict: "no_edge", n: 2 };
+  recordSettlement("abandon-key", payload);
+  assert(lookupRecovery({ key: "abandon-key" })?.pending, "starts pending");
+  assert(abandonSettlement(JSON.stringify(payload)) === 1, "the operation is abandoned");
+  assert(lookupRecovery({ key: "abandon-key" }) === null, "a retry is no longer blocked");
+  assert(replayFor("abandon-key") === null, "a failed settlement never becomes free replay");
 
 });
 

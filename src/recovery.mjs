@@ -130,6 +130,11 @@ export const IDEMPOTENCY_REMEASURE_MS = 6 * 60 * 60 * 1000;  // 6 hours
 
 const settled = new Map();    // key -> entry (shared between aliases; settled flag gates replayability)
 const tombstones = new Map(); // key -> { responseHash, settledAt, expiredAt }
+// In-process request reservations. This closes the concurrent-request window:
+// the first same-key request reserves the key before the paywall, and a second
+// request gets a typed pending response instead of doing the work twice.
+// Reservations are process-local and disappear on restart, like the records.
+const inFlight = new Map();   // key -> { token, requestHash, at }
 // Staged entries live at most this long before being silently dropped. A
 // staged record was never settled — if the settle outcome is lost (SettleError,
 // transport loss in our own tests, facilitator outage), the record MUST NOT
@@ -222,6 +227,7 @@ export function recordSettlement(key, payload, _companionKey = null, {
   }
   for (const k of entry.aliases) {
     tombstones.delete(k); // a fresh settlement re-opens the window
+    inFlight.delete(k);
     settled.set(k, entry);
   }
   return { responseHash, operationId };
@@ -284,9 +290,70 @@ export function promoteSettlement(body, settlement) {
   return 1;
 }
 
+// Reserve a key for one in-process request. Returns:
+//   { token }                 this request owns the key
+//   { pending: true }         another request is already working on it
+//   { conflict: "request_mismatch" } same key, different request content
+//   null                      no key supplied
+// A reservation is released on response finish/close, when the verdict is
+// staged, or when the process restarts. It is not a durable lock.
+export function reserveRecovery({ key, requestHash: operationRequestHash = null } = {}) {
+  if (!key) return null;
+  const t = nowFn();
+  const existing = inFlight.get(key);
+  if (existing) {
+    if (operationRequestHash && existing.requestHash && operationRequestHash !== existing.requestHash) {
+      return { conflict: "request_mismatch" };
+    }
+    if (t - existing.at <= IDEMPOTENCY_STAGE_TTL_MS) return { pending: true };
+    inFlight.delete(key); // stale reservation; let a retry proceed
+  }
+  const token = randomUUID();
+  inFlight.set(key, { token, requestHash: operationRequestHash, at: t });
+  return { token };
+}
+
+// Release only the reservation this request owns. A late finish from an old
+// request must not clear a newer reservation for the same key.
+export function releaseRecovery(key, token) {
+  const existing = key ? inFlight.get(key) : null;
+  if (!existing) return false;
+  if (token && existing.token !== token) return false;
+  inFlight.delete(key);
+  return true;
+}
+
+// Drop a staged entry when the settlement is explicitly known to have failed.
+// The caller can then retry with the same key instead of waiting for the
+// stage TTL. A settled entry is never removed here.
+export function abandonSettlement(body) {
+  let obj = null;
+  if (body && typeof Buffer !== "undefined" && Buffer.isBuffer(body)) {
+    try { obj = JSON.parse(body.toString("utf8")); } catch { return 0; }
+  } else if (typeof body === "string") {
+    try { obj = JSON.parse(body); } catch { return 0; }
+  } else if (body && typeof body === "object") {
+    obj = body;
+  }
+  const opId = obj?.recovery?.operationId;
+  if (typeof opId !== "string" || !opId) return 0;
+  let removed = 0;
+  for (const [k, e] of settled) {
+    if (e.operationId === opId && !e.settled) {
+      for (const a of e.aliases) {
+        if (settled.get(a) === e) settled.delete(a);
+        inFlight.delete(a);
+      }
+      removed = 1;
+    }
+  }
+  return removed;
+}
+
 // Decide what an incoming request may do with an idempotency key. Returns
-// `{ hit }` (replay), `{ conflict }` (reject BEFORE payment or replay), or
-// null (not recoverable — continue to the paywall).
+// `{ hit }` (replay), `{ pending }` (settlement still unresolved),
+// `{ conflict }` (reject BEFORE payment or replay), or null (not recoverable
+// — continue to the paywall).
 //
 // Authorization is possession of the original key, full stop. The key is bound
 // to the operation's request fingerprint, so reusing it for different content
@@ -304,7 +371,17 @@ export function lookupRecovery({
   if (operationRequestHash && entry.requestHash && operationRequestHash !== entry.requestHash) {
     return { conflict: "request_mismatch" };
   }
-  if (!entry.settled) return null; // staged: same operation may pay; nothing is replayable yet
+  if (!entry.settled) {
+    // A staged entry means the handler ran and its settlement is still
+    // unresolved (or failed without an explicit failure hook). Do not let a
+    // retry do the work again while that outcome is unknown. The staged record
+    // expires after IDEMPOTENCY_STAGE_TTL_MS, after which a retry is allowed.
+    if (nowFn() - entry.stagedAt > IDEMPOTENCY_STAGE_TTL_MS) {
+      for (const a of entry.aliases) if (settled.get(a) === entry) settled.delete(a);
+      return null;
+    }
+    return { pending: "settlement_pending" };
+  }
   const hit = replayFor(key);
   return hit ? { hit } : null;
 }

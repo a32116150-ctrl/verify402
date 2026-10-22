@@ -5,7 +5,7 @@
 // Complies with official OpenAPI 3.1 specification (https://spec.openapis.org/oas/v3.1.0.html).
 
 import { IDEMPOTENCY_MAX_REPLAYS, IDEMPOTENCY_TTL_MS } from "./recovery.mjs";
-import { DEFAULT_TTL_SECONDS, MAX_TTL_SECONDS, MIN_TTL_SECONDS } from "./preflight.mjs";
+import { DEFAULT_TTL_SECONDS, MAX_TTL_SECONDS, MIN_TTL_SECONDS, RECEIPT_SPEC } from "./preflight.mjs";
 import { DEFAULT_SIZE } from "./config.mjs";
 import { RELEASE_VERSION } from "./version.mjs";
 import { DEMO_BASE_URL, paymentRail } from "./payment-mode.mjs";
@@ -200,7 +200,7 @@ function paidOperation({ price, operationId, summary, tag, inputSchema, outputSc
 
 const chainId = {
   type: "integer",
-  description: "Required EVM chain id: 1 Ethereum mainnet, 42161 Arbitrum One, 8453 Base, 84532 Base Sepolia. There is no silent default; missing => 400 missing_chain.",
+  description: "Required EVM chain id for paid measurement and preflight transaction intents: 1 Ethereum mainnet, 42161 Arbitrum One, 8453 Base. There is no silent default; missing => 400 missing_chain. Base Sepolia (84532) is readiness-only and is not a paid-route chain.",
 };
 
 export function buildOpenapi(prices, { mode = "testnet", baseUrl = DEMO_BASE_URL } = {}) {
@@ -272,8 +272,8 @@ export function buildOpenapi(prices, { mode = "testnet", baseUrl = DEMO_BASE_URL
         get: {
           tags: ["Discovery"],
           operationId: "getReady",
-          summary: "Deep readiness: latest block read with a timeout",
-          description: "Traffic readiness, not liveness. Reads the latest block on READY_CHAIN_ID with a 3s timeout. A process that cannot read the chain returns 503 with ok:false and must not receive paid traffic.",
+          summary: "Deep readiness: verify chain id, then read the latest block",
+          description: "Traffic readiness, not liveness. Calls eth_chainId and requires it to match READY_CHAIN_ID, then reads the latest block. The whole probe is capped at 3s. A process on the wrong chain or unable to read it returns 503 with ok:false and must not receive paid traffic.",
           responses: {
             200: {
               description: "The configured readiness chain was read successfully.",
@@ -620,9 +620,17 @@ export function buildOpenapi(prices, { mode = "testnet", baseUrl = DEMO_BASE_URL
                       },
                       receipt: {
                         type: "object",
-                        description: "Short-lived HMAC receipt bound to intent and block.",
+                        description: "Short-lived HMAC receipt. It is bound to the normalized intent and (for receipts issued by this version) the exact request body, plus a pinned block. Receipts issued before request binding remain signature-valid but are unbound; supplying `request` to /preflight/verify returns missing_request_hash.",
                         properties: {
+                          spec: { type: "string", const: RECEIPT_SPEC },
                           id: { type: "string" },
+                          kind: { type: "string", enum: ["payment", "transaction"] },
+                          verdict: { type: "string", enum: ["PASS", "CAUTION", "BLOCK"] },
+                          intentHash: { type: "string", description: "HMAC-signed SHA-256 of the canonical normalized intent." },
+                          requestHash: { type: "string", description: "HMAC-signed SHA-256 of the exact JSON request body sent to /preflight. This field is additive within @1; older receipts lack it." },
+                          blockNumber: { type: ["integer", "null"] },
+                          blockHash: { type: ["string", "null"] },
+                          issuedAt: { type: "string" },
                           expiresAt: { type: "string" },
                           signature: { type: "string" },
                         },
@@ -654,7 +662,7 @@ export function buildOpenapi(prices, { mode = "testnet", baseUrl = DEMO_BASE_URL
           operationId: "preflightVerify",
           summary: "Verify authenticity and validity of a preflight receipt",
           security: [],
-          description: "Recomputes HMAC signature and checks expiration. Call this in an execution module before submitting a signed transaction.",
+          description: "Recomputes the HMAC signature, checks expiry, and validates the signed intent/request hashes. Supplying `intent` and `request` re-binds the receipt to this caller; without them, `{receipt}` remains compatible but returns intentBound:false and requestBound:false. `requestHash` is additive within verify402/preflight-receipt@1: receipts issued before it existed are signature-valid but unbound and return missing_request_hash when `request` is supplied. Call this in an execution module before submitting a signed transaction, and require both bound flags.",
           requestBody: {
             required: true,
             content: {
@@ -666,6 +674,16 @@ export function buildOpenapi(prices, { mode = "testnet", baseUrl = DEMO_BASE_URL
                     receipt: {
                       type: "object",
                       description: "Receipt object returned by POST /preflight.",
+                      additionalProperties: true,
+                    },
+                    intent: {
+                      type: "object",
+                      description: "Optional: the normalized intent returned by POST /preflight. The verifier recomputes its hash and compares it to the signed receipt.",
+                      additionalProperties: true,
+                    },
+                    request: {
+                      type: "object",
+                      description: "Optional: the exact JSON request body sent to POST /preflight. The verifier recomputes its signed hash, binding the receipt to the caller's original fields.",
                       additionalProperties: true,
                     },
                   },
@@ -683,8 +701,15 @@ export function buildOpenapi(prices, { mode = "testnet", baseUrl = DEMO_BASE_URL
                     required: ["valid"],
                     properties: {
                       valid: { type: "boolean", description: "True if signature matches and receipt has not expired." },
-                      reason: { type: ["string", "null"], description: "Failure code if invalid (e.g. 'expired', 'bad_signature')." },
+                      reason: { type: ["string", "null"], description: "Failure code if invalid (e.g. 'expired', 'bad_signature', 'missing_intent_hash', 'missing_request_hash', 'intent_mismatch', 'request_mismatch')." },
                       verdict: { type: "string" },
+                      kind: { type: "string" },
+                      intentHash: { type: ["string", "null"] },
+                      requestHash: { type: ["string", "null"] },
+                      intentBound: { type: "boolean", description: "True only when a caller-supplied normalized intent matched the signed hash. Without `intent`, this is false and the receipt is not caller-bound." },
+                      requestBound: { type: "boolean", description: "True only when the caller-supplied original request matched the signed request hash. Without `request`, this is false and the receipt is not caller-bound." },
+                      blockNumber: { type: ["integer", "null"] },
+                      blockHash: { type: ["string", "null"] },
                       expiresAt: { type: "string" },
                     },
                   },

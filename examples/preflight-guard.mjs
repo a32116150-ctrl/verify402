@@ -15,6 +15,12 @@
 // trust the public instance, run your own and pin `baseUrl` to it. A PASS is
 // not a guarantee of safety; it means the checks listed in the response passed
 // at that block. Read `notChecked` before you treat it as more.
+//
+// Receipt verification is mandatory. There is deliberately no `verify:false`
+// switch: a caller-controlled option must not be able to reach the signer
+// without the receipt and both bindings being checked.
+
+import { preflightRequestHash } from "../src/preflight.mjs";
 
 function clone(value) {
   if (typeof structuredClone === "function") return structuredClone(value);
@@ -91,7 +97,6 @@ async function requestJson(fetchImpl, baseUrl, path, body, timeoutMs) {
  * @param {boolean} [options.acknowledgeCaution] Must be true to sign a CAUTION.
  * @param {Function} [options.fetchImpl] Injected fetch (tests / custom runtime).
  * @param {number} [options.timeoutMs]  Per-request timeout (default 70s).
- * @param {boolean} [options.verify]    Verify the receipt (default true).
  * @returns {Promise<{verdict: string, receipt: object, result: any, response: object}>}
  */
 export async function guardAndSign(options = {}) {
@@ -103,7 +108,6 @@ export async function guardAndSign(options = {}) {
     acknowledgeCaution = false,
     fetchImpl = globalThis.fetch,
     timeoutMs = 70_000,
-    verify = true,
   } = options;
 
   if (!intent || typeof intent !== "object" || Array.isArray(intent)) {
@@ -116,7 +120,11 @@ export async function guardAndSign(options = {}) {
   // signer. A caller that mutates the intent after the gate cannot silently
   // sign something the receipt never covered.
   const frozenIntent = deepFreeze(clone(intent));
-  const pre = await requestJson(fetchImpl, baseUrl, "/preflight", { ...frozenIntent, policy }, timeoutMs);
+  // Keep the exact body sent to the gate. The receipt signs a hash of it, so
+  // verification can bind the receipt to the caller's request without
+  // reimplementing the gate's canonicalisation.
+  const preflightBody = { ...frozenIntent, policy };
+  const pre = await requestJson(fetchImpl, baseUrl, "/preflight", preflightBody, timeoutMs);
 
   if (pre.verdict === "BLOCK" || pre.sign_allowed !== true) {
     throw new PreflightBlockedError(pre.summary || "preflight returned BLOCK; do not sign", {
@@ -147,23 +155,58 @@ export async function guardAndSign(options = {}) {
     });
   }
 
-  if (verify) {
-    const checked = await requestJson(fetchImpl, baseUrl, "/preflight/verify", { receipt: pre.receipt }, timeoutMs);
-    if (checked.valid !== true) {
-      throw new PreflightBlockedError(`receipt verification failed: ${checked.reason || "invalid"}`, {
-        verdict: pre.verdict, reasons: pre.reasons, response: pre,
-      });
-    }
-    if (checked.intentHash !== pre.intentHash) {
-      throw new PreflightBlockedError("receipt intent hash does not match the verdict", {
-        verdict: pre.verdict, reasons: pre.reasons, response: pre,
-      });
-    }
-    if (checked.kind !== pre.kind || checked.verdict !== pre.verdict) {
-      throw new PreflightBlockedError("receipt kind/verdict does not match the verdict", {
-        verdict: pre.verdict, reasons: pre.reasons, response: pre,
-      });
-    }
+  if (!pre.intent || typeof pre.intent !== "object" || Array.isArray(pre.intent)) {
+    throw new PreflightBlockedError("preflight returned no canonical intent; cannot bind the receipt", {
+      verdict: pre.verdict, reasons: pre.reasons, response: pre,
+    });
+  }
+
+  // Recompute the request binding locally. The remote verifier can only say
+  // "bound"; it must not be able to override a receipt that names bytes other
+  // than the ones this caller actually sent.
+  let localRequestHash;
+  try {
+    localRequestHash = preflightRequestHash(preflightBody);
+  } catch {
+    throw new PreflightBlockedError("preflight request body cannot be canonicalised; do not sign", {
+      verdict: pre.verdict, reasons: pre.reasons, response: pre,
+    });
+  }
+  if (pre.receipt.requestHash !== localRequestHash) {
+    throw new PreflightBlockedError("receipt request hash does not match the request sent to the gate", {
+      verdict: pre.verdict, reasons: pre.reasons, response: pre,
+    });
+  }
+
+  const checked = await requestJson(fetchImpl, baseUrl, "/preflight/verify", {
+    receipt: pre.receipt,
+    intent: pre.intent,
+    request: preflightBody,
+  }, timeoutMs);
+  if (checked.valid !== true) {
+    throw new PreflightBlockedError(`receipt verification failed: ${checked.reason || "invalid"}`, {
+      verdict: pre.verdict, reasons: pre.reasons, response: pre,
+    });
+  }
+  if (checked.intentBound !== true || checked.requestBound !== true) {
+    throw new PreflightBlockedError("receipt was not bound to this caller's intent/request", {
+      verdict: pre.verdict, reasons: pre.reasons, response: pre,
+    });
+  }
+  if (checked.requestHash !== localRequestHash) {
+    throw new PreflightBlockedError("receipt request hash does not match the request sent to the gate", {
+      verdict: pre.verdict, reasons: pre.reasons, response: pre,
+    });
+  }
+  if (checked.intentHash !== pre.intentHash) {
+    throw new PreflightBlockedError("receipt intent hash does not match the verdict", {
+      verdict: pre.verdict, reasons: pre.reasons, response: pre,
+    });
+  }
+  if (checked.kind !== pre.kind || checked.verdict !== pre.verdict) {
+    throw new PreflightBlockedError("receipt kind/verdict does not match the verdict", {
+      verdict: pre.verdict, reasons: pre.reasons, response: pre,
+    });
   }
 
   const result = await sign(frozenIntent, { receipt: pre.receipt, verdict: pre.verdict, response: pre });

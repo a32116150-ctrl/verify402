@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import {
   guardAndSign, PreflightBlockedError, PreflightUnavailableError,
 } from "../examples/preflight-guard.mjs";
+import { preflightRequestHash } from "../src/preflight.mjs";
 
 const FUTURE = () => new Date(Date.now() + 60_000).toISOString();
 
@@ -16,10 +17,11 @@ function pass(overrides = {}) {
     requires_ack: false,
     kind: "transaction",
     intentHash: "intent-abc",
+    intent: { kind: "transaction", chainId: 8453, to: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", data: "0x095ea7b3" + "00".repeat(64), value: "0", policy: {} },
     reasons: [],
     checked: ["calldata", "simulation"],
     notChecked: ["recipient reputation"],
-    receipt: { spec: "verify402/preflight-receipt@1", intentHash: "intent-abc", expiresAt: FUTURE(), signature: "a".repeat(64) },
+    receipt: { spec: "verify402/preflight-receipt@1", intentHash: "intent-abc", requestHash: REQUEST_HASH, expiresAt: FUTURE(), signature: "a".repeat(64) },
     ...overrides,
   };
 }
@@ -31,6 +33,9 @@ function verifyOk(overrides = {}) {
     verdict: "PASS",
     kind: "transaction",
     intentHash: "intent-abc",
+    requestHash: REQUEST_HASH,
+    intentBound: true,
+    requestBound: true,
     blockNumber: 1,
     blockHash: "0x" + "ab".repeat(32),
     ...overrides,
@@ -61,6 +66,7 @@ const INTENT = {
   data: "0x095ea7b3" + "00".repeat(64),
   value: "0",
 };
+const REQUEST_HASH = preflightRequestHash(INTENT);
 
 async function run(responses, options = {}, state = { signed: 0 }) {
   const f = fakeFetch(...responses);
@@ -90,6 +96,9 @@ test("PASS + verified receipt calls the signer exactly once", async () => {
   assert.ok(out.calls[0].url.endsWith("/preflight"));
   assert.ok(out.calls[1].url.endsWith("/preflight/verify"));
   assert.equal(Object.isFrozen(out.seen.intent), true);
+  assert.ok(out.calls[1].body.intent, "verification must send the canonical intent");
+  assert.ok(out.calls[1].body.request, "verification must send the original request");
+  assert.equal(out.calls[1].body.request.chainId, 8453);
 });
 
 test("BLOCK never reaches the signer", async () => {
@@ -137,6 +146,59 @@ test("a receipt bound to a different intent never reaches the signer", async () 
   await assert.rejects(
     () => run([{ body: pass() }, { body: verifyOk({ intentHash: "intent-other" }) }], {}, state),
     (e) => e instanceof PreflightBlockedError && /intent hash/.test(e.message),
+  );
+  assert.equal(state.signed, 0);
+});
+
+test("a valid HMAC without caller-intent binding never reaches the signer", async () => {
+  for (const unbound of [
+    verifyOk({ intentBound: false }),
+    verifyOk({ requestBound: false }),
+  ]) {
+    const state = { signed: 0 };
+    await assert.rejects(
+      () => run([{ body: pass() }, { body: unbound }], {}, state),
+      (e) => e instanceof PreflightBlockedError && /bound to this caller/.test(e.message),
+    );
+    assert.equal(state.signed, 0);
+  }
+});
+
+test("the removed verify:false option cannot bypass verification", async () => {
+  const state = { signed: 0 };
+  await assert.rejects(
+    () => run([{ body: pass() }, { body: verifyOk({ valid: false, reason: "bad_signature" }) }], { verify: false }, state),
+    (e) => e instanceof PreflightBlockedError && /bad_signature/.test(e.message),
+  );
+  assert.equal(state.signed, 0);
+});
+
+test("a verifier cannot override a receipt with a different request hash", async () => {
+  const state = { signed: 0 };
+  const mismatched = pass();
+  mismatched.receipt = { ...mismatched.receipt, requestHash: "c".repeat(64) };
+
+  await assert.rejects(
+    () => run([{ body: mismatched }, { body: verifyOk({ requestHash: REQUEST_HASH }) }], {}, state),
+    (e) => e instanceof PreflightBlockedError && /request hash/.test(e.message),
+  );
+  assert.equal(state.signed, 0);
+});
+
+test("a verifier claiming a different request hash never reaches the signer", async () => {
+  const state = { signed: 0 };
+  await assert.rejects(
+    () => run([{ body: pass() }, { body: verifyOk({ requestHash: "c".repeat(64) }) }], {}, state),
+    (e) => e instanceof PreflightBlockedError && /request hash/.test(e.message),
+  );
+  assert.equal(state.signed, 0);
+});
+
+test("a gate response without a canonical intent never reaches the signer", async () => {
+  const state = { signed: 0 };
+  await assert.rejects(
+    () => run([{ body: pass({ intent: undefined }) }], {}, state),
+    (e) => e instanceof PreflightBlockedError && /canonical intent/.test(e.message),
   );
   assert.equal(state.signed, 0);
 });

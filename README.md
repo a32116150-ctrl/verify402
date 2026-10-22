@@ -225,7 +225,7 @@ header. In testnet/local mode the card falls back to a Host allowlist
 | Route | Price | What it does |
 |---|---|---|
 | `POST /preflight` | free | pre-signing gate: validate a payment request or transaction, return PASS / CAUTION / BLOCK + a short-lived receipt |
-| `POST /preflight/verify` | free | verify a preflight receipt (HMAC, intent hash, expiry) |
+| `POST /preflight/verify` | free | verify a preflight receipt (HMAC, expiry, optional intent + request bindings) |
 | `POST /verify` | $0.05 (x402) | the measurement, with verdict + evidence |
 | `POST /safety` | $0.10 (x402) | pre-trade token check: TRUST / CAUTION / AVOID + evidence; not a code audit |
 | `POST /route` | $0.03 (x402) | what would the chain ACTUALLY pay for this swap? best route + every quoted venue |
@@ -268,6 +268,7 @@ Response: `PASS` / `CAUTION` / `BLOCK`, `reasons[]`, `checked[]`,
   "receipt": {
     "spec": "verify402/preflight-receipt@1",
     "intentHash": "…",
+    "requestHash": "…",
     "blockNumber": 48277717,
     "blockHash": "0x…",
     "expiresAt": "2026-10-19T…Z",
@@ -277,8 +278,17 @@ Response: `PASS` / `CAUTION` / `BLOCK`, `reasons[]`, `checked[]`,
 ```
 
 - The receipt is HMAC-SHA256 signed, bound to the canonical normalized intent,
-  a fresh pinned block where the chain is readable, and an expiry (default 90s,
-  max 300s). `POST /preflight/verify` recomputes it.
+  the exact request body the gate received, a fresh pinned block where the
+  chain is readable, and an expiry (default 90s, max 300s). `POST /preflight/verify`
+  recomputes the signature and, when supplied, the caller's `intent` and
+  `request` hashes. Pass `request` to bind the receipt to the original fields
+  without reimplementing normalization. `requestHash` is an additive field
+  within `verify402/preflight-receipt@1`; receipts issued before it existed
+  remain signature-valid but are **not caller-bound**, and verify with
+  `missing_request_hash` when `request` is supplied. A receipt with no
+  `intentHash` returns `missing_intent_hash`. Receipt-only verification stays
+  compatible but reports `intentBound:false` and `requestBound:false`; the
+  reference executor requires both bindings.
 - **Fresh block, not just any block:** on EVM chains, a latest block older than
   **30s** is `CAUTION`; older than **120s** is `BLOCK`. The response carries
   `block.timestamp` and `block.ageSeconds`. A block with no timestamp is a
@@ -302,7 +312,8 @@ operator. Client configs and the install command are at
 
 ### Reference executor
 
-`examples/preflight-guard.mjs` is a dependency-free, deny-by-default wrapper:
+`examples/preflight-guard.mjs` is a small repo-local, deny-by-default wrapper
+(its only import is verify402's own canonical request-hash helper):
 it calls the gate, refuses `BLOCK`, requires an explicit acknowledgement for
 `CAUTION`, verifies the receipt, and only then calls **your** signer. It holds
 no key and sends nothing itself. The intent is cloned and deep-frozen before the
@@ -448,6 +459,10 @@ or any MCP client.
     after the TTL or cap, cross instances, or recover a response if the caller lost the
     key. `/usage` counters are likewise process-local and reset on restart. Recovery
     only returns the exact settled response bytes while the record is live.
+  - **Concurrent retries:** the first same-key request reserves the key before the
+    paywall. A second request gets a typed `409 recovery_conflict` with
+    `code: operation_in_flight`, or `settlement_pending` while a staged settlement is
+    unresolved. The reservation is in-process and is lost on restart, like the records.
   - **Settlement-gated (fail-closed):** a verdict record only becomes replayable
     **after the facilitator confirms the settlement** (official x402 `onAfterSettle`
     hook). Promotion is keyed on a server-generated `operationId` carried in the

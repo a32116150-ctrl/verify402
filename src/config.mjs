@@ -91,6 +91,32 @@ export const CHAINS = {
   },
 };
 
+// Readiness-only chains. This is deliberately separate from CHAINS: /ready
+// must be able to check the payment rail's chain (Base Sepolia) without making
+// that chain a paid-route measurement venue. Adding a chain here does not
+// grant it a quoter, tokens, or a route.
+export const READINESS_CHAINS = Object.freeze({
+  1: { name: "ethereum", viemChain: "mainnet", rpcEnv: "ETH_RPC_URL", rpcDefault: CHAINS[1].rpcDefault },
+  42161: { name: "arbitrum", viemChain: "arbitrum", rpcEnv: "ARB_RPC_URL", rpcDefault: CHAINS[42161].rpcDefault },
+  8453: { name: "base", viemChain: "base", rpcEnv: "BASE_RPC_URL", rpcDefault: CHAINS[8453].rpcDefault },
+  84532: {
+    name: "base-sepolia",
+    viemChain: "baseSepolia",
+    rpcEnv: "BASE_SEPOLIA_RPC_URL",
+    rpcDefault: "https://sepolia.base.org",
+  },
+});
+
+export function readinessChain(chainId) {
+  const c = READINESS_CHAINS[chainId];
+  if (!c) {
+    throw new Error(
+      `READY_CHAIN_ID ${chainId} is not a supported readiness chain; supported: ${Object.keys(READINESS_CHAINS).join(", ")}`,
+    );
+  }
+  return c;
+}
+
 // Default trade size, in whole units of the base token.
 export const DEFAULT_SIZE = 100_000;
 

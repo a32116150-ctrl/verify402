@@ -6,7 +6,7 @@
 request or chain transaction your agent is about to sign. It answers
 **PASS / CAUTION / BLOCK** with typed reasons, the checks that actually ran
 (`checked`), the checks that did not (`notChecked`), and a short-lived HMAC
-receipt bound to that exact intent and a fresh pinned block.
+receipt bound to that exact intent, the request body, and a fresh pinned block.
 
 Live: **https://verify402.onrender.com**
 
@@ -54,7 +54,14 @@ You should get:
   "checked": ["scheme","network","asset","amount","payee","resource","timeout","block_freshness"],
   "notChecked": ["recipient reputation","sanctions screening","payment signature / signed payload","facilitator settlement","off-chain promises","payer_balance"],
   "block": { "number": 52814257, "ageSeconds": 0 },
-  "receipt": { "id": "pf_...", "expiresAt": "...", "signature": "..." }
+  "receipt": {
+    "spec": "verify402/preflight-receipt@1",
+    "id": "pf_...",
+    "intentHash": "…",
+    "requestHash": "…",
+    "expiresAt": "...",
+    "signature": "..."
+  }
 }
 ```
 
@@ -106,13 +113,23 @@ const gate = await fetch("https://verify402.onrender.com/preflight", {
 const check = await fetch("https://verify402.onrender.com/preflight/verify", {
   method: "POST",
   headers: { "content-type": "application/json" },
-  body: JSON.stringify({ receipt: gate.receipt }),
+  // `request` is the exact body sent to /preflight. The verifier re-hashes it,
+  // so the receipt is bound to what this caller actually asked to sign.
+  body: JSON.stringify({ receipt: gate.receipt, request: intent }),
 }).then((r) => r.json());
 
-if (!check.valid) throw new Error(`receipt rejected: ${check.reason}`);
+if (!check.valid || check.requestBound !== true) {
+  throw new Error(`receipt rejected: ${check.reason || "not bound to this request"}`);
+}
 ```
 
 A tampered receipt returns `{ "valid": false, "reason": "bad_signature" }`.
+An altered request returns `request_mismatch`; a receipt issued before request
+binding returns `missing_request_hash`; a receipt without an intent hash
+returns `missing_intent_hash`. `intent` may also be supplied (using the
+normalized object returned by the gate) for a second, independent hash check.
+Receipt-only verification remains compatible but reports `intentBound:false`
+and `requestBound:false`; require both when a signature is at stake.
 Receipts expire after 90 seconds by default (15–300 configurable via
 `ttlSeconds`). Re-call the gate instead of reusing an expired one.
 
@@ -147,7 +164,7 @@ can be charged. The five paid measurement tools stay off.
 
 The MCP tool is advisory: it cannot stop an agent that ignores the answer. The
 enforcement belongs in the executor. [`preflight-guard.mjs`](./preflight-guard.mjs)
-is a dependency-free, deny-by-default wrapper:
+is a small repo-local, deny-by-default wrapper:
 
 ```js
 import { guardAndSign } from "./preflight-guard.mjs";
@@ -183,7 +200,8 @@ Run 3–5 intents your agent would actually sign (or has signed before). Send ba
 3. anything that looks like a **false PASS** — a transaction the gate passed
    that you believe is unsafe.
 
-That last item is the metric that matters. It is free and unlimited; the paid
+That last item is the metric that matters. The gate is free and rate-limited
+(60 requests/min per IP, 8 concurrent), so no payment is needed; the paid
 endpoints (`/verify`, `/safety`, `/route`, `/quotecheck`, `/depth`) are separate
 and not needed for this test.
 

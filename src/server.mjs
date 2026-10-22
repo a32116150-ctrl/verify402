@@ -23,11 +23,11 @@ import { HTTPFacilitatorClient } from "@x402/core/server";
 import { createCdpFacilitatorClient } from "@coinbase/cdp-sdk/x402";
 import { declareDiscoveryExtension } from "@x402/extensions/bazaar";
 
-import { measureRoundTrip, clientFor, isHardQuoteFailure } from "./measure.mjs";
+import { measureRoundTrip, clientFor, readinessProbe, isHardQuoteFailure } from "./measure.mjs";
 import { preTradeCheck } from "./safety.mjs";
 import { fairQuoteCheck, bestRouteBook, parseRawPositive } from "./quotecheck.mjs";
 import { depthProfile } from "./depth.mjs";
-import { CHAINS, DEFAULT_SIZE, chain, resolveToken, requireChainId } from "./config.mjs";
+import { CHAINS, DEFAULT_SIZE, chain, readinessChain, resolveToken, requireChainId } from "./config.mjs";
 import {
   PRICE_DEFAULTS,
   PREFLIGHT_RATE_PER_MIN,
@@ -36,7 +36,8 @@ import {
 } from "./contract.mjs";
 import {
   IDEMPOTENCY_TTL_MS, IDEMPOTENCY_MAX_REPLAYS,
-  recordSettlement, promoteSettlement, lookupRecovery,
+  recordSettlement, lookupRecovery,
+  reserveRecovery, releaseRecovery,
   evidenceBundle, requestHash, expiredRecoveryInfo,
   validateIdempotencyKey,
 } from "./recovery.mjs";
@@ -45,6 +46,7 @@ import {
   PREFLIGHT_SPEC, RECEIPT_SPEC, RECEIPT_SECRET_SOURCE,
   DEFAULT_TTL_SECONDS, MAX_TTL_SECONDS,
 } from "./preflight.mjs";
+import { registerRecoveryHooks } from "./settlement-recovery.mjs";
 import { buildOpenapi } from "./openapi.mjs";
 import { buildServiceManifest } from "./manifest.mjs";
 import { RELEASE_VERSION } from "./version.mjs";
@@ -304,6 +306,54 @@ app.use((req, res, next) => {
           maxReplays: IDEMPOTENCY_MAX_REPLAYS,
         },
       });
+    }
+    if (found?.pending) {
+      const h = honestFailure(req.path, null);
+      res.set("Cache-Control", "no-store");
+      res.set("Retry-After", "1");
+      return res.status(409).json({
+        error: "recovery_conflict",
+        code: "settlement_pending",
+        conflict: "operation_in_flight",
+        message: "this idempotency key is still being processed; retry after the settlement resolves",
+        requestId: req.requestId,
+        ...h,
+      });
+    }
+    // Reserve before the paywall. Without this, two concurrent requests with
+    // the same key both reach the handler and both pay. The reservation is
+    // process-local; a restart loses it, exactly like the recovery records.
+    const reservation = reserveRecovery({ key, requestHash: rh });
+    if (reservation?.conflict) {
+      const h = honestFailure(req.path, null);
+      res.set("Cache-Control", "no-store");
+      return res.status(409).json({
+        error: "recovery_conflict",
+        code: "request_mismatch",
+        conflict: reservation.conflict,
+        message: "this idempotency key belongs to a different request; use a new key for a new operation",
+        requestId: req.requestId,
+        ...h,
+      });
+    }
+    if (reservation?.pending) {
+      const h = honestFailure(req.path, null);
+      res.set("Cache-Control", "no-store");
+      res.set("Retry-After", "1");
+      return res.status(409).json({
+        error: "recovery_conflict",
+        code: "operation_in_flight",
+        conflict: "operation_in_flight",
+        message: "this idempotency key is already processing another request; retry after it completes",
+        requestId: req.requestId,
+        ...h,
+      });
+    }
+    if (reservation?.token) {
+      req.recoveryReservation = { key, token: reservation.token };
+      const release = () => releaseRecovery(key, reservation.token);
+      res.once("finish", release);
+      res.once("close", release);
     }
     // Post-window typed signal: expired verdicts leave a tombstone; a retry
     // now re-measures with the paywall re-armed (no free measures), and the
@@ -638,28 +688,12 @@ if (!BYPASS_PAYMENT) app.use(
         },
       },
     },
-    new x402ResourceServer(facilitatorClient)
-      .register(NETWORKS.evm, new ExactEvmScheme())
-      .register(NETWORKS.svm, new ExactSvmScheme())
-      .onAfterSettle(async (ctx) => {
-        // THE settlement gate for recovery: a staged verdict only becomes
-        // replayable here — after the facilitator confirms THIS settle, for the
-        // staged operation named in the response body, with the response bytes
-        // as an additional check. Failed/pending settle promotes nothing.
-        // Matching by bytes alone is not enough: two operations may return
-        // identical output, and settling one must not promote the other.
-        if (ctx?.phase !== "after-handler") return;
-        try {
-          promoteSettlement(ctx?.transportContext?.responseBody ?? null, {
-            ok: ctx?.result?.success === true,
-            transaction: ctx?.result?.transaction ?? null,
-            network: ctx?.result?.network ?? null,
-            payer: ctx?.result?.payer ?? null,
-          });
-        } catch (e) {
-          logError("[recovery] promotion failed", e);
-        }
-      }),
+    registerRecoveryHooks(
+      new x402ResourceServer(facilitatorClient)
+        .register(NETWORKS.evm, new ExactEvmScheme())
+        .register(NETWORKS.svm, new ExactSvmScheme()),
+      { logError },
+    ),
   ),
 );
 
@@ -1163,7 +1197,10 @@ app.get("/usage", (req, res) => {
 app.post("/preflight/verify", preflightRateLimit, (req, res) => {
   res.set("Cache-Control", "no-store");
   const receipt = req.body?.receipt ?? req.body;
-  res.json(verifyReceipt(receipt));
+  const options = {};
+  if (req.body?.intent !== undefined) options.intent = req.body.intent;
+  if (req.body?.request !== undefined) options.request = req.body.request;
+  res.json(verifyReceipt(receipt, options));
 });
 
 // Static pages for humans: /start, /checks, /live, /proof, /docs, /donate (+ /assets).
@@ -1230,19 +1267,19 @@ app.get("/ready", async (req, res) => {
   const started = Date.now();
   const chainId = Number(process.env.READY_CHAIN_ID || 1);
   try {
-    if (!CHAINS[chainId]) throw new Error(`READY_CHAIN_ID ${chainId} is not configured`);
-    const blockNumber = await withTimeout(clientFor(chainId).getBlockNumber(), 3000, "ready");
+    readinessChain(chainId);
+    const probe = await readinessProbe(chainId);
     res.set("Cache-Control", "no-store");
     return res.json({
       ok: true,
       ready: true,
       mode: MODE,
       chainId,
-      blockNumber: Number(blockNumber),
+      blockNumber: probe.blockNumber,
       latencyMs: Date.now() - started,
     });
   } catch (e) {
-    return sendPublicError(req, res, 503, "rpc_unavailable", "the chain could not be read within the readiness timeout", {
+    return sendPublicError(req, res, 503, "rpc_unavailable", "the readiness chain is not configured or could not be read within the timeout", {
       log: e,
       extra: { ok: false, ready: false, chainId, latencyMs: Date.now() - started },
     });
@@ -1312,7 +1349,7 @@ app.get("/info", (_req, res) => {
           reasons: "[{ code, severity, message }]",
           checked: "[what was actually checked]",
           notChecked: "[what was deliberately not checked]",
-          receipt: "{ spec, id, verdict, intentHash, blockNumber, blockHash, issuedAt, expiresAt, signature }",
+          receipt: "{ spec, id, kind, verdict, intentHash, requestHash, blockNumber, blockHash, issuedAt, expiresAt, signature }",
         },
         use_when: "an agent is about to sign ANY x402 payment request or chain transaction; free and fail-closed",
       },
@@ -1320,9 +1357,13 @@ app.get("/info", (_req, res) => {
         method: "POST",
         path: "/preflight/verify",
         price: "free",
-        body: { receipt: "{...the receipt returned by /preflight...}" },
-        response: { valid: "boolean", reason: "null | missing_receipt | unknown_spec | missing_signature | bad_signature | bad_expiry | expired" },
-        use_when: "an executor verifies a preflight receipt before allowing a signature",
+        body: {
+          receipt: "{...the receipt returned by /preflight...}",
+          intent: "{optional: the normalized intent returned by /preflight}",
+          request: "{optional: the exact request body sent to /preflight}",
+        },
+        response: { valid: "boolean", reason: "null | missing_receipt | unknown_spec | missing_signature | bad_signature | missing_intent_hash | missing_request_hash | bad_expiry | expired | invalid_intent | invalid_request | intent_mismatch | request_mismatch", intentBound: "boolean", requestBound: "boolean" },
+        use_when: "an executor verifies a preflight receipt against its own intent/request before allowing a signature",
       },
       {
         method: "POST",
@@ -1407,7 +1448,7 @@ app.get("/info", (_req, res) => {
     readiness: {
       path: "/ready",
       price: "free",
-      check: "latest block read with a 3s timeout",
+      check: "RPC eth_chainId must match READY_CHAIN_ID, then latest block read; whole probe capped at 3s",
       liveness: "/health",
     },
     preflight: {
@@ -1430,12 +1471,12 @@ app.get("/info", (_req, res) => {
         noTimestamp: "503, no receipt",
         note: "EVM only; the response carries block.timestamp and block.ageSeconds",
       },
-      binding: `sha256 of the canonical normalized intent, a fresh pinned block where the chain is readable, and an expiry (default ${DEFAULT_TTL_SECONDS}s, max ${MAX_TTL_SECONDS}s)`,
+      binding: `sha256 of the canonical normalized intent and the exact request body, a fresh pinned block where the chain is readable, and an expiry (default ${DEFAULT_TTL_SECONDS}s, max ${MAX_TTL_SECONDS}s). requestHash is additive within ${RECEIPT_SPEC}; older receipts are signature-valid but unbound and return missing_request_hash when a request is supplied. Receipt-only verification returns intentBound:false and requestBound:false.`,
       failClosed: "if the chain cannot be read, /preflight returns 503 and issues no receipt; an executor should refuse to sign without a verifiable PASS or an explicitly acknowledged CAUTION",
       receiptSigning: RECEIPT_SECRET_SOURCE === "env"
         ? "hmac-sha256 with PREFLIGHT_SECRET"
         : "hmac-sha256 with an ephemeral per-process secret; set PREFLIGHT_SECRET for multi-instance verification",
-      verify: "POST /preflight/verify",
+      verify: "POST /preflight/verify; supply intent and request, then require intentBound and requestBound",
       mcpTool: "preflight_gate",
       doesNotCheck: [
         "recipient reputation",

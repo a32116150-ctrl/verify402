@@ -14,9 +14,11 @@
 //   CAUTION  at least one check needs a decision before signing.
 //   BLOCK    at least one hard check failed. Do not sign.
 //
-// Every answer carries a short-lived receipt bound to the exact intent and,
-// when the chain is readable, a pinned block. POST /preflight/verify recomputes
-// the HMAC, so an executor can refuse a receipt it cannot verify.
+// Every answer carries a short-lived receipt bound to the exact intent, the
+// exact request body, and, when the chain is readable, a pinned block.
+// POST /preflight/verify recomputes the HMAC and both bindings, so an executor
+// can refuse a receipt it cannot verify. The request binding is additive within
+// @1; receipts issued before it are signature-valid but unbound.
 //
 // What this module deliberately does NOT do: reputation, sanctions, contract
 // audits, balance-delta simulation. Those need data or trace support we do not
@@ -577,13 +579,14 @@ function checkDecoded(decoded, { from, policy, now, value }) {
 
 // ---------------------------------------------------------------- receipt ---
 
-function makeReceipt({ kind, verdict, intentHash, block: chainBlock, ttlSeconds, checked, notChecked, now }) {
+function makeReceipt({ kind, verdict, intentHash, requestHash, block: chainBlock, ttlSeconds, checked, notChecked, now }) {
   const payload = {
     spec: RECEIPT_SPEC,
     id: `pf_${randomBytes(8).toString("hex")}`,
     kind,
     verdict,
     intentHash,
+    requestHash,
     blockNumber: chainBlock ? Number(chainBlock.number) : null,
     blockHash: chainBlock?.hash ?? null,
     issuedAt: new Date(now).toISOString(),
@@ -597,23 +600,92 @@ function makeReceipt({ kind, verdict, intentHash, block: chainBlock, ttlSeconds,
   return { ...payload, signature };
 }
 
-export function verifyReceipt(receipt, { now = Date.now() } = {}) {
+const HEX64_RE = /^[0-9a-f]{64}$/i;
+
+function jsonSafe(value) {
+  try {
+    return JSON.parse(JSON.stringify(value));
+  } catch {
+    return null;
+  }
+}
+
+function canonicalJsonHash(value) {
+  const safe = jsonSafe(value);
+  if (safe == null || typeof safe !== "object" || Array.isArray(safe)) return null;
+  return sha256Hex(canonicalStable(safe));
+}
+
+// Exported so an executor can reproduce the binding locally without copying
+// the canonicalisation rules. `intent` is the normalized object returned by
+// /preflight; `request` is the exact request body the gate received.
+export function intentHash(intent) {
+  const hash = canonicalJsonHash(intent);
+  if (!hash) throw new Error("intent must be a JSON object");
+  return hash;
+}
+
+export function preflightRequestHash(request) {
+  const hash = canonicalJsonHash(request);
+  if (!hash) throw new Error("request must be a JSON object");
+  return hash;
+}
+
+function hashBinding(value, reason) {
+  const safe = jsonSafe(value);
+  if (safe == null || typeof safe !== "object" || Array.isArray(safe)) {
+    return { error: reason };
+  }
+  return { safe };
+}
+
+export function verifyReceipt(receipt, { now = Date.now(), intent, request } = {}) {
   if (!receipt || typeof receipt !== "object" || Array.isArray(receipt)) {
     return { valid: false, reason: "missing_receipt" };
   }
   const { signature, ...payload } = receipt;
   if (payload.spec !== RECEIPT_SPEC) return { valid: false, reason: "unknown_spec" };
-  if (typeof signature !== "string" || !/^[0-9a-f]{64}$/i.test(signature)) {
+  if (typeof signature !== "string" || !HEX64_RE.test(signature)) {
     return { valid: false, reason: "missing_signature" };
   }
   const expected = createHmac("sha256", RECEIPT_SECRET).update(canonicalStable(payload)).digest("hex");
   const a = Buffer.from(signature, "hex");
   const b = Buffer.from(expected, "hex");
   if (a.length !== b.length || !timingSafeEqual(a, b)) return { valid: false, reason: "bad_signature" };
+  if (typeof payload.intentHash !== "string" || !HEX64_RE.test(payload.intentHash)) {
+    return { valid: false, reason: "missing_intent_hash" };
+  }
 
   const expires = Date.parse(payload.expiresAt);
   if (!Number.isFinite(expires)) return { valid: false, reason: "bad_expiry" };
   if (expires <= now) return { valid: false, reason: "expired", expiredAt: payload.expiresAt };
+
+  // Optional caller-side binding. Without it the old `{receipt}` call keeps
+  // working, but the result says it was not bound to local intent.
+  let intentBound = false;
+  if (intent !== undefined) {
+    const bound = hashBinding(intent, "invalid_intent");
+    if (bound.error) return { valid: false, reason: bound.error };
+    if (payload.kind !== bound.safe.kind) return { valid: false, reason: "intent_mismatch" };
+    const got = intentHash(bound.safe);
+    if (got !== payload.intentHash) return { valid: false, reason: "intent_mismatch" };
+    intentBound = true;
+  }
+
+  // Stronger binding: the caller re-supplies the original request body. The
+  // gate signed a hash of exactly that body, so no normalization has to be
+  // reimplemented here and no field can be changed after the gate ran.
+  let requestBound = false;
+  if (request !== undefined) {
+    if (typeof payload.requestHash !== "string" || !HEX64_RE.test(payload.requestHash)) {
+      return { valid: false, reason: "missing_request_hash" };
+    }
+    const bound = hashBinding(request, "invalid_request");
+    if (bound.error) return { valid: false, reason: bound.error };
+    const got = preflightRequestHash(bound.safe);
+    if (got !== payload.requestHash) return { valid: false, reason: "request_mismatch" };
+    requestBound = true;
+  }
 
   return {
     valid: true,
@@ -621,15 +693,18 @@ export function verifyReceipt(receipt, { now = Date.now() } = {}) {
     verdict: payload.verdict,
     kind: payload.kind,
     intentHash: payload.intentHash,
+    requestHash: payload.requestHash ?? null,
+    intentBound,
+    requestBound,
     blockNumber: payload.blockNumber,
     blockHash: payload.blockHash,
     expiresAt: payload.expiresAt,
   };
 }
 
-const NOTE = "A PASS is not a guarantee, a counterparty audit, or a prompt-injection filter. It means the checks listed in `checked` passed at this block; `notChecked` lists what was not examined, including tool metadata and response content. Receipts expire and are bound to the exact intent.";
+const NOTE = "A PASS is not a guarantee, a counterparty audit, or a prompt-injection filter. It means the checks listed in `checked` passed at this block; `notChecked` lists what was not examined, including tool metadata and response content. Receipts expire and are bound to the exact intent and request; older receipts without requestHash are unbound.";
 
-function finish({ kind, reasons, checked, notChecked, intent, block: chainBlock, simulation, decoded, payerBalance, ttlSeconds, now, structuralOnly = false, structuralOnlyReasons = [] }) {
+function finish({ kind, reasons, checked, notChecked, intent, request, block: chainBlock, simulation, decoded, payerBalance, ttlSeconds, now, structuralOnly = false, structuralOnlyReasons = [] }) {
   const reasonsFinal = [...reasons];
   let blockAgeSeconds = null;
   if (chainBlock?.timestamp != null) {
@@ -644,7 +719,8 @@ function finish({ kind, reasons, checked, notChecked, intent, block: chainBlock,
   const verdict = verdictOf(reasonsFinal);
   const checkedFinal = unique(checked);
   const notCheckedFinal = unique(notChecked);
-  const intentHash = sha256Hex(canonicalStable(intent));
+  const boundIntentHash = intentHash(intent);
+  const boundRequestHash = preflightRequestHash(request);
   const structuralReasonsFinal = unique(structuralOnlyReasons);
   let summary = summaryOf(verdict, reasonsFinal);
   if (structuralOnly) {
@@ -653,7 +729,8 @@ function finish({ kind, reasons, checked, notChecked, intent, block: chainBlock,
   const receipt = makeReceipt({
     kind,
     verdict,
-    intentHash,
+    intentHash: boundIntentHash,
+    requestHash: boundRequestHash,
     block: chainBlock,
     ttlSeconds,
     checked: checkedFinal,
@@ -674,7 +751,8 @@ function finish({ kind, reasons, checked, notChecked, intent, block: chainBlock,
     checked: checkedFinal,
     notChecked: notCheckedFinal,
     intent,
-    intentHash,
+    intentHash: boundIntentHash,
+    requestHash: boundRequestHash,
     block: chainBlock ? {
       number: Number(chainBlock.number),
       hash: chainBlock.hash,
@@ -1003,6 +1081,7 @@ async function paymentPreflight(body, { clientFactory, now }) {
     checked,
     notChecked,
     intent,
+    request: body,
     block: blockData,
     payerBalance,
     ttlSeconds: ttlOf(body),
@@ -1196,6 +1275,7 @@ async function transactionPreflight(body, { clientFactory, now }) {
     checked,
     notChecked,
     intent,
+    request: body,
     block: chainBlock,
     simulation,
     decoded,

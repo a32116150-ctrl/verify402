@@ -32,7 +32,7 @@ const {
   bannedClaimHits,
 } = await import("../src/contract.mjs");
 const {
-  recordSettlement, requestHash, lookupRecovery,
+  recordSettlement, requestHash, lookupRecovery, reserveRecovery, releaseRecovery,
   IDEMPOTENCY_TTL_MS, IDEMPOTENCY_MAX_REPLAYS,
 } = await import("../src/recovery.mjs");
 const { app } = await import("../src/server.mjs");
@@ -52,6 +52,54 @@ async function check(name, fn) {
   } catch (e) {
     failed++;
     console.log(`  ${name} ... FAIL\n      ${e.message}`);
+  }
+}
+
+async function withReadinessRpc({ chainId, rpcChainId, blockNumber = 42 }, fn) {
+  const rpc = http.createServer((req, res) => {
+    let raw = "";
+    req.on("data", (chunk) => { raw += chunk; });
+    req.on("end", () => {
+      let id = 1;
+      let method = "";
+      try {
+        const parsed = JSON.parse(raw);
+        id = parsed.id ?? id;
+        method = parsed.method;
+      } catch { /* keep defaults */ }
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify({
+        jsonrpc: "2.0",
+        id,
+        result: method === "eth_chainId"
+          ? `0x${rpcChainId.toString(16)}`
+          : `0x${blockNumber.toString(16)}`,
+      }));
+    });
+  });
+  const port = await new Promise((resolve, reject) => {
+    rpc.once("error", reject);
+    rpc.listen(0, "127.0.0.1", () => resolve(rpc.address().port));
+  });
+  const previous = {
+    offline: process.env.TEST_OFFLINE,
+    url: process.env.READY_RPC_URL,
+    chain: process.env.READY_CHAIN_ID,
+  };
+  process.env.TEST_OFFLINE = "0";
+  process.env.READY_RPC_URL = `http://127.0.0.1:${port}`;
+  process.env.READY_CHAIN_ID = String(chainId);
+  try {
+    await fn();
+  } finally {
+    if (previous.offline === undefined) delete process.env.TEST_OFFLINE;
+    else process.env.TEST_OFFLINE = previous.offline;
+    if (previous.url === undefined) delete process.env.READY_RPC_URL;
+    else process.env.READY_RPC_URL = previous.url;
+    if (previous.chain === undefined) delete process.env.READY_CHAIN_ID;
+    else process.env.READY_CHAIN_ID = previous.chain;
+    rpc.closeAllConnections?.();
+    await new Promise((resolve) => rpc.close(resolve));
   }
 }
 
@@ -263,6 +311,38 @@ await check("409: a settled idempotency key with changed content conflicts befor
   honesty(r.body);
 });
 
+await check("409: a reserved idempotency key rejects a concurrent request before work", async () => {
+  const key = randomUUID();
+  const body = { chainId: 1, target: "WETH" };
+  const rh = requestHash("/verify", body);
+  const reservation = reserveRecovery({ key, requestHash: rh });
+  assert.ok(reservation.token, "test reservation exists");
+  try {
+    const r = await post("/verify", body, { "x-idempotency-key": key });
+    assert.equal(r.status, 409);
+    assert.equal(r.body.error, "recovery_conflict");
+    assert.equal(r.body.code, "operation_in_flight");
+    assert.equal(r.body.conflict, "operation_in_flight");
+    assert.equal(r.headers.get("retry-after"), "1");
+    honesty(r.body);
+  } finally {
+    releaseRecovery(key, reservation.token);
+  }
+});
+
+await check("409: a staged settlement blocks a duplicate request", async () => {
+  const key = randomUUID();
+  const body = { chainId: 1, target: "WETH" };
+  const rh = requestHash("/verify", body);
+  recordSettlement(key, { verdict: "no_edge" }, null, { requestHash: rh });
+  const r = await post("/verify", body, { "x-idempotency-key": key });
+  assert.equal(r.status, 409);
+  assert.equal(r.body.error, "recovery_conflict");
+  assert.equal(r.body.code, "settlement_pending");
+  assert.equal(r.body.conflict, "operation_in_flight");
+  honesty(r.body);
+});
+
 await check("429: preflight rate limit is typed and carries a request id", async () => {
   let last;
   for (let i = 0; i < 62; i++) {
@@ -297,6 +377,50 @@ await check("503: /ready is a deep check and fails closed when the chain is unre
   assert.equal(typeof body.requestId, "string");
   assert.deepEqual(Object.keys(body).sort(), [...READY_FAILURE_KEYS].sort());
   assert.ok(!JSON.stringify(body).includes("FAKE_RPC_SECRET_DO_NOT_LEAK"));
+});
+
+await check("503: /ready supports READY_CHAIN_ID=84532 and fails closed offline", async () => {
+  const previous = process.env.READY_CHAIN_ID;
+  process.env.READY_CHAIN_ID = "84532";
+  try {
+    const r = await fetch(`${base}/ready`);
+    const body = await r.json();
+    assert.equal(r.status, 503, "the closed offline RPC must fail closed");
+    assert.equal(body.chainId, 84532, "the request must reach the Base Sepolia readiness path");
+    assert.equal(body.ready, false);
+    assert.deepEqual(Object.keys(body).sort(), [...READY_FAILURE_KEYS].sort());
+    assert.ok(!/FAKE_RPC_SECRET_DO_NOT_LEAK|https?:\/\//.test(JSON.stringify(body)),
+      "readiness errors must not echo the RPC URL");
+  } finally {
+    if (previous === undefined) delete process.env.READY_CHAIN_ID;
+    else process.env.READY_CHAIN_ID = previous;
+  }
+});
+
+await check("200: /ready verifies eth_chainId and returns the block", async () => {
+  await withReadinessRpc({ chainId: 42161, rpcChainId: 42161, blockNumber: 42 }, async () => {
+    const r = await fetch(`${base}/ready`);
+    const body = await r.json();
+    assert.equal(r.status, 200);
+    assert.equal(body.ok, true);
+    assert.equal(body.ready, true);
+    assert.equal(body.chainId, 42161);
+    assert.equal(body.blockNumber, 42);
+    assert.deepEqual(Object.keys(body).sort(), [...READY_OK_KEYS].sort());
+  });
+});
+
+await check("503: /ready rejects an RPC on the wrong chain", async () => {
+  await withReadinessRpc({ chainId: 8453, rpcChainId: 1 }, async () => {
+    const r = await fetch(`${base}/ready`);
+    const body = await r.json();
+    assert.equal(r.status, 503);
+    assert.equal(body.error, "rpc_unavailable");
+    assert.equal(body.ready, false);
+    assert.equal(body.chainId, 8453);
+    assert.deepEqual(Object.keys(body).sort(), [...READY_FAILURE_KEYS].sort());
+    assert.ok(!/https?:\/\/|FAKE_RPC_SECRET_DO_NOT_LEAK/.test(JSON.stringify(body)));
+  });
 });
 
 await check("/health stays liveness-only and advertises /ready", async () => {

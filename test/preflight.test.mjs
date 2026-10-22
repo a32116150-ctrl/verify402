@@ -4,7 +4,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { encodeFunctionData, parseAbi } from "viem";
-import { preflight, verifyReceipt, PreflightError } from "../src/preflight.mjs";
+import { preflight, verifyReceipt, intentHash, PreflightError } from "../src/preflight.mjs";
 
 const NOW = 1_700_000_000_000;
 const FROM = "0x1111111111111111111111111111111111111111";
@@ -331,6 +331,73 @@ test("receipt: tampering invalidates the signature and expiry is enforced", asyn
 test("receipt: a missing or unknown receipt is rejected", () => {
   assert.equal(verifyReceipt(null).valid, false);
   assert.equal(verifyReceipt({ spec: "something-else", signature: "00" }).reason, "unknown_spec");
+});
+
+test("H-8: a receipt verifies only against the exact intent and request it covered", async () => {
+  const body = payment();
+  const out = await run(body);
+
+  const bound = verifyReceipt(out.receipt, { now: NOW, intent: out.intent, request: body });
+  assert.equal(bound.valid, true);
+  assert.equal(bound.reason, null);
+  assert.equal(bound.intentBound, true);
+  assert.equal(bound.requestBound, true);
+  assert.equal(bound.intentHash, intentHash(out.intent));
+  assert.equal(bound.requestHash, out.receipt.requestHash);
+
+  // A changed request field must fail even when the gate's normalized intent
+  // is supplied: the signed request hash covers the caller's original body.
+  const changedBody = {
+    ...body,
+    payment: { ...body.payment, amount: "20000" },
+  };
+  assert.equal(
+    verifyReceipt(out.receipt, { now: NOW, intent: out.intent, request: changedBody }).reason,
+    "request_mismatch",
+  );
+
+  // A changed normalized intent must fail independently.
+  const changedIntent = {
+    ...out.intent,
+    payment: { ...out.intent.payment, amount: "20000" },
+  };
+  assert.equal(
+    verifyReceipt(out.receipt, { now: NOW, intent: changedIntent, request: body }).reason,
+    "intent_mismatch",
+  );
+
+  // A missing caller field is not a wildcard.
+  const missingField = { ...body, payment: { ...body.payment } };
+  delete missingField.payment.payTo;
+  assert.equal(
+    verifyReceipt(out.receipt, { now: NOW, request: missingField }).reason,
+    "request_mismatch",
+  );
+
+  // The old form stays valid, but it explicitly says it was not bound.
+  const legacy = verifyReceipt(out.receipt, { now: NOW });
+  assert.equal(legacy.valid, true);
+  assert.equal(legacy.intentBound, false);
+  assert.equal(legacy.requestBound, false);
+
+  assert.equal(verifyReceipt(out.receipt, { now: NOW, intent: null }).reason, "invalid_intent");
+  assert.equal(verifyReceipt(out.receipt, { now: NOW, request: [] }).reason, "invalid_request");
+  assert.equal(
+    verifyReceipt(out.receipt, { now: NOW, intent: { ...out.intent, kind: "transaction" } }).reason,
+    "intent_mismatch",
+  );
+});
+
+test("H-8: expired receipts fail even when the intent and request match", async () => {
+  const body = payment();
+  const out = await run(body);
+  const expired = verifyReceipt(out.receipt, {
+    now: NOW + 10 * 60 * 1000,
+    intent: out.intent,
+    request: body,
+  });
+  assert.equal(expired.valid, false);
+  assert.equal(expired.reason, "expired");
 });
 
 // --- H-4: transaction chainId is mandatory and typed ------------------------
