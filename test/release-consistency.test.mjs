@@ -536,10 +536,10 @@ test("every advertised paid MCP tool is bound to one paid route in the bridge", 
   assert.equal(new Set(values).size, values.length, "each paid tool must have a distinct route");
 });
 
-test("the release runbook sequences candidate, artifact, npm, registry, then deploy", () => {
+test("the release runbook sequences validation, artifact, npm, registry, then deploy", () => {
   const runbook = read("PUBLISH_STEPS_FOR_ME.md");
   const steps = [
-    "Validate and inspect the candidate",
+    "Validate and inspect the release",
     "Create and verify the npm 1.0.5 artifact",
     "Publish npm 1.0.5",
     "only when the npm 1.0.5 artifact exists",
@@ -554,7 +554,15 @@ test("the release runbook sequences candidate, artifact, npm, registry, then dep
     previous = index;
   }
   assert.doesNotMatch(runbook, /missing\s+(registry\s+)?default/i, "obsolete missing-default instruction must be gone");
-  assert.match(runbook, /unpublished `1\.0\.5` candidate|unpublished 1\.0\.5 candidate/i);
+  assert.doesNotMatch(
+    runbook,
+    /Status today: the working tree is an \*\*unpublished `1\.0\.5` candidate\*\*/i,
+    "the runbook must not describe the published release as a current unpublished candidate",
+  );
+  assert.match(runbook, /npm `verify402-mcp@1\.0\.5` is \*\*published\*\*/i);
+  assert.match(runbook, /MCP Registry publication of `1\.0\.5` is \*\*pending and unverified\*\*/i);
+  assert.match(runbook, /Render deployment of `1\.0\.5` is \*\*pending and unverified\*\*/i);
+  assert.match(runbook, /Transition the release metadata to published 1\.0\.5 — completed/);
 });
 
 test("post-deploy is testnet-only and rejects unsupported modes before network access", () => {

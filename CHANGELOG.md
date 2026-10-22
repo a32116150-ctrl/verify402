@@ -3,11 +3,13 @@
 All notable changes to verify402. This file records repository changes; it does
 not imply a deploy or an npm publish.
 
-## Unreleased — 1.0.5 (source only, not published)
+## 1.0.5 — 2026-10-22
 
-This release is a **source-tree** release. No npm version, git tag, GitHub
-release, MCP Registry entry, or deployment was produced for it. The published
-npm package is still `verify402-mcp@1.0.4`, which is immutable.
+`verify402-mcp@1.0.5` is published to npm. The package is immutable; do not
+republish, overwrite, or unpublish it. No git tag, GitHub release, MCP Registry
+entry, or deployment is implied by the npm publication: the MCP Registry entry
+and the Render deployment remain pending and unverified. The previously
+published `verify402-mcp@1.0.4` remains immutable.
 
 ### Security
 
@@ -49,7 +51,7 @@ npm package is still `verify402-mcp@1.0.4`, which is immutable.
 
 ### Release metadata
 
-- The source version is `1.0.5` consistently across the package manifest, the
+- The release version is `1.0.5` consistently across the package manifest, the
   lockfile, `server.json`, the service manifest, OpenAPI, the version module,
   the site, and the release-consistency assertions.
 - The registry and manifest metadata now describe the real 1.0.5 default
@@ -135,11 +137,11 @@ npm package is still `verify402-mcp@1.0.4`, which is immutable.
 
 ### `verify402-mcp` 1.0.4 release status
 
-`verify402-mcp@1.0.4` was published to npm on 2026-10-21 and is the `latest`
-tag. Do not publish 1.0.4 again and do not overwrite 1.0.3; npm versions are
-immutable. The patch was backward compatible: no MCP tool names, inputs, or
-existing response fields were removed, and it added the missing `paid-call.mjs`
-package file.
+`verify402-mcp@1.0.4` was published to npm on 2026-10-21 and was the `latest`
+tag until `1.0.5`. Do not publish 1.0.4 again and do not overwrite 1.0.3; npm
+versions are immutable. The patch was backward compatible: no MCP tool names,
+inputs, or existing response fields were removed, and it added the missing
+`paid-call.mjs` package file.
 
 The focused repair pass reconciles local package and lockfile metadata, the
 service manifest, OpenAPI, `/info`, the `/mcp` page, and onboarding docs at

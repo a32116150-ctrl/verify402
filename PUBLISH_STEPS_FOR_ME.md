@@ -1,17 +1,19 @@
-# Release verify402-mcp 1.0.5 (candidate) — for me
+# Release verify402-mcp 1.0.5 — for me
 
-Status today: the working tree is an **unpublished `1.0.5` candidate**.
+Status: npm `verify402-mcp@1.0.5` is **published** (gitHead
+`fc1654964969f340a32c0420d5b5a3852f055310`). The repository metadata transition
+is local commit `17ee189a20d1c601f5a4b4077882d74d609c1cc5`.
 
-- npm `verify402-mcp@1.0.4` is published and immutable.
-- The MCP Registry currently serves its earlier reference; it does **not** carry a
-  `1.0.5` entry.
-- The live service has not been validated against this candidate.
+- npm `verify402-mcp@1.0.4` remains published and immutable.
+- MCP Registry publication of `1.0.5` is **pending and unverified**; the
+  registry does **not** yet carry a `1.0.5` entry.
+- Render deployment of `1.0.5` is **pending and unverified**; the live service
+  has not been validated against this release.
 
-Nothing below has been performed by the repair pass. Do these steps only after
-you approve them, and in this order. Each step is a gate: do not start the next
-one until the previous one has been verified. No command here runs
-automatically: the first push is the traceability gate in step 4, and the
-deploy push is step 10.
+The npm artifact and metadata transition are complete. Steps 8–10 below remain
+gated and must not run automatically. Each remaining step is a gate: do not
+start the next one until the previous one has been verified. The deploy push is
+step 10.
 
 ## 1. Account for the immutable npm 1.0.4 package
 
@@ -22,9 +24,10 @@ npm view verify402-mcp version dist.tarball gitHead
 npm view verify402-mcp@1.0.4 version
 ```
 
-Expected: `1.0.4`, a registry tarball URL, and a published `gitHead`. npm
-`1.0.4` is immutable and identifies commit `248923f` as its source. Do **not**
-republish, overwrite, or unpublish it.
+Expected: `1.0.5` as the current latest, plus a resolvable `1.0.4` with its
+registry tarball URL and published `gitHead`. npm `1.0.4` is immutable and
+identifies commit `248923f` as its source. Do **not** republish, overwrite, or
+unpublish it.
 
 The working tree intentionally contains post-1.0.4 repair changes: the bridge
 default is now Base Sepolia testnet and the README/env examples are testnet.
@@ -34,11 +37,11 @@ it as permission to republish 1.0.4. The published package's built-in runtime
 default is Base mainnet (`eip155:8453`) and remains safe for the public demo
 only when the client explicitly sets `VERIFY402_NETWORKS=eip155:84532`.
 
-If the npm runtime itself should carry the testnet default, that is what the
-`1.0.5` candidate does. Do not attach the new source to the existing `1.0.4`
+If the npm runtime itself should carry the testnet default, that is what
+`1.0.5` does. Do not attach the new source to the existing `1.0.4`
 version.
 
-## 2. Validate and inspect the candidate
+## 2. Validate and inspect the release
 
 All of these are offline and make no network request:
 
@@ -54,12 +57,12 @@ Expected: the release identity is `1.0.5` in the source metadata, every offline
 test passes, and discovery validation passes. Stop on any failure.
 
 Review the public release surfaces before continuing. They must describe
-`1.0.5` as an unpublished candidate and must not claim that npm or the registry
+`1.0.5` as published on npm and must not claim that the MCP Registry or Render
 already serves it:
 
 - `src/site/mcp.html` (the public `/mcp` page)
 - the service manifest served at `/.well-known/verify402.json`
-- `server.json` (the registry entry for the candidate)
+- `server.json` (the registry entry for the published 1.0.5 release)
 - `README.md`, `examples/ONBOARDING.md`, `mcp-bridge/llms-install.md`
 
 ## 3. Review and commit the repository changes
@@ -71,7 +74,7 @@ git status --short
 git diff
 ```
 
-Commit the reviewed files, including the `1.0.5` candidate metadata, testnet
+Commit the reviewed files, including the `1.0.5` release metadata, testnet
 demo docs, and the release-consistency and bridge-tool tests. Do not include
 `.env` files, secrets, generated tarballs, or `VERIFY402_HANDOFF.md` unless you
 intend to publish that review.
@@ -167,9 +170,9 @@ Then verify, from the tarball contents:
 - importing `package/index.mjs` does not load a `.env` file;
 - the MCP tool binding maps each paid tool to exactly one paid route.
 
-Delete the local tarball after inspection. Nothing is published yet.
+Delete the local tarball after inspection.
 
-## 6. Publish npm 1.0.5 — only after explicit approval
+## 6. Publish npm 1.0.5 — completed
 
 Step 4 must have made the exact commit being published publicly traceable, and
 step 5 must have verified the artifact. Confirm the commit first:
@@ -193,15 +196,12 @@ Expected: `1.0.5`, a resolvable tarball, and a `gitHead` equal to the SHA above
 that resolves on GitHub. Do not publish from an unpushed commit. npm versions
 are immutable: never republish, overwrite, or unpublish `1.0.5` after this step.
 
-## 7. Transition the release metadata to published 1.0.5 — separate approval, only after step 6 is verified
+## 7. Transition the release metadata to published 1.0.5 — completed
 
-Do not start this step until step 6 has printed `1.0.5` for both the latest
-version and the pinned version. Before that point the tree must keep describing
-`1.0.5` as an unpublished candidate. This metadata update is its own approval
-gate; the npm publication does not approve it.
-
-Once the npm package exists, update the repository from `candidate-unpublished`
-to "published `1.0.5`" in one metadata commit:
+Step 6 printed `1.0.5` for both the latest version and the pinned version. The
+repository was updated from `candidate-unpublished` to "published `1.0.5`" in
+local commit `17ee189a20d1c601f5a4b4077882d74d609c1cc5`. The checklist below is
+the record of that transition:
 
 - `src/version.mjs` — set `PUBLISHED_VERSION = "1.0.5"` and change
   `RELEASE_STATUS` from the candidate value to the published/released value.
@@ -218,8 +218,8 @@ to "published `1.0.5`" in one metadata commit:
   version unpublished.
 - `test/release-consistency.test.mjs` — re-point the published-version
   assertions and the "never present 1.0.5 as already published" checks at the
-  new state. The current tests pin `1.0.4` and are expected to fail until this
-  update; that failure is the guard, not a reason to weaken the test.
+  new state. The prior tests pinned `1.0.4` and failed until this update; that
+  failure was the guard, not a reason to weaken the test.
 
 Re-run the offline gates, inspect the diff, and commit with explicit paths:
 
@@ -245,7 +245,7 @@ work around it.
 
 ## 8. Publish the MCP Registry entry — separate approval, only when the npm 1.0.5 artifact exists
 
-Steps 6 and 7 must both be complete and verified first. This registry
+Step 6 is complete; step 7's metadata commit exists locally. This registry
 publication is its own approval gate; npm publication and the metadata update
 do not approve it. The checked-in
 `server.json` must already describe a **published** `1.0.5`: `VERIFY402_NETWORKS`
@@ -348,7 +348,6 @@ post-deploy checks are sufficient to verify the release surfaces.
 - **npm 1.0.5 exists but metadata still says unpublished:** stop. Complete the
   metadata transition in step 7 and publish the registry entry only from that
   state; do not deploy a tree that calls the published version unpublished.
-- **A public page claims 1.0.5 is published:** after step 6 this is only true
-  once step 7 has updated the tree; before that, revert the claim. The source
-  tree is a candidate until step 6 succeeds and the step 7 metadata commit is
-  in place.
+- **A public page claims 1.0.5 is published:** that is true for npm now that
+  the metadata commit is in place. It must not also claim that the MCP Registry
+  entry or the Render deployment is complete until those gates are verified.

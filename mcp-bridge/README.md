@@ -10,13 +10,12 @@ dedicated hot wallet funded with **Base Sepolia testnet USDC** (`eip155:84532`).
 The analysis reads mainnet chain data, but the demo never settles mainnet
 payments. The bridge never signs or sends a trade.
 
-> **Published package note:** npm `verify402-mcp@1.0.4` is immutable and its
-> published README predates this source-tree testnet default. Its built-in
-> runtime default is Base mainnet (`eip155:8453`). The explicit
-> `VERIFY402_NETWORKS=eip155:84532` block below is required with that package
-> for the public demo; a future patch release is needed to update the npm page
-> and change the built-in default. This source tree is `1.0.5` and already
-> defaults to Base Sepolia testnet, but `1.0.5` is not published yet.
+> **Published package note:** `verify402-mcp@1.0.5` is published to npm and
+> defaults paid calls to Base Sepolia testnet (`eip155:84532`) for the public
+> demo. Base mainnet (`eip155:8453`) requires an explicit `VERIFY402_NETWORKS`
+> opt-in in a separate deployment and is not enabled by this release. The
+> previously published `1.0.4` package is immutable and used Base mainnet by
+> default; do not republish or overwrite either version.
 
 ## Tools
 
@@ -185,7 +184,7 @@ Once configured, your agent automatically sees the tools in its context. You can
   proves that the requirement it signs is the exact object the server sent.
 - The allowlist can be narrowed or pointed at another deployment with
   `VERIFY402_NETWORKS`, `VERIFY402_PAY_TO`, and `VERIFY402_RESOURCE_PREFIX`.
-  The source-tree defaults are Base Sepolia testnet (`eip155:84532`) and the
+  The bridge defaults are Base Sepolia testnet (`eip155:84532`) and the
   public verify402 payee. `VERIFY402_NETWORKS` is constrained to the supported
   map (`eip155:84532`, `eip155:8453`); an explicitly empty value fails closed
   instead of falling back to a default.
