@@ -11,7 +11,6 @@
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![verify402 MCP server](https://mcprush.com/badge/verify402-mcp/card.svg)](https://mcprush.com/to/verify402-mcp?ref=badge)
 
-
 > **Demo scope:** the public demo settles payments in **Base Sepolia testnet USDC**. The analysis itself reads mainnet chain data (Ethereum, Arbitrum, Base). This is not a mainnet payment service, and no testnet payment is mainnet revenue.
 
 ---
