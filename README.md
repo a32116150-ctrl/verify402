@@ -36,6 +36,8 @@ curl -sS -X POST https://verify402.onrender.com/preflight \
   }'
 ```
 
+[![verify402 MCP server](https://mcprush.com/badge/verify402-mcp/card.svg)](https://mcprush.com/to/verify402-mcp?ref=badge)
+
 This example uses the **public demo's Base Sepolia testnet USDC** (`eip155:84532`), not mainnet. The free gate is only validating the request shape; it is not a payment. The paid analysis routes read mainnet chain data (Ethereum, Arbitrum, Base), but the demo does not settle mainnet payments.
 
 Returns `PASS` / `CAUTION` / `BLOCK`, typed reasons, exact `checked` and `notChecked` lists, pinned block number, and a verifiable 90-second HMAC receipt.
