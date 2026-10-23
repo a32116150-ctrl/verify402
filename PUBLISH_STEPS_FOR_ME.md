@@ -8,12 +8,12 @@ Status: npm `verify402-mcp@1.0.6` is **published** (gitHead
 - npm `verify402-mcp@1.0.5` remains published and immutable; `1.0.4` is also immutable.
 - MCP Registry publication of `1.0.6` is **published and verified**; the
   registry carries a `1.0.6` entry with `isLatest: true`.
-- Render deployment of `1.0.6` is **pending and unverified**; the live service
-  has not been validated against this release.
+- Render deployment of `1.0.6` is **deployed and verified** at
+  `2026-10-23T22:20Z`; `/info` reports `1.0.6` and the free-only post-deploy
+  check passed 29/29.
 
-The npm artifact, registry entry, and metadata transition are complete. Step
-10 (Render deployment) remains gated and must not run automatically. The deploy
-push is step 10.
+All release gates are complete. The npm artifact, registry entry, metadata,
+and Render deployment now agree on `1.0.6`.
 
 ## 1. Account for the immutable npm 1.0.5 package
 
@@ -267,7 +267,7 @@ Verified: a `server` object with `version: "1.0.6"`, the Base Sepolia default
 in its environment-variable metadata, `status: active`, `isLatest: true`, and
 `publishedAt: 2026-10-23T22:12:34.131712Z`.
 
-## 10. Deploy only after a separate approval
+## 10. Deploy only after a separate approval — completed
 
 Deployment is a separate decision. Step 4 may have pushed the approved commit to
 a branch that was confirmed non-deploying, or to `master` with auto-deploy off;
@@ -313,6 +313,10 @@ Do not assert that the live service still reports its previous version after a
 push unless you have verified that with `/info` or `/health`. With auto-deploy
 on, the push changes the live service immediately, and a green post-deploy run
 is the only evidence that it succeeded.
+
+Verified on 2026-10-23 at ~22:20 UTC: all 29 checks passed against the live
+service, including `/info` version `1.0.6`, testnet mode, and the published
+install pin.
 
 Do not make a paid call as part of this checklist. The free gate and the
 post-deploy checks are sufficient to verify the release surfaces.

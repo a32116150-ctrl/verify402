@@ -30,6 +30,14 @@ already using the public server.
   `obligation state (idempotency key, cumulative spend, grant balance)`.
   Neither is implemented as a ledger or registry.
 
+### Release metadata
+
+- npm: `verify402-mcp@1.0.6`, `gitHead
+  954702575b9df58a08e8dbdac45d680ecf3cc365`.
+- MCP Registry: `1.0.6` active and latest
+  (`publishedAt: 2026-10-23T22:12:34.131712Z`).
+- Render: `/info` reports `1.0.6`; free-only post-deploy check passed 29/29.
+
 ## 1.0.5 — 2026-10-22
 
 `verify402-mcp@1.0.5` is published to npm. The package is immutable; do not

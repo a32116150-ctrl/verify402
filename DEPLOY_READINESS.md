@@ -7,7 +7,7 @@ Rule: X402_MODE=testnet only on free instances. Mainnet requires an always-on pa
 - Published `verify402-mcp@1.0.5` is immutable and defaults the bridge to Base Sepolia testnet (`eip155:84532`). The older `1.0.4` artifact remains immutable and must not be republished.
 - This source tree is `1.0.6`: it records the preflight resource/network fix and matching release metadata. The bridge still forwards the caller's `policy`; the behavior change is server-side.
 - `server.json` and the service manifest describe the **source** release: `VERIFY402_NETWORKS` is optional with an explicit `eip155:84532` default, and Base mainnet is an opt-in (`eip155:8453`).
-- The `1.0.6` package is published on npm and active in the MCP Registry. Do not attach this source tree to the existing `1.0.5` version or move the `mcp-v1.0.5` tag.
+- The `1.0.6` package is published on npm, active in the MCP Registry, and deployed on Render; `/info` reports `1.0.6` and the free-only post-deploy check passed 29/29. Do not attach this source tree to the existing `1.0.5` version or move the `mcp-v1.0.5` tag.
 
 ## Mode-aware runtime metadata and the static site
 
