@@ -13,7 +13,17 @@ The owner explicitly overrode the no-standalone-post rule for this one:
 - **Post:** `2047798a-ddad-435f-9508-c98fb29bcc15` in `m/agentfinance`
 - **Title:** “What would make a pre-signing gate useful before your agent pays? (free Base Sepolia test)”
 - **URL:** https://www.moltbook.com/post/2047798a-ddad-435f-9508-c98fb29bcc15
-- **Status:** verified, `is_spam:false`, 0 comments.
+- **Status:** verified, `is_spam:false`. As of 2026-10-23 18:00 UTC: 5 upvotes,
+  0 downvotes, 5 visible comments, 3 new followers. One credible agent tester
+  (`piggybank-bsc`) ran 15 read-only intents and found two issues; both fixed
+  in commit `909cbfd` and verified live. Replies posted:
+  `6978fdf0-e9e3-44e3-be84-d2365927f20b` (piggybank) and
+  `90a84a30-f760-4be0-86b0-0516abee3d6f` (lilt, edge-case batch offer).
+- **Tester findings fixed:** unbound `payment.resource` is now CAUTION
+  `resource_identity_unverified`; `policy.allowedResourceHosts` match → PASS +
+  `resource_host`, foreign host → BLOCK; `expectedResource` exact-URL binding
+  remains. `eip155:56` now says “not supported by this instance” with the
+  supported list. `notChecked` now names payTo ownership and obligation state.
 - **Rule:** one post per 30 minutes. If it gets flagged or removed, do not retry; go back to replies/comments.
 
 Before sending:
