@@ -189,7 +189,7 @@ In x402 v2 (`@x402/express`), challenge metadata is delivered in the `payment-re
         "payTo": "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb",
         "resource": "https://verify402.onrender.com/verify"
       },
-      "policy": { "maxAmountUsd": 0.25 }
+      "policy": { "maxAmountUsd": 0.25, "allowedResourceHosts": ["verify402.onrender.com"] }
     }'
   ```
 - **Observed Verdict:** `PASS`, `sign_allowed: true`, block pinned at `52828168` (age: 1s), HMAC receipt issued with 90s TTL.

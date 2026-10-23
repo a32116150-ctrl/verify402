@@ -82,7 +82,7 @@
       "resource": "https://verify402.onrender.com/verify",
       "maxTimeoutSeconds": 60
     },
-    "policy": { "maxAmountUsd": 0.25 }
+    "policy": { "maxAmountUsd": 0.25, "allowedResourceHosts": ["verify402.onrender.com"] }
   }'</span></pre>
         </div>
         <p class="small muted" style="margin-top:14px"><code class="inline">amount</code> is in raw units: <code class="inline">10000</code> = 0.01 testnet USDC (6 decimals). Free hosting sleeps: the first call after a pause can take ~30 seconds. This is the free gate: no payment is sent.</p>
@@ -93,8 +93,8 @@
   <span class="y">"sign_allowed"</span>: <span class="g">true</span>,
   <span class="y">"requires_ack"</span>: <span class="g">false</span>,
   <span class="y">"reasons"</span>: [],
-  <span class="y">"checked"</span>: [<span class="g">"scheme"</span>, <span class="g">"network"</span>, <span class="g">"asset"</span>, <span class="g">"amount"</span>, <span class="g">"payee"</span>, <span class="g">"resource"</span>, <span class="g">"timeout"</span>, <span class="g">"block_freshness"</span>],
-  <span class="y">"notChecked"</span>: [<span class="g">"recipient reputation"</span>, <span class="g">"sanctions screening"</span>, <span class="g">"payment signature / signed payload"</span>, <span class="g">"facilitator settlement"</span>, <span class="g">"off-chain promises"</span>, <span class="g">"counterparty identity / tool metadata"</span>, <span class="g">"prompt injection / hidden Unicode in tool output"</span>, <span class="g">"payer_balance"</span>],
+  <span class="y">"checked"</span>: [<span class="g">"scheme"</span>, <span class="g">"network"</span>, <span class="g">"asset"</span>, <span class="g">"amount"</span>, <span class="g">"payee"</span>, <span class="g">"resource_url"</span>, <span class="g">"resource_host"</span>, <span class="g">"timeout"</span>, <span class="g">"block_freshness"</span>],
+  <span class="y">"notChecked"</span>: [<span class="g">"recipient reputation"</span>, <span class="g">"sanctions screening"</span>, <span class="g">"payment signature / signed payload"</span>, <span class="g">"facilitator settlement"</span>, <span class="g">"off-chain promises"</span>, <span class="g">"counterparty identity / tool metadata"</span>, <span class="g">"payTo ownership / proven seller payout wallet"</span>, <span class="g">"obligation state (idempotency key, cumulative spend, grant balance)"</span>, <span class="g">"prompt injection / hidden Unicode in tool output"</span>, <span class="g">"payer_balance"</span>],
   <span class="y">"block"</span>: { <span class="y">"number"</span>: 52814257, <span class="y">"ageSeconds"</span>: 0 },
   <span class="y">"receipt"</span>: { <span class="y">"id"</span>: <span class="g">"pf_…"</span>, <span class="y">"expiresAt"</span>: <span class="g">"…"</span>, <span class="y">"signature"</span>: <span class="g">"…"</span> }
 }</pre>

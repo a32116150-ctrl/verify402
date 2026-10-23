@@ -89,6 +89,15 @@ const NETWORK_ALIASES = {
   "solana-devnet": "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1",
 };
 
+// Used only in the unsupported-network reason. The distinction matters:
+// "eip155:56" is a real x402 chain, but this instance does not measure it.
+// Saying "not a known x402 network" sends the caller to fix the wrong thing.
+const SUPPORTED_NETWORK_HINTS = [
+  ...Object.entries(CHAINS).map(([id, c]) => `eip155:${id} (${c.name})`),
+  ...Object.entries(EXTRA_EVM).map(([id, x]) => `eip155:${id} (${x.name})`),
+  "Solana mainnet/devnet",
+].join(", ");
+
 // An ephemeral secret makes receipts verifiable only inside the current
 // process. That is acceptable for a 90-second gate, and fatal for a
 // multi-instance deployment, so /info says which mode is live.
@@ -365,6 +374,18 @@ function normalizePolicy(p) {
       throw new PreflightError(400, "invalid_policy", "policy.expectedResource must be a URL");
     }
     out.expectedResource = s;
+  }
+  if (p.allowedResourceHosts != null) {
+    if (!Array.isArray(p.allowedResourceHosts)) {
+      throw new PreflightError(400, "invalid_policy", "policy.allowedResourceHosts must be an array");
+    }
+    const hosts = p.allowedResourceHosts.map((x) => String(x).trim().toLowerCase());
+    for (const host of hosts) {
+      if (!/^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/.test(host)) {
+        throw new PreflightError(400, "invalid_policy", "policy.allowedResourceHosts entries must be bare hostnames");
+      }
+    }
+    out.allowedResourceHosts = hosts;
   }
   if (p.forbidUnlimitedApproval != null) out.forbidUnlimitedApproval = Boolean(p.forbidUnlimitedApproval);
   return out;
@@ -784,6 +805,8 @@ async function paymentPreflight(body, { clientFactory, now }) {
     "facilitator settlement",
     "off-chain promises",
     "counterparty identity / tool metadata",
+    "payTo ownership / proven seller payout wallet",
+    "obligation state (idempotency key, cumulative spend, grant balance)",
     "prompt injection / hidden Unicode in tool output",
   ];
 
@@ -802,7 +825,7 @@ async function paymentPreflight(body, { clientFactory, now }) {
   if (!raw.network) {
     reasons.push(block("missing_network", "the payment request does not name a network"));
   } else if (!net || !net.supported) {
-    reasons.push(block("unsupported_network", `network "${raw.network}" is not a known x402 EVM or Solana network`));
+    reasons.push(block("unsupported_network", `network "${raw.network}" is not supported by this instance; supported: ${SUPPORTED_NETWORK_HINTS}`));
   } else {
     checked.push("network");
     if (chainHint != null) {
@@ -914,15 +937,34 @@ async function paymentPreflight(body, { clientFactory, now }) {
       if (!["http:", "https:"].includes(url.protocol)) {
         reasons.push(block("invalid_resource", "resource must be an http(s) URL"));
       } else {
-        checked.push("resource");
+        // Syntax/protocol is not identity. Only claim `resource` or
+        // `resource_host` when a caller policy actually binds the URL or host.
+        checked.push("resource_url");
         if (url.protocol === "http:") {
           reasons.push(caution("non_https_resource", "resource is plain http; the payment request could have been altered in transit"));
         }
+        let resourceBound = false;
         if (policy.expectedResource) {
           const expected = new URL(policy.expectedResource);
           if (url.href.replace(/\/$/, "") !== expected.href.replace(/\/$/, "")) {
             reasons.push(block("resource_mismatch", "resource does not match policy.expectedResource"));
+          } else {
+            checked.push("resource");
+            resourceBound = true;
           }
+        }
+        if (policy.allowedResourceHosts) {
+          const host = url.hostname.toLowerCase();
+          if (!policy.allowedResourceHosts.includes(host)) {
+            reasons.push(block("resource_host_not_allowed", `resource host "${host}" is outside policy.allowedResourceHosts`));
+          } else {
+            checked.push("resource_host");
+            resourceBound = true;
+          }
+        }
+        if (!resourceBound && !policy.expectedResource && !policy.allowedResourceHosts) {
+          notChecked.push("resource identity");
+          reasons.push(caution("resource_identity_unverified", "the payment request names a resource, but no policy binds its identity; confirm the host before paying"));
         }
       }
     } catch {
@@ -1109,6 +1151,7 @@ async function transactionPreflight(body, { clientFactory, now }) {
     "contract audit",
     "off-chain promises",
     "counterparty identity / tool metadata",
+    "obligation state (idempotency key, cumulative spend, grant balance)",
     "prompt injection / hidden Unicode in tool output",
   ];
 

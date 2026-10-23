@@ -49,7 +49,7 @@
         resource: "https://verify402.onrender.com/verify",
         maxTimeoutSeconds: 60
       },
-      policy: { maxAmountUsd: 0.25 }
+      policy: { maxAmountUsd: 0.25, allowedResourceHosts: ["verify402.onrender.com"] }
     }, null, 2),
     block: JSON.stringify({
       kind: "transaction",

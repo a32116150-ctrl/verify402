@@ -276,7 +276,7 @@
       "resource": "https://verify402.onrender.com/verify",
       "maxTimeoutSeconds": 60
     },
-    "policy": { "maxAmountUsd": 0.25 }
+    "policy": { "maxAmountUsd": 0.25, "allowedResourceHosts": ["verify402.onrender.com"] }
   }'</span></pre>
         </div>
         <div style="margin-top:24px">
@@ -286,8 +286,8 @@
   <span class="y">"sign_allowed"</span>: <span class="g">true</span>,
   <span class="y">"requires_ack"</span>: <span class="g">false</span>,
   <span class="y">"reasons"</span>: [],
-  <span class="y">"checked"</span>: [<span class="g">"scheme"</span>, <span class="g">"network"</span>, <span class="g">"asset"</span>, <span class="g">"amount"</span>, <span class="g">"payee"</span>, <span class="g">"resource"</span>, <span class="g">"payer_balance"</span>, <span class="g">"block_freshness"</span>],
-  <span class="y">"notChecked"</span>: [<span class="g">"recipient reputation"</span>, <span class="g">"sanctions screening"</span>, <span class="g">"payment signature / signed payload"</span>, <span class="g">"facilitator settlement"</span>, <span class="g">"off-chain promises"</span>, <span class="g">"counterparty identity / tool metadata"</span>, <span class="g">"prompt injection / hidden Unicode in tool output"</span>],
+  <span class="y">"checked"</span>: [<span class="g">"scheme"</span>, <span class="g">"network"</span>, <span class="g">"asset"</span>, <span class="g">"amount"</span>, <span class="g">"payee"</span>, <span class="g">"resource_url"</span>, <span class="g">"resource_host"</span>, <span class="g">"payer_balance"</span>, <span class="g">"block_freshness"</span>],
+  <span class="y">"notChecked"</span>: [<span class="g">"recipient reputation"</span>, <span class="g">"sanctions screening"</span>, <span class="g">"payment signature / signed payload"</span>, <span class="g">"facilitator settlement"</span>, <span class="g">"off-chain promises"</span>, <span class="g">"counterparty identity / tool metadata"</span>, <span class="g">"payTo ownership / proven seller payout wallet"</span>, <span class="g">"obligation state (idempotency key, cumulative spend, grant balance)"</span>, <span class="g">"prompt injection / hidden Unicode in tool output"</span>],
   <span class="y">"receipt"</span>: {
     <span class="y">"spec"</span>: <span class="g">"verify402/preflight-receipt@1"</span>,
     <span class="y">"intentHash"</span>: <span class="g">"…"</span>,
@@ -338,8 +338,8 @@
           <thead><tr><th>Checked</th><th>Not checked</th></tr></thead>
           <tbody>
             <tr>
-              <td>Network, asset, amount, payee, resource, timeout, authorization window</td>
-              <td>Whether the recipient is a scammer or a sanctioned address</td>
+              <td>Network, asset, amount, payee, resource URL, resource host when policy binds it, timeout, authorization window</td>
+              <td>Whether the recipient is a scammer or a sanctioned address; payTo ownership / proven seller payout wallet</td>
             </tr>
             <tr>
               <td>EVM block freshness: &gt;30s CAUTION, &gt;120s BLOCK</td>
@@ -363,7 +363,7 @@
             </tr>
             <tr>
               <td>Receipt integrity: HMAC, intent hash, block, expiry</td>
-              <td>Counterparty identity, tool metadata, hidden Unicode / prompt injection in tool output, or off-chain promises: “the seller will deliver after you pay”</td>
+              <td>Counterparty identity, tool metadata, obligation state (settled idempotency keys, cumulative spend, grant balance), hidden Unicode / prompt injection in tool output, or off-chain promises: “the seller will deliver after you pay”</td>
             </tr>
           </tbody>
         </table>

@@ -35,7 +35,7 @@ curl -sS -X POST https://verify402.onrender.com/preflight \
       "resource": "https://verify402.onrender.com/verify",
       "maxTimeoutSeconds": 60
     },
-    "policy": { "maxAmountUsd": 0.25 }
+    "policy": { "maxAmountUsd": 0.25, "allowedResourceHosts": ["verify402.onrender.com"] }
   }'
 ```
 
@@ -51,8 +51,8 @@ You should get:
   "verdict": "PASS",
   "sign_allowed": true,
   "requires_ack": false,
-  "checked": ["scheme","network","asset","amount","payee","resource","timeout","block_freshness"],
-  "notChecked": ["recipient reputation","sanctions screening","payment signature / signed payload","facilitator settlement","off-chain promises","payer_balance"],
+  "checked": ["scheme","network","asset","amount","payee","resource_url","resource_host","timeout","block_freshness"],
+  "notChecked": ["recipient reputation","sanctions screening","payment signature / signed payload","facilitator settlement","off-chain promises","counterparty identity / tool metadata","payTo ownership / proven seller payout wallet","obligation state (idempotency key, cumulative spend, grant balance)","prompt injection / hidden Unicode in tool output","payer_balance"],
   "block": { "number": 52814257, "ageSeconds": 0 },
   "receipt": {
     "spec": "verify402/preflight-receipt@1",

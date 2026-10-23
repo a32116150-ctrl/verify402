@@ -35,7 +35,7 @@ curl -sS -X POST https://verify402.onrender.com/preflight \
       "payTo": "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb",
       "resource": "https://verify402.onrender.com/verify"
     },
-    "policy": { "maxAmountUsd": 0.25 }
+    "policy": { "maxAmountUsd": 0.25, "allowedResourceHosts": ["verify402.onrender.com"] }
   }'
 ```
 
@@ -274,8 +274,8 @@ Response: `PASS` / `CAUTION` / `BLOCK`, `reasons[]`, `checked[]`,
   "sign_allowed": true,
   "requires_ack": true,
   "reasons": [{ "code": "unlimited_approval", "severity": "caution", "message": "..." }],
-  "checked": ["scheme", "network", "asset", "amount", "payee", "resource", "payer_balance", "block_freshness"],
-  "notChecked": ["recipient reputation", "sanctions screening", "payment signature / signed payload", "facilitator settlement", "off-chain promises", "counterparty identity / tool metadata", "prompt injection / hidden Unicode in tool output"],
+  "checked": ["scheme", "network", "asset", "amount", "payee", "resource_url", "resource_host", "payer_balance", "block_freshness"],
+  "notChecked": ["recipient reputation", "sanctions screening", "payment signature / signed payload", "facilitator settlement", "off-chain promises", "counterparty identity / tool metadata", "payTo ownership / proven seller payout wallet", "obligation state (idempotency key, cumulative spend, grant balance)", "prompt injection / hidden Unicode in tool output"],
   "receipt": {
     "spec": "verify402/preflight-receipt@1",
     "intentHash": "…",

@@ -56,7 +56,11 @@ function payment(overrides = {}) {
       ...overrides.payment,
     },
     from: FROM,
-    policy: { maxAmountUsd: 0.25, ...overrides.policy },
+    policy: {
+      maxAmountUsd: 0.25,
+      allowedResourceHosts: ["verify402.onrender.com"],
+      ...overrides.policy,
+    },
   };
 }
 
@@ -82,10 +86,67 @@ test("payment: canonical USDC with enough balance is PASS and the receipt verifi
   assert.equal(out.block.ageSeconds, 0);
   assert.ok(out.checked.includes("block_freshness"));
   assert.ok(out.checked.includes("payer_balance"));
+  assert.ok(out.checked.includes("resource_host"));
+  assert.ok(!out.notChecked.includes("resource identity"));
   assert.ok(out.notChecked.includes("sanctions screening"));
   assert.ok(out.notChecked.includes("counterparty identity / tool metadata"));
+  assert.ok(out.notChecked.includes("payTo ownership / proven seller payout wallet"));
+  assert.ok(out.notChecked.includes("obligation state (idempotency key, cumulative spend, grant balance)"));
   assert.ok(out.notChecked.includes("prompt injection / hidden Unicode in tool output"));
   assert.equal(verifyReceipt(out.receipt, { now: NOW }).valid, true);
+});
+
+test("payment: a resource with no binding policy is CAUTION, not a claimed resource check", async () => {
+  const out = await run(payment({
+    payment: { resource: "https://evil.example/steal" },
+    policy: { allowedResourceHosts: undefined },
+  }));
+  assert.equal(out.verdict, "CAUTION");
+  assert.equal(out.sign_allowed, true);
+  assert.equal(out.requires_ack, true);
+  assert.ok(out.checked.includes("resource_url"));
+  assert.ok(!out.checked.includes("resource"));
+  assert.ok(!out.checked.includes("resource_host"));
+  assert.ok(out.notChecked.includes("resource identity"));
+  assert.ok(out.reasons.some((r) => r.code === "resource_identity_unverified"));
+});
+
+test("payment: allowedResourceHosts makes a foreign resource host BLOCK", async () => {
+  const out = await run(payment({ payment: { resource: "https://evil.example/steal" } }));
+  assert.equal(out.verdict, "BLOCK");
+  assert.ok(out.reasons.some((r) => r.code === "resource_host_not_allowed"));
+  assert.ok(out.checked.includes("resource_url"));
+  assert.ok(!out.checked.includes("resource_host"));
+});
+
+test("payment: expectedResource binds the exact resource URL and passes", async () => {
+  const out = await run(payment({
+    policy: {
+      allowedResourceHosts: undefined,
+      expectedResource: "https://verify402.onrender.com/verify",
+    },
+  }));
+  assert.equal(out.verdict, "PASS");
+  assert.ok(out.checked.includes("resource"));
+  assert.ok(!out.checked.includes("resource_host"));
+  assert.ok(!out.notChecked.includes("resource identity"));
+});
+
+test("payment: a malformed allowedResourceHosts entry is a 400", async () => {
+  await assert.rejects(
+    () => run(payment({ policy: { allowedResourceHosts: ["https://verify402.onrender.com"] } })),
+    (e) => e instanceof PreflightError && e.status === 400 && e.code === "invalid_policy",
+  );
+});
+
+test("payment: an unsupported but real network gets a reason that says so", async () => {
+  const out = await run(payment({ payment: { network: "eip155:56" } }));
+  assert.equal(out.verdict, "BLOCK");
+  const reason = out.reasons.find((r) => r.code === "unsupported_network");
+  assert.ok(reason);
+  assert.match(reason.message, /not supported by this instance/);
+  assert.match(reason.message, /eip155:8453/);
+  assert.doesNotMatch(reason.message, /not a known x402/);
 });
 
 test("payment: non-canonical asset is CAUTION; an explicit asset allowlist makes it BLOCK", async () => {
@@ -158,12 +219,13 @@ test("payment: Solana request is validated structurally without an EVM RPC", asy
       resource: "https://verify402.onrender.com/verify",
       maxTimeoutSeconds: 60,
     },
-    policy: { maxAmountUsd: 0.25 },
+    policy: { maxAmountUsd: 0.25, allowedResourceHosts: ["verify402.onrender.com"] },
   }, null);
   assert.equal(out.verdict, "PASS");
   assert.equal(out.block, null);
   assert.ok(out.notChecked.includes("solana slot binding"));
   assert.ok(out.checked.includes("asset"));
+  assert.ok(out.checked.includes("resource_host"));
 });
 
 test("transaction: a plain ERC-20 transfer that simulates is PASS", async () => {
