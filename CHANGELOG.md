@@ -36,6 +36,7 @@ already using the public server.
   954702575b9df58a08e8dbdac45d680ecf3cc365`.
 - MCP Registry: `1.0.6` active and latest
   (`publishedAt: 2026-10-23T22:12:34.131712Z`).
+- GitHub: release `mcp-v1.0.6` is published and is the latest release.
 - Render: `/info` reports `1.0.6`; free-only post-deploy check passed 29/29.
 
 ## 1.0.5 — 2026-10-22

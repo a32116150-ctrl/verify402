@@ -3,11 +3,13 @@
 Status: npm `verify402-mcp@1.0.6` is **published** (gitHead
 `954702575b9df58a08e8dbdac45d680ecf3cc365`). The MCP Registry entry is
 **published and verified** as active latest at
-`2026-10-23T22:12:34.131712Z`.
+`2026-10-23T22:12:34.131712Z`. The GitHub release `mcp-v1.0.6` is published and
+is the latest release.
 
 - npm `verify402-mcp@1.0.5` remains published and immutable; `1.0.4` is also immutable.
 - MCP Registry publication of `1.0.6` is **published and verified**; the
   registry carries a `1.0.6` entry with `isLatest: true`.
+- GitHub release `mcp-v1.0.6` is **published and latest**.
 - Render deployment of `1.0.6` is **deployed and verified** at
   `2026-10-23T22:20Z`; `/info` reports `1.0.6` and the free-only post-deploy
   check passed 29/29.
