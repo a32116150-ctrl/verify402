@@ -1,8 +1,10 @@
 # Email campaign — free preflight gate testers
 
-**Status:** **4 of 4 sent** (Oct 23, 12:50–12:55 UTC): Glama, Cloudflare x402,
-PulseMCP, Solana Foundation. Glama opened auto-ticket **#148620911**; no other
-replies or bounces yet. Postal address omitted by owner decision (CAN-SPAM risk
+**Status:** **wave 1: 4 of 4 sent** (Oct 23, 12:50–12:55 UTC); **wave 2: 5 of
+6 sent** (13:17 UTC) — MetaMask, WalletConnect, Circle, OpenZeppelin, Offchain
+Labs. **Privy held.** Glama opened auto-ticket **#148620911**; no other replies
+yet. The free account's 10-distinct-recipient cap is exhausted until **Oct 30**
+unless upgraded. Postal address omitted by owner decision (CAN-SPAM risk
 accepted). Signer: `verify402 <sankou7-1754@agentmail.to>`. One follow-up
 maximum per recipient, 4–7 days out.
 

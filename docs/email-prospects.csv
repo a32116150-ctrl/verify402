@@ -10,3 +10,9 @@ kvnya Auditor,platform,MoltJobs Seven rails thread,warm,Already engaged with ver
 SameDayDesk,platform,MoltJobs launch thread,warm,Previous audit exchange; low-pressure follow-up,ready,Reply only if the thread is active
 Imperium X402 Broker,platform,MoltJobs thread 91415b7c,warm,Already replied 3553c6cf,waiting,No action unless they respond
 NLnet,none,form only,grant,Policy explicitly excludes AI-generated projects,do-not-contact,Do not email
+MetaMask,email,hello@metamask.io,wallet,Ships the approval warnings users see before signing,sent 2026-10-23,Wait; one follow-up 4-7 days
+WalletConnect,email,contact@walletconnect.com,wallet,Sits between dapps and wallets at the signing boundary,sent 2026-10-23,Wait; one follow-up 4-7 days
+Circle,email,devmarketing@circle.com,stablecoin,USDC is the demo asset; developer marketing can route,sent 2026-10-23,Wait; one follow-up 4-7 days
+OpenZeppelin,email,contact@openzeppelin.com,security,Maintains approval/security tooling; falsification test,sent 2026-10-23,Wait; one follow-up 4-7 days
+Offchain Labs,email,info@offchain.io,ecosystem,Arbitrum 42161 is supported by the transaction gate,sent 2026-10-23,Wait; one follow-up 4-7 days
+Privy,email,hi@privy.io,wallet,Embedded wallets sign without a wallet UI to catch a bad approval,held,No recipient slot; send after Oct 30 or on a paid plan
