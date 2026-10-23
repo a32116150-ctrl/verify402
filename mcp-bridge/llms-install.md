@@ -12,10 +12,10 @@ The first run downloads the MCP SDK and `viem`. Some clients kill a server that
 takes more than 30 seconds to start, so run this once first:
 
 ```bash
-npx -y verify402-mcp@1.0.6 --help
+npx -y verify402-mcp@1.0.7 --help
 ```
 
-This pins the published `1.0.6` package. Paid tools in the public demo use Base Sepolia testnet USDC; mainnet settlement is not enabled by this release.
+This pins the published `1.0.7` package. Paid tools in the public demo use Base Sepolia testnet USDC; mainnet settlement is not enabled by this release.
 
 Expected: a usage line listing `preflight_gate` and the five paid tools.
 
@@ -30,7 +30,7 @@ Free gate only — no wallet, nothing can be charged:
       "command": "npx",
       "args": [
         "-y",
-        "verify402-mcp@1.0.6"
+        "verify402-mcp@1.0.7"
       ],
       "env": {
         "VERIFY402_URL": "https://verify402.onrender.com"

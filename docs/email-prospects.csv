@@ -1,5 +1,5 @@
 target,route,address_or_url,segment,why,status,next_action
-Glama,email,support@glama.ai,listing,Listing still points at the 1.0.2 tarball; current is 1.0.6,sent 2026-10-23,Ticket #148620911 auto-ack; wait for update/human reply; one follow-up 4-7 days; cite 1.0.6
+Glama,email,support@glama.ai,listing,Listing still points at the 1.0.2 tarball; current is 1.0.7,sent 2026-10-23,Ticket #148620911 auto-ack; wait for update/human reply; one follow-up 4-7 days; cite 1.0.7
 PulseMCP,email,hello@pulsemcp.com,directory,Directory + The Agentic Loop; submissions are paused,sent 2026-10-23,Wait; one follow-up 4-7 days
 Cloudflare x402 team,email,x402@cloudflare.com,protocol,Cloudflare co-launched the x402 Foundation; closest team to the protocol,sent 2026-10-23,Wait for reply; one follow-up 4-7 days
 Solana Foundation,email,hello@solana.com,ecosystem,Demo accepts Solana devnet payment challenges; simulation is EVM-only,sent 2026-10-23,Wait; one follow-up 4-7 days

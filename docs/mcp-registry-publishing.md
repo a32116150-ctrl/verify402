@@ -75,10 +75,10 @@ mcp-publisher validate server.json
 
 Note: The MCP Registry strictly limits the `description` field to 100 characters.
 
-The checked-in `server.json` describes the **source** release (`1.0.6`), whose
+The checked-in `server.json` describes the **source** release (`1.0.7`), whose
 runtime default is Base Sepolia testnet (`eip155:84532`). It therefore declares
 that default explicitly and keeps `VERIFY402_NETWORKS` optional; Base mainnet
-(`eip155:8453`) is an opt-in. This metadata is only truthful once a `1.0.6`
+(`eip155:8453`) is an opt-in. This metadata is only truthful once a `1.0.7`
 package artifact actually exists and is published: the registry entry must
 never be used to claim that the immutable npm `1.0.4` package — whose runtime
 default is Base mainnet — defaults to testnet. Publish the registry entry only
@@ -104,7 +104,7 @@ Check that the server appears in the registry:
 curl -s "https://registry.modelcontextprotocol.io/v0.1/servers/io.github.a32116150-ctrl%2Fverify402-mcp/versions" | jq .
 
 # Query the active release status directly
-curl -s "https://registry.modelcontextprotocol.io/v0.1/servers/io.github.a32116150-ctrl%2Fverify402-mcp/versions/1.0.6" | jq ._meta
+curl -s "https://registry.modelcontextprotocol.io/v0.1/servers/io.github.a32116150-ctrl%2Fverify402-mcp/versions/1.0.7" | jq ._meta
 ```
 
 Or visit the official registry API documentation:
@@ -141,20 +141,20 @@ do not publish.
 
 ## Current status
 
-Current release: `verify402-mcp@1.0.6` is published on npm and is `latest`.
+Current release: `verify402-mcp@1.0.7` is published on npm and is `latest`.
 That version is immutable, maps to git commit
 `954702575b9df58a08e8dbdac45d680ecf3cc365`, and defaults the bridge to Base
-Sepolia testnet (`eip155:84532`). The previous `1.0.5` package remains
+Sepolia testnet (`eip155:84532`). The previous `1.0.6` package remains
 published and immutable.
 
-The official MCP Registry lists `1.0.6` as active and latest
+The official MCP Registry lists `1.0.7` as active and latest
 (`publishedAt: 2026-10-23T22:12:34.131712Z`). The checked-in `server.json`
 matches the published package. This repository does **not** publish packages or
 registry entries automatically.
 
 | Step | Status |
 |---|---|
-| `server.json` created | DONE — manifest is `1.0.6`, testnet default declared |
+| `server.json` created | DONE — manifest is `1.0.7`, testnet default declared |
 | `mcpName` in package.json | DONE |
-| Published to npm | DONE — `verify402-mcp@1.0.6` is live and `latest` (immutable) |
-| Published to MCP Registry | DONE — active `1.0.6`, `isLatest: true` |
+| Published to npm | DONE — `verify402-mcp@1.0.7` is live and `latest` (immutable) |
+| Published to MCP Registry | DONE — active `1.0.7`, `isLatest: true` |

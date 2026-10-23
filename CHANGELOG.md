@@ -3,11 +3,10 @@
 All notable changes to verify402. This file records repository changes; it does
 not imply a deploy or an npm publish.
 
-## Unreleased — planned 1.0.7
+## 1.0.7 — 2026-10-24
 
-This section is a release candidate. It has not been published to npm, the MCP
-Registry, GitHub Releases, or the live service. Version metadata is unchanged
-at `1.0.6` until release approval.
+`verify402-mcp@1.0.7` adds opt-in caller-supplied obligation state and seller
+payout binding to the free preflight gate.
 
 ### Added
 
