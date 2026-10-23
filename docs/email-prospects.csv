@@ -1,7 +1,7 @@
 target,route,address_or_url,segment,why,status,next_action
-Glama,email,support@glama.ai,listing,Listing still points at the 1.0.2 tarball; current is 1.0.5,ready,Send draft 4.1 after postal address + AgentMail key
+Glama,email,support@glama.ai,listing,Listing still points at the 1.0.2 tarball; current is 1.0.5,sent 2026-10-23,Ticket #148620911 auto-ack; wait for update/human reply; one follow-up 4-7 days
 PulseMCP,email,hello@pulsemcp.com,directory,Directory + The Agentic Loop; submissions are paused,ready,Send draft 4.2 only after 4.1/4.3 render cleanly
-Cloudflare x402 team,email,x402@cloudflare.com,protocol,Cloudflare co-launched the x402 Foundation; closest team to the protocol,ready,Send draft 4.3 after postal address + AgentMail key
+Cloudflare x402 team,email,x402@cloudflare.com,protocol,Cloudflare co-launched the x402 Foundation; closest team to the protocol,sent 2026-10-23,Wait for reply; one follow-up 4-7 days
 Solana Foundation,email,hello@solana.com,ecosystem,Demo accepts Solana devnet payment challenges; simulation is EVM-only,ready,Send draft 4.4 after the first two render cleanly
 Base,form,https://www.base.org/contact-us,ecosystem,Base Sepolia demo + Base mainnet analysis,ready,Submit form copy after email round
 Ethereum Foundation ESP,form,https://esp.ethereum.foundation/applicants,grant,Public-good grant fit; open grants paused in 2025,paused-check,Verify current program status before submitting

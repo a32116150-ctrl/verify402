@@ -1,9 +1,11 @@
 # Email campaign — free preflight gate testers
 
-**Status:** AgentMail is **connected and tested** (Oct 23, 12:40 UTC); **no
-campaign email has been sent**. One blocker remains: a postal address for the
-signature (plus a confirmed sender name). Round 1 is capped at **4 emails**,
-personalized, with **one** follow-up maximum.
+**Status:** **2 of 4 sent** (Oct 23, 12:50 UTC): Glama and Cloudflare x402.
+Glama opened auto-ticket **#148620911**; Cloudflare has not replied. PulseMCP and
+Solana Foundation are drafted but **not sent**. Postal address omitted by owner
+decision (CAN-SPAM risk accepted). Signer: `verify402
+<sankou7-1754@agentmail.to>`. Capped at **4 emails**, with **one** follow-up
+maximum.
 
 This is deliberately not a mass campaign. The project rule is 3–5 targeted
 messages, not 50. The goal is 3 testers who run real intents and report false
@@ -93,8 +95,10 @@ and keep AgentMail for inbound replies.
 6. **Opt-out in every email:** “If this is not useful, reply ‘no’ and I will not
    follow up.” Honour it immediately and permanently.
 7. **One follow-up**, 4–7 days later, same thread. Then stop. No third message.
-8. **Postal address required** in the signature (CAN-SPAM). A real business
-   address or PO box — not invented. **Do not send until this is supplied.**
+8. **Postal address omitted by owner decision (Oct 23).** CAN-SPAM requires a
+   physical address for commercial email; these messages do not carry one, so
+   that requirement is not met. The owner accepted the risk. Do not invent an
+   address.
 9. **EU/UK recipients:** legitimate-interest basis, easy opt-out, no profiling.
    If anyone objects, delete their address from the prospect file.
 10. **Send one at a time, read the rendered email before `send_message`.** The
@@ -143,8 +147,16 @@ and keep AgentMail for inbound replies.
 
 ## 4. Drafts
 
-Replace `[NAME]`, `[POSTAL ADDRESS]`, and the signature before sending. Keep the
-body under ~180 words. No HTML.
+Round 1 signature (use this; ignore the `[NAME]` / `[POSTAL ADDRESS]`
+placeholders below):
+
+```text
+verify402
+Solo developer
+sankou7-1754@agentmail.to
+```
+
+Keep the body under ~180 words. No HTML.
 
 ### 4.1 Glama — listing correction
 
@@ -294,8 +306,8 @@ EVM-only simulation boundary. Ask for tester intros, not a large grant.
 
 | Day | Action |
 |---|---|
-| 0 | Send 4.1 and 4.3. Read each rendered message first. |
-| 0 | Send 4.2 and 4.4 only if the first two render cleanly. |
+| 0 | Send 4.1 and 4.3. Read each rendered message first. | **Done** 12:50 UTC. |
+| 0 | Send 4.2 and 4.4 only if the first two render cleanly. | Pending. |
 | 1 | Submit the Base form; check EF/Solana grant status before submitting. |
 | 4–7 | One follow-up per non-responder: “Closing the loop — is this useful or should I stop?” No new link, no new ask. |
 | 8 | Stop. Record outcomes. Do not start a second wave without new evidence. |
@@ -333,7 +345,7 @@ the gate is bad.
 
 ## 8. Pre-send checklist
 
-- [ ] Postal address supplied and real
+- [x] Postal address omitted by owner decision (CAN-SPAM risk accepted)
 - [x] AgentMail account verified (OTP complete)
 - [x] `AGENTMAIL_API_KEY` stored outside the repo
 - [x] Test email sent and listed (`sent` label); inbound reply still untested
