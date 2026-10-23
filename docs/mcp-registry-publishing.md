@@ -141,23 +141,20 @@ do not publish.
 
 ## Current status
 
-Current release: `verify402-mcp@1.0.5` is published on npm and is `latest`.
+Current release: `verify402-mcp@1.0.6` is published on npm and is `latest`.
 That version is immutable, maps to git commit
-`fc1654964969f340a32c0420d5b5a3852f055310`, and defaults the bridge to Base
-Sepolia testnet (`eip155:84532`). The source tree is `1.0.6`; publishing that
-package is a manual release step and must happen before the registry entry is
-republished.
+`954702575b9df58a08e8dbdac45d680ecf3cc365`, and defaults the bridge to Base
+Sepolia testnet (`eip155:84532`). The previous `1.0.5` package remains
+published and immutable.
 
-The official MCP Registry lists `1.0.5` as active. Publishing the checked-in
-`server.json` at `1.0.6` is a manual release step and is allowed only after a
-`1.0.6` artifact exists and is published, and only if the publisher accepts the
-metadata as written. If it does not, registry publication is blocked until the
-metadata or the release is corrected. This repository does **not** publish
-packages or registry entries automatically.
+The official MCP Registry lists `1.0.6` as active and latest
+(`publishedAt: 2026-10-23T22:12:34.131712Z`). The checked-in `server.json`
+matches the published package. This repository does **not** publish packages or
+registry entries automatically.
 
 | Step | Status |
 |---|---|
-| `server.json` created | DONE — local manifest is `1.0.6`, testnet default declared |
+| `server.json` created | DONE — manifest is `1.0.6`, testnet default declared |
 | `mcpName` in package.json | DONE |
-| Published to npm | PENDING for `1.0.6`; `1.0.5` is live and `latest` (immutable) |
-| Published to MCP Registry | PENDING for `1.0.6`; registry serves active `1.0.5` |
+| Published to npm | DONE — `verify402-mcp@1.0.6` is live and `latest` (immutable) |
+| Published to MCP Registry | DONE — active `1.0.6`, `isLatest: true` |

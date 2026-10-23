@@ -1,19 +1,19 @@
 # Release verify402-mcp 1.0.6 — for me
 
 Status: npm `verify402-mcp@1.0.6` is **published** (gitHead
-`fc1654964969f340a32c0420d5b5a3852f055310`). The repository metadata transition
-is local commit `17ee189a20d1c601f5a4b4077882d74d609c1cc5`.
+`954702575b9df58a08e8dbdac45d680ecf3cc365`). The MCP Registry entry is
+**published and verified** as active latest at
+`2026-10-23T22:12:34.131712Z`.
 
 - npm `verify402-mcp@1.0.5` remains published and immutable; `1.0.4` is also immutable.
-- MCP Registry publication of `1.0.6` is **pending and unverified**; the
-  registry does **not** yet carry a `1.0.6` entry.
+- MCP Registry publication of `1.0.6` is **published and verified**; the
+  registry carries a `1.0.6` entry with `isLatest: true`.
 - Render deployment of `1.0.6` is **pending and unverified**; the live service
   has not been validated against this release.
 
-The npm artifact and metadata transition are complete. Steps 8–10 below remain
-gated and must not run automatically. Each remaining step is a gate: do not
-start the next one until the previous one has been verified. The deploy push is
-step 10.
+The npm artifact, registry entry, and metadata transition are complete. Step
+10 (Render deployment) remains gated and must not run automatically. The deploy
+push is step 10.
 
 ## 1. Account for the immutable npm 1.0.5 package
 
@@ -196,8 +196,8 @@ are immutable: never republish, overwrite, or unpublish `1.0.6` after this step.
 
 Step 6 printed `1.0.6` for both the latest version and the pinned version. The
 repository was updated from `candidate-unpublished` to "published `1.0.6`" in
-local commit `17ee189a20d1c601f5a4b4077882d74d609c1cc5`. The checklist below is
-the record of that transition:
+release commit `954702575b9df58a08e8dbdac45d680ecf3cc365` plus the metadata
+follow-up. The checklist below is the record of that transition:
 
 - `src/version.mjs` — set `PUBLISHED_VERSION = "1.0.6"` and change
   `RELEASE_STATUS` from the candidate value to the published/released value.
@@ -239,15 +239,13 @@ site, and the deployment use. If the npm page still shows candidate wording,
 that is a limitation of the immutable artifact — do not republish `1.0.6` to
 work around it.
 
-## 8. Publish the MCP Registry entry — separate approval, only when the npm 1.0.6 artifact exists
+## 8. Publish the MCP Registry entry — completed
 
-Step 6 is complete; step 7's metadata commit exists locally. This registry
-publication is its own approval gate; npm publication and the metadata update
-do not approve it. The checked-in
-`server.json` must already describe a **published** `1.0.6`: `VERIFY402_NETWORKS`
-defaults to Base Sepolia testnet (`eip155:84532`), it is optional, and Base
-mainnet (`eip155:8453`) is an explicit opt-in. Do not publish the entry if it
-still contains candidate or "unpublished" wording.
+Step 6 is complete and the checked-in `server.json` describes a **published**
+`1.0.6`: `VERIFY402_NETWORKS` defaults to Base Sepolia testnet
+(`eip155:84532`), it is optional, and Base mainnet (`eip155:8453`) is an
+explicit opt-in. This step runs only when the npm 1.0.6 artifact exists and is
+verified.
 
 ```bash
 mcp-publisher login github   # only if this machine is not already authenticated
@@ -259,16 +257,15 @@ If `mcp-publisher validate` rejects the metadata, **stop** and correct the
 metadata. Do not fabricate fields to satisfy the validator, and do not publish
 the entry against the immutable `1.0.5` version.
 
-## 9. Verify the actual 1.0.6 registry version
+## 9. Verify the actual 1.0.6 registry version — completed
 
 ```bash
 curl -s "https://registry.modelcontextprotocol.io/v0.1/servers/io.github.a32116150-ctrl%2Fverify402-mcp/versions/1.0.6"
 ```
 
-Expected: a `server` object with `version: "1.0.6"`, the Base Sepolia default in
-its environment-variable metadata, active status, and no "unpublished
-candidate" wording. A `1.0.4` or `1.0.3` response is not proof that this step
-succeeded.
+Verified: a `server` object with `version: "1.0.6"`, the Base Sepolia default
+in its environment-variable metadata, `status: active`, `isLatest: true`, and
+`publishedAt: 2026-10-23T22:12:34.131712Z`.
 
 ## 10. Deploy only after a separate approval
 

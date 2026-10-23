@@ -560,7 +560,7 @@ test("the release runbook sequences validation, artifact, npm, registry, then de
     "the runbook must not describe the published release as a current unpublished candidate",
   );
   assert.match(runbook, /npm `verify402-mcp@1\.0\.6` is \*\*published\*\*/i);
-  assert.match(runbook, /MCP Registry publication of `1\.0\.6` is \*\*pending and unverified\*\*/i);
+  assert.match(runbook, /MCP Registry publication of `1\.0\.6` is \*\*published and verified\*\*/i);
   assert.match(runbook, /Render deployment of `1\.0\.6` is \*\*pending and unverified\*\*/i);
   assert.match(runbook, /Transition the release metadata to published 1\.0\.6 — completed/);
 });

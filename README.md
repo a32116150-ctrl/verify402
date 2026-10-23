@@ -437,8 +437,7 @@ or any MCP client.
   demo; Base mainnet (`eip155:8453`) requires an explicit `VERIFY402_NETWORKS`
   opt-in in a separate deployment and is not enabled by this release. The
   immutable `1.0.4` package predates that default and used Base mainnet. The
-  MCP Registry entry is a separate release step; check the registry for the
-  `1.0.6` entry before depending on it.
+  official MCP Registry lists `1.0.6` as active (`isLatest: true`).
 
 ## Settlement, response delivery, and recovery (honest contract)
 
