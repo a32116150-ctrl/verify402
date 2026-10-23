@@ -271,3 +271,22 @@ test("discovery: google site verification meta tag and file are present for Sear
   }
 });
 
+test("discovery: /preflight ships a browser try-it panel for the free gate", () => {
+  const page = fs.readFileSync(path.join(ROOT, "src", "site", "preflight.html"), "utf8");
+  assert.match(page, /<section id="try"/);
+  assert.match(page, /id="preflight-form"/);
+  assert.match(page, /id="approval-form"/);
+  assert.match(page, /id="approval-token"/);
+  assert.match(page, /id="approval-spender"/);
+  assert.match(page, /Use Base USDC sample/);
+  assert.match(page, /src="\/assets\/preflight-demo\.js"/);
+
+  const script = fs.readFileSync(path.join(ROOT, "src", "site", "assets", "preflight-demo.js"), "utf8");
+  assert.match(script, /fetch\("\/preflight"/);
+  assert.match(script, /eip155:84532/);
+  assert.match(script, /forbidUnlimitedApproval/);
+  assert.match(script, /0x095ea7b3/);
+  assert.match(script, /runApprovalCheck/);
+  assert.match(script, /preflight-plain/);
+});
+

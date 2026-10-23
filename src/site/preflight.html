@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Preflight — verify402</title>
-<meta name="description" content="The free pre-signing gate for AI agents: validate an x402 payment request or a chain transaction, get PASS / CAUTION / BLOCK with typed reasons, and a short-lived receipt bound to the exact intent and block.">
+<meta name="description" content="The free pre-signing gate for AI agents and users: paste a token address and spender to check an approval, or validate an x402 payment request or chain transaction, get PASS / CAUTION / BLOCK with typed reasons, and a short-lived receipt bound to the exact intent and block.">
 <meta name="google-site-verification" content="iGmI2QL110IkjnW0thU3DRZrdgQe_7mZsPWgkZVte7o">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -30,7 +30,7 @@
     </nav>
     <div class="nav-cta">
       <span class="nav-live"><span class="dot"></span>free · <span data-block>block —</span></span>
-      <a class="btn sm" href="/docs#preflight">Request shape</a>
+      <a class="btn sm" href="#try">Try it</a>
     </div>
     <details class="menu">
       <summary>Menu</summary>
@@ -57,13 +57,14 @@
         <h1>The check before the signature.</h1>
         <p class="lead">One call for any x402 payment request or chain transaction. It returns <b>PASS / CAUTION / BLOCK</b>, the reasons, the checks that actually ran, and a short-lived receipt bound to the exact intent — so an executor can refuse to sign without one.</p>
         <div class="btn-row">
-          <a class="btn" href="/docs#preflight">The request shape</a>
+          <a class="btn" href="#try">Try a free check</a>
+          <a class="btn ghost" href="/docs#preflight">The request shape</a>
           <a class="btn ghost" href="/start">5-minute quickstart</a>
-          <a class="btn ghost" href="/checks">The five paid checks</a>
         </div>
         <p class="hero-note">
-          <span><span class="dot"></span>Free · no payment</span>
-          <span>Payments on EVM + Solana</span>
+          <span><span class="dot"></span>Free · no wallet</span>
+          <span>Payments: Base Sepolia demo</span>
+          <span>Analysis: mainnet chain data</span>
           <span>Fail-closed</span>
         </p>
       </div>
@@ -79,6 +80,126 @@
         </div>
         <p class="small muted" style="margin-top:12px">A captcha verifies the agent. This verifies the <b>transaction</b> — and it says when it cannot.</p>
       </aside>
+    </div>
+  </section>
+
+  <section id="try" class="tight">
+    <div class="wrap">
+      <div class="try-shell">
+        <div class="try-head">
+          <div>
+            <p class="eyebrow">Try it · free · no wallet</p>
+            <h2>Check an approval before you sign it.</h2>
+            <p class="lead">Paste the token and spender. We build the unlimited approval and ask the live gate whether it should be signed. Nothing is signed or paid.</p>
+          </div>
+          <div class="try-badges" aria-label="Test properties">
+            <span class="chip">Live chain data</span>
+            <span class="chip">No wallet</span>
+            <span class="chip">Fail-closed</span>
+          </div>
+        </div>
+
+        <div class="try-grid">
+          <div class="try-panel">
+            <form id="approval-form" class="try-approval" novalidate>
+              <p class="try-kicker">Simple check</p>
+              <h3>Paste a token address. Check the approval.</h3>
+              <p class="try-help">We build an unlimited approval and ask the live gate whether it should be signed. No wallet, no payment.</p>
+              <div class="try-fields">
+                <div class="try-field">
+                  <label for="approval-token">Token address</label>
+                  <input id="approval-token" class="try-input-sm" type="text" inputmode="text" autocomplete="off" spellcheck="false" placeholder="0x…" aria-describedby="approval-help">
+                </div>
+                <div class="try-field">
+                  <label for="approval-spender">Spender address</label>
+                  <input id="approval-spender" class="try-input-sm" type="text" inputmode="text" autocomplete="off" spellcheck="false" placeholder="0x…" aria-describedby="approval-help">
+                </div>
+                <div class="try-field try-field-network">
+                  <label for="approval-chain">Network</label>
+                  <select id="approval-chain" class="try-input-sm" aria-describedby="approval-help">
+                    <option value="8453" selected>Base</option>
+                    <option value="1">Ethereum</option>
+                    <option value="42161">Arbitrum One</option>
+                  </select>
+                </div>
+              </div>
+              <div class="try-actions">
+                <button class="btn" id="approval-run" type="submit">Check approval</button>
+                <button class="try-linkbtn" id="approval-sample" type="button">Use Base USDC sample</button>
+                <span class="try-status" id="approval-status" role="status" aria-live="polite"></span>
+              </div>
+              <p class="try-help" id="approval-help">The spender is the contract asking for permission to move your tokens — it appears as “spender” in the signature prompt. This checks the token contract, the spender, the calldata, and the block. It is not a token safety or sellability rating. The token must exist on the selected network.</p>
+            </form>
+
+            <details class="try-advanced">
+              <summary>Advanced: paste the raw JSON</summary>
+              <form id="preflight-form" novalidate>
+              <div class="try-presets" role="group" aria-label="Sample requests">
+                <button type="button" class="try-preset is-active" data-preflight-sample="payment">Payment · expect PASS</button>
+                <button type="button" class="try-preset" data-preflight-sample="block">Unlimited approval · expect BLOCK</button>
+              </div>
+              <label class="try-label" for="preflight-request">Request JSON</label>
+              <textarea id="preflight-request" class="try-input" rows="16" maxlength="60000" spellcheck="false" autocapitalize="off" autocomplete="off" aria-describedby="preflight-help"></textarea>
+              <p class="try-help" id="preflight-help">This sends the JSON to <code class="inline">POST /preflight</code>. Do not paste private keys or seed phrases. The first call after idle can take ~30s; rate limits apply.</p>
+              <div class="try-actions">
+                <button class="btn" id="preflight-run" type="submit">Run free check</button>
+                <button class="btn ghost" id="preflight-reset" type="button">Reset sample</button>
+                <span class="try-status" id="preflight-status" role="status" aria-live="polite">Ready</span>
+              </div>
+              </form>
+              <noscript><p class="small muted" style="margin-top:10px">JavaScript is off. Use the curl examples below, or enable JavaScript for the in-browser check.</p></noscript>
+            </details>
+          </div>
+
+          <div class="try-result" id="preflight-result" aria-live="polite">
+            <div id="preflight-empty">
+              <p class="try-kicker">Verdict</p>
+              <p class="try-empty-mark">—</p>
+              <p class="small muted">Run a check to see the verdict, the reasons, the checks that ran, and the receipt.</p>
+            </div>
+            <div id="preflight-output" hidden>
+              <div class="try-verdict-row">
+                <div>
+                  <p class="try-kicker">Verdict</p>
+                  <p class="try-verdict" id="preflight-verdict">—</p>
+                </div>
+                <p class="try-meta" id="preflight-meta"></p>
+              </div>
+              <p class="try-plain" id="preflight-plain"></p>
+              <dl class="try-kv">
+                <dt>Block</dt><dd id="preflight-block">—</dd>
+                <dt>Receipt</dt><dd id="preflight-receipt">—</dd>
+                <dt>Expires</dt><dd id="preflight-expires">—</dd>
+              </dl>
+              <div class="try-section">
+                <p class="try-kicker">Reasons</p>
+                <ul class="try-reasons" id="preflight-reasons"></ul>
+              </div>
+              <div class="try-section">
+                <p class="try-kicker">Checked</p>
+                <p class="try-pills" id="preflight-checked">—</p>
+              </div>
+              <div class="try-section">
+                <p class="try-kicker">Not checked</p>
+                <p class="try-pills muted" id="preflight-notchecked">—</p>
+              </div>
+              <details class="try-raw">
+                <summary>Raw response</summary>
+                <pre id="preflight-raw"></pre>
+              </details>
+              <div class="try-actions">
+                <button class="btn ghost" id="preflight-copy" type="button">Copy JSON</button>
+                <a class="btn ghost" id="preflight-report" href="https://github.com/a32116150-ctrl/verify402/issues/new?template=tester-feedback.yml" target="_blank" rel="noopener">Report this result</a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="try-feedback">
+          <p><b>3 testers wanted.</b> Tell us about setup friction or a false PASS. <a class="textlink" href="https://github.com/a32116150-ctrl/verify402/blob/master/TESTING.md" rel="noopener">5-minute tester guide</a> · <a class="textlink" href="https://github.com/a32116150-ctrl/verify402/issues/new?template=tester-feedback.yml" rel="noopener">Send feedback</a></p>
+          <p class="small muted">No wallet, account, or paid call. The gate never moves funds.</p>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -323,5 +444,6 @@
 </footer>
 
 <script src="/assets/site.js"></script>
+<script src="/assets/preflight-demo.js"></script>
 </body>
 </html>

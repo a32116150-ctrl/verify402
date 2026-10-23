@@ -6,6 +6,8 @@
 
 verify402 is a preflight gate for agents before they sign or pay. Send it the payment request or transaction intent your agent is about to sign. It returns `PASS` / `CAUTION` / `BLOCK`, the checks that ran, the checks that did not, and a short-lived HMAC receipt.
 
+**Fastest path:** open the [live try-it panel](https://verify402.onrender.com/preflight#try), click **Use Base USDC sample**, then **Check approval**. No terminal, wallet, or account. For the payment PASS example, expand **Advanced: paste the raw JSON**. The curl steps below are optional.
+
 ## Scope and safety
 
 - The public demo uses **Base Sepolia testnet USDC** (`eip155:84532`).

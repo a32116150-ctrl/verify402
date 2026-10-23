@@ -49,8 +49,9 @@ quote-based sellability check, not a honeypot proof. Read `notChecked` in the re
 
 ### Test the free gate (3 testers wanted)
 
-I’m looking for three developers building AI agents, MCP tools, or x402 payment integrations to run 3–5 real intents and report what breaks. The public demo uses Base Sepolia testnet only; no wallet or paid test is required.
+I’m looking for three developers building AI agents, MCP tools, or x402 payment integrations to run 3–5 real intents and report what breaks. Demo payments use Base Sepolia testnet only; analysis reads mainnet chain data; no wallet or paid test is required.
 
+- [Run it in the browser](https://verify402.onrender.com/preflight#try) — paste a token address, or run the raw intent; no terminal needed
 - [5-minute testing guide](TESTING.md)
 - [Open a tester feedback issue](https://github.com/a32116150-ctrl/verify402/issues/new?template=tester-feedback.yml)
 - [Full onboarding notes](examples/ONBOARDING.md)
