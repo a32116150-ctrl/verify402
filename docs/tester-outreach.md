@@ -1,5 +1,9 @@
 # Three outreach drafts for tester recruitment
 
+> **Email:** the capped email campaign (AgentMail MCP, 4 emails + 3 forms + 3
+> warm replies) lives in **`docs/email-campaign.md`**. It is drafted but **not
+> sent**; it needs a postal address and an AgentMail account/API key first.
+
 Use these as targeted messages, not a mass blast. Warm replies to people who already engaged with verify402 convert better than a new standalone post.
 
 Before sending:
