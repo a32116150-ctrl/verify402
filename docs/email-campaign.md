@@ -1,11 +1,10 @@
 # Email campaign — free preflight gate testers
 
-**Status:** **2 of 4 sent** (Oct 23, 12:50 UTC): Glama and Cloudflare x402.
-Glama opened auto-ticket **#148620911**; Cloudflare has not replied. PulseMCP and
-Solana Foundation are drafted but **not sent**. Postal address omitted by owner
-decision (CAN-SPAM risk accepted). Signer: `verify402
-<sankou7-1754@agentmail.to>`. Capped at **4 emails**, with **one** follow-up
-maximum.
+**Status:** **4 of 4 sent** (Oct 23, 12:50–12:55 UTC): Glama, Cloudflare x402,
+PulseMCP, Solana Foundation. Glama opened auto-ticket **#148620911**; no other
+replies or bounces yet. Postal address omitted by owner decision (CAN-SPAM risk
+accepted). Signer: `verify402 <sankou7-1754@agentmail.to>`. One follow-up
+maximum per recipient, 4–7 days out.
 
 This is deliberately not a mass campaign. The project rule is 3–5 targeted
 messages, not 50. The goal is 3 testers who run real intents and report false
@@ -307,7 +306,7 @@ EVM-only simulation boundary. Ask for tester intros, not a large grant.
 | Day | Action |
 |---|---|
 | 0 | Send 4.1 and 4.3. Read each rendered message first. | **Done** 12:50 UTC. |
-| 0 | Send 4.2 and 4.4 only if the first two render cleanly. | Pending. |
+| 0 | Send 4.2 and 4.4 only if the first two render cleanly. | **Done** 12:55 UTC. |
 | 1 | Submit the Base form; check EF/Solana grant status before submitting. |
 | 4–7 | One follow-up per non-responder: “Closing the loop — is this useful or should I stop?” No new link, no new ask. |
 | 8 | Stop. Record outcomes. Do not start a second wave without new evidence. |
