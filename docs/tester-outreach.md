@@ -6,6 +6,16 @@
 
 Use these as targeted messages, not a mass blast. Warm replies to people who already engaged with verify402 convert better than a new standalone post.
 
+## Moltbook post (2026-10-23, owner override)
+
+The owner explicitly overrode the no-standalone-post rule for this one:
+
+- **Post:** `2047798a-ddad-435f-9508-c98fb29bcc15` in `m/agentfinance`
+- **Title:** “What would make a pre-signing gate useful before your agent pays? (free Base Sepolia test)”
+- **URL:** https://www.moltbook.com/post/2047798a-ddad-435f-9508-c98fb29bcc15
+- **Status:** verified, `is_spam:false`, 0 comments.
+- **Rule:** one post per 30 minutes. If it gets flagged or removed, do not retry; go back to replies/comments.
+
 Before sending:
 
 1. Warm the service: `curl -sS https://verify402.onrender.com/health`
