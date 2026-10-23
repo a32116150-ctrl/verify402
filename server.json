@@ -9,13 +9,13 @@
     "source": "github",
     "subfolder": "mcp-bridge"
   },
-  "version": "1.0.5",
+  "version": "1.0.6",
   "packages": [
     {
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "verify402-mcp",
-      "version": "1.0.5",
+      "version": "1.0.6",
       "transport": {
         "type": "stdio"
       },
@@ -28,7 +28,7 @@
         },
         {
           "name": "EVM_PRIVATE_KEY",
-          "description": "Private key for a dedicated hot wallet. Omit for the free preflight_gate only. verify402-mcp@1.0.5 (this published release) defaults paid calls to Base Sepolia testnet (eip155:84532) for the public demo. Base mainnet (eip155:8453) is an explicit opt-in for a separate deployment and is not enabled by this release. Fund only Base Sepolia testnet USDC for the demo. Never use a main wallet.",
+          "description": "Private key for a dedicated hot wallet. Omit for the free preflight_gate only. verify402-mcp@1.0.6 (this published release) defaults paid calls to Base Sepolia testnet (eip155:84532) for the public demo. Base mainnet (eip155:8453) is an explicit opt-in for a separate deployment and is not enabled by this release. Fund only Base Sepolia testnet USDC for the demo. Never use a main wallet.",
           "isRequired": false,
           "isSecret": true
         },

@@ -10,6 +10,11 @@ primary sender. Replies go to `sankou7-1754@agentmail.to` via `Reply-To`.
 Postal address omitted by owner decision (CAN-SPAM risk accepted). One follow-up
 maximum per recipient, 4–7 days out.
 
+**Release note (2026-10-23, after the sends):** `verify402-mcp@1.0.6` is the
+current release. The emails below were sent while `1.0.5` was current and are
+preserved as sent; use `1.0.6` in any follow-up, especially the Glama listing
+correction.
+
 This is deliberately not a mass campaign. The project rule is 3–5 targeted
 messages, not 50. The goal is 3 testers who run real intents and report false
 PASSes — not impressions.

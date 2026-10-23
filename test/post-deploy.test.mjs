@@ -57,7 +57,7 @@ async function readJson(req) {
 }
 
 function createMock({
-  version = "1.0.5",
+  version = "1.0.6",
   mode = "testnet",
   challengeNetwork = "eip155:84532",
   challengeAsset = TESTNET_USDC,
@@ -188,16 +188,16 @@ test("post-deploy prints wake result and passes against a current mock", async (
   const { code, output } = await runPostDeploy();
   assert.equal(code, 0, output);
   assert.match(output, /^wake: (ready|FAILED), \d+ms, \d+ attempt\(s\)$/m, output);
-  assert.match(output, /release version is 1\.0\.5 \.\.\. PASS/, output);
+  assert.match(output, /release version is 1\.0\.6 \.\.\. PASS/, output);
   assert.match(output, /\/health reports mode testnet \.\.\. PASS/, output);
   assert.match(output, /402 challenge offers Base Sepolia testnet USDC \.\.\. PASS/, output);
 });
 
-test("post-deploy fails when the service is 1.0.4 but 1.0.5 is expected", async () => {
+test("post-deploy fails when the service is 1.0.4 but 1.0.6 is expected", async () => {
   const { code, output } = await runPostDeploy({ version: "1.0.4" });
   assert.equal(code, 1, output);
-  assert.match(output, /release version is 1\.0\.5 \.\.\. FAIL/, output);
-  assert.match(output, /1\.0\.4 !== 1\.0\.5/, output);
+  assert.match(output, /release version is 1\.0\.6 \.\.\. FAIL/, output);
+  assert.match(output, /1\.0\.4 !== 1\.0\.6/, output);
   assert.match(output, /post-deploy: FAIL/, output);
 });
 

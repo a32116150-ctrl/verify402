@@ -2,12 +2,12 @@
 
 Rule: X402_MODE=testnet only on free instances. Mainnet requires an always-on paid instance.
 
-## Immutable npm 1.0.4 boundary
+## Immutable npm release boundary
 
-- Published `verify402-mcp@1.0.4` is immutable and maps to `248923f`; its built-in paid-call default is Base mainnet (`eip155:8453`).
-- This source tree is `1.0.5` and defaults the bridge to Base Sepolia (`eip155:84532`). That is a future-package change, not a change to the published artifact.
-- `server.json` and the service manifest therefore describe the **source** release: `VERIFY402_NETWORKS` is optional with an explicit `eip155:84532` default, and Base mainnet is an opt-in (`eip155:8453`). Do not publish registry metadata that claims `1.0.4` defaults to testnet.
-- The `1.0.5` package is a plan only until an artifact is built, published, and verified. Do not attach this source tree to the existing `1.0.4` version or move the `mcp-v1.0.4` tag.
+- Published `verify402-mcp@1.0.5` is immutable and defaults the bridge to Base Sepolia testnet (`eip155:84532`). The older `1.0.4` artifact remains immutable and must not be republished.
+- This source tree is `1.0.6`: it records the preflight resource/network fix and matching release metadata. The bridge still forwards the caller's `policy`; the behavior change is server-side.
+- `server.json` and the service manifest describe the **source** release: `VERIFY402_NETWORKS` is optional with an explicit `eip155:84532` default, and Base mainnet is an opt-in (`eip155:8453`).
+- The `1.0.6` package is a candidate until an artifact is built, published, and verified. Do not attach this source tree to the existing `1.0.5` version or move the `mcp-v1.0.5` tag.
 
 ## Mode-aware runtime metadata and the static site
 
@@ -87,4 +87,4 @@ Common optional values:
 
 1. Open the host dashboard and set or update the environment variables listed above.
 2. Open the RPC provider dashboard and create or revoke RPC keys.
-3. `verify402-mcp@1.0.4` is already published on npm and is `latest`; do not republish it. The remaining release actions are human-only: push the local commits, do **not** move the `mcp-v1.0.4` tag onto those newer commits (npm maps 1.0.4 to `248923f`; use a future patch for source changes), publish `server.json` for `1.0.5` only after a `1.0.5` artifact exists, and deploy the service. Until those actions happen, GitHub, the MCP Registry, and the live service remain on `1.0.3` even though local metadata is `1.0.5`.
+3. `verify402-mcp@1.0.4` is already published on npm and is `latest`; do not republish it. The remaining release actions are human-only: push the local commits, do **not** move the `mcp-v1.0.4` tag onto those newer commits (npm maps 1.0.4 to `248923f`; use a future patch for source changes), publish `server.json` for `1.0.6` only after a `1.0.6` artifact exists, and deploy the service. Until those actions happen, GitHub, the MCP Registry, and the live service remain on `1.0.3` even though local metadata is `1.0.6`.

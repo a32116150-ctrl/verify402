@@ -3,6 +3,33 @@
 All notable changes to verify402. This file records repository changes; it does
 not imply a deploy or an npm publish.
 
+## 1.0.6 — 2026-10-23
+
+`verify402-mcp@1.0.6` is the release that points at the fixed public
+`/preflight` service. The MCP bridge itself still forwards the caller's
+`policy` object; the behavior change is server-side and applies to clients
+already using the public server.
+
+### Fixed
+
+- `payment.resource` is no longer accepted as an identity check just because it
+  parses as a URL. With no `policy.expectedResource` or
+  `policy.allowedResourceHosts`, the verdict is now **CAUTION**
+  `resource_identity_unverified`, and `notChecked` names `resource identity`.
+- `policy.allowedResourceHosts` binds the resource host. A matching host is a
+  checked `resource_host` and can PASS; a foreign host is **BLOCK**
+  `resource_host_not_allowed`. `policy.expectedResource` still performs exact
+  URL binding.
+- Unsupported but real networks such as `eip155:56` now say “not supported by
+  this instance” and list the supported networks, instead of calling the chain
+  unknown. The verdict remains **BLOCK**.
+
+### Scope disclosures
+
+- `notChecked` now names `payTo ownership / proven seller payout wallet` and
+  `obligation state (idempotency key, cumulative spend, grant balance)`.
+  Neither is implemented as a ledger or registry.
+
 ## 1.0.5 — 2026-10-22
 
 `verify402-mcp@1.0.5` is published to npm. The package is immutable; do not

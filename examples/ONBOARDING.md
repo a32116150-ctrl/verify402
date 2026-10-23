@@ -138,10 +138,10 @@ Receipts expire after 90 seconds by default (15–300 configurable via
 Warm the `npx` cache once:
 
 ```bash
-npx -y verify402-mcp@1.0.5 --help
+npx -y verify402-mcp@1.0.6 --help
 ```
 
-This pins the published `1.0.5` package. Paid tools in the public demo use Base Sepolia testnet USDC; mainnet settlement is not enabled by this release.
+This pins the published `1.0.6` package. Paid tools in the public demo use Base Sepolia testnet USDC; mainnet settlement is not enabled by this release.
 
 Then add it to Claude Desktop / Cursor (`.cursor/mcp.json`):
 
@@ -150,7 +150,7 @@ Then add it to Claude Desktop / Cursor (`.cursor/mcp.json`):
   "mcpServers": {
     "verify402": {
       "command": "npx",
-      "args": ["-y", "verify402-mcp@1.0.5"],
+      "args": ["-y", "verify402-mcp@1.0.6"],
       "env": { "VERIFY402_URL": "https://verify402.onrender.com" }
     }
   }

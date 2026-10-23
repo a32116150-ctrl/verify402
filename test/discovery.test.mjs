@@ -44,7 +44,7 @@ test("discovery: server.json complies with MCP Registry specification", () => {
     (entry) => entry.name === "VERIFY402_NETWORKS",
   );
   assert.ok(networkEnv, "server.json must document VERIFY402_NETWORKS");
-  assert.equal(Object.hasOwn(networkEnv, "default"), true, "server.json must declare the 1.0.5 default network");
+  assert.equal(Object.hasOwn(networkEnv, "default"), true, "server.json must declare the 1.0.6 default network");
   assert.equal(networkEnv.default, "eip155:84532");
   assert.equal(networkEnv.isRequired, false);
   assert.match(networkEnv.description, /Base Sepolia/);

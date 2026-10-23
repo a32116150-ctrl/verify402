@@ -10,12 +10,13 @@ dedicated hot wallet funded with **Base Sepolia testnet USDC** (`eip155:84532`).
 The analysis reads mainnet chain data, but the demo never settles mainnet
 payments. The bridge never signs or sends a trade.
 
-> **Published package note:** `verify402-mcp@1.0.5` is published to npm and
+> **Published package note:** `verify402-mcp@1.0.6` is published to npm and
 > defaults paid calls to Base Sepolia testnet (`eip155:84532`) for the public
 > demo. Base mainnet (`eip155:8453`) requires an explicit `VERIFY402_NETWORKS`
 > opt-in in a separate deployment and is not enabled by this release. The
-> previously published `1.0.4` package is immutable and used Base mainnet by
-> default; do not republish or overwrite either version.
+> previously published `1.0.5` package is immutable; `1.0.4` is also immutable
+> and used Base mainnet by default. Do not republish or overwrite either
+> version.
 
 ## Tools
 
@@ -32,6 +33,13 @@ payments. The bridge never signs or sends a trade.
 transaction or x402 payment request. If `sign_allowed` is false, **do not
 sign**. If `requires_ack` is true, surface the reasons to the operator. The
 receipt expires (default 90s); call again instead of reusing it.
+
+For payment intents, `policy.allowedResourceHosts` binds the host in
+`payment.resource`; a matching host can PASS and a foreign host is BLOCK.
+Without `allowedResourceHosts` or `expectedResource`, an otherwise valid
+resource is CAUTION `resource_identity_unverified` and `resource identity` is
+listed in `notChecked`. The bridge forwards this policy to the server; the
+server enforces it.
 
 The gate is advisory at this layer: the bridge does not hold the agent's
 transaction key and cannot stop an agent that ignores the answer. Enforcement

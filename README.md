@@ -427,18 +427,18 @@ or any MCP client.
   allowlisted EVM network, the verify402 payee, and a known paid resource on the
   configured server, and refuses redirects. `MAX_DAILY_USD` is optional.
 - **Install:** `npx -y verify402-mcp@latest` from the public npm registry
-  (currently `1.0.5`). For a pinned install of the published package, use
-  `npx -y verify402-mcp@1.0.5`; its npm tarball is
-  `https://registry.npmjs.org/verify402-mcp/-/verify402-mcp-1.0.5.tgz`. No npm
+  (currently `1.0.6`). For a pinned install of the published package, use
+  `npx -y verify402-mcp@1.0.6`; its npm tarball is
+  `https://registry.npmjs.org/verify402-mcp/-/verify402-mcp-1.0.6.tgz`. No npm
   account is required to run the published package. Client configs, the exact
   OpenCode V2 shape, and the release command are at
-  [`/mcp`](https://verify402.onrender.com/mcp). The published `1.0.5`
+  [`/mcp`](https://verify402.onrender.com/mcp). The published `1.0.6`
   defaults paid calls to Base Sepolia testnet (`eip155:84532`) for the public
   demo; Base mainnet (`eip155:8453`) requires an explicit `VERIFY402_NETWORKS`
   opt-in in a separate deployment and is not enabled by this release. The
   immutable `1.0.4` package predates that default and used Base mainnet. The
   MCP Registry entry is a separate release step; check the registry for the
-  `1.0.5` entry before depending on it.
+  `1.0.6` entry before depending on it.
 
 ## Settlement, response delivery, and recovery (honest contract)
 

@@ -42,7 +42,7 @@ installConsoleRedaction();
 const IS_MAIN = isMainModule();
 if (IS_MAIN) config();
 
-const VERSION = "1.0.5";
+const VERSION = "1.0.6";
 const EVM_PRIVATE_KEY = process.env.EVM_PRIVATE_KEY;
 // Normalise once so the axios base URL, the payment policy prefix, and the
 // per-tool expected resource are all the same string (no trailing slash).
