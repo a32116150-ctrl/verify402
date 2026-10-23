@@ -68,6 +68,14 @@ You should get:
 Your block number will differ. `sign_allowed` is simply
 `verdict !== "BLOCK"`; a CAUTION still needs a human/agent decision.
 
+If your agent keeps its own payment ledger, add
+`payment.idempotencyKey` and `policy.obligation` (`settledKeys`,
+`spentUsd`, `grantUsd`) to reject an already-settled key or a payment
+that would exceed the grant. Add `policy.sellerPayoutWallets` to bind
+`payTo` to the seller's known payout addresses. These are caller-supplied
+bindings: the public gate does not persist the ledger, and the payout list
+is not independent proof of wallet ownership.
+
 ## 2. The same gate says no to an unlimited approval
 
 ```bash

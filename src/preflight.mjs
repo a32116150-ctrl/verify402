@@ -119,6 +119,14 @@ const block = (code, message) => ({ code, severity: "block", message });
 const caution = (code, message) => ({ code, severity: "caution", message });
 const unique = (arr) => [...new Set(arr)];
 
+// `notChecked` is the honest half of the answer. When a caller supplies state
+// that turns one of those named gaps into a real check, remove the stale line
+// rather than claiming both "checked" and "not checked" at once.
+function dropNotChecked(arr, item) {
+  const i = arr.indexOf(item);
+  if (i >= 0) arr.splice(i, 1);
+}
+
 function verdictOf(reasons) {
   if (reasons.some((r) => r.severity === "block")) return "BLOCK";
   if (reasons.some((r) => r.severity === "caution")) return "CAUTION";
@@ -365,6 +373,65 @@ function normalizePolicy(p) {
       if (!Array.isArray(p[key])) throw new PreflightError(400, "invalid_policy", `policy.${key} must be an array`);
       out[key] = p[key].map((x) => String(x));
     }
+  }
+  // A caller-supplied seller payout list is a binding, not an independent
+  // proof of wallet ownership. It lets an agent say "this is the address my
+  // seller told me to use" and fail closed on any other address.
+  if (p.sellerPayoutWallets != null) {
+    if (!Array.isArray(p.sellerPayoutWallets) || !p.sellerPayoutWallets.every((x) => typeof x === "string")) {
+      throw new PreflightError(400, "invalid_policy", "policy.sellerPayoutWallets must be an array of strings");
+    }
+    const wallets = p.sellerPayoutWallets.map((x) => x.trim()).filter(Boolean);
+    if (wallets.length === 0) {
+      throw new PreflightError(400, "invalid_policy", "policy.sellerPayoutWallets must contain at least one address");
+    }
+    if (wallets.length > 200) {
+      throw new PreflightError(400, "invalid_policy", "policy.sellerPayoutWallets is limited to 200 addresses");
+    }
+    out.sellerPayoutWallets = wallets;
+  }
+  // Obligation state is supplied by the caller because this public gate does
+  // not keep a cross-process payment ledger. Supplying it turns the named
+  // `notChecked` gap into a real replay/cumulative-spend check for that caller.
+  if (p.obligation != null) {
+    if (typeof p.obligation !== "object" || Array.isArray(p.obligation)) {
+      throw new PreflightError(400, "invalid_policy", "policy.obligation must be an object");
+    }
+    const src = p.obligation;
+    const o = {};
+    if (src.settledKeys != null) {
+      if (!Array.isArray(src.settledKeys) || !src.settledKeys.every((x) => typeof x === "string")) {
+        throw new PreflightError(400, "invalid_policy", "policy.obligation.settledKeys must be an array of strings");
+      }
+      if (src.settledKeys.length > 500) {
+        throw new PreflightError(400, "invalid_policy", "policy.obligation.settledKeys is limited to 500 keys");
+      }
+      o.settledKeys = unique(src.settledKeys.map((x) => x.trim()).filter(Boolean));
+      for (const key of o.settledKeys) {
+        if (key.length > 256) {
+          throw new PreflightError(400, "invalid_policy", "policy.obligation.settledKeys entries are limited to 256 characters");
+        }
+      }
+    }
+    for (const key of ["spentUsd", "grantUsd"]) {
+      if (src[key] != null) {
+        if (typeof src[key] !== "number" && typeof src[key] !== "string") {
+          throw new PreflightError(400, "invalid_policy", `policy.obligation.${key} must be a non-negative number`);
+        }
+        const n = Number(src[key]);
+        if (!Number.isFinite(n) || n < 0) {
+          throw new PreflightError(400, "invalid_policy", `policy.obligation.${key} must be a non-negative number`);
+        }
+        o[key] = n;
+      }
+    }
+    if ((o.spentUsd == null) !== (o.grantUsd == null)) {
+      throw new PreflightError(400, "invalid_policy", "policy.obligation.spentUsd and grantUsd must be supplied together");
+    }
+    if (o.settledKeys == null && o.spentUsd == null) {
+      throw new PreflightError(400, "invalid_policy", "policy.obligation must include settledKeys or spentUsd + grantUsd");
+    }
+    out.obligation = o;
   }
   if (p.expectedResource != null) {
     const s = String(p.expectedResource);
@@ -725,7 +792,7 @@ export function verifyReceipt(receipt, { now = Date.now(), intent, request } = {
 
 const NOTE = "A PASS is not a guarantee, a counterparty audit, or a prompt-injection filter. It means the checks listed in `checked` passed at this block; `notChecked` lists what was not examined, including tool metadata and response content. Receipts expire and are bound to the exact intent and request; older receipts without requestHash are unbound.";
 
-function finish({ kind, reasons, checked, notChecked, intent, request, block: chainBlock, simulation, decoded, payerBalance, ttlSeconds, now, structuralOnly = false, structuralOnlyReasons = [] }) {
+function finish({ kind, reasons, checked, notChecked, intent, request, block: chainBlock, simulation, decoded, payerBalance, obligation, ttlSeconds, now, structuralOnly = false, structuralOnlyReasons = [] }) {
   const reasonsFinal = [...reasons];
   let blockAgeSeconds = null;
   if (chainBlock?.timestamp != null) {
@@ -784,6 +851,7 @@ function finish({ kind, reasons, checked, notChecked, intent, request, block: ch
     simulation: simulation ?? undefined,
     decoded: decoded ?? undefined,
     payerBalance: payerBalance ?? undefined,
+    obligation: obligation ?? undefined,
     receipt,
     note: NOTE,
   };
@@ -812,6 +880,21 @@ async function paymentPreflight(body, { clientFactory, now }) {
 
   const net = parseNetwork(raw.network);
   const chainHint = body.chainId ?? raw.chainId ?? null;
+
+  // This key is the caller's local payment idempotency key, not the paid-route
+  // `x-idempotency-key` header. It is only useful when the caller also supplies
+  // its settlement ledger through policy.obligation.
+  const keyRaw = raw.idempotencyKey ?? body.idempotencyKey ?? null;
+  let idempotencyKey = null;
+  if (keyRaw != null) {
+    if (typeof keyRaw !== "string" || !keyRaw.trim()) {
+      reasons.push(block("invalid_obligation_key", "payment.idempotencyKey must be a non-empty string"));
+    } else if (keyRaw.trim().length > 256) {
+      reasons.push(block("invalid_obligation_key", "payment.idempotencyKey is limited to 256 characters"));
+    } else {
+      idempotencyKey = keyRaw.trim();
+    }
+  }
 
   const scheme = raw.scheme == null ? null : String(raw.scheme).trim().toLowerCase();
   if (!scheme) {
@@ -905,8 +988,12 @@ async function paymentPreflight(body, { clientFactory, now }) {
       if (payTo === ZERO_ADDRESS || payTo === DEAD_ADDRESS) {
         reasons.push(block("burn_address", "payTo is the zero or dead address"));
       }
-      if (policy.allowedPayTo && !matchesList(policy.allowedPayTo, payTo, net)) {
-        reasons.push(block("payee_not_allowed", "payTo is outside policy.allowedPayTo"));
+      if (policy.allowedPayTo) {
+        if (!matchesList(policy.allowedPayTo, payTo, net)) {
+          reasons.push(block("payee_not_allowed", "payTo is outside policy.allowedPayTo"));
+        } else {
+          checked.push("payee_allowlist");
+        }
       }
     }
   } else if (net?.supported && net.family === "svm") {
@@ -918,13 +1005,95 @@ async function paymentPreflight(body, { clientFactory, now }) {
       if (SVM_BLOCKED_PAYEES.has(payTo)) {
         reasons.push(block("burn_address", "payTo is a Solana system/token program, not a wallet"));
       }
-      if (policy.allowedPayTo && !matchesList(policy.allowedPayTo, payTo, net)) {
-        reasons.push(block("payee_not_allowed", "payTo is outside policy.allowedPayTo"));
+      if (policy.allowedPayTo) {
+        if (!matchesList(policy.allowedPayTo, payTo, net)) {
+          reasons.push(block("payee_not_allowed", "payTo is outside policy.allowedPayTo"));
+        } else {
+          checked.push("payee_allowlist");
+        }
       }
     }
   } else {
     payTo = raw.payTo == null ? null : String(raw.payTo);
     notChecked.push("payee format");
+  }
+
+  // Optional caller-supplied seller payout binding. A match is a real check
+  // for this caller; it is not independent proof that the seller controls the
+  // wallet. Keep that distinction visible in `notChecked`.
+  if (policy.sellerPayoutWallets && payTo) {
+    if (!matchesList(policy.sellerPayoutWallets, payTo, net)) {
+      reasons.push(block("payee_not_payout_wallet", "payTo is not in the caller-supplied seller payout wallets"));
+    } else {
+      checked.push("payee_payout_binding");
+      dropNotChecked(notChecked, "payTo ownership / proven seller payout wallet");
+      notChecked.push("independent payee ownership proof (caller-supplied payout list only)");
+    }
+  }
+
+  let obligation = null;
+  if (policy.obligation) {
+    const o = policy.obligation;
+    const settled = Boolean(idempotencyKey && o.settledKeys?.includes(idempotencyKey));
+    const obligationCanon = canonicalUsdc(net);
+    const canPrice = Boolean(
+      amount != null
+      && net?.supported
+      && obligationCanon
+      && sameAsset(net, asset, obligationCanon)
+    );
+    const round6 = (n) => Math.round(n * 1e6) / 1e6;
+    const currentUsd = canPrice ? round6(Number(amount) / 10 ** canonicalUsdcDecimals(net)) : null;
+    const priorSpent = o.spentUsd ?? null;
+    const grant = o.grantUsd ?? null;
+    let projected = null;
+    let remaining = null;
+
+    if (settled) {
+      reasons.push(block("obligation_already_settled", "the payment idempotency key is already settled in the caller-supplied obligation state"));
+    } else if (idempotencyKey) {
+      checked.push("obligation_key");
+    }
+
+    if (!idempotencyKey) {
+      notChecked.push("obligation key binding");
+      if (o.settledKeys && o.settledKeys.length > 0) {
+        reasons.push(caution("obligation_key_missing", "policy.obligation.settledKeys was supplied but payment.idempotencyKey is missing; replay was not checked"));
+      }
+    }
+    if (!o.settledKeys) notChecked.push("obligation replay ledger (no settledKeys supplied)");
+
+    if (priorSpent != null && grant != null) {
+      if (currentUsd == null) {
+        reasons.push(caution("obligation_amount_unavailable", "policy.obligation uses USD, but this asset's decimals are unknown; cumulative spend and grant were not checked"));
+        notChecked.push("obligation spend in USD");
+      } else {
+        projected = round6(priorSpent + currentUsd);
+        remaining = round6(grant - priorSpent);
+        // Compare at micro-dollar precision to avoid binary-float surprises.
+        const projectedMicro = BigInt(Math.round(projected * 1e6));
+        const grantMicro = BigInt(Math.round(grant * 1e6));
+        if (projectedMicro > grantMicro) {
+          reasons.push(block("cumulative_spend_over_grant", `adding $${currentUsd.toFixed(6)} to $${priorSpent.toFixed(6)} already spent would exceed the $${grant.toFixed(6)} grant`));
+        } else {
+          checked.push("cumulative_spend", "grant_balance");
+        }
+      }
+    }
+
+    dropNotChecked(notChecked, "obligation state (idempotency key, cumulative spend, grant balance)");
+    notChecked.push("obligation ledger persistence / cross-process enforcement");
+
+    obligation = {
+      source: "caller",
+      key: idempotencyKey,
+      settled,
+      priorSpentUsd: priorSpent,
+      currentUsd,
+      projectedSpentUsd: projected,
+      grantUsd: grant,
+      remainingUsd: remaining == null ? null : Math.max(0, remaining),
+    };
   }
 
   const resource = raw.resource == null ? null : String(raw.resource);
@@ -1106,6 +1275,7 @@ async function paymentPreflight(body, { clientFactory, now }) {
       amount: amount != null ? amount.toString() : (raw.amount == null ? null : String(raw.amount)),
       payTo: payTo ?? (raw.payTo == null ? null : String(raw.payTo)),
       resource,
+      idempotencyKey,
       maxTimeoutSeconds: numberOrNull(raw.maxTimeoutSeconds),
       extra: {
         validAfter: numberOrNull(validAfter),
@@ -1126,6 +1296,7 @@ async function paymentPreflight(body, { clientFactory, now }) {
     request: body,
     block: blockData,
     payerBalance,
+    obligation,
     ttlSeconds: ttlOf(body),
     now,
     structuralOnly: structuralOnlyReasons.length > 0,

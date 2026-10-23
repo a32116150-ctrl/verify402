@@ -139,6 +139,112 @@ test("payment: a malformed allowedResourceHosts entry is a 400", async () => {
   );
 });
 
+test("payment: a caller-supplied seller payout wallet binds payTo and removes the ownership gap", async () => {
+  const out = await run(payment({ policy: { sellerPayoutWallets: [PAY_TO] } }));
+  assert.equal(out.verdict, "PASS");
+  assert.ok(out.checked.includes("payee_payout_binding"));
+  assert.ok(!out.notChecked.includes("payTo ownership / proven seller payout wallet"));
+  assert.ok(out.notChecked.includes("independent payee ownership proof (caller-supplied payout list only)"));
+});
+
+test("payment: payTo outside the seller payout wallets is BLOCK", async () => {
+  const out = await run(payment({ policy: { sellerPayoutWallets: [SPENDER] } }));
+  assert.equal(out.verdict, "BLOCK");
+  assert.ok(out.reasons.some((r) => r.code === "payee_not_payout_wallet"));
+});
+
+test("payment: a settled idempotency key is BLOCK", async () => {
+  const out = await run(payment({
+    payment: { idempotencyKey: "pay-1" },
+    policy: { obligation: { settledKeys: ["pay-1"] } },
+  }));
+  assert.equal(out.verdict, "BLOCK");
+  assert.ok(out.reasons.some((r) => r.code === "obligation_already_settled"));
+  assert.equal(out.obligation.settled, true);
+  assert.ok(out.notChecked.includes("obligation ledger persistence / cross-process enforcement"));
+});
+
+test("payment: cumulative spend over the grant is BLOCK", async () => {
+  const out = await run(payment({
+    payment: { idempotencyKey: "pay-2" },
+    policy: { obligation: { spentUsd: 0.25, grantUsd: 0.25 } },
+  }));
+  assert.equal(out.verdict, "BLOCK");
+  assert.ok(out.reasons.some((r) => r.code === "cumulative_spend_over_grant"));
+  assert.equal(out.obligation.projectedSpentUsd, 0.26);
+});
+
+test("payment: cumulative spend inside the grant is checked and PASS", async () => {
+  const out = await run(payment({
+    payment: { idempotencyKey: "pay-3" },
+    policy: { obligation: { spentUsd: 0.24, grantUsd: 0.25 } },
+  }));
+  assert.equal(out.verdict, "PASS");
+  assert.ok(out.checked.includes("obligation_key"));
+  assert.ok(out.checked.includes("cumulative_spend"));
+  assert.ok(out.checked.includes("grant_balance"));
+  assert.ok(!out.notChecked.includes("obligation state (idempotency key, cumulative spend, grant balance)"));
+  assert.ok(out.notChecked.includes("obligation replay ledger (no settledKeys supplied)"));
+  assert.equal(out.obligation.projectedSpentUsd, 0.25);
+  assert.equal(out.obligation.remainingUsd, 0.01);
+});
+
+test("payment: settled keys without an idempotency key is CAUTION, not PASS", async () => {
+  const out = await run(payment({
+    policy: { obligation: { settledKeys: ["pay-1"] } },
+  }));
+  assert.equal(out.verdict, "CAUTION");
+  assert.ok(out.reasons.some((r) => r.code === "obligation_key_missing"));
+});
+
+test("payment: obligation state with an unpriceable asset does not claim a spend check", async () => {
+  const out = await run(payment({
+    payment: { asset: SPENDER },
+    policy: { maxAmountUsd: null, obligation: { spentUsd: 0, grantUsd: 1 } },
+  }));
+  assert.equal(out.verdict, "CAUTION");
+  assert.ok(out.reasons.some((r) => r.code === "obligation_amount_unavailable"));
+  assert.ok(out.notChecked.includes("obligation spend in USD"));
+  assert.ok(!out.checked.includes("cumulative_spend"));
+});
+
+test("payment: malformed obligation policy is a 400", async () => {
+  await assert.rejects(
+    () => run(payment({ policy: { obligation: { settledKeys: "pay-1" } } })),
+    (e) => e instanceof PreflightError && e.status === 400 && e.code === "invalid_policy",
+  );
+  await assert.rejects(
+    () => run(payment({ policy: { obligation: { spentUsd: 0.1 } } })),
+    (e) => e instanceof PreflightError && e.status === 400 && e.code === "invalid_policy",
+  );
+  await assert.rejects(
+    () => run(payment({ policy: { sellerPayoutWallets: [PAY_TO, 7] } })),
+    (e) => e instanceof PreflightError && e.status === 400 && e.code === "invalid_policy",
+  );
+});
+
+test("payment: obligation state is bound into the receipt", async () => {
+  const body = payment({
+    payment: { idempotencyKey: "pay-bound" },
+    policy: { obligation: { settledKeys: ["pay-old"], spentUsd: 0.01, grantUsd: 1 } },
+  });
+  const out = await run(body);
+  assert.equal(out.verdict, "PASS");
+  assert.equal(verifyReceipt(out.receipt, { now: NOW, intent: out.intent, request: body }).valid, true);
+
+  const changed = {
+    ...out.intent,
+    policy: {
+      ...out.intent.policy,
+      obligation: { ...out.intent.policy.obligation, spentUsd: 0.02 },
+    },
+  };
+  assert.equal(
+    verifyReceipt(out.receipt, { now: NOW, intent: changed, request: body }).reason,
+    "intent_mismatch",
+  );
+});
+
 test("payment: an unsupported but real network gets a reason that says so", async () => {
   const out = await run(payment({ payment: { network: "eip155:56" } }));
   assert.equal(out.verdict, "BLOCK");

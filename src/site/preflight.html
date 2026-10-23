@@ -279,6 +279,26 @@
     "policy": { "maxAmountUsd": 0.25, "allowedResourceHosts": ["verify402.onrender.com"] }
   }'</span></pre>
         </div>
+        <div class="callout" style="margin-top:24px">
+          <h3>Optional: bind the payout wallet and local obligation state</h3>
+          <p>The public gate has no cross-process payment ledger. If your agent already keeps one, pass it in:</p>
+<pre>{
+  <span class="y">"payment"</span>: {
+    <span class="y">"idempotencyKey"</span>: <span class="g">"pay-2026-10-24-001"</span>,
+    <span class="y">"payTo"</span>: <span class="g">"0x…"</span>,
+    …
+  },
+  <span class="y">"policy"</span>: {
+    <span class="y">"sellerPayoutWallets"</span>: [<span class="g">"0xSellerPayout"</span>],
+    <span class="y">"obligation"</span>: {
+      <span class="y">"settledKeys"</span>: [<span class="g">"pay-2026-10-23-014"</span>],
+      <span class="y">"spentUsd"</span>: <span class="g">0.24</span>,
+      <span class="y">"grantUsd"</span>: <span class="g">0.25</span>
+    }
+  }
+}</pre>
+          <p><code class="inline">sellerPayoutWallets</code> is a caller-supplied binding, not independent proof that the seller controls the wallet. A settled key is <b>BLOCK</b>; adding this payment to <code class="inline">spentUsd</code> above <code class="inline">grantUsd</code> is <b>BLOCK</b>. Without this state, both gaps stay named in <code class="inline">notChecked</code>.</p>
+        </div>
         <div style="margin-top:24px">
           <p class="code-cap">Response · abbreviated</p>
 <pre>{
@@ -338,8 +358,8 @@
           <thead><tr><th>Checked</th><th>Not checked</th></tr></thead>
           <tbody>
             <tr>
-              <td>Network, asset, amount, payee, resource URL, resource host when policy binds it, timeout, authorization window</td>
-              <td>Whether the recipient is a scammer or a sanctioned address; payTo ownership / proven seller payout wallet</td>
+              <td>Network, asset, amount, payee, resource URL, resource host when policy binds it, timeout, authorization window; seller payout binding when the caller supplies <code class="inline">sellerPayoutWallets</code></td>
+              <td>Whether the recipient is a scammer or a sanctioned address; independent proof that the seller controls the payout wallet</td>
             </tr>
             <tr>
               <td>EVM block freshness: &gt;30s CAUTION, &gt;120s BLOCK</td>
@@ -362,8 +382,8 @@
               <td>MEV, sandwich protection, route quality beyond the decoded minimum</td>
             </tr>
             <tr>
-              <td>Receipt integrity: HMAC, intent hash, block, expiry</td>
-              <td>Counterparty identity, tool metadata, obligation state (settled idempotency keys, cumulative spend, grant balance), hidden Unicode / prompt injection in tool output, or off-chain promises: “the seller will deliver after you pay”</td>
+              <td>Receipt integrity: HMAC, intent hash, block, expiry; settled idempotency key and cumulative spend/grant when the caller supplies <code class="inline">policy.obligation</code></td>
+              <td>Counterparty identity, tool metadata, obligation ledger persistence across processes, independent payTo ownership proof, hidden Unicode / prompt injection in tool output, or off-chain promises: “the seller will deliver after you pay”</td>
             </tr>
           </tbody>
         </table>

@@ -41,6 +41,15 @@ resource is CAUTION `resource_identity_unverified` and `resource identity` is
 listed in `notChecked`. The bridge forwards this policy to the server; the
 server enforces it.
 
+Two optional caller-supplied checks are forwarded as-is:
+
+- `payment.idempotencyKey` + `policy.obligation.settledKeys` rejects a key the
+  caller already settled; `policy.obligation.spentUsd` + `grantUsd` rejects
+  cumulative spend over the grant. The bridge does **not** persist this state.
+- `policy.sellerPayoutWallets` binds `payTo` to the seller's known payout
+  addresses. A mismatch is BLOCK. This is a caller binding, not independent
+  proof that the seller controls the wallet.
+
 The gate is advisory at this layer: the bridge does not hold the agent's
 transaction key and cannot stop an agent that ignores the answer. Enforcement
 belongs in the executor that signs — verify the receipt, then sign. See
@@ -201,9 +210,10 @@ Once configured, your agent automatically sees the tools in its context. You can
   can authorize; they do **not** protect a compromised private key.
 - `preflight_gate` is a check, not a guarantee. Read `notChecked`: it does not
   screen recipient reputation or sanctions, audit contracts, simulate full
-  balance deltas, audit the counterparty, scan tool descriptions or responses
-  for prompt injection, or protect against MEV. It catches the measurable
-  signing mistakes, not every scam.
+  balance deltas, audit the counterparty, independently prove payee ownership,
+  persist an obligation ledger across processes, scan tool descriptions or
+  responses for prompt injection, or protect against MEV. It catches the
+  measurable signing mistakes, not every scam.
 - Use the [reference executor](https://github.com/a32116150-ctrl/verify402/blob/master/examples/preflight-guard.mjs)
   when you want enforcement rather than advice.
 

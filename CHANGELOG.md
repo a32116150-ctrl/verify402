@@ -3,6 +3,35 @@
 All notable changes to verify402. This file records repository changes; it does
 not imply a deploy or an npm publish.
 
+## Unreleased — planned 1.0.7
+
+This section is a release candidate. It has not been published to npm, the MCP
+Registry, GitHub Releases, or the live service. Version metadata is unchanged
+at `1.0.6` until release approval.
+
+### Added
+
+- Optional caller-supplied obligation checks for payment intents.
+  `payment.idempotencyKey` plus `policy.obligation.settledKeys` returns
+  **BLOCK** `obligation_already_settled` for a re-presented key.
+  `policy.obligation.spentUsd` plus `grantUsd` returns **BLOCK**
+  `cumulative_spend_over_grant` when this payment would exceed the grant.
+  The gate does not persist this state; `notChecked` names the missing
+  cross-process ledger and any missing key/ledger input.
+- Optional `policy.sellerPayoutWallets` binds `payTo` to caller-supplied seller
+  payout addresses. A match adds `payee_payout_binding`; a mismatch is
+  **BLOCK** `payee_not_payout_wallet`. This is a binding, not independent proof
+  that the seller controls the wallet.
+- The preflight receipt now binds `payment.idempotencyKey` and the normalized
+  obligation/payout policy through the existing intent hash.
+
+### Changed
+
+- `policy.allowedPayTo` matches now add `payee_allowlist` to `checked`.
+- MCP `preflight_gate` exposes `payment.idempotencyKey`,
+  `policy.obligation`, `policy.sellerPayoutWallets`, and the previously missing
+  `policy.allowedResourceHosts`.
+
 ## 1.0.6 — 2026-10-23
 
 `verify402-mcp@1.0.6` is the release that points at the fixed public

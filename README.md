@@ -306,6 +306,17 @@ Response: `PASS` / `CAUTION` / `BLOCK`, `reasons[]`, `checked[]`,
   `503`, not a PASS.
 - **Fail-closed:** if the chain cannot be read, the endpoint returns `503` and
   no receipt. An executor must refuse to sign without a verifiable receipt.
+- **Optional caller-supplied state:** the gate has no cross-process payment
+  ledger, so it can only check obligation state the caller supplies:
+  - `payment.idempotencyKey` plus `policy.obligation.settledKeys` catches a
+    re-presented key (`obligation_already_settled`).
+  - `policy.obligation.spentUsd` plus `grantUsd` catches cumulative spend over
+    the grant (`cumulative_spend_over_grant`).
+  - `policy.sellerPayoutWallets` binds `payTo` to the seller's known payout
+    addresses (`payee_payout_binding`; a mismatch is `payee_not_payout_wallet`).
+  These are caller bindings, not a server-side ledger and not independent proof
+  that the seller controls the wallet. Without them, the response says so in
+  `notChecked`.
 - **Not checked, on purpose:** recipient reputation, sanctions, contract
   audits, full balance-delta simulation, MEV, the payment signature/signed
   payload, gas price/limit chosen by the signer, raw signed-transaction binding,

@@ -505,6 +505,7 @@ export function buildOpenapi(prices, { mode = "testnet", baseUrl = DEMO_BASE_URL
           description: [
             "Accepts an x402 payment challenge (kind=payment) or raw transaction calldata (kind=transaction).",
             "Evaluates structural validity, recipient allowlists, spend caps, approval limits, revert simulation, and block freshness.",
+            "Optional caller-supplied checks: policy.sellerPayoutWallets binds payTo to the seller's payout addresses; policy.obligation checks a local settled-key ledger and cumulative spend against a grant. The gate does not persist either state.",
             "Returns PASS / CAUTION / BLOCK with typed reasons, checked/notChecked lists, pinned block number, and an HMAC receipt (valid for 90s).",
             "\n**Security disclaimer:** A PASS indicates that the specific checks in `checked` passed. It is not an audit, does not screen sanctions, does not audit the counterparty, does not scan tool descriptions or responses for prompt injection, and does not guarantee the intent is safe. Always inspect `notChecked`.",
             `\n**Rate limits:** ${PREFLIGHT_RATE_PER_MIN} requests/minute per IP, max concurrency of ${PREFLIGHT_MAX_IN_FLIGHT}.`,
@@ -528,6 +529,7 @@ export function buildOpenapi(prices, { mode = "testnet", baseUrl = DEMO_BASE_URL
                         amount: { type: "string", description: "Atomic units (e.g. 10000 = 0.01 USDC, 6 decimals)." },
                         payTo: { type: "string", description: "Recipient address." },
                         resource: { type: "string", description: "Resource URL being paid for." },
+                        idempotencyKey: { type: "string", maxLength: 256, description: "Optional caller-local payment idempotency key, separate from the paid-route x-idempotency-key header. It binds the receipt and enables the caller-supplied obligation replay check." },
                         maxTimeoutSeconds: { type: "integer", default: 60 },
                       },
                       required: ["network", "asset", "amount", "payTo"],
@@ -549,6 +551,17 @@ export function buildOpenapi(prices, { mode = "testnet", baseUrl = DEMO_BASE_URL
                         allowedTo: { type: "array", items: { type: "string" } },
                         expectedResource: { type: "string", format: "uri", description: "Exact resource URL; a mismatch is BLOCK. Binding the resource identity turns the unverified-resource CAUTION into a PASS/FAIL check." },
                         allowedResourceHosts: { type: "array", items: { type: "string" }, description: "Bare hostnames allowed in payment.resource. A resource on another host is BLOCK; a matching host makes resource identity a checked field." },
+                        sellerPayoutWallets: { type: "array", items: { type: "string" }, maxItems: 200, description: "Caller-supplied seller payout addresses. A payTo match adds payee_payout_binding and removes the generic payTo-ownership gap; a mismatch is BLOCK payee_not_payout_wallet. This is a binding, not independent proof of wallet ownership." },
+                        obligation: {
+                          type: "object",
+                          description: "Caller-supplied obligation state. The public gate does not persist a cross-process payment ledger; supplying this turns the named replay/cumulative-spend gap into checks for this caller.",
+                          properties: {
+                            settledKeys: { type: "array", items: { type: "string", maxLength: 256 }, maxItems: 500, description: "Payment idempotency keys the caller already settled." },
+                            spentUsd: { type: "number", minimum: 0, description: "Amount already spent under the grant, in USD." },
+                            grantUsd: { type: "number", minimum: 0, description: "Total grant in USD. remainingUsd is grantUsd - spentUsd." },
+                          },
+                          additionalProperties: false,
+                        },
                       },
                       additionalProperties: true,
                     },
@@ -613,6 +626,20 @@ export function buildOpenapi(prices, { mode = "testnet", baseUrl = DEMO_BASE_URL
                       },
                       checked: { type: "array", items: { type: "string" }, description: "Specific checks that were executed." },
                       notChecked: { type: "array", items: { type: "string" }, description: "Limitations and checks that were skipped." },
+                      obligation: {
+                        type: "object",
+                        description: "Present only when the caller supplied policy.obligation. This is caller-supplied state, not a server ledger; it is echoed for audit and receipt binding.",
+                        properties: {
+                          source: { type: "string", const: "caller" },
+                          key: { type: ["string", "null"] },
+                          settled: { type: "boolean" },
+                          priorSpentUsd: { type: ["number", "null"] },
+                          currentUsd: { type: ["number", "null"] },
+                          projectedSpentUsd: { type: ["number", "null"] },
+                          grantUsd: { type: ["number", "null"] },
+                          remainingUsd: { type: ["number", "null"] },
+                        },
+                      },
                       block: {
                         type: "object",
                         properties: {

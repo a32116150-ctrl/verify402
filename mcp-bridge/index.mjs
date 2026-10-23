@@ -222,7 +222,9 @@ const DESCRIPTIONS = {
     "operator before signing. The receipt expires (default 90s): call again rather than reuse it. " +
     "Free. Pass `from` (the wallet that will sign) to enable simulation and balance checks. For " +
     "kind=transaction, chainId is REQUIRED (400 missing_chain without it). For payment intents " +
-    "with no `from` or no proof, the response is PASS with structural_only:true and names what was not checked.",
+    "with no `from` or no proof, the response is PASS with structural_only:true and names what was not checked. " +
+    "Optional caller-supplied checks: policy.sellerPayoutWallets binds payTo to the seller's payout addresses; " +
+    "policy.obligation checks a local settled-key ledger and cumulative spend against a grant. The gate does not persist either state.",
   verify_arbitrage:
     "Ask verify402 whether a cross-venue arbitrage opportunity is REAL, right now. " +
     "Quotes come from Uniswap's canonical QuoterV2 and each DEX router at one pinned block. " +
@@ -268,6 +270,7 @@ async function main() {
         amount: z.string().describe("RAW amount in the asset's smallest unit, as a string"),
         payTo: z.string().describe("Recipient address from the 402 challenge"),
         resource: z.string().optional().describe("The resource URL the payment is for"),
+        idempotencyKey: z.string().max(256).optional().describe("Caller-local payment idempotency key (not the paid-route x-idempotency-key header); enables the policy.obligation replay check"),
         maxTimeoutSeconds: z.number().optional().describe("maxTimeoutSeconds from the 402 challenge"),
         extra: z.object({
           validAfter: z.number().optional(),
@@ -289,6 +292,13 @@ async function main() {
         allowedAssets: z.array(z.string()).optional().describe("Allowlist of payment assets"),
         allowedFacilitators: z.array(z.string()).optional().describe("Allowlist of x402 facilitators"),
         expectedResource: z.string().optional().describe("The exact resource URL the agent intends to pay for"),
+        allowedResourceHosts: z.array(z.string()).optional().describe("Bare hostnames allowed in payment.resource; a foreign host is BLOCK"),
+        sellerPayoutWallets: z.array(z.string()).optional().describe("Caller-supplied seller payout addresses; a payTo mismatch is BLOCK. This is a binding, not independent ownership proof"),
+        obligation: z.object({
+          settledKeys: z.array(z.string()).optional().describe("Payment idempotency keys already settled"),
+          spentUsd: z.number().nonnegative().optional().describe("Already spent under the grant, in USD"),
+          grantUsd: z.number().nonnegative().optional().describe("Total grant in USD; spentUsd and grantUsd must be supplied together"),
+        }).optional().describe("Caller-supplied local obligation state. The public gate does not persist it"),
         forbidUnlimitedApproval: z.boolean().optional().describe("Turn an unlimited approve into a BLOCK"),
         maxTimeoutSeconds: z.number().optional().describe("Reject challenges with a longer timeout"),
       }).optional().describe("Operator policy. Omit for structural checks only."),
