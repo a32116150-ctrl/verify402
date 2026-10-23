@@ -19,6 +19,8 @@ I’m testing a free preflight gate for agents before they sign or pay. Demo pay
 
 ## 2. GitHub issue
 
+**Opened 2026-10-23 as issue #3:** https://github.com/a32116150-ctrl/verify402/issues/3
+
 Title:
 
 ```text
@@ -57,7 +59,7 @@ If it’s not useful for your workflow, that’s useful feedback too. No pitch o
 
 ## What to track
 
-- `/usage` before and after
+- `/usage` before and after (baseline 2026-10-23 12:35 CET: 4 calls, all ours)
 - number of testers
 - intents tested
 - false PASS / false BLOCK findings
