@@ -1,13 +1,14 @@
 # Email campaign — free preflight gate testers
 
-**Status:** **wave 1: 4 of 4 sent** (Oct 23, 12:50–12:55 UTC); **wave 2: 6 of
-6 sent** — five via AgentMail at 13:17 UTC, **Privy via Resend** at 13:24 UTC
-from `verify402 <verify402@anoir.space>`. Glama and OpenZeppelin auto-acked; no
-human replies yet. AgentMail's free 10-recipient cap is exhausted until **Oct
-30**, but **Resend on `anoir.space` is verified** (3,000/month, 100/day) and is
-now the primary sender. Replies go to `sankou7-1754@agentmail.to` via
-`Reply-To`. Postal address omitted by owner decision (CAN-SPAM risk accepted).
-One follow-up maximum per recipient, 4–7 days out.
+**Status:** **15 campaign emails sent** Oct 23: wave 1 (4), wave 2 (6), wave 3
+(5). Wave 3 went via Resend at 13:31 UTC — Rabby, Rainbow, Turnkey and Wallet
+Guard delivered; **Safe bounced** (`info@safe.global`, 550 no such user), so use
+their contact form or drop. Glama and OpenZeppelin auto-acked; no human replies
+yet. AgentMail's free 10-recipient cap is exhausted until **Oct 30**, but
+**Resend on `anoir.space` is verified** (3,000/month, 100/day) and is the
+primary sender. Replies go to `sankou7-1754@agentmail.to` via `Reply-To`.
+Postal address omitted by owner decision (CAN-SPAM risk accepted). One follow-up
+maximum per recipient, 4–7 days out.
 
 This is deliberately not a mass campaign. The project rule is 3–5 targeted
 messages, not 50. The goal is 3 testers who run real intents and report false
@@ -99,6 +100,8 @@ remains the reply inbox.
   platform. Keep volume low, personalized, and honor opt-outs; a complaint or
   bounce spike can suspend the domain. Do not exceed 5–10 sends/day from a new
   domain without warming it.
+- **Wave 3 (Oct 23, owner-approved):** Safe (bounced), Rabby, Rainbow,
+  Turnkey, Wallet Guard. See `docs/email-wave3.md` for routes, drafts, and IDs.
 
 ---
 

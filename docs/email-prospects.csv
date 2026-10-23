@@ -16,3 +16,8 @@ Circle,email,devmarketing@circle.com,stablecoin,USDC is the demo asset; develope
 OpenZeppelin,email,contact@openzeppelin.com,security,Maintains approval/security tooling; falsification test,sent 2026-10-23,Wait; one follow-up 4-7 days
 Offchain Labs,email,info@offchain.io,ecosystem,Arbitrum 42161 is supported by the transaction gate,sent 2026-10-23,Wait; one follow-up 4-7 days
 Privy,email,hi@privy.io,wallet,Embedded wallets sign without a wallet UI to catch a bad approval,sent 2026-10-23 via Resend,Wait; one follow-up 4-7 days
+Safe,email,info@safe.global,wallet,Smart-account wallet; nested execTransaction calldata,bounced 2026-10-23,Address published on imprint but 550 no such user; use contact form or drop
+Rabby,email,support@rabby.io,wallet,Ships transaction previews before signing,sent 2026-10-23 via Resend,Wait; one follow-up 4-7 days
+Rainbow,email,hello@rainbow.me,wallet,Consumer wallet at the signing screen,sent 2026-10-23 via Resend,Wait; one follow-up 4-7 days
+Turnkey,email,hello@turnkey.com,wallet,Embedded wallets sign without a wallet UI,sent 2026-10-23 via Resend,Wait; one follow-up 4-7 days
+Wallet Guard,email,team@walletguard.app,security,Wallet security extension; transaction threat detection,sent 2026-10-23 via Resend,Wait; one follow-up 4-7 days
