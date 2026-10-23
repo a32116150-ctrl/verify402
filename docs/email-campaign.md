@@ -1,7 +1,8 @@
 # Email campaign — free preflight gate testers
 
-**Status:** drafted, **not sent**. Two blockers remain: a postal address for the
-signature, and an AgentMail account/API key. Round 1 is capped at **4 emails**,
+**Status:** AgentMail is **connected and tested** (Oct 23, 12:40 UTC); **no
+campaign email has been sent**. One blocker remains: a postal address for the
+signature (plus a confirmed sender name). Round 1 is capped at **4 emails**,
 personalized, with **one** follow-up maximum.
 
 This is deliberately not a mass campaign. The project rule is 3–5 targeted
@@ -56,6 +57,12 @@ env_http_headers = { "x-api-key" = "AGENTMAIL_API_KEY" }
    it, never paste it into a doc.
 4. Test: send one message to your own address, then reply to it and confirm
    `list_threads` shows the thread. Only after that send externally.
+
+**Live setup (Oct 23):** inbox `sankou7-1754@agentmail.to`, display name
+`verify402`; a test email sent to itself and listed with the `sent` label. The
+current key is inbox-scoped, so `inbox_create` is denied — a branded
+`verify402@agentmail.to` address would need an organization-scoped key. The
+free-plan footer `Sent via AgentMail` is present on sent mail.
 
 ### Alternatives (and why not now)
 
@@ -327,9 +334,9 @@ the gate is bad.
 ## 8. Pre-send checklist
 
 - [ ] Postal address supplied and real
-- [ ] AgentMail account verified (OTP complete)
-- [ ] `AGENTMAIL_API_KEY` stored outside the repo
-- [ ] Test email sent to own address and reply received
+- [x] AgentMail account verified (OTP complete)
+- [x] `AGENTMAIL_API_KEY` stored outside the repo
+- [x] Test email sent and listed (`sent` label); inbound reply still untested
 - [ ] Sender display name and signature agreed
 - [ ] Four recipients re-checked against public routes
 - [ ] No scraped addresses in the prospect file
