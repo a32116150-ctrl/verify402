@@ -1,12 +1,13 @@
 # Email campaign — wave 2 (6 prospects)
 
-**Status:** **5 of 6 sent** at 2026-10-23T13:17 UTC (MetaMask, WalletConnect,
-Circle, OpenZeppelin, Offchain Labs). **Privy is held**: the free account's
-10-distinct-recipient cap is now exhausted and does not lift until
-**2026-10-30T12:17Z** unless the plan is upgraded. Same rules as wave 1: plain
-text, one link, no tracking, one follow-up maximum, opt-out in every message.
-Postal address omitted by owner decision (CAN-SPAM risk accepted). Signer:
-`verify402 <sankou7-1754@agentmail.to>`.
+**Status:** **6 of 6 sent** on 2026-10-23. Five went via AgentMail at 13:17 UTC
+(MetaMask, WalletConnect, Circle, OpenZeppelin, Offchain Labs); **Privy** went
+via **Resend** at 13:24 UTC from `verify402 <verify402@anoir.space>` with
+`Reply-To: sankou7-1754@agentmail.to`, after `anoir.space` was verified. Resend
+free tier: 3,000/month, 100/day. Same rules as wave 1: plain text, one link, no
+tracking, one follow-up maximum, opt-out in every message. Postal address
+omitted by owner decision (CAN-SPAM risk accepted). Replies go to the AgentMail
+inbox.
 
 All six addresses were published as public **role** addresses on the
 organizations’ GitHub org profiles on Oct 23 (no personal or scraped addresses).

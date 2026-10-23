@@ -1,12 +1,13 @@
 # Email campaign — free preflight gate testers
 
-**Status:** **wave 1: 4 of 4 sent** (Oct 23, 12:50–12:55 UTC); **wave 2: 5 of
-6 sent** (13:17 UTC) — MetaMask, WalletConnect, Circle, OpenZeppelin, Offchain
-Labs. **Privy held.** Glama opened auto-ticket **#148620911**; no other replies
-yet. The free account's 10-distinct-recipient cap is exhausted until **Oct 30**
-unless upgraded. Postal address omitted by owner decision (CAN-SPAM risk
-accepted). Signer: `verify402 <sankou7-1754@agentmail.to>`. One follow-up
-maximum per recipient, 4–7 days out.
+**Status:** **wave 1: 4 of 4 sent** (Oct 23, 12:50–12:55 UTC); **wave 2: 6 of
+6 sent** — five via AgentMail at 13:17 UTC, **Privy via Resend** at 13:24 UTC
+from `verify402 <verify402@anoir.space>`. Glama and OpenZeppelin auto-acked; no
+human replies yet. AgentMail's free 10-recipient cap is exhausted until **Oct
+30**, but **Resend on `anoir.space` is verified** (3,000/month, 100/day) and is
+now the primary sender. Replies go to `sankou7-1754@agentmail.to` via
+`Reply-To`. Postal address omitted by owner decision (CAN-SPAM risk accepted).
+One follow-up maximum per recipient, 4–7 days out.
 
 This is deliberately not a mass campaign. The project rule is 3–5 targeted
 messages, not 50. The goal is 3 testers who run real intents and report false
@@ -78,6 +79,26 @@ free-plan footer `Sent via AgentMail` is present on sent mail.
 **Upgrade trigger:** if the campaign produces replies and a second round is
 justified, buy/verify a domain (e.g. a `verify402` domain), move to Resend MCP,
 and keep AgentMail for inbound replies.
+
+### Live Resend setup (Oct 23)
+
+The owner's domain **`anoir.space`** is verified in Resend (region `eu-west-1`,
+sending and receiving enabled). Resend is now the primary sender; AgentMail
+remains the reply inbox.
+
+- **Sender:** `verify402 <verify402@anoir.space>`
+- **Reply-To:** `sankou7-1754@agentmail.to`
+- **API:** `POST https://api.resend.com/emails`; key stored at
+  `~/.config/resend/env` (mode `600`), never committed or printed.
+- **Free tier:** 3,000/month, 100/day; open/click tracking off.
+- **Test:** message `01a168ef-1bc5-70d0-9e54-abfc4f1cc5da`, `last_event:
+  delivered`; received in the AgentMail inbox at 13:24:23 UTC with the expected
+  `From` and `Reply-To`.
+- **Privy:** message `01a168ef-a60e-770e-b3f5-2e9b5a75756d`, delivered.
+- **Caveat:** Resend is a transactional-email provider, not a cold-outreach
+  platform. Keep volume low, personalized, and honor opt-outs; a complaint or
+  bounce spike can suspend the domain. Do not exceed 5–10 sends/day from a new
+  domain without warming it.
 
 ---
 
