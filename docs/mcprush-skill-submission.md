@@ -1,7 +1,9 @@
 # mcprush skill submission: verify402 preflight
 
-Status: **prepared, not submitted**. The source lives at
-`skills/verify402-preflight/` in this repository.
+Status: **source pushed, not submitted**. The source lives at
+`skills/verify402-preflight/` in this repository and is live on `master` at
+commit `d87adf6`:
+https://github.com/a32116150-ctrl/verify402/tree/master/skills/verify402-preflight
 
 ## Listing fields
 

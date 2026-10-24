@@ -34,6 +34,8 @@ Depending on the intent and policy, it can check:
 - Recipient reputation or sanctions screening.
 - Counterparty identity, off-chain promises, or delivery guarantees.
 - Contract audits, proxy/owner privilege analysis, or token intent.
+- Off-chain EIP-712 typed-data signing. The transaction intent decodes an
+  on-chain `permit(...)` call; it does not evaluate a typed-data permit.
 - Full balance-delta / state-change simulation; MEV or sandwich protection.
 - Transfer-tax, blacklist, pause, or max-transaction testing.
 - A honeypot proof. The token check is quote-based sellability.

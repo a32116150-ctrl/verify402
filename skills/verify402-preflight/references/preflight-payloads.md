@@ -94,6 +94,9 @@ Notes:
 - `value` is wei as a decimal string.
 - Include `from` whenever possible. Without it the simulation is skipped and
   the gate will say so.
+- The gate decodes an on-chain `permit(...)` call, but it does not evaluate an
+  off-chain EIP-712 typed-data permit. Treat typed-data signing as outside this
+  intent shape.
 
 ## Policy recipes
 
