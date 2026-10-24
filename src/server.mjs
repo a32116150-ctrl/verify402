@@ -814,6 +814,7 @@ app.get("/sitemap.xml", (_req, res) => {
   <url><loc>https://verify402.onrender.com/proof</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://verify402.onrender.com/live</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
   <url><loc>https://verify402.onrender.com/donate</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://verify402.onrender.com/sponsor</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
 </urlset>`
   );
 });
@@ -1203,7 +1204,7 @@ app.post("/preflight/verify", preflightRateLimit, (req, res) => {
   res.json(verifyReceipt(receipt, options));
 });
 
-// Static pages for humans: /start, /checks, /live, /proof, /docs, /donate (+ /assets).
+// Static pages for humans: /start, /checks, /live, /proof, /docs, /donate, /sponsor (+ /assets).
 // Clean URLs via the html extension; HTML is no-store so edits go live at once.
 app.use(express.static(SITE_DIR, {
   index: false,

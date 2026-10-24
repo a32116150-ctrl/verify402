@@ -254,6 +254,7 @@ test("discovery: google site verification meta tag and file are present for Sear
     path.join(ROOT, "src", "site", "proof.html"),
     path.join(ROOT, "src", "site", "docs.html"),
     path.join(ROOT, "src", "site", "donate.html"),
+    path.join(ROOT, "src", "site", "sponsor.html"),
     path.join(ROOT, "src", "site", "mcp.html"),
   ];
 
