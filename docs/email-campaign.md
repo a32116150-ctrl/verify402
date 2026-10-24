@@ -4,9 +4,10 @@
 (5). Wave 3 went via Resend at 13:31 UTC — Rabby, Rainbow, Turnkey and Wallet
 Guard delivered; **Safe bounced** (`info@safe.global`, 550 no such user), so use
 their contact form or drop. Glama and OpenZeppelin auto-acked; no human replies
-yet. AgentMail's free 10-recipient cap is exhausted until **Oct 30**, but
-**Resend on `anoir.space` is verified** (3,000/month, 100/day) and is the
-primary sender. Replies go to `sankou7-1754@agentmail.to` via `Reply-To`.
+yet. AgentMail's free new-recipient cap is exhausted until
+**`2026-10-30T12:17:03Z`**, but **Resend on `anoir.space` is verified**
+(3,000/month, 100/day) and is the primary sender. Replies go to
+`sankou7-1754@agentmail.to` via `Reply-To`.
 Postal address omitted by owner decision (CAN-SPAM risk accepted). One follow-up
 maximum per recipient, 4–7 days out.
 
