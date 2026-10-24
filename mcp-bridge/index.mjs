@@ -31,6 +31,7 @@ import { config } from "dotenv";
 import { z } from "zod";
 import { installConsoleRedaction, logInfo, logError } from "./log.mjs";
 import { paidPost } from "./paid-call.mjs";
+import { CLIENT_HEADERS, VERSION } from "./client-id.mjs";
 import { fileURLToPath } from "node:url";
 import { realpathSync } from "node:fs";
 import { AsyncLocalStorage } from "node:async_hooks";
@@ -42,20 +43,14 @@ installConsoleRedaction();
 const IS_MAIN = isMainModule();
 if (IS_MAIN) config();
 
-const VERSION = "1.0.7";
 const EVM_PRIVATE_KEY = process.env.EVM_PRIVATE_KEY;
 // Normalise once so the axios base URL, the payment policy prefix, and the
 // per-tool expected resource are all the same string (no trailing slash).
 const SERVER_URL = (process.env.VERIFY402_URL || "https://verify402.onrender.com")
   .trim()
   .replace(/\/+$/, "");
-// Tell the server which client made the call. This is a label, not an identity:
-// it helps separate MCP use from generic HTTP probes without collecting keys or
-// wallet addresses.
-const CLIENT_HEADERS = {
-  "User-Agent": `verify402-mcp/${VERSION}`,
-  "X-Verify402-Client": `mcp/${VERSION}`,
-};
+// CLIENT_HEADERS is a label, not an identity: it helps /usage separate MCP
+// calls from generic HTTP probes without collecting keys or wallet addresses.
 // Preflight is free, so it does not go through the paying client. Keeping the
 // two clients separate means a misconfigured 402 on a free route can never
 // turn into a signature.

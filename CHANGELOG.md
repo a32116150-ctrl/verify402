@@ -26,6 +26,11 @@ not imply a deploy or an npm publish.
   `guardX402Payment()`. The hook maps an x402 v2 challenge to a payment intent,
   blocks on `BLOCK`, refuses unacknowledged `CAUTION`, verifies the receipt,
   and attaches it to `context.verify402` before signing.
+- The MCP bridge now sends one shared anonymous label,
+  `X-Verify402-Client: verify402-mcp/<version>`, on free and paid requests.
+  `/usage` reports the label source (declared header or User-Agent), caps the
+  number of distinct labels, and states that labels are self-declared and not
+  identities. `client-id.mjs` reads the version from `package.json`.
 
 ## 1.0.7 — 2026-10-24
 

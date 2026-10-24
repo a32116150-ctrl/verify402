@@ -40,6 +40,7 @@ import {
   DEFAULT_PAY_TO,
   DEMO_NETWORK,
 } from "./payment-policy.mjs";
+import { CLIENT_HEADERS } from "./client-id.mjs";
 
 export const FIRST_PAYMENT_ROUTE = "/route";
 export const FIRST_PAYMENT_MAX_USD = 0.03;
@@ -230,7 +231,7 @@ export async function main() {
     },
   });
   const paid = wrapAxiosWithPayment(
-    axios.create({ timeout: 180_000, maxRedirects: 0 }),
+    axios.create({ timeout: 180_000, maxRedirects: 0, headers: CLIENT_HEADERS }),
     client,
   );
 

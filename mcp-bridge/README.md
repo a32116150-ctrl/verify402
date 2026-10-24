@@ -212,6 +212,10 @@ Once configured, your agent automatically sees the tools in its context. You can
 - `MAX_PAYMENT_USD` is enforced inside the x402 client, before a signature
   exists; removing it is a security regression. The caps limit what the bridge
   can authorize; they do **not** protect a compromised private key.
+- The bridge sends `X-Verify402-Client: verify402-mcp/<version>` and the same
+  version in its User-Agent. This is an anonymous label for `/usage`, not an
+  account: it contains no wallet, key, or user id, and the server treats it as
+  self-declared and spoofable.
 - `preflight_gate` is a check, not a guarantee. Read `notChecked`: it does not
   screen recipient reputation or sanctions, audit contracts, simulate full
   balance deltas, audit the counterparty, independently prove payee ownership,

@@ -74,7 +74,14 @@ test("release metadata uses one version across package, lockfile, registry, mani
   assert.equal(manifest.version, RELEASE_VERSION);
   assert.equal(openapi.info.version, RELEASE_VERSION);
 
-  assert.match(read("mcp-bridge/index.mjs"), new RegExp(`const VERSION = "${RELEASE_VERSION}";`));
+  assert.match(
+    read("mcp-bridge/index.mjs"),
+    /import \{ CLIENT_HEADERS, VERSION \} from "\.\/client-id\.mjs";/,
+  );
+  const clientIdSource = read("mcp-bridge/client-id.mjs");
+  assert.match(clientIdSource, /readFileSync\(new URL\("\.\/package\.json", import\.meta\.url\)/);
+  assert.match(clientIdSource, /export const VERSION = pkg\.version;/);
+  assert.match(clientIdSource, /"X-Verify402-Client": `\$\{CLIENT_ID\}\/\$\{VERSION\}`/);
   const serverSource = read("src/server.mjs");
   assert.match(serverSource, /version: RELEASE_VERSION/);
 

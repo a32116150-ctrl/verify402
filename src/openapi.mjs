@@ -389,7 +389,7 @@ export function buildOpenapi(prices, { mode = "testnet", baseUrl = DEMO_BASE_URL
           tags: ["Discovery"],
           operationId: "getUsage",
           summary: "Anonymous free-gate call counts",
-          description: "Process-local counts of free preflight calls by client, kind, verdict, and status. No IP addresses, request bodies, intents, or wallets are stored. A call is not a unique agent; paid settlements are the identity-backed usage signal. Resets on restart or deploy.",
+          description: "Process-local counts of free preflight calls by client, client source, kind, verdict, and status. Client labels come from the optional X-Verify402-Client header or are inferred from User-Agent; they are self-declared, spoofable, and not identities. No IP addresses, request bodies, intents, or wallets are stored. A call is not a unique agent; paid settlements are the identity-backed usage signal. Resets on restart or deploy.",
           responses: {
             200: {
               description: "Free-gate call counts since this process started.",
@@ -406,6 +406,7 @@ export function buildOpenapi(prices, { mode = "testnet", baseUrl = DEMO_BASE_URL
                       byVerdict: { type: "object", additionalProperties: { type: "integer" } },
                       byKind: { type: "object", additionalProperties: { type: "integer" } },
                       byClient: { type: "object", additionalProperties: { type: "integer" } },
+                      byClientSource: { type: "object", additionalProperties: { type: "integer" } },
                       byStatus: { type: "object", additionalProperties: { type: "integer" } },
                       note: { type: "string" },
                     },

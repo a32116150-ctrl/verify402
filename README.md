@@ -355,6 +355,12 @@ Response: `PASS` / `CAUTION` / `BLOCK`, `reasons[]`, `checked[]`,
   instead of being implied. A PASS is not a counterparty audit.
 - Free is rate-limited (60/min per IP, 8 concurrent) so it cannot become a
   public RPC proxy.
+- `GET /usage` is an anonymous, process-local call counter. The MCP bridge
+  sends `X-Verify402-Client: verify402-mcp/<version>` so its calls can be
+  separated from generic HTTP probes. The label is self-declared, spoofable,
+  and never an identity; `/usage` also reports whether each label came from the
+  header or the User-Agent. The number of distinct labels is capped so a caller
+  cannot grow the counter without bound. It resets on restart or deploy.
 
 The MCP server exposes it as `preflight_gate`. It runs with no wallet (free gate
 only); add `EVM_PRIVATE_KEY` for the five paid tools. If `sign_allowed` is

@@ -161,8 +161,9 @@ tar -tzf verify402-mcp-1.0.7.tgz
 Then verify, from the tarball contents:
 
 - the version in `package/package.json` is `1.0.7`;
-- `package/index.mjs`, `payment-policy.mjs`, `paid-call.mjs`, `budget.mjs`,
-  `log.mjs`, `README.md`, `.env.example`, `LICENSE`, and `NOTICE` are present;
+- `package/index.mjs`, `client-id.mjs`, `payment-policy.mjs`, `paid-call.mjs`,
+  `budget.mjs`, `log.mjs`, `README.md`, `.env.example`, `LICENSE`, and `NOTICE`
+  are present;
 - the bridge default is Base Sepolia (`eip155:84532`) and mainnet requires an
   explicit `VERIFY402_NETWORKS=eip155:8453`;
 - importing `package/index.mjs` does not load a `.env` file;

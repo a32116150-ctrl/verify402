@@ -6,7 +6,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -18,6 +18,7 @@ process.env.VERIFY402_NETWORKS = "eip155:84532";
 process.env.MAX_PAYMENT_USD = "0.25";
 
 const { createBridgeClientFromEnv, createBridgePaidClient, runPaidTool, runWithPaidTool, PAID_TOOL_ROUTES } = await import("../index.mjs");
+const { CLIENT_HEADERS, VERSION } = await import("../client-id.mjs");
 const {
   createPaymentGuard,
   createPaymentPolicy,
@@ -31,6 +32,15 @@ const {
 const SERVER_URL = "https://verify402.onrender.com";
 const RESOURCE = `${SERVER_URL}/route`;
 const PAY_TO = "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb";
+
+test("the bridge identifies itself with an anonymous, versioned client label", () => {
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  const pkg = JSON.parse(readFileSync(path.join(here, "..", "package.json"), "utf8"));
+  assert.equal(VERSION, pkg.version);
+  assert.equal(CLIENT_HEADERS["X-Verify402-Client"], `verify402-mcp/${pkg.version}`);
+  assert.equal(CLIENT_HEADERS["User-Agent"], `verify402-mcp/${pkg.version}`);
+  assert.equal(/0x[0-9a-f]{40}|private.?key|wallet/i.test(JSON.stringify(CLIENT_HEADERS)), false);
+});
 
 function makeRequirement(overrides = {}) {
   return {
@@ -261,10 +271,18 @@ function settlementHeader() {
 function makeAdapter({ challenge, calls }) {
   const paymentRequired = encodePaymentRequiredHeader(challenge);
   return async (config) => {
+    const header = (name) => (
+      config.headers?.get?.(name) ?? config.headers?.[name] ?? config.headers?.[name.toLowerCase()]
+    );
     const signed = Boolean(
       config.headers?.get?.("PAYMENT-SIGNATURE") ?? config.headers?.["PAYMENT-SIGNATURE"],
     );
-    calls.push({ url: config.url, signed });
+    calls.push({
+      url: config.url,
+      signed,
+      client: header("x-verify402-client"),
+      userAgent: header("user-agent"),
+    });
     if (!signed) {
       const error = new Error("Request failed with status code 402");
       error.config = config;
@@ -328,6 +346,8 @@ test("each paid tool accepts its own resource and completes the paid call", asyn
     assert.equal(calls.length, 2, `${tool} must send one request and one paid retry`);
     assert.equal(calls[0].url, route, `${tool} must request its own route`);
     assert.equal(calls[1].signed, true, `${tool} retry must carry a signature`);
+    assert.equal(calls[0].client, CLIENT_HEADERS["X-Verify402-Client"], `${tool} label`);
+    assert.equal(calls[0].userAgent, CLIENT_HEADERS["User-Agent"], `${tool} user-agent`);
   }
 });
 
