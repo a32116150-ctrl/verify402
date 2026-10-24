@@ -143,12 +143,12 @@ do not publish.
 
 Current release: `verify402-mcp@1.0.7` is published on npm and is `latest`.
 That version is immutable, maps to git commit
-`954702575b9df58a08e8dbdac45d680ecf3cc365`, and defaults the bridge to Base
+`485256fda9072447ea4ae3b8a3420069c9efb765`, and defaults the bridge to Base
 Sepolia testnet (`eip155:84532`). The previous `1.0.6` package remains
 published and immutable.
 
 The official MCP Registry lists `1.0.7` as active and latest
-(`publishedAt: 2026-10-23T22:12:34.131712Z`). The checked-in `server.json`
+(`publishedAt: 2026-10-23T23:55:58.349764Z`). The checked-in `server.json`
 matches the published package. This repository does **not** publish packages or
 registry entries automatically.
 

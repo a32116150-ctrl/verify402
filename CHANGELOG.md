@@ -31,6 +31,16 @@ payout binding to the free preflight gate.
   `policy.obligation`, `policy.sellerPayoutWallets`, and the previously missing
   `policy.allowedResourceHosts`.
 
+### Release metadata
+
+- npm: `verify402-mcp@1.0.7`, `gitHead
+  485256fda9072447ea4ae3b8a3420069c9efb765`.
+- MCP Registry: `1.0.7` active and latest
+  (`publishedAt: 2026-10-23T23:55:58.349764Z`).
+- GitHub: release `mcp-v1.0.7` published `2026-10-23T23:58:30Z` and is the
+  latest release.
+- Render: `/info` reports `1.0.7`; free-only post-deploy check passed 29/29.
+
 ## 1.0.6 — 2026-10-23
 
 `verify402-mcp@1.0.6` is the release that points at the fixed public

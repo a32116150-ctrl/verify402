@@ -37,12 +37,12 @@ The owner explicitly overrode the no-standalone-post rule for this one:
   `resource_host`, foreign host → BLOCK; `expectedResource` exact-URL binding
   remains. `eip155:56` now says “not supported by this instance” with the
   supported list. `notChecked` now names payTo ownership and obligation state.
-- **2026-10-24 — candidate built, not published:** caller-supplied
+- **2026-10-24 — published in 1.0.7:** caller-supplied
   `payment.idempotencyKey` + `policy.obligation` and
-  `policy.sellerPayoutWallets` are implemented on branch `release/1.0.7` with
-  tests and docs. They are **not** on the live `1.0.6` service and not on npm.
-  Do not ask testers to use these fields until the 1.0.7 release is approved
-  and deployed.
+  `policy.sellerPayoutWallets` are on npm `verify402-mcp@1.0.7`, active in the
+  MCP Registry, and live at `/preflight`. Testers can now use these fields;
+  the gate still does not persist a ledger, and the payout binding is not proof
+  of wallet ownership.
 - **Rule:** one post per 30 minutes. If it gets flagged or removed, do not retry; go back to replies/comments.
 
 Before sending:

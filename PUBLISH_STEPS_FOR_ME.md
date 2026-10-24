@@ -1,17 +1,17 @@
 # Release verify402-mcp 1.0.7 — for me
 
 Status: npm `verify402-mcp@1.0.7` is **published** (gitHead
-`954702575b9df58a08e8dbdac45d680ecf3cc365`). The MCP Registry entry is
+`485256fda9072447ea4ae3b8a3420069c9efb765`). The MCP Registry entry is
 **published and verified** as active latest at
-`2026-10-23T22:12:34.131712Z`. The GitHub release `mcp-v1.0.7` is published and
-is the latest release.
+`2026-10-23T23:55:58.349764Z`. The GitHub release `mcp-v1.0.7` is published and
+is the latest release (`2026-10-23T23:58:30Z`).
 
 - npm `verify402-mcp@1.0.6` remains published and immutable; `1.0.5` and `1.0.4` are also immutable.
 - MCP Registry publication of `1.0.7` is **published and verified**; the
   registry carries a `1.0.7` entry with `isLatest: true`.
 - GitHub release `mcp-v1.0.7` is **published and latest**.
 - Render deployment of `1.0.7` is **deployed and verified** at
-  `2026-10-23T22:20Z`; `/info` reports `1.0.7` and the free-only post-deploy
+  `2026-10-23T23:58Z`; `/info` reports `1.0.7` and the free-only post-deploy
   check passed 29/29.
 
 All release gates are complete. The npm artifact, registry entry, metadata,
@@ -54,8 +54,9 @@ Expected: the release identity is `1.0.7` in the source metadata, every offline
 test passes, and discovery validation passes. Stop on any failure.
 
 Review the public release surfaces before continuing. They must describe
-`1.0.7` as published on npm and must not claim that the MCP Registry or Render
-already serves it:
+`1.0.7` as published on npm; once the later gates are verified, they may also
+name the MCP Registry and Render as live. Before those gates, do not claim they
+already serve it:
 
 - `src/site/mcp.html` (the public `/mcp` page)
 - the service manifest served at `/.well-known/verify402.json`
@@ -197,7 +198,7 @@ are immutable: never republish, overwrite, or unpublish `1.0.7` after this step.
 
 Step 6 printed `1.0.7` for both the latest version and the pinned version. The
 repository was updated from `candidate-unpublished` to "published `1.0.7`" in
-release commit `954702575b9df58a08e8dbdac45d680ecf3cc365` plus the metadata
+release commit `485256fda9072447ea4ae3b8a3420069c9efb765` plus the metadata
 follow-up. The checklist below is the record of that transition:
 
 - `src/version.mjs` — set `PUBLISHED_VERSION = "1.0.7"` and change
@@ -266,7 +267,7 @@ curl -s "https://registry.modelcontextprotocol.io/v0.1/servers/io.github.a321161
 
 Verified: a `server` object with `version: "1.0.7"`, the Base Sepolia default
 in its environment-variable metadata, `status: active`, `isLatest: true`, and
-`publishedAt: 2026-10-23T22:12:34.131712Z`.
+`publishedAt: 2026-10-23T23:55:58.349764Z`.
 
 ## 10. Deploy only after a separate approval — completed
 
@@ -315,7 +316,7 @@ push unless you have verified that with `/info` or `/health`. With auto-deploy
 on, the push changes the live service immediately, and a green post-deploy run
 is the only evidence that it succeeded.
 
-Verified on 2026-10-23 at ~22:20 UTC: all 29 checks passed against the live
+Verified on 2026-10-23 at ~23:58 UTC: all 29 checks passed against the live
 service, including `/info` version `1.0.7`, testnet mode, and the published
 install pin.
 
