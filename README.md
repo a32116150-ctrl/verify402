@@ -163,6 +163,14 @@ Once configured, restart your AI client. The agent automatically has access to t
 
 ---
 
+### Step 4: Install the preflight skill
+
+The free agent skill lives at [`skills/verify402-preflight`](skills/verify402-preflight/SKILL.md). It is the operating manual for the gate: exact payment and transaction payloads, how to read `PASS` / `CAUTION` / `BLOCK`, how to verify the receipt before an executor signs, and when the five paid checks are worth a call. It works with the MCP server above or the HTTPS fallback.
+
+The skill is explicit about the limits: a `PASS` is not a guarantee, the token check is not a honeypot proof, and no result is a profit forecast.
+
+---
+
 ## Machine-Readable Discovery
 
 - **Service Manifest:** [`/.well-known/verify402.json`](https://verify402.onrender.com/.well-known/verify402.json) ([Documentation](docs/service-manifest.md))
