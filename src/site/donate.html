@@ -8,40 +8,35 @@
 <meta name="google-site-verification" content="iGmI2QL110IkjnW0thU3DRZrdgQe_7mZsPWgkZVte7o">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;560;640;750&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/assets/site.css">
 </head>
 <body>
 
-<header class="nav">
-  <div class="wrap nav-in">
-    <a class="logo" href="/">verify40<i>2</i></a>
-    <nav class="nav-links">
-      <a href="/start">Start</a>
-      <a href="/checks">Checks</a>
-      <a href="/preflight">Preflight</a>
-      <a href="/mcp">MCP</a>
-      <a href="/live">Live</a>
-      <a href="/proof">Proof</a>
-      <a href="/docs">Docs</a>
-      <a href="/donate" aria-current="page">Donate</a>
-    </nav>
-    <div class="nav-cta">
-      <span class="nav-live"><span class="dot"></span>live · <span data-block>block —</span></span>
-      <a class="btn sm" href="/live">Free findings</a>
-    </div>
-    <details class="menu">
+<header class="site-head">
+  <a class="brand" href="/" aria-label="verify402 home">verify<span>[</span>402<span>]</span></a>
+  <nav class="site-nav" aria-label="Primary">
+    <a href="/checks">Checks</a>
+    <a href="/preflight">Preflight</a>
+    <a href="/mcp">MCP</a>
+    <a href="/proof">Proof</a>
+    <a href="/docs">Docs</a>
+  </nav>
+  <div class="site-actions">
+    <a class="site-status" href="/live"><span class="status-dot"></span><span data-block>live · block —</span></a>
+    <a class="btn sm" href="/preflight#try">Run free check</a>
+    <details class="site-menu">
       <summary>Menu</summary>
-      <nav>
-        <a href="/start">Start here</a>
+      <nav aria-label="Menu">
         <a href="/checks">Checks</a>
         <a href="/preflight">Preflight</a>
         <a href="/mcp">MCP server</a>
         <a href="/live">Live findings</a>
         <a href="/proof">Proof &amp; receipts</a>
         <a href="/docs">Docs</a>
-        <a href="/donate">Donate</a>
+        <a href="/start">Quickstart</a>
+        <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">GitHub</a>
       </nav>
     </details>
   </div>
@@ -56,24 +51,30 @@
 
   <section class="tight">
     <div class="wrap">
-      <div class="wallets">
-        <div class="wallet">
+      <div class="wallets" data-ui>
+        <div class="wallet" data-ui>
           <div class="top">
             <h3>Base · EVM</h3>
             <span class="chip">USDC · ETH</span>
           </div>
-          <div class="addr" id="addr-evm">0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb</div>
+          <div class="wallet-address">
+            <div class="addr" id="addr-evm"><code>0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb</code></div>
+            <img class="qr" src="/assets/donate-base-qr.png" alt="QR code for the Base donation address" width="320" height="320">
+          </div>
           <div class="bot">
             <button class="btn sm" data-copy="0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb" data-copy-target="addr-evm">Copy address</button>
             <span class="hint">or select it — no account, no form</span>
           </div>
         </div>
-        <div class="wallet">
+        <div class="wallet" data-ui>
           <div class="top">
             <h3>Solana</h3>
             <span class="chip">USDC · SOL</span>
           </div>
-          <div class="addr" id="addr-svm">BdcsYodhwWUhLTuL5FJ3m8D4u4wVy8KMw7vAvPVucAbJ</div>
+          <div class="wallet-address">
+            <div class="addr" id="addr-svm"><code>BdcsYodhwWUhLTuL5FJ3m8D4u4wVy8KMw7vAvPVucAbJ</code></div>
+            <img class="qr" src="/assets/donate-solana-qr.png" alt="QR code for the Solana donation address" width="320" height="320">
+          </div>
           <div class="bot">
             <button class="btn sm" data-copy="BdcsYodhwWUhLTuL5FJ3m8D4u4wVy8KMw7vAvPVucAbJ" data-copy-target="addr-svm">Copy address</button>
             <span class="hint">or select it — no account, no form</span>
@@ -90,19 +91,16 @@
         <p class="eyebrow">Where it goes</p>
         <h2>Money with a job.</h2>
       </div>
-      <div class="steps">
+      <div class="steps" data-ui>
         <div class="step">
-          <p class="n">01</p>
           <h3>Reliable RPC</h3>
           <p>Every measurement makes real on-chain calls. Paid RPC allowances raise reliability at volume — the first place money makes the product better.</p>
         </div>
         <div class="step">
-          <p class="n">02</p>
           <h3>Keeping the free tier up</h3>
           <p>The free route should stay reachable. A warmer instance means fewer cold starts and more honest measurements for everyone, including people who never pay.</p>
         </div>
         <div class="step">
-          <p class="n">03</p>
           <h3>Protocol work</h3>
           <p>Time spent answering auditors, maintaining the recovery contract proposed as an x402 extension, and external security review.</p>
         </div>
@@ -136,42 +134,39 @@
   </section>
 </main>
 
-<footer>
-  <div class="wrap">
-    <div class="foot-grid">
-      <div class="foot-brand">
-        <a class="logo" href="/">verify40<i>2</i></a>
-        <p>Machine-payable truth for agents. A negative result, delivered with receipts.</p>
-      </div>
-      <div class="foot-col">
-        <p class="cap">Product</p>
-        <a href="/start">Quickstart</a>
-        <a href="/checks">The five checks</a>
-        <a href="/preflight">Preflight gate</a>
-        <a href="/mcp">MCP server</a>
-        <a href="/live">Live findings</a>
-        <a href="/docs">Documentation</a>
-        <a href="/donate">Donate</a>
-      </div>
-      <div class="foot-col">
-        <p class="cap">Project</p>
-        <a href="/proof">Proof &amp; receipts</a>
-        <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">Source code</a>
-        <a href="https://github.com/x402-foundation/x402/issues/3847" rel="noopener">x402 proposal</a>
-      </div>
-      <div class="foot-col">
-        <p class="cap">For machines</p>
-        <a href="/.well-known/verify402.json">service manifest</a>
-        <a href="/openapi.json">openapi 3.1</a>
-        <a href="/llms.txt">llms.txt</a>
-        <a href="/sitemap.xml">sitemap</a>
-        <a href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener">npm package</a>
-        <a href="/health">/health</a>
-        <a href="/findings">/findings</a>
-      </div>
+<footer class="site-foot">
+  <div class="foot-mark" aria-hidden="true">verify<span>[402]</span></div>
+  <div class="foot-links">
+    <div>
+      <h2>Product</h2>
+      <a href="/preflight">Preflight gate</a>
+      <a href="/checks">The five checks</a>
+      <a href="/mcp">MCP server</a>
+      <a href="/live">Live findings</a>
+      <a href="/start">Quickstart</a>
     </div>
-    <p class="legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data; demo payments are testnet. The only settlement ever recorded is the operator's own testnet transaction. No external buyer yet. Donations are voluntary and buy no product, priority, or verdict.</p>
+    <div>
+      <h2>Project</h2>
+      <a href="/proof">Proof &amp; receipts</a>
+      <a href="/docs">Documentation</a>
+      <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">Source code</a>
+      <a href="https://github.com/x402-foundation/x402/issues/3847" rel="noopener">x402 proposal</a>
+    </div>
+    <div>
+      <h2>For machines</h2>
+      <a href="/.well-known/verify402.json">Service manifest</a>
+      <a href="/openapi.json">OpenAPI 3.1</a>
+      <a href="/llms.txt">llms.txt</a>
+      <a href="/findings">/findings</a>
+    </div>
+    <div>
+      <h2>For teams</h2>
+      <p class="foot-note">Embedding a pre-signing check in a wallet, agent, or treasury workflow?</p>
+      <a href="mailto:a32116150@gmail.com?subject=verify402%20walkthrough">Talk to the builder</a>
+      <a href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener">npm package</a>
+    </div>
   </div>
+  <p class="foot-legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data; demo payments are testnet. The only settlement ever recorded is the operator's own testnet transaction. No external buyer yet. Donations are voluntary and buy no product, priority, or verdict.</p>
 </footer>
 
 <script src="/assets/site.js"></script>

@@ -8,41 +8,36 @@
 <meta name="google-site-verification" content="iGmI2QL110IkjnW0thU3DRZrdgQe_7mZsPWgkZVte7o">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;560;640;750&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/assets/site.css">
 <link rel="modulepreload" href="/assets/hairline.js">
 </head>
 <body>
 
-<header class="nav">
-  <div class="wrap nav-in">
-    <a class="logo" href="/">verify40<i>2</i></a>
-    <nav class="nav-links">
-      <a href="/start">Start</a>
-      <a href="/checks">Checks</a>
-      <a href="/preflight" aria-current="page">Preflight</a>
-      <a href="/mcp">MCP</a>
-      <a href="/live">Live</a>
-      <a href="/proof">Proof</a>
-      <a href="/docs">Docs</a>
-      <a href="/donate">Donate</a>
-    </nav>
-    <div class="nav-cta">
-      <span class="nav-live"><span class="dot"></span>free · <span data-block>block —</span></span>
-      <a class="btn sm" href="#try">Try it</a>
-    </div>
-    <details class="menu">
+<header class="site-head">
+  <a class="brand" href="/" aria-label="verify402 home">verify<span>[</span>402<span>]</span></a>
+  <nav class="site-nav" aria-label="Primary">
+    <a href="/checks">Checks</a>
+    <a href="/preflight">Preflight</a>
+    <a href="/mcp">MCP</a>
+    <a href="/proof">Proof</a>
+    <a href="/docs">Docs</a>
+  </nav>
+  <div class="site-actions">
+    <a class="site-status" href="/live"><span class="status-dot"></span><span data-block>live · block —</span></a>
+    <a class="btn sm" href="/preflight#try">Run free check</a>
+    <details class="site-menu">
       <summary>Menu</summary>
-      <nav>
-        <a href="/start">Start here</a>
+      <nav aria-label="Menu">
         <a href="/checks">Checks</a>
-        <a href="/preflight" aria-current="page">Preflight</a>
+        <a href="/preflight">Preflight</a>
         <a href="/mcp">MCP server</a>
         <a href="/live">Live findings</a>
         <a href="/proof">Proof &amp; receipts</a>
         <a href="/docs">Docs</a>
-        <a href="/donate">Donate</a>
+        <a href="/start">Quickstart</a>
+        <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">GitHub</a>
       </nav>
     </details>
   </div>
@@ -69,7 +64,7 @@
         </p>
       </div>
       <aside>
-        <div class="vcard">
+        <div class="vcard" data-ui>
           <div class="vcard-head"><span>POST /preflight · free</span><span class="ok">● gate</span></div>
           <div class="vcard-body">
             <div class="vrow"><span class="pair">payment</span><span class="verdict">PASS</span><span class="meta">canonical USDC · payee ok</span></div>
@@ -151,10 +146,9 @@
             </details>
           </div>
 
-          <div class="try-result" id="preflight-result" aria-live="polite">
+          <div class="try-result" id="preflight-result" aria-live="polite" data-ui>
             <div id="preflight-empty">
-              <p class="try-kicker">Verdict</p>
-              <p class="try-empty-mark">—</p>
+              <p class="try-empty-title">Ready when you are.</p>
               <p class="small muted">Run a check to see the verdict, the reasons, the checks that ran, and the receipt.</p>
             </div>
             <div id="preflight-output" hidden>
@@ -208,7 +202,7 @@
       <div class="sec-head with-figure">
         <div class="sec-copy">
           <p class="eyebrow">Two intents, one verdict</p>
-          <h2>Payments and transactions are the same question.</h2>
+          <h2>One gate for both.</h2>
           <p class="lead">“If I sign this, what will the chain do — and is that what I think it is?” The gate answers the part that is measurable at a block, and names the part that is not.</p>
         </div>
         <figure class="hairline-block">
@@ -332,8 +326,6 @@
         </div>
       </article>
 
-      <hr class="divider" style="margin:44px 0">
-
       <article id="transaction">
         <p class="eyebrow">02 · Transaction</p>
         <h2 style="margin-top:14px">Check the calldata and the simulation.</h2>
@@ -412,18 +404,15 @@
         <p class="lead">Every response carries a short-lived HMAC-signed receipt. The intent hash binds the exact normalized request, the request hash binds the original body, the fresh block pins the chain state, and the expiry bounds reuse.</p>
       </div>
       <div class="steps" style="margin-top:40px">
-        <div class="step">
-          <p class="n">01</p>
+        <div class="step" data-ui>
           <h3>Call the gate</h3>
           <p>One request, one verdict, reasons and a receipt. Free, rate-limited, and fail-closed.</p>
         </div>
-        <div class="step">
-          <p class="n">02</p>
+        <div class="step" data-ui>
           <h3>Verify the receipt</h3>
           <p><code class="inline">POST /preflight/verify</code> recomputes the HMAC, checks the expiry, and re-hashes the caller's normalized <code class="inline">intent</code> and original <code class="inline">request</code>. Require both <code class="inline">intentBound</code> and <code class="inline">requestBound</code>; a receipt-only check stays compatible but is unbound. No chain call.</p>
         </div>
-        <div class="step">
-          <p class="n">03</p>
+        <div class="step" data-ui>
           <h3>Sign or refuse</h3>
           <p>An executor should require <code class="inline">sign_allowed</code>. A <b>CAUTION</b> is an explicit decision, not a pass. <a class="textlink" href="https://github.com/a32116150-ctrl/verify402/blob/master/examples/preflight-guard.mjs" rel="noopener">Reference guard</a>. Put the gate in an agent with the <a class="textlink" href="/mcp">MCP server</a>.</p>
         </div>
@@ -437,42 +426,39 @@
 
 </main>
 
-<footer>
-  <div class="wrap">
-    <div class="foot-grid">
-      <div class="foot-brand">
-        <a class="logo" href="/">verify40<i>2</i></a>
-        <p>Machine-payable truth for agents. A negative result, delivered with receipts.</p>
-      </div>
-      <div class="foot-col">
-        <p class="cap">Product</p>
-        <a href="/start">Quickstart</a>
-        <a href="/checks">The five checks</a>
-        <a href="/preflight">Preflight gate</a>
-        <a href="/mcp">MCP server</a>
-        <a href="/live">Live findings</a>
-        <a href="/docs">Documentation</a>
-        <a href="/donate">Donate</a>
-      </div>
-      <div class="foot-col">
-        <p class="cap">Project</p>
-        <a href="/proof">Proof &amp; receipts</a>
-        <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">Source code</a>
-        <a href="https://github.com/x402-foundation/x402/issues/3847" rel="noopener">x402 proposal</a>
-      </div>
-      <div class="foot-col">
-        <p class="cap">For machines</p>
-        <a href="/.well-known/verify402.json">service manifest</a>
-        <a href="/openapi.json">openapi 3.1</a>
-        <a href="/llms.txt">llms.txt</a>
-        <a href="/sitemap.xml">sitemap</a>
-        <a href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener">npm package</a>
-        <a href="/health">/health</a>
-        <a href="/findings">/findings</a>
-      </div>
+<footer class="site-foot">
+  <div class="foot-mark" aria-hidden="true">verify<span>[402]</span></div>
+  <div class="foot-links">
+    <div>
+      <h2>Product</h2>
+      <a href="/preflight">Preflight gate</a>
+      <a href="/checks">The five checks</a>
+      <a href="/mcp">MCP server</a>
+      <a href="/live">Live findings</a>
+      <a href="/start">Quickstart</a>
     </div>
-    <p class="legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data; demo payments are testnet. The only settlement ever recorded is the operator's own testnet transaction. No external buyer yet. Prices are per call, paid in testnet USDC over x402; /preflight is free.</p>
+    <div>
+      <h2>Project</h2>
+      <a href="/proof">Proof &amp; receipts</a>
+      <a href="/docs">Documentation</a>
+      <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">Source code</a>
+      <a href="https://github.com/x402-foundation/x402/issues/3847" rel="noopener">x402 proposal</a>
+    </div>
+    <div>
+      <h2>For machines</h2>
+      <a href="/.well-known/verify402.json">Service manifest</a>
+      <a href="/openapi.json">OpenAPI 3.1</a>
+      <a href="/llms.txt">llms.txt</a>
+      <a href="/findings">/findings</a>
+    </div>
+    <div>
+      <h2>For teams</h2>
+      <p class="foot-note">Embedding a pre-signing check in a wallet, agent, or treasury workflow?</p>
+      <a href="mailto:a32116150@gmail.com?subject=verify402%20walkthrough">Talk to the builder</a>
+      <a href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener">npm package</a>
+    </div>
   </div>
+  <p class="foot-legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data; demo payments are testnet. The only settlement ever recorded is the operator's own testnet transaction. No external buyer yet. Prices are per call, paid in testnet USDC over x402; /preflight is free.</p>
 </footer>
 
 <script src="/assets/site.js"></script>

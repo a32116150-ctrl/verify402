@@ -8,40 +8,35 @@
 <meta name="google-site-verification" content="iGmI2QL110IkjnW0thU3DRZrdgQe_7mZsPWgkZVte7o">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;560;640;750&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/assets/site.css">
-<link rel="modulepreload" href="/assets/hairline.js">
 </head>
 <body>
 
-<header class="nav">
-  <div class="wrap nav-in">
-    <a class="logo" href="/">verify40<i>2</i></a>
-    <nav class="nav-links">
-      <a href="/checks" aria-current="page">Checks</a>
-      <a href="/preflight">Preflight</a>
-      <a href="/mcp">MCP</a>
-      <a href="/live">Live</a>
-      <a href="/proof">Proof</a>
-      <a href="/docs">Docs</a>
-      <a href="/donate">Donate</a>
-    </nav>
-    <div class="nav-cta">
-      <span class="nav-live"><span class="dot"></span>live · <span data-block>block —</span></span>
-      <a class="btn sm" href="/live">Free findings</a>
-    </div>
-    <details class="menu">
+<header class="site-head">
+  <a class="brand" href="/" aria-label="verify402 home">verify<span>[</span>402<span>]</span></a>
+  <nav class="site-nav" aria-label="Primary">
+    <a href="/checks">Checks</a>
+    <a href="/preflight">Preflight</a>
+    <a href="/mcp">MCP</a>
+    <a href="/proof">Proof</a>
+    <a href="/docs">Docs</a>
+  </nav>
+  <div class="site-actions">
+    <a class="site-status" href="/live"><span class="status-dot"></span><span data-block>live · block —</span></a>
+    <a class="btn sm" href="/preflight#try">Run free check</a>
+    <details class="site-menu">
       <summary>Menu</summary>
-      <nav>
-        <a href="/start">Start</a>
-      <a href="/checks">Checks</a>
+      <nav aria-label="Menu">
+        <a href="/checks">Checks</a>
         <a href="/preflight">Preflight</a>
         <a href="/mcp">MCP server</a>
         <a href="/live">Live findings</a>
         <a href="/proof">Proof &amp; receipts</a>
         <a href="/docs">Docs</a>
-        <a href="/donate">Donate</a>
+        <a href="/start">Quickstart</a>
+        <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">GitHub</a>
       </nav>
     </details>
   </div>
@@ -50,14 +45,17 @@
 <main>
   <div class="wrap page-head with-figure">
     <div class="page-copy">
-      <p class="eyebrow">The catalog</p>
-      <h1>Five checks, five prices, no subscription.</h1>
+      <h1>Five checks.<br>No subscription.</h1>
       <p class="lead">Each call measures one claim against the chain at a pinned block and returns a verdict with evidence. Pay per call in testnet USDC for the public demo; no account, no minimum, no monthly bill.</p>
+      <div class="btn-row" style="margin-top:24px">
+        <a class="btn" href="/preflight#try">Run free preflight</a>
+        <a class="btn ghost" href="#prices">See prices</a>
+      </div>
       <p class="small muted" style="margin-top:18px">Looking for the free tier? <a class="textlink" href="/live">Live findings</a> is free and needs no payment. Machine-readable spec: <a class="textlink" href="/info">/info</a>.</p>
     </div>
-    <figure class="hairline-block">
-      <div class="hairline-figure" data-hairline-figure="loupe" data-intensity="0.6" data-label="A loupe over a ruled sheet, inspecting the claim."></div>
-      <figcaption>Inspect the claim. Keep the receipt.</figcaption>
+    <figure class="hairline-block page-shot">
+      <img src="/assets/preflight-receipt.png" alt="A verify402 preflight receipt showing a BLOCK verdict for an unlimited token approval, with the intent, spender, allowance and pinned block." width="445" height="650">
+      <figcaption>A preflight receipt. Example intent, not a live transaction.</figcaption>
     </figure>
   </div>
 
@@ -74,79 +72,66 @@
     <div class="wrap stack">
 
       <article id="verify">
-        <p class="eyebrow">01 · $0.05 per call</p>
-        <h2 style="margin-top:14px">/verify — is this arbitrage real?</h2>
+        <h2>/verify — $0.05 · is this arbitrage real?</h2>
         <p class="lead" style="margin-top:14px">Takes a claimed cross-venue opportunity and measures it at a pinned block: Uniswap's own QuoterV2 on one side, each router's own math on the other, flash-loan premium and gas subtracted before any verdict is printed.</p>
-        <div class="proof-grid" style="margin-top:26px">
-          <div class="pcard2">
+        <div class="proof-grid" data-ui style="margin-top:26px">
+          <div class="pcard2" data-ui>
             <p class="tag">You get</p>
             <h3>Three honest states</h3>
             <p><b>edge</b> — profit survives measured costs. <b>no_edge</b> — it doesn't exist at this block. <b>no_edge_costs_ate_it</b> — a gross spread existed; costs ate it. The verdict names which.</p>
           </div>
-          <div class="pcard2">
+          <div class="pcard2" data-ui>
             <p class="tag">Receipt</p>
             <h3>Recomputable by anyone</h3>
             <p>request hash, response hash, pinned block, and the numbers behind the verdict — enough for a third party to redo the check without trusting us.</p>
           </div>
         </div>
-        <div style="margin-top:26px">
-          <p class="code-cap">Request</p>
+        <details class="request" data-ui>
+          <summary>Request shape</summary>
 <pre><span class="c">POST</span> /verify
 { <span class="y">"pair"</span>: <span class="g">"USDC/WETH"</span>, <span class="y">"dex"</span>: <span class="g">"uniswap-v3"</span>, <span class="y">"sizeUsd"</span>: 100000 }</pre>
-        </div>
+        </details>
       </article>
 
-      <hr class="divider" style="margin:44px 0">
-
       <article id="safety">
-        <p class="eyebrow">02 · $0.10 per call</p>
-        <h2 style="margin-top:14px">/safety — can this token be sold on the configured venues?</h2>
+        <h2>/safety — $0.10 · can this token be sold?</h2>
         <p class="lead" style="margin-top:14px">A pre-trade gate with a quote-based sellability check. Contract facts, market liquidity, scam signals, a USD-sized sell QUOTED through the configured venues' own routers, round-trip cost at your intended size, and phantom-price detection — then TRUST, CAUTION or AVOID, with the evidence named. It does not execute a transfer, and transfer restrictions are listed in notChecked.</p>
-        <div style="margin-top:26px">
-          <p class="code-cap">Request</p>
+        <details class="request" data-ui>
+          <summary>Request shape</summary>
 <pre><span class="c">POST</span> /safety
 { <span class="y">"tokenAddress"</span>: <span class="g">"0x…"</span>, <span class="y">"chainId"</span>: 1, <span class="y">"intendedUsd"</span>: 500 }</pre>
-        </div>
+        </details>
         <p class="small muted" style="margin-top:14px">Most calls land on CAUTION or AVOID. A gate that only said yes would be a marketing page, not a gate.</p>
       </article>
 
-      <hr class="divider" style="margin:44px 0">
-
       <article id="route">
-        <p class="eyebrow">03 · $0.03 per call</p>
-        <h2 style="margin-top:14px">/route — what would the chain actually pay?</h2>
+        <h2>/route — $0.03 · what would the chain pay?</h2>
         <p class="lead" style="margin-top:14px">Best execution route for a swap, plus every quoted venue at your size. Useful when a UI shows one price and the chain would pay another.</p>
-        <div style="margin-top:26px">
-          <p class="code-cap">Request</p>
+        <details class="request" data-ui>
+          <summary>Request shape</summary>
 <pre><span class="c">POST</span> /route
 { <span class="y">"tokenAddress"</span>: <span class="g">"WETH"</span>, <span class="y">"intendedUsd"</span>: 500 }</pre>
-        </div>
+        </details>
       </article>
-
-      <hr class="divider" style="margin:44px 0">
 
       <article id="quotecheck">
-        <p class="eyebrow">04 · $0.05 per call</p>
-        <h2 style="margin-top:14px">/quotecheck — is this quote honest?</h2>
+        <h2>/quotecheck — $0.05 · is this quote honest?</h2>
         <p class="lead" style="margin-top:14px">Someone — a broker, a bot, another agent — gave you a number. This re-measures it at a pinned block and answers: fair, overpaying, or too good to be true.</p>
-        <div style="margin-top:26px">
-          <p class="code-cap">Request</p>
+        <details class="request" data-ui>
+          <summary>Request shape</summary>
 <pre><span class="c">POST</span> /quotecheck
 { <span class="y">"tokenAddress"</span>: <span class="g">"0x…"</span>, <span class="y">"intendedUsd"</span>: 500, <span class="y">"offeredPriceUsd"</span>: 0.000021 }</pre>
-        </div>
+        </details>
       </article>
 
-      <hr class="divider" style="margin:44px 0">
-
       <article id="depth">
-        <p class="eyebrow">05 · $0.05 per call</p>
-        <h2 style="margin-top:14px">/depth — how big can this trade be?</h2>
+        <h2>/depth — $0.05 · how big can this trade be?</h2>
         <p class="lead" style="margin-top:14px">Position sizing: a capacity ladder across USD sizes, with the realizable impact and round-trip cost at each rung. Pool-reserve headlines tell an agent nothing about the block it will actually trade in.</p>
-        <div style="margin-top:26px">
-          <p class="code-cap">Request</p>
+        <details class="request" data-ui>
+          <summary>Request shape</summary>
 <pre><span class="c">POST</span> /depth
 { <span class="y">"tokenAddress"</span>: <span class="g">"WETH"</span>, <span class="y">"baseSymbol"</span>: <span class="g">"USDC"</span>, <span class="y">"sizesUsd"</span>: [100, 1000, 10000, 100000] }</pre>
-        </div>
+        </details>
       </article>
 
     </div>
@@ -155,10 +140,9 @@
   <section class="soft">
     <div class="wrap">
       <div class="sec-head">
-        <p class="eyebrow">Prices &amp; limits</p>
-        <h2>Fixed, exact, on the rail.</h2>
+          <h2>Fixed, exact, on the rail.</h2>
       </div>
-      <div class="table-wrap" style="margin-top:32px">
+      <div class="table-wrap" data-ui style="margin-top:32px">
         <table class="table">
           <thead><tr><th>Route</th><th>Question</th><th>Price</th><th>Notes</th></tr></thead>
           <tbody>
@@ -180,42 +164,39 @@
   </section>
 </main>
 
-<footer>
-  <div class="wrap">
-    <div class="foot-grid">
-      <div class="foot-brand">
-        <a class="logo" href="/">verify40<i>2</i></a>
-        <p>Machine-payable truth for agents. A negative result, delivered with receipts.</p>
-      </div>
-      <div class="foot-col">
-        <p class="cap">Product</p>
-        <a href="/start">Quickstart</a>
-        <a href="/checks">The five checks</a>
-        <a href="/preflight">Preflight gate</a>
-        <a href="/mcp">MCP server</a>
-        <a href="/live">Live findings</a>
-        <a href="/docs">Documentation</a>
-        <a href="/donate">Donate</a>
-      </div>
-      <div class="foot-col">
-        <p class="cap">Project</p>
-        <a href="/proof">Proof &amp; receipts</a>
-        <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">Source code</a>
-        <a href="https://github.com/x402-foundation/x402/issues/3847" rel="noopener">x402 proposal</a>
-      </div>
-      <div class="foot-col">
-        <p class="cap">For machines</p>
-        <a href="/.well-known/verify402.json">service manifest</a>
-        <a href="/openapi.json">openapi 3.1</a>
-        <a href="/llms.txt">llms.txt</a>
-        <a href="/sitemap.xml">sitemap</a>
-        <a href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener">npm package</a>
-        <a href="/health">/health</a>
-        <a href="/findings">/findings</a>
-      </div>
+<footer class="site-foot">
+  <div class="foot-mark" aria-hidden="true">verify<span>[402]</span></div>
+  <div class="foot-links">
+    <div>
+      <h2>Product</h2>
+      <a href="/preflight">Preflight gate</a>
+      <a href="/checks">The five checks</a>
+      <a href="/mcp">MCP server</a>
+      <a href="/live">Live findings</a>
+      <a href="/start">Quickstart</a>
     </div>
-    <p class="legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data; demo payments are testnet. The only settlement ever recorded is the operator's own testnet transaction. No external buyer yet. Prices are per call, paid in testnet USDC over x402.</p>
+    <div>
+      <h2>Project</h2>
+      <a href="/proof">Proof &amp; receipts</a>
+      <a href="/docs">Documentation</a>
+      <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">Source code</a>
+      <a href="https://github.com/x402-foundation/x402/issues/3847" rel="noopener">x402 proposal</a>
+    </div>
+    <div>
+      <h2>For machines</h2>
+      <a href="/.well-known/verify402.json">Service manifest</a>
+      <a href="/openapi.json">OpenAPI 3.1</a>
+      <a href="/llms.txt">llms.txt</a>
+      <a href="/findings">/findings</a>
+    </div>
+    <div>
+      <h2>For teams</h2>
+      <p class="foot-note">Embedding a pre-signing check in a wallet, agent, or treasury workflow?</p>
+      <a href="mailto:a32116150@gmail.com?subject=verify402%20walkthrough">Talk to the builder</a>
+      <a href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener">npm package</a>
+    </div>
   </div>
+  <p class="foot-legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data; demo payments are testnet. The only settlement ever recorded is the operator's own testnet transaction. No external buyer yet. Prices are per call, paid in testnet USDC over x402.</p>
 </footer>
 
 <script src="/assets/site.js"></script>

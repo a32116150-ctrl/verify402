@@ -1,5 +1,41 @@
 /* verify402 site — small, dependency-free behaviours. */
 (function () {
+  // Mark the current page in the shared masthead and close the phone menu.
+  var path = location.pathname.replace(/\/+$/, "") || "/";
+  document.querySelectorAll(".site-nav a, .site-menu nav a").forEach(function (link) {
+    var href = link.getAttribute("href") || "";
+    if (href === path) link.setAttribute("aria-current", "page");
+    link.addEventListener("click", function () {
+      var menu = link.closest("details");
+      if (menu) menu.removeAttribute("open");
+    });
+  });
+
+  // Section entrances for reading pages. The home page has its own reveal layer.
+  document.documentElement.classList.add("js");
+  if (!document.body.classList.contains("home")) {
+    var reveal = document.querySelectorAll(".page-head h1, .page-head .lead, .page-head .btn-row, .page-head .small, section h2, section .lead, .sec-head, .pcard2, .callout, .table-wrap, .try-shell, .vcard, .proof-grid, .step");
+    if (!("IntersectionObserver" in window)) {
+      reveal.forEach(function (el) { el.classList.add("is-in"); });
+    } else {
+      var revealIO = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (!entry.isIntersecting) return;
+          entry.target.classList.add("is-in");
+          revealIO.unobserve(entry.target);
+        });
+      }, { rootMargin: "0px 0px -8% 0px", threshold: 0.08 });
+      reveal.forEach(function (el, i) {
+        el.classList.add("reveal-ready");
+        el.style.transitionDelay = (i % 4) * 60 + "ms";
+        revealIO.observe(el);
+      });
+      window.setTimeout(function () {
+        reveal.forEach(function (el) { el.classList.add("is-in"); });
+      }, 2600);
+    }
+  }
+
   // Copy-to-clipboard for wallet addresses (a mistyped address is a lost donation).
   document.querySelectorAll("[data-copy]").forEach(function (btn) {
     btn.addEventListener("click", function () {

@@ -8,40 +8,35 @@
 <meta name="google-site-verification" content="iGmI2QL110IkjnW0thU3DRZrdgQe_7mZsPWgkZVte7o">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;560;640;750&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/assets/site.css">
 </head>
 <body>
 
-<header class="nav">
-  <div class="wrap nav-in">
-    <a class="logo" href="/">verify40<i>2</i></a>
-    <nav class="nav-links">
-      <a href="/start">Start</a>
-      <a href="/checks">Checks</a>
-      <a href="/preflight">Preflight</a>
-      <a href="/mcp">MCP</a>
-      <a href="/live" aria-current="page">Live</a>
-      <a href="/proof">Proof</a>
-      <a href="/docs">Docs</a>
-      <a href="/donate">Donate</a>
-    </nav>
-    <div class="nav-cta">
-      <span class="nav-live"><span class="dot"></span>live · <span data-block>block —</span></span>
-      <a class="btn sm" href="/findings">Raw JSON</a>
-    </div>
-    <details class="menu">
+<header class="site-head">
+  <a class="brand" href="/" aria-label="verify402 home">verify<span>[</span>402<span>]</span></a>
+  <nav class="site-nav" aria-label="Primary">
+    <a href="/checks">Checks</a>
+    <a href="/preflight">Preflight</a>
+    <a href="/mcp">MCP</a>
+    <a href="/proof">Proof</a>
+    <a href="/docs">Docs</a>
+  </nav>
+  <div class="site-actions">
+    <a class="site-status" href="/live"><span class="status-dot"></span><span data-block>live · block —</span></a>
+    <a class="btn sm" href="/preflight#try">Run free check</a>
+    <details class="site-menu">
       <summary>Menu</summary>
-      <nav>
-        <a href="/start">Start here</a>
+      <nav aria-label="Menu">
         <a href="/checks">Checks</a>
         <a href="/preflight">Preflight</a>
         <a href="/mcp">MCP server</a>
         <a href="/live">Live findings</a>
         <a href="/proof">Proof &amp; receipts</a>
         <a href="/docs">Docs</a>
-        <a href="/donate">Donate</a>
+        <a href="/start">Quickstart</a>
+        <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">GitHub</a>
       </nav>
     </details>
   </div>
@@ -50,13 +45,17 @@
 <main>
   <div class="wrap page-head">
     <p class="eyebrow">Free · no account · no payment</p>
-    <h1>The machine, answering honestly, live.</h1>
+    <h1>The machine,<br>answering live.</h1>
     <p class="lead">Current verdicts on Ethereum majors, computed the same way the paid calls are. They exist so you can watch the service say <b>no</b> before trusting it to say yes.</p>
+    <div class="btn-row" style="margin-top:24px">
+      <a class="btn" href="/preflight#try">Run a free check</a>
+      <a class="btn ghost" href="#findings">See the live feed</a>
+    </div>
   </div>
 
-  <section class="tight">
+  <section class="tight" id="findings">
     <div class="wrap">
-      <div class="vcard">
+      <div class="vcard" data-ui>
         <div class="vcard-head"><span>GET /findings · free</span><span class="ok">● live</span></div>
         <div class="vcard-body" data-findings>
           <div class="vrow"><span class="pair">WETH</span><span class="verdict">no_edge</span><span class="meta">loading…</span></div>
@@ -75,18 +74,18 @@
         <p class="lead">A verdict is a measurement at one block, not a promise about the next one. These names exist so an agent can branch on them instead of squinting at a number.</p>
       </div>
       <div class="steps">
-        <div class="step">
-          <p class="n">EDGE</p>
+        <div class="step" data-ui>
+          <p class="n">Edge</p>
           <h3>It survives costs</h3>
           <p>A real spread remained after flash-loan premium, gas, and the round trip. Rare on mainstream pairs, and the only state that is a positive answer.</p>
         </div>
-        <div class="step">
-          <p class="n">NO_EDGE</p>
+        <div class="step" data-ui>
+          <p class="n">No edge</p>
           <h3>It doesn't exist</h3>
           <p>No spread at this block. Most "opportunities" that agents are sold land here — which is exactly why the verdict is published this bluntly.</p>
         </div>
-        <div class="step">
-          <p class="n">NO_EDGE_COSTS_ATE_IT</p>
+        <div class="step" data-ui>
+          <p class="n">No edge — costs ate it</p>
           <h3>It existed; costs won</h3>
           <p>A gross spread was there on paper, but the measured costs were larger. The distinction matters: one is a fake opportunity, the other is a real one you still shouldn't take.</p>
         </div>
@@ -127,42 +126,39 @@
   </section>
 </main>
 
-<footer>
-  <div class="wrap">
-    <div class="foot-grid">
-      <div class="foot-brand">
-        <a class="logo" href="/">verify40<i>2</i></a>
-        <p>Machine-payable truth for agents. A negative result, delivered with receipts.</p>
-      </div>
-      <div class="foot-col">
-        <p class="cap">Product</p>
-        <a href="/start">Quickstart</a>
-        <a href="/checks">The five checks</a>
-        <a href="/preflight">Preflight gate</a>
-        <a href="/mcp">MCP server</a>
-        <a href="/live">Live findings</a>
-        <a href="/docs">Documentation</a>
-        <a href="/donate">Donate</a>
-      </div>
-      <div class="foot-col">
-        <p class="cap">Project</p>
-        <a href="/proof">Proof &amp; receipts</a>
-        <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">Source code</a>
-        <a href="https://github.com/x402-foundation/x402/issues/3847" rel="noopener">x402 proposal</a>
-      </div>
-      <div class="foot-col">
-        <p class="cap">For machines</p>
-        <a href="/.well-known/verify402.json">service manifest</a>
-        <a href="/openapi.json">openapi 3.1</a>
-        <a href="/llms.txt">llms.txt</a>
-        <a href="/sitemap.xml">sitemap</a>
-        <a href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener">npm package</a>
-        <a href="/health">/health</a>
-        <a href="/findings">/findings</a>
-      </div>
+<footer class="site-foot">
+  <div class="foot-mark" aria-hidden="true">verify<span>[402]</span></div>
+  <div class="foot-links">
+    <div>
+      <h2>Product</h2>
+      <a href="/preflight">Preflight gate</a>
+      <a href="/checks">The five checks</a>
+      <a href="/mcp">MCP server</a>
+      <a href="/live">Live findings</a>
+      <a href="/start">Quickstart</a>
     </div>
-    <p class="legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data; demo payments are testnet. The only settlement ever recorded is the operator's own testnet transaction. No external buyer yet. Prices are per call, paid in testnet USDC over x402.</p>
+    <div>
+      <h2>Project</h2>
+      <a href="/proof">Proof &amp; receipts</a>
+      <a href="/docs">Documentation</a>
+      <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">Source code</a>
+      <a href="https://github.com/x402-foundation/x402/issues/3847" rel="noopener">x402 proposal</a>
+    </div>
+    <div>
+      <h2>For machines</h2>
+      <a href="/.well-known/verify402.json">Service manifest</a>
+      <a href="/openapi.json">OpenAPI 3.1</a>
+      <a href="/llms.txt">llms.txt</a>
+      <a href="/findings">/findings</a>
+    </div>
+    <div>
+      <h2>For teams</h2>
+      <p class="foot-note">Embedding a pre-signing check in a wallet, agent, or treasury workflow?</p>
+      <a href="mailto:a32116150@gmail.com?subject=verify402%20walkthrough">Talk to the builder</a>
+      <a href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener">npm package</a>
+    </div>
   </div>
+  <p class="foot-legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data; demo payments are testnet. The only settlement ever recorded is the operator's own testnet transaction. No external buyer yet. Prices are per call, paid in testnet USDC over x402.</p>
 </footer>
 
 <script src="/assets/site.js"></script>

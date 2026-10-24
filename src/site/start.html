@@ -8,40 +8,35 @@
 <meta name="google-site-verification" content="iGmI2QL110IkjnW0thU3DRZrdgQe_7mZsPWgkZVte7o">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;560;640;750&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/assets/site.css">
 </head>
 <body>
 
-<header class="nav">
-  <div class="wrap nav-in">
-    <a class="logo" href="/">verify40<i>2</i></a>
-    <nav class="nav-links">
-      <a href="/start" aria-current="page">Start</a>
-      <a href="/checks">Checks</a>
-      <a href="/preflight">Preflight</a>
-      <a href="/mcp">MCP</a>
-      <a href="/live">Live</a>
-      <a href="/proof">Proof</a>
-      <a href="/docs">Docs</a>
-      <a href="/donate">Donate</a>
-    </nav>
-    <div class="nav-cta">
-      <span class="nav-live"><span class="dot"></span>free · <span data-block>block —</span></span>
-      <a class="btn sm" href="/preflight#try">Try it</a>
-    </div>
-    <details class="menu">
+<header class="site-head">
+  <a class="brand" href="/" aria-label="verify402 home">verify<span>[</span>402<span>]</span></a>
+  <nav class="site-nav" aria-label="Primary">
+    <a href="/checks">Checks</a>
+    <a href="/preflight">Preflight</a>
+    <a href="/mcp">MCP</a>
+    <a href="/proof">Proof</a>
+    <a href="/docs">Docs</a>
+  </nav>
+  <div class="site-actions">
+    <a class="site-status" href="/live"><span class="status-dot"></span><span data-block>live · block —</span></a>
+    <a class="btn sm" href="/preflight#try">Run free check</a>
+    <details class="site-menu">
       <summary>Menu</summary>
-      <nav>
-        <a href="/start" aria-current="page">Start here</a>
+      <nav aria-label="Menu">
         <a href="/checks">Checks</a>
         <a href="/preflight">Preflight</a>
         <a href="/mcp">MCP server</a>
         <a href="/live">Live findings</a>
         <a href="/proof">Proof &amp; receipts</a>
         <a href="/docs">Docs</a>
-        <a href="/donate">Donate</a>
+        <a href="/start">Quickstart</a>
+        <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">GitHub</a>
       </nav>
     </details>
   </div>
@@ -53,6 +48,10 @@
     <p class="eyebrow">For developers · free · no key</p>
     <h1>Five minutes from zero to a verdict.</h1>
     <p class="lead">The free gate answers one question before an agent signs anything: <b>“If I sign this, is it what I think it is?”</b> One HTTP call returns <b>PASS / CAUTION / BLOCK</b>, the reasons, the checks that ran, the checks that did not, and a short-lived receipt bound to the exact intent. No account, no API key, no wallet.</p>
+    <div class="btn-row" style="margin-top:24px">
+      <a class="btn" href="/preflight#try">Run the gate</a>
+      <a class="btn ghost" href="/docs">Read the docs</a>
+    </div>
   </div>
 
   <section>
@@ -69,7 +68,7 @@
         <p class="lead" style="margin-top:14px">This is a canonical x402 payment request: 0.01 testnet USDC on Base Sepolia, a known payee, a known resource. Paste it as-is. The analysis reads mainnet chain data; this demo's payment rail is testnet-only.</p>
         <div style="margin-top:24px">
           <p class="code-cap">POST /preflight · free</p>
-<pre><span class="c">curl -sS -X POST</span> https://verify402.onrender.com/preflight \
+<pre data-ui><span class="c">curl -sS -X POST</span> https://verify402.onrender.com/preflight \
   -H <span class="g">"content-type: application/json"</span> \
   -d <span class="y">'{
     "kind": "payment",
@@ -88,7 +87,7 @@
         <p class="small muted" style="margin-top:14px"><code class="inline">amount</code> is in raw units: <code class="inline">10000</code> = 0.01 testnet USDC (6 decimals). Free hosting sleeps: the first call after a pause can take ~30 seconds. This is the free gate: no payment is sent.</p>
         <div style="margin-top:24px">
           <p class="code-cap">Response · abbreviated</p>
-<pre>{
+<pre data-ui>{
   <span class="y">"verdict"</span>: <span class="g">"PASS"</span>,
   <span class="y">"sign_allowed"</span>: <span class="g">true</span>,
   <span class="y">"requires_ack"</span>: <span class="g">false</span>,
@@ -102,15 +101,13 @@
         <p class="small muted" style="margin-top:14px">Your block number will differ. <code class="inline">sign_allowed</code> is simply <code class="inline">verdict !== "BLOCK"</code>; a CAUTION still needs a decision.</p>
       </article>
 
-      <hr class="divider" style="margin:44px 0">
-
       <article id="block">
         <p class="eyebrow">02 · A bad signature</p>
         <h2 style="margin-top:14px">The same gate says no to an unlimited approval.</h2>
         <p class="lead" style="margin-top:14px">This calldata is USDC <code class="inline">approve(spender, 2^256-1)</code> — the classic “let this contract take everything” signature. With <code class="inline">forbidUnlimitedApproval</code> set, it is a hard block.</p>
         <div style="margin-top:24px">
           <p class="code-cap">POST /preflight · free</p>
-<pre><span class="c">curl -sS -X POST</span> https://verify402.onrender.com/preflight \
+<pre data-ui><span class="c">curl -sS -X POST</span> https://verify402.onrender.com/preflight \
   -H <span class="g">"content-type: application/json"</span> \
   -d <span class="y">'{
     "kind": "transaction",
@@ -123,7 +120,7 @@
         </div>
         <div style="margin-top:24px">
           <p class="code-cap">Response · abbreviated</p>
-<pre>{
+<pre data-ui>{
   <span class="y">"verdict"</span>: <span class="g">"BLOCK"</span>,
   <span class="y">"sign_allowed"</span>: <span class="g">false</span>,
   <span class="y">"reasons"</span>: [
@@ -138,15 +135,13 @@
         <p class="small muted" style="margin-top:14px">Add <code class="inline">"from": "0xYourPayerAddress"</code> to enable simulation. Without it the response also carries a <code class="inline">simulation_skipped_no_from</code> caution — the gate names what it could not check.</p>
       </article>
 
-      <hr class="divider" style="margin:44px 0">
-
       <article id="receipt">
         <p class="eyebrow">03 · The receipt</p>
         <h2 style="margin-top:14px">Verify before you trust it.</h2>
         <p class="lead" style="margin-top:14px">Every verdict carries an HMAC-signed receipt bound to the exact normalized intent, the request body the gate received, and the block. <code class="inline">POST /preflight/verify</code> recomputes the signature, checks expiry, and re-hashes the caller's <code class="inline">request</code> and optional <code class="inline">intent</code>. A tampered copy returns <code class="inline">bad_signature</code>; an altered request returns <code class="inline">request_mismatch</code>.</p>
         <div style="margin-top:24px">
           <p class="code-cap">Node · verify, then sign</p>
-<pre><span class="c">const</span> gate = <span class="c">await</span> fetch(<span class="g">"https://verify402.onrender.com/preflight"</span>, {
+<pre data-ui><span class="c">const</span> gate = <span class="c">await</span> fetch(<span class="g">"https://verify402.onrender.com/preflight"</span>, {
   method: <span class="g">"POST"</span>,
   headers: { <span class="g">"content-type"</span>: <span class="g">"application/json"</span> },
   body: JSON.stringify(intent),
@@ -163,19 +158,17 @@
         <p class="small muted" style="margin-top:14px">Receipts expire after 90 seconds by default (15–300 configurable). Re-call the gate instead of reusing an expired one. If the chain cannot be read, the gate returns <b>503 and no receipt</b> — fail-closed.</p>
       </article>
 
-      <hr class="divider" style="margin:44px 0">
-
       <article id="mcp">
         <p class="eyebrow">04 · Inside the agent</p>
         <h2 style="margin-top:14px">One MCP tool, no wallet.</h2>
         <p class="lead" style="margin-top:14px">Run with <code class="inline">npx</code>, or add the server to Claude Desktop, Cursor, OpenCode or any stdio MCP client. With no <code class="inline">EVM_PRIVATE_KEY</code>, only <code class="inline">preflight_gate</code> is registered — nothing can be charged. Published on npm as <a class="textlink" href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener">verify402-mcp</a> and listed on the official MCP Registry.</p>
         <div style="margin-top:24px">
           <p class="code-cap">Run via npx · free gate</p>
-<pre><span class="c">npx -y</span> verify402-mcp --help</pre>
+<pre data-ui><span class="c">npx -y</span> verify402-mcp --help</pre>
         </div>
         <div style="margin-top:24px">
           <p class="code-cap">.cursor/mcp.json · free-only</p>
-<pre>{
+<pre data-ui>{
   <span class="y">"mcpServers"</span>: {
     <span class="y">"verify402"</span>: {
       <span class="y">"command"</span>: <span class="g">"npx"</span>,
@@ -194,11 +187,9 @@
         </div>
       </article>
 
-      <hr class="divider" style="margin:44px 0">
-
       <article id="feedback">
         <p class="eyebrow">05 · What I need back</p>
-        <h2 style="margin-top:14px">One thing matters more than signups: a false PASS.</h2>
+        <h2 style="margin-top:14px">The only failure: a false PASS.</h2>
         <p class="lead" style="margin-top:14px">Run 3–5 intents your agent would actually sign — or has signed before. Send the intent (redacted is fine), the verdict, and the reasons. The number that does not exist yet is the <b>false-PASS rate</b>: a transaction the gate passed that you believe is unsafe.</p>
         <p class="small muted" style="margin-top:14px">The gate is free and rate-limited. The five paid measurements — <a class="textlink" href="/checks">/verify, /safety, /route, /quotecheck, /depth</a> — are separate and not needed for this test.</p>
         <div class="callout warn" style="margin-top:24px">
@@ -228,42 +219,39 @@
 
 </main>
 
-<footer>
-  <div class="wrap">
-    <div class="foot-grid">
-      <div class="foot-brand">
-        <a class="logo" href="/">verify40<i>2</i></a>
-        <p>Machine-payable truth for agents. A negative result, delivered with receipts.</p>
-      </div>
-      <div class="foot-col">
-        <p class="cap">Product</p>
-        <a href="/start">Quickstart</a>
-        <a href="/checks">The five checks</a>
-        <a href="/preflight">Preflight gate</a>
-        <a href="/mcp">MCP server</a>
-        <a href="/live">Live findings</a>
-        <a href="/docs">Documentation</a>
-        <a href="/donate">Donate</a>
-      </div>
-      <div class="foot-col">
-        <p class="cap">Project</p>
-        <a href="/proof">Proof &amp; receipts</a>
-        <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">Source code</a>
-        <a href="https://github.com/x402-foundation/x402/issues/3847" rel="noopener">x402 proposal</a>
-      </div>
-      <div class="foot-col">
-        <p class="cap">For machines</p>
-        <a href="/.well-known/verify402.json">service manifest</a>
-        <a href="/openapi.json">openapi 3.1</a>
-        <a href="/llms.txt">llms.txt</a>
-        <a href="/sitemap.xml">sitemap</a>
-        <a href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener">npm package</a>
-        <a href="/health">/health</a>
-        <a href="/findings">/findings</a>
-      </div>
+<footer class="site-foot">
+  <div class="foot-mark" aria-hidden="true">verify<span>[402]</span></div>
+  <div class="foot-links">
+    <div>
+      <h2>Product</h2>
+      <a href="/preflight">Preflight gate</a>
+      <a href="/checks">The five checks</a>
+      <a href="/mcp">MCP server</a>
+      <a href="/live">Live findings</a>
+      <a href="/start">Quickstart</a>
     </div>
-    <p class="legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data; demo payments are testnet. The only settlement ever recorded is the operator's own testnet transaction. No external buyer yet. Prices are per call, paid in testnet USDC over x402; /preflight is free.</p>
+    <div>
+      <h2>Project</h2>
+      <a href="/proof">Proof &amp; receipts</a>
+      <a href="/docs">Documentation</a>
+      <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">Source code</a>
+      <a href="https://github.com/x402-foundation/x402/issues/3847" rel="noopener">x402 proposal</a>
+    </div>
+    <div>
+      <h2>For machines</h2>
+      <a href="/.well-known/verify402.json">Service manifest</a>
+      <a href="/openapi.json">OpenAPI 3.1</a>
+      <a href="/llms.txt">llms.txt</a>
+      <a href="/findings">/findings</a>
+    </div>
+    <div>
+      <h2>For teams</h2>
+      <p class="foot-note">Embedding a pre-signing check in a wallet, agent, or treasury workflow?</p>
+      <a href="mailto:a32116150@gmail.com?subject=verify402%20walkthrough">Talk to the builder</a>
+      <a href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener">npm package</a>
+    </div>
   </div>
+  <p class="foot-legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data; demo payments are testnet. The only settlement ever recorded is the operator's own testnet transaction. No external buyer yet. Prices are per call, paid in testnet USDC over x402; /preflight is free.</p>
 </footer>
 
 <script src="/assets/site.js"></script>

@@ -8,40 +8,35 @@
 <meta name="google-site-verification" content="iGmI2QL110IkjnW0thU3DRZrdgQe_7mZsPWgkZVte7o">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;560;640;750&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/assets/site.css">
 </head>
 <body>
 
-<header class="nav">
-  <div class="wrap nav-in">
-    <a class="logo" href="/">verify40<i>2</i></a>
-    <nav class="nav-links">
-      <a href="/start">Start</a>
-      <a href="/checks">Checks</a>
-      <a href="/preflight">Preflight</a>
-      <a href="/mcp">MCP</a>
-      <a href="/live">Live</a>
-      <a href="/proof">Proof</a>
-      <a href="/docs" aria-current="page">Docs</a>
-      <a href="/donate">Donate</a>
-    </nav>
-    <div class="nav-cta">
-      <span class="nav-live"><span class="dot"></span>live · <span data-block>block —</span></span>
-      <a class="btn sm" href="/live">Free findings</a>
-    </div>
-    <details class="menu">
+<header class="site-head">
+  <a class="brand" href="/" aria-label="verify402 home">verify<span>[</span>402<span>]</span></a>
+  <nav class="site-nav" aria-label="Primary">
+    <a href="/checks">Checks</a>
+    <a href="/preflight">Preflight</a>
+    <a href="/mcp">MCP</a>
+    <a href="/proof">Proof</a>
+    <a href="/docs">Docs</a>
+  </nav>
+  <div class="site-actions">
+    <a class="site-status" href="/live"><span class="status-dot"></span><span data-block>live · block —</span></a>
+    <a class="btn sm" href="/preflight#try">Run free check</a>
+    <details class="site-menu">
       <summary>Menu</summary>
-      <nav>
-        <a href="/start">Start here</a>
+      <nav aria-label="Menu">
         <a href="/checks">Checks</a>
         <a href="/preflight">Preflight</a>
         <a href="/mcp">MCP server</a>
         <a href="/live">Live findings</a>
         <a href="/proof">Proof &amp; receipts</a>
         <a href="/docs">Docs</a>
-        <a href="/donate">Donate</a>
+        <a href="/start">Quickstart</a>
+        <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">GitHub</a>
       </nav>
     </details>
   </div>
@@ -50,8 +45,12 @@
 <main>
   <div class="wrap page-head">
     <p class="eyebrow">For agents and their humans</p>
-    <h1>Ten minutes from zero to a settled verdict.</h1>
+    <h1>Ten minutes.<br>One verdict.</h1>
     <p class="lead">No signup, no API key: the payment is the authentication. New here? The <a class="textlink" href="/start">five-minute quickstart</a> gets you a PASS, a BLOCK and a verified receipt first. This page then shows the free pre-signing gate, the exact handshake, the recovery contract, and every machine endpoint. Plain-language version: <a class="textlink" href="/checks">the checks page</a>.</p>
+    <div class="btn-row" style="margin-top:24px">
+      <a class="btn" href="/start">Start the quickstart</a>
+      <a class="btn ghost" href="https://github.com/a32116150-ctrl/verify402" rel="noopener">Open the source</a>
+    </div>
   </div>
 
   <section>
@@ -63,7 +62,7 @@
         <p class="lead" style="margin-top:14px">First call without payment. The service answers <b>402 Payment Required</b> with everything your agent needs: scheme, network, asset, amount, recipient, and the per-call cap.</p>
         <div style="margin-top:24px">
           <p class="code-cap">1 · Ask without paying</p>
-<pre><span class="c">curl -X POST</span> https://verify402.onrender.com/verify \
+<pre data-ui><span class="c">curl -X POST</span> https://verify402.onrender.com/verify \
   -H <span class="g">"Content-Type: application/json"</span> \
   -H <span class="g">"x-idempotency-key: 3f2c7a1e-5b8d-4c6f-9a4e-7b2d9c1f6a3e"</span> \
   -d <span class="y">'{"pair":"USDC/WETH","dex":"uniswap-v3","sizeUsd":100000}'</span>
@@ -74,7 +73,7 @@
         </div>
         <div style="margin-top:24px">
           <p class="code-cap">2 · Pay and retry with proof</p>
-<pre><span class="c"># x402 clients (e.g. @x402/fetch) do this automatically:</span>
+<pre data-ui><span class="c"># x402 clients (e.g. @x402/fetch) do this automatically:</span>
 <span class="c">#   read the 402 → sign the exact payment → retry with PAYMENT-SIGNATURE</span>
 <span class="c">#   (x402 v2; the legacy X-PAYMENT header is also accepted)</span>
 <span class="c"># The retry returns the verdict with an evidence_bundle.</span></pre>
@@ -85,13 +84,11 @@
         </div>
       </article>
 
-      <hr class="divider" style="margin:44px 0">
-
       <article id="receipts">
         <p class="eyebrow">02 · Receipts</p>
         <h2 style="margin-top:14px">Every paid response can be rechecked.</h2>
         <p class="lead" style="margin-top:14px">The response carries an evidence bundle so a third party can recompute the measurement without trusting the service: the hash of the canonical request, the hash of the actual response body, and the pinned block.</p>
-        <div class="table-wrap" style="margin-top:22px">
+        <div class="table-wrap" data-ui style="margin-top:22px">
           <table class="table">
             <thead><tr><th>Field</th><th>What it proves</th></tr></thead>
             <tbody>
@@ -103,17 +100,15 @@
           </table>
         </div>
         <h3 style="margin-top:32px">The recovery contract, in one paragraph</h3>
-        <p class="small" style="margin-top:10px">A settlement is <b>staged</b>, not recorded, when payment succeeds. It is <b>promoted</b> only by the official <code class="inline">onAfterSettle</code> hook, keyed on a server-generated <code class="inline">operationId</code> carried in the response and requiring a confirmed settle with a transaction reference — with the hash of the actual response bytes as an additional check. <b>Equal output does not identify an operation</b>: two requests that both return <code class="inline">no_match</code> are still distinct, and settling one never promotes the other. A failed or pending settlement promotes nothing; staged-unpromoted records age out silently after five minutes; the replay cap is per operation, bound to the caller's key. Reusing a key with changed request content is a <code class="inline">409</code> conflict resolved before the paywall — never the other operation's answer, never a charge. A concurrent same-key request is also a <code class="inline">409</code> (<code class="inline">operation_in_flight</code>, or <code class="inline">settlement_pending</code> while a staged settlement is unresolved), issued before the paywall. The reservation is in-process and lost on restart, like the records. The original idempotency key is the only replay credential; no payer identity is read from <code class="inline">x-payment</code> or <code class="inline">authorization.from</code>, and the old content-hash companion alias has been removed. The key is a bearer secret: a leaked key allows replay until the TTL/replay cap, and recovery does not prove payment or survive a restart. Two parts of this were broken in public by an independent auditor and fixed the same day: commit <a class="textlink" href="https://github.com/a32116150-ctrl/verify402/commit/4bf3c9c" rel="noopener">4bf3c9c</a>, then hardened after the x402 spec review (<a class="textlink" href="https://github.com/x402-foundation/x402/pull/3848" rel="noopener">#3848</a>).</p>
+        <p class="small" style="margin-top:10px">A settlement is <b>staged</b>, not recorded, when payment succeeds. It is <b>promoted</b> only by the official <code class="inline">onAfterSettle</code> hook, keyed on a server-generated <code class="inline">operationId</code> carried in the response and requiring a confirmed settle with a transaction reference — with the hash of the actual response bytes as an additional check. <b>Equal output does not identify an operation</b>: two requests that both return <code class="inline">no_match</code> are still distinct, and settling one never promotes the other. A failed or pending settlement promotes nothing; staged-unpromoted records age out silently after five minutes; the replay cap is per operation, bound to the caller's key. Reusing a key with changed request content is a <code class="inline">409</code> conflict resolved before the paywall — never the other operation's answer, never a charge. A concurrent same-key request is also a <code class="inline">409</code> (<code class="inline">operation_in_flight</code>, or <code class="inline">settlement_pending</code> while a staged settlement is unresolved), issued before the paywall. The reservation is in-process and lost on restart, like the records. The original idempotency key is the only replay credential; no payer identity is read from <code class="inline">x-payment</code> or <code class="inline">authorization.from</code>, and the old content-hash companion alias has been removed. The key is a bearer secret: a leaked key allows replay until the TTL/replay cap, and recovery does not prove payment or survive a restart. Two parts of this were broken in public by an independent auditor and fixed the same day: commit <a class="textlink" href="https://github.com/a32116150-ctrl/verify402/commit/4bf3c9c" rel="noopener"><code class="inline">4bf3c9c</code></a>, then hardened after the x402 spec review (<a class="textlink" href="https://github.com/x402-foundation/x402/pull/3848" rel="noopener"><code class="inline">#3848</code></a>).</p>
       </article>
-
-      <hr class="divider" style="margin:44px 0">
 
       <article id="preflight">
         <p class="eyebrow">03 · Before you sign</p>
         <h2 style="margin-top:14px">One free gate, one short-lived receipt.</h2>
         <p class="lead" style="margin-top:14px"><code class="inline">POST /preflight</code> is free. Give it an x402 payment request or a chain transaction; it returns <b>PASS / CAUTION / BLOCK</b>, typed reasons, the checks that actually ran, and the checks that did not. Every response carries an HMAC-signed receipt bound to the exact normalized intent, the exact request body, and, where the chain is readable, a fresh pinned block. On EVM, a block older than 30s is CAUTION; older than 120s is BLOCK; a block with no timestamp is a 503. <code class="inline">requestHash</code> is additive within <code class="inline">@1</code>: receipts issued before it existed stay signature-valid but are not caller-bound, and a supplied <code class="inline">request</code> verifies with <code class="inline">missing_request_hash</code>. A missing <code class="inline">intentHash</code> returns <code class="inline">missing_intent_hash</code>. The reference executor requires both <code class="inline">intentBound</code> and <code class="inline">requestBound</code>; receipt-only verification remains compatible but reports both as false.</p>
         <p class="small muted" style="margin-top:12px">Use it from an agent: <a class="textlink" href="/mcp">verify402-mcp</a> exposes the gate (no wallet) and the five paid checks (hot wallet, per-call x402) over MCP.</p>
-        <div class="table-wrap" style="margin-top:22px">
+        <div class="table-wrap" data-ui style="margin-top:22px">
           <table class="table">
             <thead><tr><th>Intent</th><th>What it needs</th><th>What it checks</th></tr></thead>
             <tbody>
@@ -125,7 +120,7 @@
         <p class="small muted" style="margin-top:16px">Optional caller-supplied checks: <code class="inline">payment.idempotencyKey</code> + <code class="inline">policy.obligation.settledKeys</code> rejects an already-settled key; <code class="inline">policy.obligation.spentUsd</code> + <code class="inline">grantUsd</code> rejects cumulative spend over the grant. <code class="inline">policy.sellerPayoutWallets</code> is only a payout allowlist; <code class="inline">policy.sellerPayoutManifest</code> fetches a seller-signed manifest from a caller-pinned HTTPS origin and is the only source of <code class="inline">payee_payout_binding</code>. The gate does not persist this state, and neither form independently proves the seller controls the wallet.</p>
         <div style="margin-top:24px">
           <p class="code-cap">Payment request · abbreviated</p>
-<pre><span class="c">curl -X POST</span> https://verify402.onrender.com/preflight \
+<pre data-ui><span class="c">curl -X POST</span> https://verify402.onrender.com/preflight \
   -H <span class="g">"Content-Type: application/json"</span> \
   -d <span class="y">'{
     "kind": "payment",
@@ -143,7 +138,7 @@
         </div>
         <div style="margin-top:24px">
           <p class="code-cap">Response</p>
-<pre>{ <span class="y">"verdict"</span>: <span class="g">"PASS"</span>, <span class="y">"sign_allowed"</span>: <span class="g">true</span>, <span class="y">"requires_ack"</span>: <span class="g">false</span>,
+<pre data-ui>{ <span class="y">"verdict"</span>: <span class="g">"PASS"</span>, <span class="y">"sign_allowed"</span>: <span class="g">true</span>, <span class="y">"requires_ack"</span>: <span class="g">false</span>,
   <span class="y">"checked"</span>: [<span class="g">"scheme"</span>, <span class="g">"network"</span>, <span class="g">"asset"</span>, <span class="g">"amount"</span>, <span class="g">"payee"</span>, <span class="g">"payer_balance"</span>],
   <span class="y">"notChecked"</span>: [<span class="g">"recipient reputation"</span>, <span class="g">"sanctions screening"</span>, <span class="g">"counterparty identity / tool metadata"</span>, <span class="g">"prompt injection / hidden Unicode in tool output"</span>],
   <span class="y">"receipt"</span>: { <span class="y">"spec"</span>: <span class="g">"verify402/preflight-receipt@1"</span>, <span class="y">"intentHash"</span>: <span class="g">"…"</span>, <span class="y">"requestHash"</span>: <span class="g">"…"</span>,
@@ -155,12 +150,10 @@
         </div>
       </article>
 
-      <hr class="divider" style="margin:44px 0">
-
       <article id="endpoints">
         <p class="eyebrow">04 · Endpoints</p>
         <h2 style="margin-top:14px">Everything the machine answers.</h2>
-        <div class="table-wrap" style="margin-top:22px">
+        <div class="table-wrap" data-ui style="margin-top:22px">
           <table class="table">
             <thead><tr><th>Endpoint</th><th>Price</th><th>Purpose</th></tr></thead>
             <tbody>
@@ -184,8 +177,6 @@
         </div>
       </article>
 
-      <hr class="divider" style="margin:44px 0">
-
       <article id="humans">
         <p class="eyebrow">05 · If you're a human</p>
         <h2 style="margin-top:14px">You don't need to run curl.</h2>
@@ -200,42 +191,39 @@
   </section>
 </main>
 
-<footer>
-  <div class="wrap">
-    <div class="foot-grid">
-      <div class="foot-brand">
-        <a class="logo" href="/">verify40<i>2</i></a>
-        <p>Machine-payable truth for agents. A negative result, delivered with receipts.</p>
-      </div>
-      <div class="foot-col">
-        <p class="cap">Product</p>
-        <a href="/start">Quickstart</a>
-        <a href="/checks">The five checks</a>
-        <a href="/preflight">Preflight gate</a>
-        <a href="/mcp">MCP server</a>
-        <a href="/live">Live findings</a>
-        <a href="/docs">Documentation</a>
-        <a href="/donate">Donate</a>
-      </div>
-      <div class="foot-col">
-        <p class="cap">Project</p>
-        <a href="/proof">Proof &amp; receipts</a>
-        <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">Source code</a>
-        <a href="https://github.com/x402-foundation/x402/issues/3847" rel="noopener">x402 proposal</a>
-      </div>
-      <div class="foot-col">
-        <p class="cap">For machines</p>
-        <a href="/.well-known/verify402.json">service manifest</a>
-        <a href="/openapi.json">openapi 3.1</a>
-        <a href="/llms.txt">llms.txt</a>
-        <a href="/sitemap.xml">sitemap</a>
-        <a href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener">npm package</a>
-        <a href="/health">/health</a>
-        <a href="/findings">/findings</a>
-      </div>
+<footer class="site-foot">
+  <div class="foot-mark" aria-hidden="true">verify<span>[402]</span></div>
+  <div class="foot-links">
+    <div>
+      <h2>Product</h2>
+      <a href="/preflight">Preflight gate</a>
+      <a href="/checks">The five checks</a>
+      <a href="/mcp">MCP server</a>
+      <a href="/live">Live findings</a>
+      <a href="/start">Quickstart</a>
     </div>
-    <p class="legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data; demo payments are testnet. The only settlement ever recorded is the operator's own testnet transaction. No external buyer yet. Prices are per call, paid in testnet USDC over x402.</p>
+    <div>
+      <h2>Project</h2>
+      <a href="/proof">Proof &amp; receipts</a>
+      <a href="/docs">Documentation</a>
+      <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">Source code</a>
+      <a href="https://github.com/x402-foundation/x402/issues/3847" rel="noopener">x402 proposal</a>
+    </div>
+    <div>
+      <h2>For machines</h2>
+      <a href="/.well-known/verify402.json">Service manifest</a>
+      <a href="/openapi.json">OpenAPI 3.1</a>
+      <a href="/llms.txt">llms.txt</a>
+      <a href="/findings">/findings</a>
+    </div>
+    <div>
+      <h2>For teams</h2>
+      <p class="foot-note">Embedding a pre-signing check in a wallet, agent, or treasury workflow?</p>
+      <a href="mailto:a32116150@gmail.com?subject=verify402%20walkthrough">Talk to the builder</a>
+      <a href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener">npm package</a>
+    </div>
   </div>
+  <p class="foot-legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data; demo payments are testnet. The only settlement ever recorded is the operator's own testnet transaction. No external buyer yet. Prices are per call, paid in testnet USDC over x402.</p>
 </footer>
 
 <script src="/assets/site.js"></script>

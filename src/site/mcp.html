@@ -8,40 +8,35 @@
 <meta name="google-site-verification" content="iGmI2QL110IkjnW0thU3DRZrdgQe_7mZsPWgkZVte7o">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;560;640;750&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/assets/site.css">
 </head>
 <body>
 
-<header class="nav">
-  <div class="wrap nav-in">
-    <a class="logo" href="/">verify40<i>2</i></a>
-    <nav class="nav-links">
-      <a href="/start">Start</a>
-      <a href="/checks">Checks</a>
-      <a href="/preflight">Preflight</a>
-      <a href="/mcp" aria-current="page">MCP</a>
-      <a href="/live">Live</a>
-      <a href="/proof">Proof</a>
-      <a href="/docs">Docs</a>
-      <a href="/donate">Donate</a>
-    </nav>
-    <div class="nav-cta">
-      <span class="nav-live"><span class="dot"></span>free gate · no wallet</span>
-      <a class="btn sm" href="#install">Install</a>
-    </div>
-    <details class="menu">
+<header class="site-head">
+  <a class="brand" href="/" aria-label="verify402 home">verify<span>[</span>402<span>]</span></a>
+  <nav class="site-nav" aria-label="Primary">
+    <a href="/checks">Checks</a>
+    <a href="/preflight">Preflight</a>
+    <a href="/mcp">MCP</a>
+    <a href="/proof">Proof</a>
+    <a href="/docs">Docs</a>
+  </nav>
+  <div class="site-actions">
+    <a class="site-status" href="/live"><span class="status-dot"></span><span data-block>live · block —</span></a>
+    <a class="btn sm" href="/preflight#try">Run free check</a>
+    <details class="site-menu">
       <summary>Menu</summary>
-      <nav>
-        <a href="/start">Start here</a>
+      <nav aria-label="Menu">
         <a href="/checks">Checks</a>
         <a href="/preflight">Preflight</a>
-        <a href="/mcp" aria-current="page">MCP server</a>
+        <a href="/mcp">MCP server</a>
         <a href="/live">Live findings</a>
         <a href="/proof">Proof &amp; receipts</a>
         <a href="/docs">Docs</a>
-        <a href="/donate">Donate</a>
+        <a href="/start">Quickstart</a>
+        <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">GitHub</a>
       </nav>
     </details>
   </div>
@@ -68,7 +63,7 @@
         </p>
       </div>
       <aside>
-        <div class="vcard">
+        <div class="vcard" data-ui>
           <div class="vcard-head"><span>MCP · verify402</span><span class="ok">● active registry</span></div>
           <div class="vcard-body">
             <div class="vrow"><span class="pair">preflight_gate</span><span class="verdict">free</span><span class="meta">before the signature</span></div>
@@ -92,7 +87,7 @@
         <h2>One gate, five deep questions.</h2>
         <p class="lead">The gate is free because it has to run before every signature. The paid tools answer the questions that need a measurement at a pinned block.</p>
       </div>
-      <div class="table-wrap" style="margin-top:32px">
+      <div class="table-wrap" data-ui style="margin-top:32px">
         <table class="table">
           <thead><tr><th>Tool</th><th>Price</th><th>Question</th><th>What comes back</th></tr></thead>
           <tbody>
@@ -132,7 +127,7 @@
 
       <div style="margin-top:32px">
         <p class="code-cap">Run via npx · no wallet required</p>
-<pre>npx -y verify402-mcp --help</pre>
+<pre data-ui>npx -y verify402-mcp --help</pre>
       </div>
 
       <div class="callout good" style="margin-top:24px">
@@ -158,7 +153,7 @@
         <p class="lead" style="margin-top:14px">Claude Desktop uses <code class="inline">claude_desktop_config.json</code>; Cursor uses <code class="inline">.cursor/mcp.json</code>. This block is free-only. For paid tools, add <code class="inline">EVM_PRIVATE_KEY</code>, <code class="inline">MAX_PAYMENT_USD</code> and optionally <code class="inline">MAX_DAILY_USD</code> to <code class="inline">env</code>.</p>
         <div style="margin-top:24px">
           <p class="code-cap">Free-only config</p>
-<pre>{
+<pre data-ui>{
   <span class="y">"mcpServers"</span>: {
     <span class="y">"verify402"</span>: {
       <span class="y">"command"</span>: <span class="g">"npx"</span>,
@@ -175,15 +170,13 @@
         </div>
       </article>
 
-      <hr class="divider" style="margin:44px 0">
-
       <article id="opencode">
         <p class="eyebrow">Client · OpenCode V2</p>
         <h2 style="margin-top:14px">Servers live under <span class="mono">mcp.servers</span>.</h2>
         <p class="lead" style="margin-top:14px">Put this in <code class="inline">opencode.jsonc</code> or the global <code class="inline">~/.config/opencode/opencode.jsonc</code>. For paid tools, use <code class="inline">"EVM_PRIVATE_KEY": "{env:EVM_PRIVATE_KEY}"</code> and export the key in the environment that starts OpenCode — do not write it into the file.</p>
         <div style="margin-top:24px">
           <p class="code-cap">opencode.jsonc · free-only</p>
-<pre>{
+<pre data-ui>{
   <span class="y">"$schema"</span>: <span class="g">"https://opencode.ai/config.json"</span>,
   <span class="y">"mcp"</span>: {
     <span class="y">"servers"</span>: {
@@ -218,7 +211,7 @@
         <p class="eyebrow">The honesty boundary</p>
         <h2>What it catches — and what it does not.</h2>
       </div>
-      <div class="table-wrap" style="margin-top:32px">
+      <div class="table-wrap" data-ui style="margin-top:32px">
         <table class="table">
           <thead><tr><th>It checks</th><th>It does not</th></tr></thead>
           <tbody>
@@ -246,18 +239,15 @@
         <p class="lead">An MCP server is only in the path if installing it is one line. <code class="inline">npx</code> runs a versioned package on first use, your client config stays small, and updates are a version bump — not a git pull. The package is distribution, not another endpoint.</p>
       </div>
       <div class="steps" style="margin-top:40px">
-        <div class="step">
-          <p class="n">01</p>
+        <div class="step" data-ui>
           <h3>Add the server</h3>
           <p>One block in Claude, Cursor, or OpenCode. No build, no clone, no submodule.</p>
         </div>
-        <div class="step">
-          <p class="n">02</p>
+        <div class="step" data-ui>
           <h3>Call the gate</h3>
           <p>Free, no wallet. The agent gets PASS / CAUTION / BLOCK and a receipt bound to the intent and block.</p>
         </div>
-        <div class="step">
-          <p class="n">03</p>
+        <div class="step" data-ui>
           <h3>Add paid depth</h3>
           <p>When the agent needs a measurement, the same server pays per call over x402. No subscription.</p>
         </div>
@@ -268,42 +258,39 @@
 
 </main>
 
-<footer>
-  <div class="wrap">
-    <div class="foot-grid">
-      <div class="foot-brand">
-        <a class="logo" href="/">verify40<i>2</i></a>
-        <p>Machine-payable truth for agents. A negative result, delivered with receipts.</p>
-      </div>
-      <div class="foot-col">
-        <p class="cap">Product</p>
-        <a href="/start">Quickstart</a>
-        <a href="/checks">The five checks</a>
-        <a href="/preflight">Preflight gate</a>
-        <a href="/mcp">MCP server</a>
-        <a href="/live">Live findings</a>
-        <a href="/docs">Documentation</a>
-        <a href="/donate">Donate</a>
-      </div>
-      <div class="foot-col">
-        <p class="cap">Project</p>
-        <a href="/proof">Proof &amp; receipts</a>
-        <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">Source code</a>
-        <a href="https://github.com/x402-foundation/x402/issues/3847" rel="noopener">x402 proposal</a>
-      </div>
-      <div class="foot-col">
-        <p class="cap">For machines</p>
-        <a href="/.well-known/verify402.json">service manifest</a>
-        <a href="/openapi.json">openapi 3.1</a>
-        <a href="/llms.txt">llms.txt</a>
-        <a href="/sitemap.xml">sitemap</a>
-        <a href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener">npm package</a>
-        <a href="/health">/health</a>
-        <a href="/findings">/findings</a>
-      </div>
+<footer class="site-foot">
+  <div class="foot-mark" aria-hidden="true">verify<span>[402]</span></div>
+  <div class="foot-links">
+    <div>
+      <h2>Product</h2>
+      <a href="/preflight">Preflight gate</a>
+      <a href="/checks">The five checks</a>
+      <a href="/mcp">MCP server</a>
+      <a href="/live">Live findings</a>
+      <a href="/start">Quickstart</a>
     </div>
-    <p class="legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data; demo payments are testnet. The only settlement ever recorded is the operator's own testnet transaction. No external buyer yet. Prices are per call, paid in testnet USDC over x402; /preflight is free. The MCP server pays for calls only; it never signs a trade.</p>
+    <div>
+      <h2>Project</h2>
+      <a href="/proof">Proof &amp; receipts</a>
+      <a href="/docs">Documentation</a>
+      <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">Source code</a>
+      <a href="https://github.com/x402-foundation/x402/issues/3847" rel="noopener">x402 proposal</a>
+    </div>
+    <div>
+      <h2>For machines</h2>
+      <a href="/.well-known/verify402.json">Service manifest</a>
+      <a href="/openapi.json">OpenAPI 3.1</a>
+      <a href="/llms.txt">llms.txt</a>
+      <a href="/findings">/findings</a>
+    </div>
+    <div>
+      <h2>For teams</h2>
+      <p class="foot-note">Embedding a pre-signing check in a wallet, agent, or treasury workflow?</p>
+      <a href="mailto:a32116150@gmail.com?subject=verify402%20walkthrough">Talk to the builder</a>
+      <a href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener">npm package</a>
+    </div>
   </div>
+  <p class="foot-legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data; demo payments are testnet. The only settlement ever recorded is the operator's own testnet transaction. No external buyer yet. Prices are per call, paid in testnet USDC over x402; /preflight is free. The MCP server pays for calls only; it never signs a trade.</p>
 </footer>
 
 <script src="/assets/site.js"></script>
