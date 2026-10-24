@@ -55,8 +55,9 @@ access:
 > PASS/CAUTION/BLOCK verdict and a short-lived receipt. It sends only the public
 > intent fields (chain/network, addresses, calldata, value, payment terms, and
 > optional policy) plus the receipt during verification. It does not send
-> private keys, seed phrases, signed transactions, or files. No data is sent to
-> any third party.
+> private keys, seed phrases, signed transactions, or files. The only other
+> outbound request is an optional fetch of a sellerPayoutManifest URL that the
+> caller supplies; the skill does not choose or discover it.
 
 ### Long description
 
