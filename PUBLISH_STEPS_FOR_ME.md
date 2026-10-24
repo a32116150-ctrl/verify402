@@ -1,42 +1,35 @@
-# Release verify402-mcp 1.0.7 — for me
+# Release verify402-mcp 1.0.8 — for me
 
-Status: npm `verify402-mcp@1.0.7` is **published** (gitHead
-`485256fda9072447ea4ae3b8a3420069c9efb765`). The MCP Registry entry is
-**published and verified** as active latest at
-`2026-10-23T23:55:58.349764Z`. The GitHub release `mcp-v1.0.7` is published and
-is the latest release (`2026-10-23T23:58:30Z`).
+Status: **release in progress.** The target is npm `verify402-mcp@1.0.8`.
+Until the gates below complete, npm `latest`, the MCP Registry entry, the
+GitHub release, and Render remain on `1.0.7`. Do not claim the `1.0.8` artifact,
+registry entry, tag, or deployment exists before verifying it.
 
-- npm `verify402-mcp@1.0.6` remains published and immutable; `1.0.5` and `1.0.4` are also immutable.
-- MCP Registry publication of `1.0.7` is **published and verified**; the
-  registry carries a `1.0.7` entry with `isLatest: true`.
-- GitHub release `mcp-v1.0.7` is **published and latest**.
-- Render deployment of `1.0.7` is **deployed and verified** at
-  `2026-10-23T23:58Z`; `/info` reports `1.0.7` and the free-only post-deploy
-  check passed 29/29.
+- npm `verify402-mcp@1.0.7` remains published and immutable; `1.0.6`, `1.0.5`, and `1.0.4` are also immutable.
+- MCP Registry currently serves `1.0.7` as active latest.
+- GitHub release `mcp-v1.0.7` is currently the latest release.
+- Render currently reports `1.0.7`; the free-only post-deploy check passed 29/29 on that release.
+- The working tree adds the payout-provenance correction, the x402 preflight
+  hook, and anonymous MCP client labels; it targets `1.0.8`.
 
-All release gates are complete. The npm artifact, registry entry, metadata,
-and Render deployment now agree on `1.0.7`.
-
-## 1. Account for the immutable npm 1.0.6 package
+## 1. Account for the immutable npm 1.0.7 package
 
 From the repository root:
 
 ```bash
 npm view verify402-mcp version dist.tarball gitHead
-npm view verify402-mcp@1.0.6 version
+npm view verify402-mcp@1.0.7 version
 ```
 
-Expected: `1.0.7` as the current latest, plus a resolvable `1.0.6` with its
-registry tarball URL and published `gitHead`. npm `1.0.6` is immutable and
-identifies commit `954702575b9df58a08e8dbdac45d680ecf3cc365` as its source. Do
-**not** republish, overwrite, or unpublish it.
+Expected before publishing: `1.0.7` as the current latest, plus a resolvable
+`1.0.7` with its registry tarball URL and published `gitHead`. npm `1.0.7` is
+immutable and identifies commit `485256fda9072447ea4ae3b8a3420069c9efb765` as
+its source. Do **not** republish, overwrite, or unpublish it.
 
-The working tree intentionally contains post-1.0.6 changes: the 1.0.7 release
-adds caller-supplied obligation state and seller payout binding. The 1.0.6
-package already defaults the bridge to Base Sepolia testnet (`eip155:84532`).
-Do not treat these changes as permission to republish 1.0.6.
-
-Do not attach the new source to the existing `1.0.6` version.
+The working tree contains post-1.0.7 changes: the payout-provenance correction,
+the x402 preflight hook, and anonymous client labels. Do not treat these
+changes as permission to republish `1.0.7`, and do not attach the new source to
+the existing `1.0.7` version.
 
 ## 2. Validate and inspect the release
 
@@ -50,17 +43,17 @@ node scripts/check-discovery.mjs
 node -e "console.log(require('./server.json').version, require('./mcp-bridge/package.json').version)"
 ```
 
-Expected: the release identity is `1.0.7` in the source metadata, every offline
+Expected: the release identity is `1.0.8` in the source metadata, every offline
 test passes, and discovery validation passes. Stop on any failure.
 
 Review the public release surfaces before continuing. They must describe
-`1.0.7` as published on npm; once the later gates are verified, they may also
+`1.0.8` as published on npm; once the later gates are verified, they may also
 name the MCP Registry and Render as live. Before those gates, do not claim they
 already serve it:
 
 - `src/site/mcp.html` (the public `/mcp` page)
 - the service manifest served at `/.well-known/verify402.json`
-- `server.json` (the registry entry for the published 1.0.7 release)
+- `server.json` (the registry entry for the published 1.0.8 release)
 - `README.md`, `examples/ONBOARDING.md`, `mcp-bridge/llms-install.md`
 
 ## 3. Review and commit the repository changes
@@ -72,7 +65,7 @@ git status --short
 git diff
 ```
 
-Commit the reviewed files, including the `1.0.7` release metadata, testnet
+Commit the reviewed files, including the `1.0.8` release metadata, testnet
 demo docs, and the release-consistency and bridge-tool tests. Do not include
 `.env` files, secrets, generated tarballs, or `VERIFY402_HANDOFF.md` unless you
 intend to publish that review.
@@ -145,7 +138,7 @@ Never push `master` in this step while auto-deploy is on; `master` is reserved
 for the deploy gate in step 10. This runbook does not verify the dashboard
 settings itself; it requires you to record them.
 
-## 5. Create and verify the npm 1.0.7 artifact
+## 5. Create and verify the npm 1.0.8 artifact
 
 Do **not** publish in this step. Build the artifact locally and inspect it.
 
@@ -155,12 +148,12 @@ npm ci
 npm test
 npm pack --dry-run
 npm pack
-tar -tzf verify402-mcp-1.0.7.tgz
+tar -tzf verify402-mcp-1.0.8.tgz
 ```
 
 Then verify, from the tarball contents:
 
-- the version in `package/package.json` is `1.0.7`;
+- the version in `package/package.json` is `1.0.8`;
 - `package/index.mjs`, `client-id.mjs`, `payment-policy.mjs`, `paid-call.mjs`,
   `budget.mjs`, `log.mjs`, `README.md`, `.env.example`, `LICENSE`, and `NOTICE`
   are present;
@@ -171,7 +164,7 @@ Then verify, from the tarball contents:
 
 Delete the local tarball after inspection.
 
-## 6. Publish npm 1.0.7 — completed
+## 6. Publish npm 1.0.8
 
 Step 4 must have made the exact commit being published publicly traceable, and
 step 5 must have verified the artifact. Confirm the commit first:
@@ -188,21 +181,22 @@ be clean. Then:
 cd mcp-bridge
 npm publish
 npm view verify402-mcp version dist.tarball gitHead
-npm view verify402-mcp@1.0.7 version
+npm view verify402-mcp@1.0.8 version
 ```
 
-Expected: `1.0.7`, a resolvable tarball, and a `gitHead` equal to the SHA above
+Expected: `1.0.8`, a resolvable tarball, and a `gitHead` equal to the SHA above
 that resolves on GitHub. Do not publish from an unpushed commit. npm versions
-are immutable: never republish, overwrite, or unpublish `1.0.7` after this step.
+are immutable: never republish, overwrite, or unpublish `1.0.8` after this step.
 
-## 7. Transition the release metadata to published 1.0.7 — completed
+## 7. Transition the release metadata to published 1.0.8
 
-Step 6 printed `1.0.7` for both the latest version and the pinned version. The
-repository was updated from `candidate-unpublished` to "published `1.0.7`" in
-release commit `485256fda9072447ea4ae3b8a3420069c9efb765` plus the metadata
-follow-up. The checklist below is the record of that transition:
+After step 6 prints `1.0.8` for both the latest version and the pinned version,
+record the artifact facts in the repository. The prep commit already points the
+install surfaces at `1.0.8`; this step records the actual `gitHead`, registry
+timestamps, and deploy result. The checklist below is the record of that
+transition:
 
-- `src/version.mjs` — set `PUBLISHED_VERSION = "1.0.7"` and change
+- `src/version.mjs` — set `PUBLISHED_VERSION = "1.0.8"` and change
   `RELEASE_STATUS` from the candidate value to the published/released value.
 - `src/manifest.mjs` — published release status, published version, tarball
   URL, quick-install command, and the published-package default; keep planned
@@ -211,13 +205,13 @@ follow-up. The checklist below is the record of that transition:
   "unpublished candidate" note.
 - `src/site/mcp.html` — hero, lead, registry callout, and install snippets.
 - `README.md`, `examples/ONBOARDING.md`, `mcp-bridge/llms-install.md` — move the
-  install pins from `1.0.6` to `1.0.7`.
+  install pins from `1.0.7` to `1.0.8`.
 - `server.json` — replace the "unpublished candidate" wording with
-  published-`1.0.7` wording. Registry metadata must never call a published
+  published-`1.0.8` wording. Registry metadata must never call a published
   version unpublished.
 - `test/release-consistency.test.mjs` — re-point the published-version
-  assertions and the "never present 1.0.7 as already published" checks at the
-  new state. The prior tests pinned `1.0.6` and failed until this update; that
+  assertions and the "never present 1.0.8 as already published" checks at the
+  new state. The prior tests pinned `1.0.7` and failed until this update; that
   failure was the guard, not a reason to weaken the test.
 
 Re-run the offline gates, inspect the diff, and commit with explicit paths:
@@ -236,18 +230,18 @@ non-deploying branch from step 4 if one was used, or keep it local until the
 deploy gate.
 
 Known limitation: the already-published npm tarball is immutable, so the
-README and install text embedded in `1.0.7` reflect the pre-publication state.
+README and install text embedded in `1.0.8` reflect the pre-publication state.
 The repository copies updated here are what the registry metadata, the public
 site, and the deployment use. If the npm page still shows candidate wording,
-that is a limitation of the immutable artifact — do not republish `1.0.7` to
+that is a limitation of the immutable artifact — do not republish `1.0.8` to
 work around it.
 
-## 8. Publish the MCP Registry entry — completed
+## 8. Publish the MCP Registry entry
 
-Step 6 is complete and the checked-in `server.json` describes a **published**
-`1.0.7`: `VERIFY402_NETWORKS` defaults to Base Sepolia testnet
+Step 6 has succeeded and the checked-in `server.json` describes a **published**
+`1.0.8`: `VERIFY402_NETWORKS` defaults to Base Sepolia testnet
 (`eip155:84532`), it is optional, and Base mainnet (`eip155:8453`) is an
-explicit opt-in. This step runs only when the npm 1.0.7 artifact exists and is
+explicit opt-in. This step runs only when the npm 1.0.8 artifact exists and is
 verified.
 
 ```bash
@@ -258,19 +252,19 @@ mcp-publisher publish server.json
 
 If `mcp-publisher validate` rejects the metadata, **stop** and correct the
 metadata. Do not fabricate fields to satisfy the validator, and do not publish
-the entry against the immutable `1.0.6` version.
+the entry against the immutable `1.0.7` version.
 
-## 9. Verify the actual 1.0.7 registry version — completed
+## 9. Verify the actual 1.0.8 registry version
 
 ```bash
-curl -s "https://registry.modelcontextprotocol.io/v0.1/servers/io.github.a32116150-ctrl%2Fverify402-mcp/versions/1.0.7"
+curl -s "https://registry.modelcontextprotocol.io/v0.1/servers/io.github.a32116150-ctrl%2Fverify402-mcp/versions/1.0.8"
 ```
 
-Verified: a `server` object with `version: "1.0.7"`, the Base Sepolia default
-in its environment-variable metadata, `status: active`, `isLatest: true`, and
-`publishedAt: 2026-10-23T23:55:58.349764Z`.
+Expected: a `server` object with `version: "1.0.8"`, the Base Sepolia default
+in its environment-variable metadata, `status: active`, and `isLatest: true`.
+Record the returned `publishedAt` timestamp in the changelog and handoff.
 
-## 10. Deploy only after a separate approval — completed
+## 10. Deploy only after a separate approval
 
 Deployment is a separate decision. Step 4 may have pushed the approved commit to
 a branch that was confirmed non-deploying, or to `master` with auto-deploy off;
@@ -291,7 +285,7 @@ step 4. If you cannot still verify them, do not push `master`.
   record the deployed SHA.
 
 Deploy only the approved, traceable SHA. If the metadata commit exists, it is
-the one to deploy, because it carries the published-1.0.7 surfaces.
+the one to deploy, because it carries the published-1.0.8 surfaces.
 
 ```bash
 git log --oneline -2
@@ -301,12 +295,12 @@ Then run the free-only post-deploy check:
 
 ```bash
 SMOKE_BASE_URL=https://verify402.onrender.com \
-  EXPECTED_VERSION=1.0.7 EXPECTED_MODE=testnet \
+  EXPECTED_VERSION=1.0.8 EXPECTED_MODE=testnet \
   npm run post-deploy
 ```
 
 Expected: all checks pass, `/health` says `testnet`, `/info` shows
-`mcp.version: "1.0.7"`, `/openapi.json` shows `info.version: "1.0.7"`, the
+`mcp.version: "1.0.8"`, `/openapi.json` shows `info.version: "1.0.8"`, the
 landing page does not advertise a mainnet demo, and `/llms.txt` describes the
 testnet payment rail and the published-package install. The dashboard's
 deployed commit must equal the metadata commit, or the recorded merge commit
@@ -317,16 +311,16 @@ push unless you have verified that with `/info` or `/health`. With auto-deploy
 on, the push changes the live service immediately, and a green post-deploy run
 is the only evidence that it succeeded.
 
-Verified on 2026-10-23 at ~23:58 UTC: all 29 checks passed against the live
-service, including `/info` version `1.0.7`, testnet mode, and the published
-install pin.
+Record the verification timestamp and check count here after the deploy. The
+expected result is all 29 checks passing against the live service, including
+`/info` version `1.0.8`, testnet mode, and the published install pin.
 
 Do not make a paid call as part of this checklist. The free gate and the
 post-deploy checks are sufficient to verify the release surfaces.
 
 ## If something is wrong
 
-- **npm already has 1.0.7:** do not overwrite or unpublish it. Fix forward with
+- **npm already has 1.0.8:** do not overwrite or unpublish it. Fix forward with
   a new patch version after approval.
 - **The published runtime differs from local:** stop and treat the difference as
   a new code change requiring a new package version and a new release.
@@ -345,9 +339,9 @@ post-deploy checks are sufficient to verify the release surfaces.
   non-deploying. Stop, verify the live version with `/info`, keep npm and the
   registry gates closed if they are still pending, and record the early
   deployment instead of announcing the release.
-- **npm 1.0.7 exists but metadata still says unpublished:** stop. Complete the
+- **npm 1.0.8 exists but metadata still says unpublished:** stop. Complete the
   metadata transition in step 7 and publish the registry entry only from that
   state; do not deploy a tree that calls the published version unpublished.
-- **A public page claims 1.0.7 is published:** that is true for npm now that
+- **A public page claims 1.0.8 is published:** that is true for npm now that
   the metadata commit is in place. It must not also claim that the MCP Registry
   entry or the Render deployment is complete until those gates are verified.

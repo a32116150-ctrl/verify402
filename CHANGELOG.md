@@ -3,7 +3,10 @@
 All notable changes to verify402. This file records repository changes; it does
 not imply a deploy or an npm publish.
 
-## Unreleased
+## 1.0.8 — 2026-10-24
+
+`verify402-mcp@1.0.8` corrects payout provenance, adds an automatic x402
+preflight hook, and labels MCP traffic anonymously for usage attribution.
 
 ### Changed
 
@@ -31,6 +34,15 @@ not imply a deploy or an npm publish.
   `/usage` reports the label source (declared header or User-Agent), caps the
   number of distinct labels, and states that labels are self-declared and not
   identities. `client-id.mjs` reads the version from `package.json`.
+
+### Release metadata
+
+- npm: `verify402-mcp@1.0.8` — publication and `gitHead` verified after the
+  release gate; do not republish.
+- MCP Registry: `1.0.8` active/latest after the registry gate.
+- GitHub: release `mcp-v1.0.8` after the tag gate.
+- Render: `/info` reports `1.0.8`; free-only post-deploy check 29/29 after the
+  deploy gate.
 
 ## 1.0.7 — 2026-10-24
 
