@@ -37,12 +37,13 @@ preflight hook, and labels MCP traffic anonymously for usage attribution.
 
 ### Release metadata
 
-- npm: `verify402-mcp@1.0.8` — publication and `gitHead` verified after the
-  release gate; do not republish.
-- MCP Registry: `1.0.8` active/latest after the registry gate.
-- GitHub: release `mcp-v1.0.8` after the tag gate.
-- Render: `/info` reports `1.0.8`; free-only post-deploy check 29/29 after the
-  deploy gate.
+- npm: `verify402-mcp@1.0.8`, `gitHead
+  d61fcfec31d5fd8d3884ccebe015d81821c0bac9`, shasum
+  `b892f4da0277466666ba0ef9ba13f33ed930f8be`.
+- MCP Registry: `1.0.8` active and latest
+  (`publishedAt: 2026-10-24T10:55:44.461072Z`).
+- GitHub: release `mcp-v1.0.8` published `2026-10-24T10:56:28Z`.
+- Render: `/info` reports `1.0.8`; free-only post-deploy check passed 29/29.
 
 ## 1.0.7 — 2026-10-24
 

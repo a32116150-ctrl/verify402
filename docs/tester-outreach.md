@@ -39,14 +39,15 @@ The owner explicitly overrode the no-standalone-post rule for this one:
   `resource_host`, foreign host → BLOCK; `expectedResource` exact-URL binding
   remains. `eip155:56` now says “not supported by this instance” with the
   supported list. `notChecked` now names payTo ownership and obligation state.
-- **2026-10-24 — published in 1.0.7:** caller-supplied
-  `payment.idempotencyKey` + `policy.obligation` and
-  `policy.sellerPayoutWallets` are on npm `verify402-mcp@1.0.7`, active in the
-  MCP Registry, and live at `/preflight`. Testers can now use these fields;
-  the gate still does not persist a ledger, and the payout binding is not proof
-  of wallet ownership. The unreleased gate reclassifies
-  `sellerPayoutWallets` as an allowlist; a verified
-  `policy.sellerPayoutManifest` is the only source of `payee_payout_binding`.
+- **2026-10-24 — published in 1.0.8:** caller-supplied
+  `payment.idempotencyKey`, `policy.obligation`, and
+  `policy.sellerPayoutWallets` are on npm `verify402-mcp@1.0.8`, active in the
+  MCP Registry, and live at `/preflight`. `sellerPayoutWallets` is an
+  allowlist, not a binding; a verified `policy.sellerPayoutManifest` is the
+  only source of `payee_payout_binding`. The gate still does not persist a
+  ledger, and the payout binding is not proof of wallet ownership. The release
+  also adds the `createX402PreflightHook()` / `guardX402Payment()` example and
+  anonymous client labels for `/usage`.
 - **Rule:** one post per 30 minutes. If it gets flagged or removed, do not retry; go back to replies/comments.
 
 Before sending:

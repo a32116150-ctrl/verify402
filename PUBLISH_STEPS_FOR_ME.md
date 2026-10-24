@@ -1,16 +1,22 @@
 # Release verify402-mcp 1.0.8 — for me
 
-Status: **release in progress.** The target is npm `verify402-mcp@1.0.8`.
-Until the gates below complete, npm `latest`, the MCP Registry entry, the
-GitHub release, and Render remain on `1.0.7`. Do not claim the `1.0.8` artifact,
-registry entry, tag, or deployment exists before verifying it.
+Status: all `1.0.8` gates are complete. npm `verify402-mcp@1.0.8` is
+**published** (gitHead
+`d61fcfec31d5fd8d3884ccebe015d81821c0bac9`). The MCP Registry entry is
+**published and verified** as active latest at
+`2026-10-24T10:55:44.461072Z`. The GitHub release `mcp-v1.0.8` is published at
+`2026-10-24T10:56:28Z`. Render reports `1.0.8` and the free-only post-deploy
+check passed 29/29.
 
 - npm `verify402-mcp@1.0.7` remains published and immutable; `1.0.6`, `1.0.5`, and `1.0.4` are also immutable.
-- MCP Registry currently serves `1.0.7` as active latest.
-- GitHub release `mcp-v1.0.7` is currently the latest release.
-- Render currently reports `1.0.7`; the free-only post-deploy check passed 29/29 on that release.
-- The working tree adds the payout-provenance correction, the x402 preflight
-  hook, and anonymous MCP client labels; it targets `1.0.8`.
+- MCP Registry publication of `1.0.8` is **published and verified**; the
+  registry carries a `1.0.8` entry with `isLatest: true`.
+- GitHub release `mcp-v1.0.8` is **published and latest**.
+- Render deployment of `1.0.8` is **deployed and verified**; `/info` reports
+  `1.0.8` and the free-only post-deploy check passed 29/29.
+
+All release gates are complete. The npm artifact, registry entry, metadata,
+and Render deployment now agree on `1.0.8`.
 
 ## 1. Account for the immutable npm 1.0.7 package
 
@@ -21,10 +27,9 @@ npm view verify402-mcp version dist.tarball gitHead
 npm view verify402-mcp@1.0.7 version
 ```
 
-Expected before publishing: `1.0.7` as the current latest, plus a resolvable
-`1.0.7` with its registry tarball URL and published `gitHead`. npm `1.0.7` is
-immutable and identifies commit `485256fda9072447ea4ae3b8a3420069c9efb765` as
-its source. Do **not** republish, overwrite, or unpublish it.
+Expected: `1.0.8` as the current latest, plus a resolvable `1.0.7` with its
+registry tarball URL and published `gitHead`. npm `1.0.7` is immutable and
+identifies commit `485256fda9072447ea4ae3b8a3420069c9efb765` as its source. Do **not** republish, overwrite, or unpublish it.
 
 The working tree contains post-1.0.7 changes: the payout-provenance correction,
 the x402 preflight hook, and anonymous client labels. Do not treat these
@@ -164,7 +169,7 @@ Then verify, from the tarball contents:
 
 Delete the local tarball after inspection.
 
-## 6. Publish npm 1.0.8
+## 6. Publish npm 1.0.8 — completed
 
 Step 4 must have made the exact commit being published publicly traceable, and
 step 5 must have verified the artifact. Confirm the commit first:
@@ -188,7 +193,7 @@ Expected: `1.0.8`, a resolvable tarball, and a `gitHead` equal to the SHA above
 that resolves on GitHub. Do not publish from an unpushed commit. npm versions
 are immutable: never republish, overwrite, or unpublish `1.0.8` after this step.
 
-## 7. Transition the release metadata to published 1.0.8
+## 7. Transition the release metadata to published 1.0.8 — completed
 
 After step 6 prints `1.0.8` for both the latest version and the pinned version,
 record the artifact facts in the repository. The prep commit already points the
@@ -236,7 +241,7 @@ site, and the deployment use. If the npm page still shows candidate wording,
 that is a limitation of the immutable artifact — do not republish `1.0.8` to
 work around it.
 
-## 8. Publish the MCP Registry entry
+## 8. Publish the MCP Registry entry — completed
 
 Step 6 has succeeded and the checked-in `server.json` describes a **published**
 `1.0.8`: `VERIFY402_NETWORKS` defaults to Base Sepolia testnet
@@ -254,17 +259,17 @@ If `mcp-publisher validate` rejects the metadata, **stop** and correct the
 metadata. Do not fabricate fields to satisfy the validator, and do not publish
 the entry against the immutable `1.0.7` version.
 
-## 9. Verify the actual 1.0.8 registry version
+## 9. Verify the actual 1.0.8 registry version — completed
 
 ```bash
 curl -s "https://registry.modelcontextprotocol.io/v0.1/servers/io.github.a32116150-ctrl%2Fverify402-mcp/versions/1.0.8"
 ```
 
-Expected: a `server` object with `version: "1.0.8"`, the Base Sepolia default
-in its environment-variable metadata, `status: active`, and `isLatest: true`.
-Record the returned `publishedAt` timestamp in the changelog and handoff.
+Verified: a `server` object with `version: "1.0.8"`, the Base Sepolia default
+in its environment-variable metadata, `status: active`, `isLatest: true`, and
+`publishedAt: 2026-10-24T10:55:44.461072Z`.
 
-## 10. Deploy only after a separate approval
+## 10. Deploy only after a separate approval — completed
 
 Deployment is a separate decision. Step 4 may have pushed the approved commit to
 a branch that was confirmed non-deploying, or to `master` with auto-deploy off;
@@ -311,9 +316,9 @@ push unless you have verified that with `/info` or `/health`. With auto-deploy
 on, the push changes the live service immediately, and a green post-deploy run
 is the only evidence that it succeeded.
 
-Record the verification timestamp and check count here after the deploy. The
-expected result is all 29 checks passing against the live service, including
-`/info` version `1.0.8`, testnet mode, and the published install pin.
+Verified on 2026-10-24 at ~10:58 UTC: all 29 checks passed against the live
+service, including `/info` version `1.0.8`, testnet mode, and the published
+install pin.
 
 Do not make a paid call as part of this checklist. The free gate and the
 post-deploy checks are sufficient to verify the release surfaces.

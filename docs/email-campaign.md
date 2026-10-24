@@ -15,8 +15,8 @@ maximum per recipient, 4–7 days out.
 current release at send time. The emails below were sent while `1.0.5` was
 current and are preserved as sent.
 
-**Follow-up update (2026-10-24):** `verify402-mcp@1.0.7` is now the current
-release. Use `1.0.7` in any follow-up, especially the Glama listing correction.
+**Follow-up update (2026-10-24):** `verify402-mcp@1.0.8` is now the current
+release. Use `1.0.8` in any follow-up, especially the Glama listing correction.
 
 This is deliberately not a mass campaign. The project rule is 3–5 targeted
 messages, not 50. The goal is 3 testers who run real intents and report false
@@ -145,7 +145,7 @@ remains the reply inbox.
 
 | # | Target | Public route | Why them | Ask |
 |---|---|---|---|---|
-| 1 | **Glama** | `support@glama.ai` (public GitHub org email) | Our listing still points at the **1.0.2** tarball; current is **1.0.7**. | Correct the listing to `npx -y verify402-mcp@latest`; tester link as context. |
+| 1 | **Glama** | `support@glama.ai` (public GitHub org email) | Our listing still points at the **1.0.2** tarball; current is **1.0.8**. | Correct the listing to `npx -y verify402-mcp@latest`; tester link as context. |
 | 2 | **PulseMCP** | `hello@pulsemcp.com` (public GitHub org email) | Directory + “The Agentic Loop” newsletter; listings are paused, so this is a queue request, not a demand. | Consider verify402 when submissions reopen; offer the browser link for a quick look. |
 | 3 | **Cloudflare x402 team** | `x402@cloudflare.com` (published in Cloudflare’s x402 launch post) | Cloudflare co-launched the x402 Foundation; closest team to the protocol our gate checks. | Falsification test: run 3–5 real intents, report false PASSes. |
 | 4 | **Solana Foundation** | `hello@solana.com` (published community contact) | The demo accepts Solana devnet payment challenges; ask for an ecosystem testing intro. **State plainly that transaction simulation is EVM-only today.** | Intro to a tester/ecosystem group; no grant ask in this email. |
