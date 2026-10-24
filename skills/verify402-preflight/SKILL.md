@@ -1,6 +1,6 @@
 ---
 name: verify402-preflight
-description: Use before signing any EVM transaction, token approval or permit, or x402/USDC payment; also use when checking a swap quote, token sellability, arbitrage claim, or position size. Calls verify402's free preflight gate, reads PASS/CAUTION/BLOCK and checked/notChecked, verifies the short-lived receipt, and refuses to sign without it. Routes the five paid verify402 checks and states their limits. Requires the verify402 MCP server or HTTPS access to verify402.onrender.com.
+description: Use before signing any EVM transaction, token approval or permit, or x402/USDC payment; also use when checking a swap quote, token sellability, arbitrage claim, or position size. Calls the verify402 MCP preflight gate, reads PASS/CAUTION/BLOCK and checked/notChecked, verifies the short-lived receipt, and refuses to sign without it. Routes the five paid verify402 checks and states their limits. Requires the verify402 MCP server; the references include a non-MCP fallback.
 requires:
   mcp: [verify402-mcp]
 license: Apache-2.0
@@ -8,10 +8,17 @@ license: Apache-2.0
 
 # verify402 preflight
 
-verify402 is a free, fail-closed pre-signing gate for AI agents, plus five paid
-on-chain checks. This skill is the judgment layer: when to call the gate, how to
-build the exact intent, how to read the answer, and when a signature is still
-forbidden.
+## What this does and who it is for
+
+This skill is the operating manual for verify402's free pre-signing gate. It is
+for agent developers and autonomous agents that are about to sign an EVM
+transaction, token approval, permit, or x402/USDC payment, or that need to
+check a swap quote, token sellability, arbitrage claim, or position size. It
+tells the agent when to call the gate, how to read the verdict, how to verify
+the receipt, and when not to sign.
+
+verify402 is a fail-closed pre-signing check, not a guarantee. A `PASS` means
+the checks in `checked` passed at that block; `notChecked` names the gaps.
 
 **The one rule:** do not sign until you have a fresh receipt for the exact
 intent and you have read `notChecked`. A `PASS` is not a safety guarantee.
@@ -23,16 +30,16 @@ intent and you have read `notChecked`. A `PASS` is not a safety guarantee.
    amounts as raw integer strings. Never rebuild it from memory.
 3. **Add the policy you can enforce** — network, payee, amount, resource,
    target, spender, timeout, approval cap.
-4. **Call the free gate** (`preflight_gate` if installed; otherwise
-   `POST /preflight`).
+4. **Call `preflight_gate`** from the declared `verify402-mcp` server.
 5. **Decide:** `BLOCK` → stop. `CAUTION` → get explicit operator
    acknowledgement. `PASS` → verify the receipt, then sign only the exact
    intent the receipt covers.
 6. **If anything is missing** — no receipt, expired receipt, failed
    verification, 503, timeout — **do not sign**. Fail closed.
 
-If the MCP server is not installed, use the HTTP fallback. Do not skip the gate
-because the tool is missing.
+If `preflight_gate` is unavailable, stop. Do not replace it with a local guess
+or an undeclared endpoint. The reference documents the same request shape for a
+non-MCP client, but the deployment must already be configured for it.
 
 ## When to use this skill
 
@@ -67,7 +74,7 @@ Required when `kind` is `payment`:
     "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
     "amount": "10000",
     "payTo": "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb",
-    "resource": "https://verify402.onrender.com/verify",
+    "resource": "<copy the exact resource from the 402>",
     "maxTimeoutSeconds": 60
   }
 }
@@ -104,6 +111,9 @@ Required when `kind` is `payment`:
   spender and amount before calling the gate.
 - `from` enables the simulation and balance-delta checks. Include it whenever
   the signing wallet is known.
+- The gate decodes an on-chain `permit(...)` call, but it does not evaluate an
+  off-chain EIP-712 typed-data permit. Treat typed-data signing as outside this
+  intent shape.
 
 ## Add policy, or the gate is only structural
 
@@ -120,8 +130,8 @@ the fields that match the intent:
 | `allowedSpenders` | Approval spender allowlist |
 | `allowedAssets` | Payment asset allowlist |
 | `allowedFacilitators` | x402 facilitator allowlist |
-| `expectedResource` | The exact resource URL you intend to pay for |
-| `allowedResourceHosts` | Bare hostnames allowed in `payment.resource` |
+| `expectedResource` | The exact resource you intend to pay for |
+| `allowedResourceHosts` | Bare hostnames allowed in the payment resource |
 | `forbidUnlimitedApproval` | Turn an unlimited approve into `BLOCK` |
 | `maxTimeoutSeconds` | Reject challenges with a longer timeout |
 | `sellerPayoutWallets` | Caller-supplied payout **allowlist only** |
@@ -133,7 +143,7 @@ Two distinctions matter:
 - `sellerPayoutWallets` does **not** prove the seller owns the payee. A match
   adds `payee_payout_allowlist`; payTo ownership stays in `notChecked`.
 - `sellerPayoutManifest` is the only path to `payee_payout_binding`. It must be
-  a caller-pinned HTTPS URL outside the 402. Even then, the gate cannot detect
+  a caller-pinned secure URL outside the 402. Even then, the gate cannot detect
   a URL copied from the 402; origin trust is the caller's responsibility.
 - The public gate does not persist an obligation ledger. If you did not supply
   it, replay and cumulative spend were not checked.
@@ -142,7 +152,7 @@ See `references/preflight-payloads.md` for full templates and policy recipes.
 
 ## Call the gate
 
-### MCP tool (preferred)
+Use the declared `verify402-mcp` server:
 
 ```text
 preflight_gate({
@@ -152,18 +162,6 @@ preflight_gate({
 
 The free gate is available with no wallet. Paid verify402 tools are optional and
 register only when the bridge has a wallet configured.
-
-### HTTP fallback
-
-```bash
-curl -sS -X POST https://verify402.onrender.com/preflight \
-  -H 'content-type: application/json' \
-  --data-binary @intent.json
-```
-
-The free public instance is rate-limited (about 60 requests/minute, 8
-concurrent) and can take ~30 seconds to wake on the first call. Warm it once,
-then call it. If the gate is down, no receipt is issued: fail closed.
 
 ## Read the verdict
 
@@ -191,52 +189,25 @@ is safe to sign without a decision.
 
 ## Verify the receipt before signing
 
-If you are the executor, a verdict alone is not enough. Verify the receipt with
-`POST /preflight/verify`, using the **exact body** sent to `/preflight` plus the
-normalized `intent` returned by the gate:
+A verdict alone is not enough for an executor. Verification requires the
+receipt, the exact request body sent to the gate, and the normalized intent
+returned by the gate.
 
-```js
-const frozenIntent = structuredClone(intent); // the exact intent you will sign
-const body = { ...frozenIntent, policy }; // the exact body sent to /preflight
-const gate = await fetch(base + "/preflight", {
-  method: "POST",
-  headers: { "content-type": "application/json" },
-  body: JSON.stringify(body),
-}).then((r) => r.json());
+Require all of:
 
-if (!gate.sign_allowed) throw new Error("preflight blocked");
-if (gate.requires_ack && !operatorAcknowledged) {
-  throw new Error("preflight requires an explicit acknowledgement");
-}
-if (!gate.receipt) throw new Error("no receipt");
-if (Date.parse(gate.receipt.expiresAt) <= Date.now()) {
-  throw new Error("receipt expired; call the gate again");
-}
+- `valid: true`
+- `intentBound: true`
+- `requestBound: true`
+- an unexpired receipt
+- the same kind and verdict
 
-const check = await fetch(base + "/preflight/verify", {
-  method: "POST",
-  headers: { "content-type": "application/json" },
-  body: JSON.stringify({
-    receipt: gate.receipt,
-    request: body,
-    intent: gate.intent, // normalized intent returned by the gate
-  }),
-}).then((r) => r.json());
+Send both the request and the intent. A request-only call leaves `intentBound`
+false; a receipt-only call leaves both bindings false. Then sign the frozen
+intent you gated, not a rebuilt object. The reference executor deep-freezes it.
 
-if (!check.valid || check.intentBound !== true || check.requestBound !== true) {
-  throw new Error(`receipt rejected: ${check.reason || "not bound"}`);
-}
-
-// Sign the frozen intent you gated. Do not rebuild or mutate it after the gate.
-await signer.sign(frozenIntent);
-```
-
-Send both `request` and `intent`; a request-only call leaves `intentBound`
-false. Require all of: `valid`, `intentBound: true`, `requestBound: true`, an
-unexpired receipt, and the same kind/verdict. If any is missing, do not sign.
-Re-call the gate rather than reusing an expired or altered receipt. The
-reference guard deep-freezes the intent so a caller cannot mutate it after the
-gate; do the same. See `references/receipt-verification.md`.
+If verification fails, do not sign. Re-call the gate rather than reusing an
+expired or altered receipt. See `references/receipt-verification.md` for the
+exact verifier call, failure reasons, and an executor pattern.
 
 ## Paid checks: spend only when the answer changes a decision
 
@@ -275,7 +246,7 @@ See `references/paid-checks.md` for inputs, outputs, and ordering.
 | `400 invalid_policy` | A policy field has the wrong type/shape | Fix the field; do not drop the policy silently |
 | `503` / no response | No receipt was issued | Do not sign; retry later |
 | `429` | Rate limit | Back off and retry |
-| `expired` from `/preflight/verify` | Receipt lifetime elapsed | Call `/preflight` again |
+| `expired` from verification | Receipt lifetime elapsed | Call the gate again |
 | `bad_signature`, `missing_signature` | Receipt is not authentic | Do not sign |
 | `intent_mismatch`, `request_mismatch` | Receipt is for different bytes | Do not sign; re-run the gate |
 | `missing_intent_hash`, `missing_request_hash` | Old or unbound receipt | Do not sign; require both bindings |
@@ -320,10 +291,9 @@ weakens the policy.
 
 ### A normal x402 payment
 
-Use the testnet payment from the payload reference. Expected: `PASS`,
-`sign_allowed: true`, `checked` includes network/asset/amount/payee/resource and
-block freshness, and a receipt. Read `notChecked`; then verify the receipt
-before paying. This does not prove the seller will deliver.
+Use the testnet payment shape above. A structural result can be `PASS` with
+`structural_only: true`; it still needs a receipt. Read `notChecked`; then
+verify the receipt before paying. This does not prove the seller will deliver.
 
 ### An unlimited approval
 
@@ -348,7 +318,7 @@ only as trustworthy as where you got it. Do not call it provenance.
 
 - `references/preflight-payloads.md` — exact payloads, policy recipes, testnet
   constants, and response shapes.
-- `references/receipt-verification.md` — receipt fields, verification code, and
+- `references/receipt-verification.md` — receipt fields, verifier call, and
   executor ordering.
 - `references/paid-checks.md` — the five paid tools, inputs, outputs, ordering,
   and spend controls.

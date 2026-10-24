@@ -33,6 +33,31 @@ PASS/CAUTION/BLOCK and `checked`/`notChecked`, verifies the short-lived receipt,
 and refuses to sign without it. Routes the five paid verify402 checks and
 states their limits.
 
+### Listing paragraph (paste into the 120+ character field)
+
+verify402 preflight is a free operating manual for AI agents that are about to
+sign an EVM transaction, token approval, or x402/USDC payment. It teaches the
+agent to build the exact intent, call verify402's free preflight gate, read
+PASS/CAUTION/BLOCK and the `checked`/`notChecked` lists, verify the short-lived
+receipt, and refuse to sign without it. It also routes the five optional paid
+on-chain checks and states their limits. It is for agent developers and
+autonomous trading, payment, and treasury agents that need a pre-signing check,
+not a guarantee.
+
+### Network and data disclosure
+
+Use this where the listing asks what the skill sends or why it needs network
+access:
+
+> This skill uses the declared `verify402-mcp` server for the free
+> `preflight_gate` tool. The non-MCP reference calls verify402's own preflight
+> endpoint to turn the supplied payment or transaction intent into a
+> PASS/CAUTION/BLOCK verdict and a short-lived receipt. It sends only the public
+> intent fields (chain/network, addresses, calldata, value, payment terms, and
+> optional policy) plus the receipt during verification. It does not send
+> private keys, seed phrases, signed transactions, or files. No data is sent to
+> any third party.
+
 ### Long description
 
 This skill is the judgment layer for verify402. It tells an agent when to stop
