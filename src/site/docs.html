@@ -122,7 +122,7 @@
             </tbody>
           </table>
         </div>
-        <p class="small muted" style="margin-top:16px">Optional caller-supplied checks: <code class="inline">payment.idempotencyKey</code> + <code class="inline">policy.obligation.settledKeys</code> rejects an already-settled key; <code class="inline">policy.obligation.spentUsd</code> + <code class="inline">grantUsd</code> rejects cumulative spend over the grant; <code class="inline">policy.sellerPayoutWallets</code> binds <code class="inline">payTo</code> to the seller's known payout addresses. The gate does not persist this state, and a payout-list match is not independent proof of wallet ownership.</p>
+        <p class="small muted" style="margin-top:16px">Optional caller-supplied checks: <code class="inline">payment.idempotencyKey</code> + <code class="inline">policy.obligation.settledKeys</code> rejects an already-settled key; <code class="inline">policy.obligation.spentUsd</code> + <code class="inline">grantUsd</code> rejects cumulative spend over the grant. <code class="inline">policy.sellerPayoutWallets</code> is only a payout allowlist; <code class="inline">policy.sellerPayoutManifest</code> fetches a seller-signed manifest from a caller-pinned HTTPS origin and is the only source of <code class="inline">payee_payout_binding</code>. The gate does not persist this state, and neither form independently proves the seller controls the wallet.</p>
         <div style="margin-top:24px">
           <p class="code-cap">Payment request · abbreviated</p>
 <pre><span class="c">curl -X POST</span> https://verify402.onrender.com/preflight \

@@ -26,12 +26,14 @@
 // They are listed in `notChecked` on every response.
 
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { lookup } from "node:dns/promises";
 import {
   decodeErrorResult,
   decodeFunctionData,
   erc20Abi,
   isAddress,
   parseAbi,
+  verifyMessage,
 } from "viem";
 import { CHAINS } from "./config.mjs";
 import { clientFor } from "./measure.mjs";
@@ -53,6 +55,14 @@ const UNLIMITED_THRESHOLD = 2n ** 255n;
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 const DEAD_ADDRESS = "0x000000000000000000000000000000000000dead";
 const MS = 1000;
+
+// Seller payout provenance. A caller-supplied address list is an allowlist,
+// not a binding. A binding requires a seller-signed manifest fetched from a
+// caller-pinned HTTPS origin, outside the 402 challenge itself.
+export const SELLER_PAYOUT_MANIFEST_SPEC = "verify402/seller-payout@1";
+const SELLER_MANIFEST_MAX_BYTES = 64 * 1024;
+const SELLER_MANIFEST_TIMEOUT_MS = 3000;
+const SELLER_MANIFEST_FUTURE_SKEW_MS = 5 * 60 * 1000;
 
 // Testnet payment rails are accepted structurally even though the measurement
 // registry only carries mainnet. No block is pinned there; the receipt says so.
@@ -250,6 +260,113 @@ function normalizeEvmAddress(value) {
   return value.toLowerCase();
 }
 
+function isPrivateManifestHost(hostname) {
+  const host = String(hostname || "").toLowerCase().replace(/^\[|\]$/g, "");
+  if (!host) return true;
+  if (host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local") || host.endsWith(".internal")) return true;
+  if (host === "0.0.0.0" || host === "::" || host === "::1") return true;
+  if (/^127\./.test(host) || /^10\./.test(host) || /^192\.168\./.test(host) || /^169\.254\./.test(host)) return true;
+  if (/^172\.(1[6-9]|2\d|3[01])\./.test(host)) return true;
+  if (/^fe80:/i.test(host) || /^fc[0-9a-f]{2}:/i.test(host) || /^fd[0-9a-f]{2}:/i.test(host)) return true;
+  return false;
+}
+
+function isPrivateIpAddress(address) {
+  const ip = String(address || "").toLowerCase();
+  if (!ip) return true;
+  if (ip.includes(":")) {
+    if (ip === "::" || ip === "::1") return true;
+    if (ip.startsWith("fe80:") || ip.startsWith("fc") || ip.startsWith("fd")) return true;
+    const mapped = ip.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
+    return mapped ? isPrivateIpAddress(mapped[1]) : false;
+  }
+  const parts = ip.split(".").map(Number);
+  if (parts.length !== 4 || parts.some((n) => !Number.isInteger(n) || n < 0 || n > 255)) return true;
+  if (parts[0] === 0 || parts[0] === 10 || parts[0] === 127) return true;
+  if (parts[0] === 169 && parts[1] === 254) return true;
+  if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true;
+  if (parts[0] === 192 && parts[1] === 168) return true;
+  if (parts[0] === 100 && parts[1] >= 64 && parts[1] <= 127) return true;
+  if (parts[0] >= 224) return true;
+  return false;
+}
+
+async function resolveManifestHost(hostname) {
+  const rows = await lookup(hostname, { all: true, verbatim: true });
+  return rows.map((row) => row.address);
+}
+
+async function readResponseTextLimited(response, maxBytes) {
+  if (!response.body || typeof response.body.getReader !== "function") {
+    const text = await response.text();
+    if (typeof text !== "string") throw new Error("manifest body is not text");
+    if (Buffer.byteLength(text, "utf8") > maxBytes) {
+      const error = new Error("manifest body is too large");
+      error.code = "too_large";
+      throw error;
+    }
+    return text;
+  }
+  const reader = response.body.getReader();
+  const chunks = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!(value instanceof Uint8Array)) throw new Error("manifest body is not bytes");
+      total += value.byteLength;
+      if (total > maxBytes) {
+        const error = new Error("manifest body is too large");
+        error.code = "too_large";
+        throw error;
+      }
+      chunks.push(value);
+    }
+  } finally {
+    try {
+      await reader.cancel();
+    } catch {
+      // The body is already closed or cancelled; nothing to do.
+    }
+  }
+  return new TextDecoder().decode(Buffer.concat(chunks));
+}
+
+function normalizeSellerPayoutManifest(raw) {
+  if (raw == null) return null;
+  if (typeof raw !== "object" || Array.isArray(raw)) {
+    throw new PreflightError(400, "invalid_policy", "policy.sellerPayoutManifest must be an object");
+  }
+  if (typeof raw.url !== "string" || raw.url.trim() === "") {
+    throw new PreflightError(400, "invalid_policy", "policy.sellerPayoutManifest.url must be a non-empty HTTPS URL");
+  }
+  let url;
+  try {
+    url = new URL(raw.url.trim());
+  } catch {
+    throw new PreflightError(400, "invalid_policy", "policy.sellerPayoutManifest.url must be a valid HTTPS URL");
+  }
+  if (url.protocol !== "https:") {
+    throw new PreflightError(400, "invalid_policy", "policy.sellerPayoutManifest.url must use HTTPS");
+  }
+  if (url.username || url.password) {
+    throw new PreflightError(400, "invalid_policy", "policy.sellerPayoutManifest.url must not contain credentials");
+  }
+  if (isPrivateManifestHost(url.hostname)) {
+    throw new PreflightError(400, "invalid_policy", "policy.sellerPayoutManifest.url must point to a public host");
+  }
+  const out = { url: url.toString() };
+  if (raw.expectedSigner != null) {
+    const signer = normalizeEvmAddress(String(raw.expectedSigner));
+    if (!signer) {
+      throw new PreflightError(400, "invalid_policy", "policy.sellerPayoutManifest.expectedSigner must be a valid EVM address");
+    }
+    out.expectedSigner = signer;
+  }
+  return out;
+}
+
 function parseNetwork(raw) {
   let s = String(raw ?? "").trim();
   if (!s) return null;
@@ -374,9 +491,10 @@ function normalizePolicy(p) {
       out[key] = p[key].map((x) => String(x));
     }
   }
-  // A caller-supplied seller payout list is a binding, not an independent
-  // proof of wallet ownership. It lets an agent say "this is the address my
-  // seller told me to use" and fail closed on any other address.
+  // A caller-supplied seller payout list is an allowlist, not a binding. It
+  // lets an agent say "this is the address my seller told me to use" and fail
+  // closed on any other address, but it does not prove where that list came
+  // from. Provenance requires the separately fetched seller manifest below.
   if (p.sellerPayoutWallets != null) {
     if (!Array.isArray(p.sellerPayoutWallets) || !p.sellerPayoutWallets.every((x) => typeof x === "string")) {
       throw new PreflightError(400, "invalid_policy", "policy.sellerPayoutWallets must be an array of strings");
@@ -389,6 +507,9 @@ function normalizePolicy(p) {
       throw new PreflightError(400, "invalid_policy", "policy.sellerPayoutWallets is limited to 200 addresses");
     }
     out.sellerPayoutWallets = wallets;
+  }
+  if (p.sellerPayoutManifest != null) {
+    out.sellerPayoutManifest = normalizeSellerPayoutManifest(p.sellerPayoutManifest);
   }
   // Obligation state is supplied by the caller because this public gate does
   // not keep a cross-process payment ledger. Supplying it turns the named
@@ -667,7 +788,7 @@ function checkDecoded(decoded, { from, policy, now, value }) {
 
 // ---------------------------------------------------------------- receipt ---
 
-function makeReceipt({ kind, verdict, intentHash, requestHash, block: chainBlock, ttlSeconds, checked, notChecked, now }) {
+function makeReceipt({ kind, verdict, intentHash, requestHash, block: chainBlock, ttlSeconds, checked, notChecked, payeeBinding, now }) {
   const payload = {
     spec: RECEIPT_SPEC,
     id: `pf_${randomBytes(8).toString("hex")}`,
@@ -682,6 +803,7 @@ function makeReceipt({ kind, verdict, intentHash, requestHash, block: chainBlock
     ttlSeconds,
     checked,
     notChecked,
+    ...(payeeBinding ? { payeeBinding } : {}),
     algorithm: "hmac-sha256",
   };
   const signature = createHmac("sha256", RECEIPT_SECRET).update(canonicalStable(payload)).digest("hex");
@@ -784,6 +906,7 @@ export function verifyReceipt(receipt, { now = Date.now(), intent, request } = {
     requestHash: payload.requestHash ?? null,
     intentBound,
     requestBound,
+    payeeBinding: payload.payeeBinding ?? null,
     blockNumber: payload.blockNumber,
     blockHash: payload.blockHash,
     expiresAt: payload.expiresAt,
@@ -792,7 +915,7 @@ export function verifyReceipt(receipt, { now = Date.now(), intent, request } = {
 
 const NOTE = "A PASS is not a guarantee, a counterparty audit, or a prompt-injection filter. It means the checks listed in `checked` passed at this block; `notChecked` lists what was not examined, including tool metadata and response content. Receipts expire and are bound to the exact intent and request; older receipts without requestHash are unbound.";
 
-function finish({ kind, reasons, checked, notChecked, intent, request, block: chainBlock, simulation, decoded, payerBalance, obligation, ttlSeconds, now, structuralOnly = false, structuralOnlyReasons = [] }) {
+function finish({ kind, reasons, checked, notChecked, intent, request, block: chainBlock, simulation, decoded, payerBalance, obligation, payeeBinding, ttlSeconds, now, structuralOnly = false, structuralOnlyReasons = [] }) {
   const reasonsFinal = [...reasons];
   let blockAgeSeconds = null;
   if (chainBlock?.timestamp != null) {
@@ -823,6 +946,7 @@ function finish({ kind, reasons, checked, notChecked, intent, request, block: ch
     ttlSeconds,
     checked: checkedFinal,
     notChecked: notCheckedFinal,
+    payeeBinding,
     now,
   });
   return {
@@ -852,14 +976,285 @@ function finish({ kind, reasons, checked, notChecked, intent, request, block: ch
     decoded: decoded ?? undefined,
     payerBalance: payerBalance ?? undefined,
     obligation: obligation ?? undefined,
+    payeeBinding: payeeBinding ?? undefined,
     receipt,
     note: NOTE,
   };
 }
 
+// Fetch and verify a seller-signed payout manifest from a caller-pinned HTTPS
+// origin. The manifest must not be read from the 402 challenge itself: the
+// caller's policy is the trust anchor, and the signature is checked against
+// the manifest's declared signer (optionally pinned by the caller).
+async function verifySellerPayoutManifest(manifestPolicy, { net, payTo, now, fetchImpl, resolveHost }) {
+  const url = manifestPolicy.url;
+  const origin = new URL(url).origin;
+  // Literal private hosts are rejected during policy normalization. Resolve
+  // again here so a public name cannot point at a private address. DNS
+  // rebinding between this lookup and the fetch is a residual risk; redirects
+  // are disabled and the fetch has a hard deadline, but this is not a full
+  // network sandbox.
+  let resolved;
+  try {
+    resolved = await resolveHost(new URL(url).hostname);
+  } catch {
+    return {
+      ok: false,
+      severity: "caution",
+      code: "payee_manifest_unavailable",
+      message: "seller payout manifest host could not be resolved; payTo ownership is not checked",
+    };
+  }
+  if (!Array.isArray(resolved) || resolved.length === 0 || resolved.some((ip) => isPrivateIpAddress(ip))) {
+    return {
+      ok: false,
+      severity: "block",
+      code: "payee_manifest_invalid",
+      message: "seller payout manifest host resolves to a private or invalid address",
+    };
+  }
+  let response;
+  try {
+    response = await fetchImpl(url, {
+      headers: { accept: "application/json", "user-agent": "verify402-preflight/1" },
+      redirect: "error",
+      signal: AbortSignal.timeout(SELLER_MANIFEST_TIMEOUT_MS),
+    });
+  } catch {
+    return {
+      ok: false,
+      severity: "caution",
+      code: "payee_manifest_unavailable",
+      message: "seller payout manifest could not be fetched; payTo ownership is not checked",
+    };
+  }
+  if (!response?.ok) {
+    return {
+      ok: false,
+      severity: "caution",
+      code: "payee_manifest_unavailable",
+      message: "seller payout manifest returned a non-2xx response; payTo ownership is not checked",
+    };
+  }
+
+  let text;
+  try {
+    text = await readResponseTextLimited(response, SELLER_MANIFEST_MAX_BYTES);
+  } catch (e) {
+    if (e?.code === "too_large") {
+      return {
+        ok: false,
+        severity: "block",
+        code: "payee_manifest_invalid",
+        message: `seller payout manifest is larger than ${SELLER_MANIFEST_MAX_BYTES} bytes`,
+      };
+    }
+    return {
+      ok: false,
+      severity: "caution",
+      code: "payee_manifest_unavailable",
+      message: "seller payout manifest could not be read; payTo ownership is not checked",
+    };
+  }
+  if (typeof text !== "string") {
+    return {
+      ok: false,
+      severity: "block",
+      code: "payee_manifest_invalid",
+      message: "seller payout manifest is not text",
+    };
+  }
+
+  let raw;
+  try {
+    raw = JSON.parse(text);
+  } catch {
+    return {
+      ok: false,
+      severity: "block",
+      code: "payee_manifest_invalid",
+      message: "seller payout manifest is not valid JSON",
+    };
+  }
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return {
+      ok: false,
+      severity: "block",
+      code: "payee_manifest_invalid",
+      message: "seller payout manifest must be a JSON object",
+    };
+  }
+  if (raw.spec !== SELLER_PAYOUT_MANIFEST_SPEC) {
+    return {
+      ok: false,
+      severity: "block",
+      code: "payee_manifest_invalid",
+      message: `seller payout manifest spec must be ${SELLER_PAYOUT_MANIFEST_SPEC}`,
+    };
+  }
+
+  const chainId = Number(raw.chainId);
+  if (!Number.isInteger(chainId) || chainId <= 0) {
+    return {
+      ok: false,
+      severity: "block",
+      code: "payee_manifest_invalid",
+      message: "seller payout manifest chainId must be a positive integer",
+    };
+  }
+  const payToList = (Array.isArray(raw.payTo) ? raw.payTo : [raw.payTo])
+    .filter((x) => typeof x === "string" && x.trim() !== "")
+    .map((x) => x.trim());
+  if (payToList.length === 0 || payToList.length > 200) {
+    return {
+      ok: false,
+      severity: "block",
+      code: "payee_manifest_invalid",
+      message: "seller payout manifest payTo must contain between 1 and 200 addresses",
+    };
+  }
+  const signerRaw = typeof raw.signer === "string" ? raw.signer.trim() : "";
+  const signer = normalizeEvmAddress(signerRaw);
+  if (!signer) {
+    return {
+      ok: false,
+      severity: "block",
+      code: "payee_manifest_invalid",
+      message: "seller payout manifest signer must be a valid EVM address",
+    };
+  }
+  if (typeof raw.signature !== "string" || !/^0x[0-9a-fA-F]+$/.test(raw.signature)) {
+    return {
+      ok: false,
+      severity: "block",
+      code: "payee_manifest_invalid",
+      message: "seller payout manifest signature must be a 0x-prefixed hex string",
+    };
+  }
+  if (typeof raw.expiresAt !== "string") {
+    return {
+      ok: false,
+      severity: "block",
+      code: "payee_manifest_invalid",
+      message: "seller payout manifest expiresAt must be an ISO-8601 timestamp",
+    };
+  }
+  const expiresMs = Date.parse(raw.expiresAt);
+  if (!Number.isFinite(expiresMs)) {
+    return {
+      ok: false,
+      severity: "block",
+      code: "payee_manifest_invalid",
+      message: "seller payout manifest expiresAt must be an ISO-8601 timestamp",
+    };
+  }
+  const issuedAt = raw.issuedAt == null ? null : String(raw.issuedAt);
+  if (issuedAt != null) {
+    const issuedMs = Date.parse(issuedAt);
+    if (!Number.isFinite(issuedMs) || issuedMs > now + SELLER_MANIFEST_FUTURE_SKEW_MS) {
+      return {
+        ok: false,
+        severity: "block",
+        code: "payee_manifest_invalid",
+        message: "seller payout manifest issuedAt is invalid or in the future",
+      };
+    }
+  }
+
+  const payload = {
+    spec: SELLER_PAYOUT_MANIFEST_SPEC,
+    seller: typeof raw.seller === "string" ? raw.seller : null,
+    chainId,
+    payTo: payToList,
+    issuedAt,
+    expiresAt: raw.expiresAt,
+    signer: signerRaw,
+  };
+  const manifestHash = sha256Hex(canonicalStable(payload));
+  let signatureValid = false;
+  try {
+    signatureValid = await verifyMessage({
+      address: signerRaw,
+      message: canonicalStable(payload),
+      signature: raw.signature,
+    });
+  } catch {
+    signatureValid = false;
+  }
+  if (!signatureValid) {
+    return {
+      ok: false,
+      severity: "block",
+      code: "payee_manifest_signature_invalid",
+      message: "seller payout manifest signature does not match its signer",
+      origin,
+      signer,
+      expiresAt: raw.expiresAt,
+      manifestHash,
+    };
+  }
+  if (manifestPolicy.expectedSigner && signer !== manifestPolicy.expectedSigner) {
+    return {
+      ok: false,
+      severity: "block",
+      code: "payee_manifest_signer_mismatch",
+      message: "seller payout manifest signer does not match policy.sellerPayoutManifest.expectedSigner",
+      origin,
+      signer,
+      expiresAt: raw.expiresAt,
+      manifestHash,
+    };
+  }
+  if (chainId !== Number(net?.chainId)) {
+    return {
+      ok: false,
+      severity: "block",
+      code: "payee_manifest_chain_mismatch",
+      message: `seller payout manifest is for chain ${chainId}, not ${net?.chainId}`,
+      origin,
+      signer,
+      expiresAt: raw.expiresAt,
+      manifestHash,
+    };
+  }
+  if (expiresMs <= now) {
+    return {
+      ok: false,
+      severity: "block",
+      code: "payee_manifest_expired",
+      message: "seller payout manifest has expired",
+      origin,
+      signer,
+      expiresAt: raw.expiresAt,
+      manifestHash,
+    };
+  }
+  if (!matchesList(payToList, payTo, net)) {
+    return {
+      ok: false,
+      severity: "block",
+      code: "payee_not_payout_wallet",
+      message: "payTo is not in the seller-signed payout manifest",
+      origin,
+      signer,
+      expiresAt: raw.expiresAt,
+      manifestHash,
+      matched: false,
+    };
+  }
+  return {
+    ok: true,
+    origin,
+    seller: typeof raw.seller === "string" ? raw.seller : null,
+    signer,
+    expiresAt: raw.expiresAt,
+    manifestHash,
+  };
+}
+
 // ---------------------------------------------------------------- payment ---
 
-async function paymentPreflight(body, { clientFactory, now }) {
+async function paymentPreflight(body, { clientFactory, now, fetchImpl = globalThis.fetch, resolveHost = resolveManifestHost }) {
   const raw = body.payment && typeof body.payment === "object" && !Array.isArray(body.payment)
     ? body.payment
     : body;
@@ -1018,16 +1413,57 @@ async function paymentPreflight(body, { clientFactory, now }) {
     notChecked.push("payee format");
   }
 
-  // Optional caller-supplied seller payout binding. A match is a real check
-  // for this caller; it is not independent proof that the seller controls the
-  // wallet. Keep that distinction visible in `notChecked`.
+  // A caller-supplied payout list is an allowlist, not provenance. A match
+  // adds `payee_payout_allowlist` and keeps payTo ownership in `notChecked`.
+  // Only a separately fetched, seller-signed manifest can add
+  // `payee_payout_binding`; the 402 is never allowed to certify its own payee.
+  let payeeBinding = null;
+  let allowlistMatched = null;
   if (policy.sellerPayoutWallets && payTo) {
-    if (!matchesList(policy.sellerPayoutWallets, payTo, net)) {
-      reasons.push(block("payee_not_payout_wallet", "payTo is not in the caller-supplied seller payout wallets"));
+    allowlistMatched = matchesList(policy.sellerPayoutWallets, payTo, net);
+    if (!allowlistMatched) {
+      reasons.push(block("payee_not_payout_wallet", "payTo is not in the caller-supplied seller payout allowlist"));
     } else {
+      checked.push("payee_payout_allowlist");
+      notChecked.push("independent payee ownership proof (caller-supplied payout allowlist only)");
+    }
+    payeeBinding = { source: "caller_allowlist", matched: allowlistMatched };
+  }
+  if (policy.sellerPayoutManifest && payTo) {
+    const manifest = await verifySellerPayoutManifest(policy.sellerPayoutManifest, {
+      net,
+      payTo,
+      now,
+      fetchImpl,
+      resolveHost,
+    });
+    if (manifest.ok) {
       checked.push("payee_payout_binding");
-      dropNotChecked(notChecked, "payTo ownership / proven seller payout wallet");
-      notChecked.push("independent payee ownership proof (caller-supplied payout list only)");
+      notChecked.push("payee wallet ownership (seller-signed manifest only)");
+      notChecked.push("seller manifest origin trust (caller-pinned URL; the gate cannot detect a URL copied from the 402)");
+      payeeBinding = {
+        source: "seller_manifest",
+        matched: true,
+        origin: manifest.origin,
+        signer: manifest.signer,
+        expiresAt: manifest.expiresAt,
+        manifestHash: manifest.manifestHash,
+        ...(manifest.seller ? { seller: manifest.seller } : {}),
+        ...(allowlistMatched != null ? { allowlistMatched } : {}),
+      };
+    } else {
+      reasons.push(manifest.severity === "block"
+        ? block(manifest.code, manifest.message)
+        : caution(manifest.code, manifest.message));
+      payeeBinding = {
+        source: "seller_manifest",
+        matched: false,
+        ...(manifest.origin ? { origin: manifest.origin } : {}),
+        ...(manifest.signer ? { signer: manifest.signer } : {}),
+        ...(manifest.expiresAt ? { expiresAt: manifest.expiresAt } : {}),
+        ...(manifest.manifestHash ? { manifestHash: manifest.manifestHash } : {}),
+        ...(allowlistMatched != null ? { allowlistMatched } : {}),
+      };
     }
   }
 
@@ -1297,6 +1733,7 @@ async function paymentPreflight(body, { clientFactory, now }) {
     block: blockData,
     payerBalance,
     obligation,
+    payeeBinding,
     ttlSeconds: ttlOf(body),
     now,
     structuralOnly: structuralOnlyReasons.length > 0,

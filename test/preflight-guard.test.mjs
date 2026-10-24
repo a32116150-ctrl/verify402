@@ -4,7 +4,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  guardAndSign, PreflightBlockedError, PreflightUnavailableError,
+  guardAndSign, guardX402Payment, createX402PreflightHook, x402PaymentIntent,
+  PreflightBlockedError, PreflightUnavailableError,
 } from "../examples/preflight-guard.mjs";
 import { preflightRequestHash } from "../src/preflight.mjs";
 
@@ -67,6 +68,73 @@ const INTENT = {
   value: "0",
 };
 const REQUEST_HASH = preflightRequestHash(INTENT);
+
+const X402_PAY_TO = "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb";
+const X402_USDC = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
+const X402_CHALLENGE = {
+  x402Version: 2,
+  resource: { url: "https://api.example/paid" },
+  accepts: [],
+};
+const X402_SELECTED = {
+  scheme: "exact",
+  network: "eip155:8453",
+  asset: X402_USDC,
+  amount: "10000",
+  payTo: X402_PAY_TO,
+  maxTimeoutSeconds: 300,
+  extra: { name: "USD Coin", version: "2", facilitator: "https://facilitator.example" },
+};
+X402_CHALLENGE.accepts = [X402_SELECTED];
+const X402_POLICY = { allowedResourceHosts: ["api.example"] };
+
+function x402Responses(overrides = {}) {
+  const intent = x402PaymentIntent({
+    paymentRequired: X402_CHALLENGE,
+    requirements: X402_SELECTED,
+  });
+  const request = { ...intent, policy: X402_POLICY };
+  const requestHash = preflightRequestHash(request);
+  const intentHash = "x402-intent";
+  const verdict = overrides.verdict ?? "PASS";
+  const passBody = {
+    verdict,
+    sign_allowed: verdict !== "BLOCK",
+    requires_ack: verdict === "CAUTION",
+    kind: "payment",
+    intentHash,
+    intent,
+    reasons: overrides.reasons ?? [],
+    checked: ["payee", "amount"],
+    notChecked: ["recipient reputation"],
+    receipt: {
+      spec: "verify402/preflight-receipt@1",
+      intentHash,
+      requestHash,
+      expiresAt: FUTURE(),
+      signature: "a".repeat(64),
+    },
+    ...overrides.body,
+  };
+  return [
+    { body: passBody },
+    {
+      body: {
+        valid: true,
+        reason: null,
+        verdict,
+        kind: "payment",
+        intentHash,
+        requestHash,
+        intentBound: true,
+        requestBound: true,
+        blockNumber: 1,
+        blockHash: "0x" + "ab".repeat(32),
+        ...overrides.verify,
+      },
+    },
+  ];
+}
 
 async function run(responses, options = {}, state = { signed: 0 }) {
   const f = fakeFetch(...responses);
@@ -238,4 +306,130 @@ test("the signer sees the same frozen intent the gate saw", async () => {
     baseUrl: "https://verify402.test",
   });
   assert.equal(mutationBlocked, true);
+});
+
+// ------------------------------------------------------------ x402 hook ---
+
+test("x402PaymentIntent maps the selected requirement into a gate payment intent", () => {
+  const from = "0x1111111111111111111111111111111111111111";
+  const intent = x402PaymentIntent({
+    paymentRequired: X402_CHALLENGE,
+    requirements: X402_SELECTED,
+    from,
+  });
+  assert.equal(intent.kind, "payment");
+  assert.equal(intent.chainId, 8453);
+  assert.equal(intent.from, from);
+  assert.equal(intent.payment.scheme, "exact");
+  assert.equal(intent.payment.network, "eip155:8453");
+  assert.equal(intent.payment.asset, X402_USDC);
+  assert.equal(intent.payment.amount, "10000");
+  assert.equal(intent.payment.payTo, X402_PAY_TO);
+  assert.equal(intent.payment.resource, "https://api.example/paid");
+  assert.equal(intent.payment.maxTimeoutSeconds, 300);
+  assert.equal(intent.payment.extra.facilitator, "https://facilitator.example");
+});
+
+test("x402 hook verifies the receipt and attaches it to the payment context", async () => {
+  const f = fakeFetch(...x402Responses());
+  let verified = null;
+  const hook = createX402PreflightHook({
+    policy: X402_POLICY,
+    fetchImpl: f.fetch,
+    baseUrl: "https://verify402.test",
+    onVerified: (attachment) => { verified = attachment; },
+  });
+  const context = {
+    paymentRequired: X402_CHALLENGE,
+    selectedRequirements: X402_SELECTED,
+  };
+  const result = await hook(context);
+  assert.equal(result, undefined);
+  assert.equal(f.calls.length, 2);
+  assert.equal(f.calls[0].body.kind, "payment");
+  assert.equal(f.calls[0].body.payment.amount, "10000");
+  assert.equal(f.calls[1].body.receipt.signature, "a".repeat(64));
+  assert.equal(context.verify402.verdict, "PASS");
+  assert.equal(context.verify402.receipt.signature, "a".repeat(64));
+  assert.equal(verified.receipt, context.verify402.receipt);
+  assert.equal(verified.context, context);
+});
+
+test("x402 hook aborts on BLOCK without calling verify or attaching a receipt", async () => {
+  const f = fakeFetch(...x402Responses({ verdict: "BLOCK" }));
+  let blocked = null;
+  const hook = createX402PreflightHook({
+    policy: X402_POLICY,
+    fetchImpl: f.fetch,
+    baseUrl: "https://verify402.test",
+    onBlocked: (e) => { blocked = e; },
+  });
+  const context = {
+    paymentRequired: X402_CHALLENGE,
+    selectedRequirements: X402_SELECTED,
+  };
+  const result = await hook(context);
+  assert.equal(result.abort, true);
+  assert.match(result.reason, /BLOCK/);
+  assert.equal(context.verify402, undefined);
+  assert.equal(f.calls.length, 1);
+  assert.equal(blocked.verdict, "BLOCK");
+});
+
+test("x402 hook refuses CAUTION unless acknowledged", async () => {
+  const context = {
+    paymentRequired: X402_CHALLENGE,
+    selectedRequirements: X402_SELECTED,
+  };
+  const f = fakeFetch(...x402Responses({ verdict: "CAUTION" }));
+  const hook = createX402PreflightHook({
+    policy: X402_POLICY,
+    fetchImpl: f.fetch,
+    baseUrl: "https://verify402.test",
+  });
+  const result = await hook(context);
+  assert.equal(result.abort, true);
+  assert.match(result.reason, /CAUTION/);
+  assert.equal(context.verify402, undefined);
+
+  const acknowledged = fakeFetch(...x402Responses({ verdict: "CAUTION" }));
+  const ackHook = createX402PreflightHook({
+    policy: X402_POLICY,
+    acknowledgeCaution: true,
+    fetchImpl: acknowledged.fetch,
+    baseUrl: "https://verify402.test",
+  });
+  const ackContext = {
+    paymentRequired: X402_CHALLENGE,
+    selectedRequirements: X402_SELECTED,
+  };
+  assert.equal(await ackHook(ackContext), undefined);
+  assert.equal(ackContext.verify402.verdict, "CAUTION");
+  assert.equal(acknowledged.calls.length, 2);
+});
+
+test("x402 hook aborts when the challenge has no selected requirement", async () => {
+  let fetched = false;
+  const hook = createX402PreflightHook({
+    fetchImpl: async () => { fetched = true; throw new Error("should not fetch"); },
+    baseUrl: "https://verify402.test",
+  });
+  const result = await hook({ paymentRequired: { x402Version: 2, accepts: [] } });
+  assert.equal(result.abort, true);
+  assert.match(result.reason, /selected payment requirement/);
+  assert.equal(fetched, false);
+});
+
+test("guardX402Payment returns the verified receipt without a signer", async () => {
+  const f = fakeFetch(...x402Responses());
+  const out = await guardX402Payment({
+    paymentRequired: X402_CHALLENGE,
+    requirements: X402_SELECTED,
+    policy: X402_POLICY,
+    fetchImpl: f.fetch,
+    baseUrl: "https://verify402.test",
+  });
+  assert.equal(out.verdict, "PASS");
+  assert.equal(out.receipt.signature, "a".repeat(64));
+  assert.equal(f.calls.length, 2);
 });

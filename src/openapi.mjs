@@ -505,7 +505,7 @@ export function buildOpenapi(prices, { mode = "testnet", baseUrl = DEMO_BASE_URL
           description: [
             "Accepts an x402 payment challenge (kind=payment) or raw transaction calldata (kind=transaction).",
             "Evaluates structural validity, recipient allowlists, spend caps, approval limits, revert simulation, and block freshness.",
-            "Optional caller-supplied checks: policy.sellerPayoutWallets binds payTo to the seller's payout addresses; policy.obligation checks a local settled-key ledger and cumulative spend against a grant. The gate does not persist either state.",
+            "Optional caller-supplied checks: policy.sellerPayoutWallets is a payout allowlist (not a binding); policy.sellerPayoutManifest fetches a seller-signed manifest from a caller-pinned HTTPS origin and is the only source of payee_payout_binding; policy.obligation checks a local settled-key ledger and cumulative spend against a grant. The gate does not persist either state.",
             "Returns PASS / CAUTION / BLOCK with typed reasons, checked/notChecked lists, pinned block number, and an HMAC receipt (valid for 90s).",
             "\n**Security disclaimer:** A PASS indicates that the specific checks in `checked` passed. It is not an audit, does not screen sanctions, does not audit the counterparty, does not scan tool descriptions or responses for prompt injection, and does not guarantee the intent is safe. Always inspect `notChecked`.",
             `\n**Rate limits:** ${PREFLIGHT_RATE_PER_MIN} requests/minute per IP, max concurrency of ${PREFLIGHT_MAX_IN_FLIGHT}.`,
@@ -551,7 +551,17 @@ export function buildOpenapi(prices, { mode = "testnet", baseUrl = DEMO_BASE_URL
                         allowedTo: { type: "array", items: { type: "string" } },
                         expectedResource: { type: "string", format: "uri", description: "Exact resource URL; a mismatch is BLOCK. Binding the resource identity turns the unverified-resource CAUTION into a PASS/FAIL check." },
                         allowedResourceHosts: { type: "array", items: { type: "string" }, description: "Bare hostnames allowed in payment.resource. A resource on another host is BLOCK; a matching host makes resource identity a checked field." },
-                        sellerPayoutWallets: { type: "array", items: { type: "string" }, maxItems: 200, description: "Caller-supplied seller payout addresses. A payTo match adds payee_payout_binding and removes the generic payTo-ownership gap; a mismatch is BLOCK payee_not_payout_wallet. This is a binding, not independent proof of wallet ownership." },
+                        sellerPayoutWallets: { type: "array", items: { type: "string" }, maxItems: 200, description: "Caller-supplied seller payout allowlist. A payTo match adds payee_payout_allowlist; a mismatch is BLOCK payee_not_payout_wallet. This is not provenance and never adds payee_payout_binding." },
+                        sellerPayoutManifest: {
+                          type: "object",
+                          description: "A seller-signed payout manifest fetched from a caller-pinned HTTPS origin outside the 402. This is the only source of payee_payout_binding. The manifest must use spec verify402/seller-payout@1; its canonical JSON payload is signed with EIP-191 personal_sign by the declared signer.",
+                          properties: {
+                            url: { type: "string", format: "uri", description: "HTTPS URL of the seller manifest. Must be public; credentials, HTTP, localhost, and private hosts are rejected." },
+                            expectedSigner: { type: "string", description: "Optional EVM address pin. A manifest signed by any other address is BLOCK payee_manifest_signer_mismatch." },
+                          },
+                          required: ["url"],
+                          additionalProperties: false,
+                        },
                         obligation: {
                           type: "object",
                           description: "Caller-supplied obligation state. The public gate does not persist a cross-process payment ledger; supplying this turns the named replay/cumulative-spend gap into checks for this caller.",
@@ -640,6 +650,20 @@ export function buildOpenapi(prices, { mode = "testnet", baseUrl = DEMO_BASE_URL
                           remainingUsd: { type: ["number", "null"] },
                         },
                       },
+                      payeeBinding: {
+                        type: "object",
+                        description: "Present when policy.sellerPayoutWallets or policy.sellerPayoutManifest was supplied. It says where the payee claim came from. caller_allowlist is not provenance; seller_manifest means a separately fetched, signature-verified manifest matched payTo.",
+                        properties: {
+                          source: { type: "string", enum: ["caller_allowlist", "seller_manifest"] },
+                          matched: { type: "boolean" },
+                          origin: { type: "string" },
+                          signer: { type: "string" },
+                          expiresAt: { type: "string" },
+                          manifestHash: { type: "string" },
+                          seller: { type: "string" },
+                          allowlistMatched: { type: "boolean" },
+                        },
+                      },
                       block: {
                         type: "object",
                         properties: {
@@ -661,6 +685,20 @@ export function buildOpenapi(prices, { mode = "testnet", baseUrl = DEMO_BASE_URL
                           blockHash: { type: ["string", "null"] },
                           issuedAt: { type: "string" },
                           expiresAt: { type: "string" },
+                          payeeBinding: {
+                            type: "object",
+                            description: "Optional, present when payout provenance was checked. It is signed with the rest of the receipt.",
+                            properties: {
+                              source: { type: "string", enum: ["caller_allowlist", "seller_manifest"] },
+                              matched: { type: "boolean" },
+                              origin: { type: "string" },
+                              signer: { type: "string" },
+                              expiresAt: { type: "string" },
+                              manifestHash: { type: "string" },
+                              seller: { type: "string" },
+                              allowlistMatched: { type: "boolean" },
+                            },
+                          },
                           signature: { type: "string" },
                         },
                       },

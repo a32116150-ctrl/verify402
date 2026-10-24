@@ -4,7 +4,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { encodeFunctionData, parseAbi } from "viem";
-import { preflight, verifyReceipt, intentHash, PreflightError } from "../src/preflight.mjs";
+import { privateKeyToAccount } from "viem/accounts";
+import { preflight, verifyReceipt, intentHash, PreflightError, SELLER_PAYOUT_MANIFEST_SPEC } from "../src/preflight.mjs";
+import { canonicalStable } from "../src/recovery.mjs";
 
 const NOW = 1_700_000_000_000;
 const FROM = "0x1111111111111111111111111111111111111111";
@@ -13,6 +15,7 @@ const RECIPIENT = "0x3333333333333333333333333333333333333333";
 const PAY_TO = "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb";
 const USDC = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
 const BLOCK_HASH = "0x" + "ab".repeat(32);
+const SELLER_SIGNER = privateKeyToAccount("0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d");
 
 const ABI_APPROVE = parseAbi(["function approve(address spender, uint256 amount)"]);
 const ABI_TRANSFER = parseAbi(["function transfer(address to, uint256 amount)"]);
@@ -38,8 +41,38 @@ function fakeClient(overrides = {}) {
   };
 }
 
-function run(input, client = fakeClient()) {
-  return preflight(input, { clientFactory: () => client, now: NOW });
+function run(input, client = fakeClient(), opts = {}) {
+  return preflight(input, {
+    clientFactory: () => client,
+    now: NOW,
+    resolveHost: async () => ["93.184.216.34"],
+    ...opts,
+  });
+}
+
+async function sellerManifest(overrides = {}) {
+  const payload = {
+    spec: SELLER_PAYOUT_MANIFEST_SPEC,
+    seller: "seller.example",
+    chainId: 8453,
+    payTo: [PAY_TO],
+    issuedAt: new Date(NOW - 60_000).toISOString(),
+    expiresAt: new Date(NOW + 3_600_000).toISOString(),
+    signer: SELLER_SIGNER.address,
+    ...overrides,
+  };
+  const signature = await SELLER_SIGNER.signMessage({ message: canonicalStable(payload) });
+  return { ...payload, signature };
+}
+
+function manifestFetch(manifest, { ok = true, status = 200 } = {}) {
+  return async () => ({
+    ok,
+    status,
+    async text() {
+      return JSON.stringify(manifest);
+    },
+  });
 }
 
 function payment(overrides = {}) {
@@ -139,12 +172,179 @@ test("payment: a malformed allowedResourceHosts entry is a 400", async () => {
   );
 });
 
-test("payment: a caller-supplied seller payout wallet binds payTo and removes the ownership gap", async () => {
+test("payment: caller-supplied seller payout wallets are an allowlist, not a binding", async () => {
   const out = await run(payment({ policy: { sellerPayoutWallets: [PAY_TO] } }));
   assert.equal(out.verdict, "PASS");
+  assert.ok(out.checked.includes("payee_payout_allowlist"));
+  assert.ok(!out.checked.includes("payee_payout_binding"));
+  assert.equal(out.payeeBinding.source, "caller_allowlist");
+  assert.equal(out.payeeBinding.matched, true);
+  assert.ok(out.notChecked.includes("payTo ownership / proven seller payout wallet"));
+  assert.ok(out.notChecked.includes("independent payee ownership proof (caller-supplied payout allowlist only)"));
+});
+
+test("payment: a seller-signed manifest from a pinned HTTPS origin is a real binding", async () => {
+  const manifest = await sellerManifest();
+  const out = await run(
+    payment({
+      policy: {
+        sellerPayoutManifest: { url: "https://seller.example/.well-known/verify402.json" },
+      },
+    }),
+    fakeClient(),
+    { fetchImpl: manifestFetch(manifest) },
+  );
+  assert.equal(out.verdict, "PASS");
   assert.ok(out.checked.includes("payee_payout_binding"));
-  assert.ok(!out.notChecked.includes("payTo ownership / proven seller payout wallet"));
-  assert.ok(out.notChecked.includes("independent payee ownership proof (caller-supplied payout list only)"));
+  assert.equal(out.payeeBinding.source, "seller_manifest");
+  assert.equal(out.payeeBinding.origin, "https://seller.example");
+  assert.equal(out.payeeBinding.signer, SELLER_SIGNER.address.toLowerCase());
+  assert.match(out.payeeBinding.manifestHash, /^[0-9a-f]{64}$/);
+  assert.ok(out.notChecked.includes("payTo ownership / proven seller payout wallet"));
+  assert.ok(out.notChecked.includes("payee wallet ownership (seller-signed manifest only)"));
+  const verified = verifyReceipt(out.receipt, { now: NOW, intent: out.intent });
+  assert.equal(verified.valid, true);
+  assert.equal(verified.payeeBinding.source, "seller_manifest");
+  assert.equal(verified.payeeBinding.origin, "https://seller.example");
+});
+
+test("payment: a seller-signed manifest naming a different payTo is BLOCK", async () => {
+  const manifest = await sellerManifest({ payTo: [SPENDER] });
+  const out = await run(
+    payment({
+      policy: {
+        sellerPayoutManifest: { url: "https://seller.example/.well-known/verify402.json" },
+      },
+    }),
+    fakeClient(),
+    { fetchImpl: manifestFetch(manifest) },
+  );
+  assert.equal(out.verdict, "BLOCK");
+  assert.ok(out.reasons.some((r) => r.code === "payee_not_payout_wallet"));
+  assert.equal(out.payeeBinding.source, "seller_manifest");
+  assert.equal(out.payeeBinding.matched, false);
+});
+
+test("payment: a manifest with a bad signature is BLOCK, not a binding", async () => {
+  const manifest = await sellerManifest();
+  manifest.signature = "0x" + "11".repeat(65);
+  const out = await run(
+    payment({
+      policy: {
+        sellerPayoutManifest: { url: "https://seller.example/.well-known/verify402.json" },
+      },
+    }),
+    fakeClient(),
+    { fetchImpl: manifestFetch(manifest) },
+  );
+  assert.equal(out.verdict, "BLOCK");
+  assert.ok(out.reasons.some((r) => r.code === "payee_manifest_signature_invalid"));
+  assert.ok(!out.checked.includes("payee_payout_binding"));
+});
+
+test("payment: an unavailable manifest is CAUTION and keeps payTo ownership unchecked", async () => {
+  const out = await run(
+    payment({
+      policy: {
+        sellerPayoutManifest: { url: "https://seller.example/.well-known/verify402.json" },
+      },
+    }),
+    fakeClient(),
+    { fetchImpl: manifestFetch({}, { ok: false, status: 503 }) },
+  );
+  assert.equal(out.verdict, "CAUTION");
+  assert.ok(out.reasons.some((r) => r.code === "payee_manifest_unavailable"));
+  assert.ok(!out.checked.includes("payee_payout_binding"));
+  assert.ok(out.notChecked.includes("payTo ownership / proven seller payout wallet"));
+});
+
+test("payment: sellerPayoutManifest rejects HTTP and private hosts", async () => {
+  await assert.rejects(
+    () => run(payment({ policy: { sellerPayoutManifest: { url: "http://seller.example/manifest.json" } } })),
+    (e) => e instanceof PreflightError && e.status === 400 && e.code === "invalid_policy",
+  );
+  await assert.rejects(
+    () => run(payment({ policy: { sellerPayoutManifest: { url: "https://localhost/manifest.json" } } })),
+    (e) => e instanceof PreflightError && e.status === 400 && e.code === "invalid_policy",
+  );
+});
+
+test("payment: a manifest host that resolves to a private address is BLOCK before fetch", async () => {
+  let fetched = false;
+  const out = await run(
+    payment({
+      policy: {
+        sellerPayoutManifest: { url: "https://seller.example/.well-known/verify402.json" },
+      },
+    }),
+    fakeClient(),
+    {
+      resolveHost: async () => ["127.0.0.1"],
+      fetchImpl: async () => {
+        fetched = true;
+        throw new Error("should not fetch");
+      },
+    },
+  );
+  assert.equal(out.verdict, "BLOCK");
+  assert.ok(out.reasons.some((r) => r.code === "payee_manifest_invalid"));
+  assert.equal(fetched, false);
+});
+
+test("payment: an oversized manifest is BLOCK without parsing", async () => {
+  const out = await run(
+    payment({
+      policy: {
+        sellerPayoutManifest: { url: "https://seller.example/.well-known/verify402.json" },
+      },
+    }),
+    fakeClient(),
+    {
+      fetchImpl: async () => ({
+        ok: true,
+        status: 200,
+        async text() { return "x".repeat(70 * 1024); },
+      }),
+    },
+  );
+  assert.equal(out.verdict, "BLOCK");
+  assert.ok(out.reasons.some((r) => r.code === "payee_manifest_invalid"));
+  assert.ok(!out.checked.includes("payee_payout_binding"));
+});
+
+test("payment: expectedSigner mismatch is BLOCK", async () => {
+  const manifest = await sellerManifest();
+  const out = await run(
+    payment({
+      policy: {
+        sellerPayoutManifest: {
+          url: "https://seller.example/.well-known/verify402.json",
+          expectedSigner: SPENDER,
+        },
+      },
+    }),
+    fakeClient(),
+    { fetchImpl: manifestFetch(manifest) },
+  );
+  assert.equal(out.verdict, "BLOCK");
+  assert.ok(out.reasons.some((r) => r.code === "payee_manifest_signer_mismatch"));
+  assert.ok(!out.checked.includes("payee_payout_binding"));
+});
+
+test("payment: expired manifest is BLOCK", async () => {
+  const manifest = await sellerManifest({ expiresAt: new Date(NOW - 1_000).toISOString() });
+  const out = await run(
+    payment({
+      policy: {
+        sellerPayoutManifest: { url: "https://seller.example/.well-known/verify402.json" },
+      },
+    }),
+    fakeClient(),
+    { fetchImpl: manifestFetch(manifest) },
+  );
+  assert.equal(out.verdict, "BLOCK");
+  assert.ok(out.reasons.some((r) => r.code === "payee_manifest_expired"));
+  assert.ok(!out.checked.includes("payee_payout_binding"));
 });
 
 test("payment: payTo outside the seller payout wallets is BLOCK", async () => {

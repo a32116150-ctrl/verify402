@@ -46,9 +46,13 @@ Two optional caller-supplied checks are forwarded as-is:
 - `payment.idempotencyKey` + `policy.obligation.settledKeys` rejects a key the
   caller already settled; `policy.obligation.spentUsd` + `grantUsd` rejects
   cumulative spend over the grant. The bridge does **not** persist this state.
-- `policy.sellerPayoutWallets` binds `payTo` to the seller's known payout
-  addresses. A mismatch is BLOCK. This is a caller binding, not independent
-  proof that the seller controls the wallet.
+- `policy.sellerPayoutWallets` is a caller-supplied payout allowlist. A
+  mismatch is BLOCK, but a match is not provenance and never adds
+  `payee_payout_binding`.
+- `policy.sellerPayoutManifest` fetches a seller-signed manifest from a
+  caller-pinned HTTPS origin outside the 402. Only a verified manifest whose
+  `payTo` list matches adds `payee_payout_binding`. The response includes
+  `payeeBinding` with the source, origin, signer, expiry, and manifest hash.
 
 The gate is advisory at this layer: the bridge does not hold the agent's
 transaction key and cannot stop an agent that ignores the answer. Enforcement

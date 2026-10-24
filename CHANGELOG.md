@@ -3,6 +3,30 @@
 All notable changes to verify402. This file records repository changes; it does
 not imply a deploy or an npm publish.
 
+## Unreleased
+
+### Changed
+
+- `policy.sellerPayoutWallets` is now a caller-supplied payout **allowlist**,
+  not a binding. A match adds `payee_payout_allowlist`; a mismatch is
+  **BLOCK** `payee_not_payout_wallet`. It never adds `payee_payout_binding`.
+  This closes the circular case where a list copied from the 402 could look
+  like independent provenance.
+- Added `policy.sellerPayoutManifest` and the `verify402/seller-payout@1`
+  manifest. The gate fetches a seller-signed manifest from a caller-pinned
+  public HTTPS origin outside the 402, verifies the EIP-191 signature, chain,
+  expiry, optional `expectedSigner`, and payee membership. Only a verified
+  match adds `payee_payout_binding`.
+- Payment responses now include `payeeBinding` with the provenance source,
+  match result, origin, signer, expiry, and manifest hash when applicable.
+  `payTo ownership / proven seller payout wallet` remains in `notChecked`;
+  a signed seller manifest is a binding, not independent proof of wallet
+  ownership.
+- `examples/preflight-guard.mjs` now exports `createX402PreflightHook()` and
+  `guardX402Payment()`. The hook maps an x402 v2 challenge to a payment intent,
+  blocks on `BLOCK`, refuses unacknowledged `CAUTION`, verifies the receipt,
+  and attaches it to `context.verify402` before signing.
+
 ## 1.0.7 — 2026-10-24
 
 `verify402-mcp@1.0.7` adds opt-in caller-supplied obligation state and seller
@@ -20,7 +44,9 @@ payout binding to the free preflight gate.
 - Optional `policy.sellerPayoutWallets` binds `payTo` to caller-supplied seller
   payout addresses. A match adds `payee_payout_binding`; a mismatch is
   **BLOCK** `payee_not_payout_wallet`. This is a binding, not independent proof
-  that the seller controls the wallet.
+  that the seller controls the wallet. **Superseded in Unreleased:** the
+  caller-supplied list is now an allowlist; only a verified
+  `policy.sellerPayoutManifest` adds `payee_payout_binding`.
 - The preflight receipt now binds `payment.idempotencyKey` and the normalized
   obligation/payout policy through the existing intent hash.
 

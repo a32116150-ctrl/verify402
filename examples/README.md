@@ -41,5 +41,31 @@ await guardAndSign({
 - `baseUrl` defaults to the public mainnet instance. If you do not want to trust
   it, run your own verify402 and pin `baseUrl` to it.
 
+## x402 automatic hook
+
+For an `x402Client`, `createX402PreflightHook()` is the one-line guard. It
+converts the selected 402 requirement into a payment intent, calls the free
+gate, refuses BLOCK and unacknowledged CAUTION, verifies the receipt, and writes
+the verified receipt to `context.verify402` before the SDK signs:
+
+```js
+import { createX402PreflightHook } from "./preflight-guard.mjs";
+
+client.onBeforePaymentCreation(createX402PreflightHook({
+  policy: { allowedResourceHosts: ["api.example"] },
+  from: account.address,
+  onVerified: ({ receipt, verdict, response }) => {
+    // attach or log the same receipt the gate issued
+  },
+}));
+```
+
+The hook aborts without attaching anything if the gate returns BLOCK, if the
+receipt fails verification, if either the intent or request binding is missing,
+or if the gate is unavailable. `context.verify402` is also visible to
+`onAfterPaymentCreation`, so a caller can attach the receipt to its own output
+without re-running the gate. `guardX402Payment()` is the same check without the
+client hook.
+
 The guard enforces the gate's answer. It does not make the transaction safe,
 audit the contract, or replace your signer. Read `notChecked`.

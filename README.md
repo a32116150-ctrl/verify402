@@ -312,11 +312,41 @@ Response: `PASS` / `CAUTION` / `BLOCK`, `reasons[]`, `checked[]`,
     re-presented key (`obligation_already_settled`).
   - `policy.obligation.spentUsd` plus `grantUsd` catches cumulative spend over
     the grant (`cumulative_spend_over_grant`).
-  - `policy.sellerPayoutWallets` binds `payTo` to the seller's known payout
-    addresses (`payee_payout_binding`; a mismatch is `payee_not_payout_wallet`).
+  - `policy.sellerPayoutWallets` is a **caller-supplied allowlist**, not
+    provenance. A match adds `payee_payout_allowlist`; a mismatch is
+    `payee_not_payout_wallet`. It never adds `payee_payout_binding`.
+  - `policy.sellerPayoutManifest` fetches a seller-signed manifest from a
+    caller-pinned HTTPS origin outside the 402. Only a verified manifest whose
+    `payTo` list contains the payment payee adds `payee_payout_binding`. The
+    response includes `payeeBinding` with `source`, `origin`, `signer`,
+    `expiresAt`, and `manifestHash`. A manifest that is missing, expired,
+    invalid, for another chain, or signed by the wrong key is CAUTION/BLOCK.
   These are caller bindings, not a server-side ledger and not independent proof
   that the seller controls the wallet. Without them, the response says so in
   `notChecked`.
+
+  Seller manifest shape (`verify402/seller-payout@1`):
+
+```json
+{
+  "spec": "verify402/seller-payout@1",
+  "seller": "seller.example",
+  "chainId": 8453,
+  "payTo": ["0xSellerPayout..."],
+  "issuedAt": "2026-10-24T00:00:00Z",
+  "expiresAt": "2026-11-24T00:00:00Z",
+  "signer": "0xSellerSigner...",
+  "signature": "0x..."
+}
+```
+
+  The signature is EIP-191 `personal_sign` over `canonicalStable` of the
+  manifest without `signature` (keys sorted recursively, no whitespace). The
+  URL must be HTTPS and public; credentials, localhost, private hosts, private
+  DNS resolutions, and redirects are rejected. Pin `expectedSigner` when the
+  seller key is known. The gate cannot tell whether the caller copied the
+  manifest URL from the 402; the URL must come from the caller's own seller
+  configuration, and that remaining trust assumption is named in `notChecked`.
 - **Not checked, on purpose:** recipient reputation, sanctions, contract
   audits, full balance-delta simulation, MEV, the payment signature/signed
   payload, gas price/limit chosen by the signer, raw signed-transaction binding,
@@ -341,6 +371,12 @@ it calls the gate, refuses `BLOCK`, requires an explicit acknowledgement for
 no key and sends nothing itself. The intent is cloned and deep-frozen before the
 gate, and that same object is passed to the signer. If you do not want to trust
 the public instance, run your own and pin `baseUrl`.
+
+For x402 clients, `createX402PreflightHook()` is the automatic version. Add one
+line to `onBeforePaymentCreation`; it maps the selected requirement to a payment
+intent, blocks on `BLOCK`, refuses unacknowledged `CAUTION`, verifies the
+receipt, and attaches it to `context.verify402` before the SDK can sign. See
+[`examples/README.md`](examples/README.md).
 
 `POST /verify` request:
 

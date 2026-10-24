@@ -44,7 +44,9 @@ The owner explicitly overrode the no-standalone-post rule for this one:
   `policy.sellerPayoutWallets` are on npm `verify402-mcp@1.0.7`, active in the
   MCP Registry, and live at `/preflight`. Testers can now use these fields;
   the gate still does not persist a ledger, and the payout binding is not proof
-  of wallet ownership.
+  of wallet ownership. The unreleased gate reclassifies
+  `sellerPayoutWallets` as an allowlist; a verified
+  `policy.sellerPayoutManifest` is the only source of `payee_payout_binding`.
 - **Rule:** one post per 30 minutes. If it gets flagged or removed, do not retry; go back to replies/comments.
 
 Before sending:

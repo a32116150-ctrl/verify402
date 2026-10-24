@@ -71,10 +71,11 @@ Your block number will differ. `sign_allowed` is simply
 If your agent keeps its own payment ledger, add
 `payment.idempotencyKey` and `policy.obligation` (`settledKeys`,
 `spentUsd`, `grantUsd`) to reject an already-settled key or a payment
-that would exceed the grant. Add `policy.sellerPayoutWallets` to bind
-`payTo` to the seller's known payout addresses. These are caller-supplied
-bindings: the public gate does not persist the ledger, and the payout list
-is not independent proof of wallet ownership.
+that would exceed the grant. Add `policy.sellerPayoutWallets` for a
+caller-supplied payout allowlist, or `policy.sellerPayoutManifest` to fetch a
+seller-signed manifest from a caller-pinned HTTPS origin. Only the manifest
+adds `payee_payout_binding`; the allowlist alone does not. The public gate does
+not persist the ledger, and neither form proves the seller controls the wallet.
 
 ## 2. The same gate says no to an unlimited approval
 

@@ -223,7 +223,8 @@ const DESCRIPTIONS = {
     "Free. Pass `from` (the wallet that will sign) to enable simulation and balance checks. For " +
     "kind=transaction, chainId is REQUIRED (400 missing_chain without it). For payment intents " +
     "with no `from` or no proof, the response is PASS with structural_only:true and names what was not checked. " +
-    "Optional caller-supplied checks: policy.sellerPayoutWallets binds payTo to the seller's payout addresses; " +
+    "Optional caller-supplied checks: policy.sellerPayoutWallets is a payout allowlist, not provenance; " +
+    "policy.sellerPayoutManifest fetches a seller-signed manifest from a caller-pinned HTTPS origin and is the only source of payee_payout_binding; " +
     "policy.obligation checks a local settled-key ledger and cumulative spend against a grant. The gate does not persist either state.",
   verify_arbitrage:
     "Ask verify402 whether a cross-venue arbitrage opportunity is REAL, right now. " +
@@ -293,7 +294,11 @@ async function main() {
         allowedFacilitators: z.array(z.string()).optional().describe("Allowlist of x402 facilitators"),
         expectedResource: z.string().optional().describe("The exact resource URL the agent intends to pay for"),
         allowedResourceHosts: z.array(z.string()).optional().describe("Bare hostnames allowed in payment.resource; a foreign host is BLOCK"),
-        sellerPayoutWallets: z.array(z.string()).optional().describe("Caller-supplied seller payout addresses; a payTo mismatch is BLOCK. This is a binding, not independent ownership proof"),
+        sellerPayoutWallets: z.array(z.string()).optional().describe("Caller-supplied seller payout allowlist; a payTo mismatch is BLOCK. This is not provenance and never adds payee_payout_binding"),
+        sellerPayoutManifest: z.object({
+          url: z.string().url().describe("HTTPS URL of a seller-signed manifest outside the 402"),
+          expectedSigner: z.string().optional().describe("Optional EVM address pin for the manifest signer"),
+        }).optional().describe("Seller-signed payout manifest; the only source of payee_payout_binding"),
         obligation: z.object({
           settledKeys: z.array(z.string()).optional().describe("Payment idempotency keys already settled"),
           spentUsd: z.number().nonnegative().optional().describe("Already spent under the grant, in USD"),

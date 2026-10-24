@@ -290,6 +290,10 @@
   },
   <span class="y">"policy"</span>: {
     <span class="y">"sellerPayoutWallets"</span>: [<span class="g">"0xSellerPayout"</span>],
+    <span class="y">"sellerPayoutManifest"</span>: {
+      <span class="y">"url"</span>: <span class="g">"https://seller.example/.well-known/verify402.json"</span>,
+      <span class="y">"expectedSigner"</span>: <span class="g">"0xSellerSigner"</span>
+    },
     <span class="y">"obligation"</span>: {
       <span class="y">"settledKeys"</span>: [<span class="g">"pay-2026-10-23-014"</span>],
       <span class="y">"spentUsd"</span>: <span class="g">0.24</span>,
@@ -297,7 +301,7 @@
     }
   }
 }</pre>
-          <p><code class="inline">sellerPayoutWallets</code> is a caller-supplied binding, not independent proof that the seller controls the wallet. A settled key is <b>BLOCK</b>; adding this payment to <code class="inline">spentUsd</code> above <code class="inline">grantUsd</code> is <b>BLOCK</b>. Without this state, both gaps stay named in <code class="inline">notChecked</code>.</p>
+          <p><code class="inline">sellerPayoutWallets</code> is only a caller-supplied allowlist. A match adds <code class="inline">payee_payout_allowlist</code>, not a binding. <code class="inline">sellerPayoutManifest</code> fetches a seller-signed manifest from a caller-pinned HTTPS origin outside the 402; only a verified manifest match adds <code class="inline">payee_payout_binding</code>. A settled key is <b>BLOCK</b>; adding this payment to <code class="inline">spentUsd</code> above <code class="inline">grantUsd</code> is <b>BLOCK</b>. Without this state, both gaps stay named in <code class="inline">notChecked</code>.</p>
         </div>
         <div style="margin-top:24px">
           <p class="code-cap">Response · abbreviated</p>
@@ -307,7 +311,15 @@
   <span class="y">"requires_ack"</span>: <span class="g">false</span>,
   <span class="y">"reasons"</span>: [],
   <span class="y">"checked"</span>: [<span class="g">"scheme"</span>, <span class="g">"network"</span>, <span class="g">"asset"</span>, <span class="g">"amount"</span>, <span class="g">"payee"</span>, <span class="g">"resource_url"</span>, <span class="g">"resource_host"</span>, <span class="g">"payer_balance"</span>, <span class="g">"block_freshness"</span>],
-  <span class="y">"notChecked"</span>: [<span class="g">"recipient reputation"</span>, <span class="g">"sanctions screening"</span>, <span class="g">"payment signature / signed payload"</span>, <span class="g">"facilitator settlement"</span>, <span class="g">"off-chain promises"</span>, <span class="g">"counterparty identity / tool metadata"</span>, <span class="g">"payTo ownership / proven seller payout wallet"</span>, <span class="g">"obligation state (idempotency key, cumulative spend, grant balance)"</span>, <span class="g">"prompt injection / hidden Unicode in tool output"</span>],
+  <span class="y">"notChecked"</span>: [<span class="g">"recipient reputation"</span>, <span class="g">"sanctions screening"</span>, <span class="g">"payment signature / signed payload"</span>, <span class="g">"facilitator settlement"</span>, <span class="g">"off-chain promises"</span>, <span class="g">"counterparty identity / tool metadata"</span>, <span class="g">"payTo ownership / proven seller payout wallet"</span>, <span class="g">"payee wallet ownership (seller-signed manifest only)"</span>, <span class="g">"obligation state (idempotency key, cumulative spend, grant balance)"</span>, <span class="g">"prompt injection / hidden Unicode in tool output"</span>],
+  <span class="y">"payeeBinding"</span>: {
+    <span class="y">"source"</span>: <span class="g">"seller_manifest"</span>,
+    <span class="y">"matched"</span>: <span class="g">true</span>,
+    <span class="y">"origin"</span>: <span class="g">"https://seller.example"</span>,
+    <span class="y">"signer"</span>: <span class="g">"0xSellerSigner"</span>,
+    <span class="y">"expiresAt"</span>: <span class="g">"2026-11-24T00:00:00Z"</span>,
+    <span class="y">"manifestHash"</span>: <span class="g">"…"</span>
+  },
   <span class="y">"receipt"</span>: {
     <span class="y">"spec"</span>: <span class="g">"verify402/preflight-receipt@1"</span>,
     <span class="y">"intentHash"</span>: <span class="g">"…"</span>,
@@ -358,7 +370,7 @@
           <thead><tr><th>Checked</th><th>Not checked</th></tr></thead>
           <tbody>
             <tr>
-              <td>Network, asset, amount, payee, resource URL, resource host when policy binds it, timeout, authorization window; seller payout binding when the caller supplies <code class="inline">sellerPayoutWallets</code></td>
+              <td>Network, asset, amount, payee, resource URL, resource host when policy binds it, timeout, authorization window; payout allowlist when the caller supplies <code class="inline">sellerPayoutWallets</code>; signed payout binding when a verified <code class="inline">sellerPayoutManifest</code> matches</td>
               <td>Whether the recipient is a scammer or a sanctioned address; independent proof that the seller controls the payout wallet</td>
             </tr>
             <tr>
