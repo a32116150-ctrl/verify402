@@ -5,7 +5,7 @@ This is the one allowed follow-up per recipient, 4–7 days later.
 
 **Rules**
 
-- One follow-up maximum. Reply in the same thread; do not start a new one.
+- One follow-up maximum. If the original message is available, reply in the same thread and keep its subject; if sending a new message, use “Following up:” rather than a fake “Re:”. Do not start a second thread.
 - No new cold recipients until AgentMail's cap clears on **2026-10-30T12:17:03Z**.
   Resend on `anoir.space` is verified and is the primary sender.
 - Five messages, not fifty. The goal is a tester or a listing fix, not impressions.
@@ -52,7 +52,7 @@ misleads anyone installing from the directory.
 ## 2. Cloudflare x402 — falsification test
 
 **To:** `x402@cloudflare.com`
-**Subject:** Re: a free pre-signing gate for x402 intents — three test cases
+**Subject:** Following up: a free pre-signing gate for x402 intents
 
 ```text
 Hi x402 team — one follow-up on the free pre-signing gate.
@@ -84,7 +84,7 @@ scope post preempts the "what doesn't it catch" question.
 ## 3. MetaMask — approval warnings
 
 **To:** `hello@metamask.io`
-**Subject:** Re: the approval screen is the last place to catch an unlimited approval
+**Subject:** Following up: the approval screen and a pre-signing check
 
 ```text
 Hi MetaMask team — following up once on the pre-signing gate.
@@ -116,7 +116,7 @@ The message asks a product question, not for a meeting.
 ## 4. Privy — embedded wallets
 
 **To:** `hi@privy.io`
-**Subject:** Re: embedded wallets sign without a wallet UI — a pre-signing check
+**Subject:** Following up: embedded wallets and a pre-signing check
 
 ```text
 Hi Privy team — one follow-up on the pre-signing gate.
@@ -147,7 +147,7 @@ screen" use case. The receipt post answers the audit question.
 ## 5. OpenZeppelin — approval safety
 
 **To:** `contact@openzeppelin.com`
-**Subject:** Re: a free falsification test for an approval pre-signing gate
+**Subject:** Following up: a free falsification test for an approval gate
 
 ```text
 Hi OpenZeppelin team — following up once on the free pre-signing gate.
