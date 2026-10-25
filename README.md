@@ -51,9 +51,11 @@ quote-based sellability check, not a honeypot proof. Read `notChecked` in the re
 
 I’m looking for three developers building AI agents, MCP tools, or x402 payment integrations to run 3–5 real intents and report what breaks. Demo payments use Base Sepolia testnet only; analysis reads mainnet chain data; no wallet or paid test is required.
 
+- [Open the tester kit](https://verify402.onrender.com/testers) — three intents: one expected pass, one uncertain, one expected block
 - [Run it in the browser](https://verify402.onrender.com/preflight#try) — paste a token address, or run the raw intent; no terminal needed
 - [5-minute testing guide](TESTING.md)
 - [Open a tester feedback issue](https://github.com/a32116150-ctrl/verify402/issues/new?template=tester-feedback.yml)
+- [Field notes](https://verify402.onrender.com/blog) — scope, receipts, and failure modes
 - [Full onboarding notes](examples/ONBOARDING.md)
 
 The most useful finding is a **false PASS**: an intent the gate allowed that you believe is unsafe.
@@ -181,7 +183,7 @@ The skill is explicit about the limits: a `PASS` is not a guarantee, the token c
 - **Discovery Audit:** [`docs/discovery-audit.md`](docs/discovery-audit.md)
 - **Directory Submission Checklist:** [`docs/distribution-directory-checklist.md`](docs/distribution-directory-checklist.md)
 
-**Human Pages:** [Home](https://verify402.onrender.com/) · [Start](https://verify402.onrender.com/start) · [Preflight Gate](https://verify402.onrender.com/preflight) · [MCP Server](https://verify402.onrender.com/mcp) · [Checks](https://verify402.onrender.com/checks) · [Live Findings](https://verify402.onrender.com/live) · [Proof & Receipts](https://verify402.onrender.com/proof) · [Docs](https://verify402.onrender.com/docs) · [Donate](https://verify402.onrender.com/donate)
+**Human Pages:** [Home](https://verify402.onrender.com/) · [Start](https://verify402.onrender.com/start) · [Tester Kit](https://verify402.onrender.com/testers) · [Blog](https://verify402.onrender.com/blog) · [Preflight Gate](https://verify402.onrender.com/preflight) · [MCP Server](https://verify402.onrender.com/mcp) · [Checks](https://verify402.onrender.com/checks) · [Live Findings](https://verify402.onrender.com/live) · [Proof & Receipts](https://verify402.onrender.com/proof) · [Docs](https://verify402.onrender.com/docs) · [Donate](https://verify402.onrender.com/donate)
 
 ---
 

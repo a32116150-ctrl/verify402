@@ -1,5 +1,8 @@
 # Three outreach drafts for tester recruitment
 
+> **Live tester kit:** https://verify402.onrender.com/testers — three intents,
+> raw verdicts, no wallet. **Field notes:** https://verify402.onrender.com/blog.
+>
 > **Email:** the capped email campaign lives in **`docs/email-campaign.md`**.
 > 15 sends went out Oct 23; AgentMail's new-recipient cap is exhausted until
 > `2026-10-30T12:17:03Z`. The postal address was omitted by owner decision
