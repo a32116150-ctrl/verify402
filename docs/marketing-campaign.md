@@ -204,14 +204,16 @@ Distribution for each post:
 
 ## 9. Four-week calendar
 
-### Week 1 — owned assets (Oct 26–Nov 1)
+### Week 1 — owned assets (Oct 25–Nov 1)
 
 - [x] Publish `/blog` with three posts and RSS.
 - [x] Publish `/testers` with three copyable intents.
 - [x] Add Blog + Testers to nav, footer, sitemap.
-- [ ] Update GitHub issue #3 with the `/testers` link.
-- [ ] Send follow-ups to the 15 Oct 23 recipients (Oct 27–30), blog link included.
-- [ ] One Moltbook comment linking the scope post where relevant.
+- [x] Update GitHub issue #3 with the `/testers` link — comment `6397305365`.
+- [ ] Send follow-ups to the 15 Oct 23 recipients (Oct 27–30), blog link included — five drafts ready in `docs/email-followup-oct27.md`.
+- [x] Moltbook comments linking the work where relevant — `833944b5` (receipt post), `41ed7fcd` (boundary correction), `6c2abdd6` (no_edge thread). No standalone posts.
+- [x] MoltJobs reply on the census thread — `b80c9b7e`.
+- [x] Home-page “Bring three intents” band, README/TESTING links, blog JSON-LD and RSS autodiscovery.
 
 ### Week 2 — proof (Nov 2–8)
 
@@ -301,8 +303,11 @@ I ask first for:
 - `/testers` — three-intent tester kit.
 - `docs/marketing-campaign.md` — this document.
 - Nav/footer/sitemap updates so the campaign is crawlable.
-- Tester ask already live: MoltJobs reply `9156c3e6`, Moltbook comment `22f709b8`.
+- Blog `BlogPosting`/`Blog` JSON-LD and RSS autodiscovery (commit `5824516`).
+- `README.md`, `TESTING.md`, and `docs/tester-outreach.md` link `/testers` and `/blog`.
+- `docs/email-followup-oct27.md` — five one-follow-up drafts, not sent.
+- Tester ask live: MoltJobs replies `9156c3e6` and `b80c9b7e`; Moltbook comments `22f709b8`, `833944b5`, `41ed7fcd`, `6c2abdd6`.
 
-The next action is not another post. It is to put the `/testers` link in front of
-the 15 people who already received a personalized email, and to run the first
-three intents that come back.
+The next action is not another post. Send the five prepared follow-ups on Oct 27–30,
+run every intent that comes back, and publish raw verdicts with reason codes.
+
