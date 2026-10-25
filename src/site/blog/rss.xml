@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>verify402 — notes from before the signature</title>
+    <link>https://verify402.onrender.com/blog</link>
+    <atom:link href="https://verify402.onrender.com/blog/rss.xml" rel="self" type="application/rss+xml" />
+    <description>Scope, receipts, and field notes from building a pre-signing gate for agent payments.</description>
+    <language>en</language>
+    <lastBuildDate>Sun, 25 Oct 2026 12:00:00 GMT</lastBuildDate>
+    <item>
+      <title>What a pre-signing gate can check — and what it can't</title>
+      <link>https://verify402.onrender.com/blog/what-a-pre-signing-gate-can-check</link>
+      <guid isPermaLink="true">https://verify402.onrender.com/blog/what-a-pre-signing-gate-can-check</guid>
+      <pubDate>Sun, 25 Oct 2026 12:00:00 GMT</pubDate>
+      <description>The checklist a gate can run on an agent payment or approval, and the things it must say it does not know.</description>
+    </item>
+    <item>
+      <title>A receipt is not a guarantee. It's a falsifiable record.</title>
+      <link>https://verify402.onrender.com/blog/a-receipt-is-a-falsifiable-record</link>
+      <guid isPermaLink="true">https://verify402.onrender.com/blog/a-receipt-is-a-falsifiable-record</guid>
+      <pubDate>Sun, 25 Oct 2026 12:00:00 GMT</pubDate>
+      <description>What a preflight receipt proves, what it does not, and why intent binding matters more than a green icon.</description>
+    </item>
+    <item>
+      <title>Three payment intents your agent should never sign unchecked</title>
+      <link>https://verify402.onrender.com/blog/three-intents-never-sign-unchecked</link>
+      <guid isPermaLink="true">https://verify402.onrender.com/blog/three-intents-never-sign-unchecked</guid>
+      <pubDate>Sun, 25 Oct 2026 12:00:00 GMT</pubDate>
+      <description>An unlimited approval, an x402 offer that does not match the resource, and a swap with no floor. The signature is valid; the intent is not.</description>
+    </item>
+  </channel>
+</rss>

@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What a pre-signing gate can check — and what it can't · verify402</title>
+<meta name="description" content="A pre-signing gate is only useful if its boundary is honest. The checklist it can run on an agent payment or approval, and the things it must say it does not know.">
+<link rel="canonical" href="https://verify402.onrender.com/blog/what-a-pre-signing-gate-can-check">
+<meta property="og:type" content="article">
+<meta property="og:title" content="What a pre-signing gate can check — and what it can't">
+<meta property="og:description" content="The checklist a gate can run on an agent payment or approval, and the things it must say it does not know.">
+<meta property="og:url" content="https://verify402.onrender.com/blog/what-a-pre-signing-gate-can-check">
+<meta property="og:image" content="https://verify402.onrender.com/assets/logo-400.png">
+<meta name="twitter:card" content="summary">
+<meta name="google-site-verification" content="iGmI2QL110IkjnW0thU3DRZrdgQe_7mZsPWgkZVte7o">
+<link rel="alternate" type="application/rss+xml" title="verify402 blog" href="/blog/rss.xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+
+<header class="site-head">
+  <a class="brand" href="/" aria-label="verify402 home">verify<span>[</span>402<span>]</span></a>
+  <nav class="site-nav" aria-label="Primary">
+    <a href="/checks">Checks</a>
+    <a href="/preflight">Preflight</a>
+    <a href="/mcp">MCP</a>
+    <a href="/proof">Proof</a>
+    <a href="/blog">Blog</a>
+    <a href="/docs">Docs</a>
+  </nav>
+  <div class="site-actions">
+    <a class="site-status" href="/live"><span class="status-dot"></span><span data-block>live · block —</span></a>
+    <a class="btn sm" href="/preflight#try">Run free check</a>
+    <details class="site-menu">
+      <summary>Menu</summary>
+      <nav aria-label="Menu">
+        <a href="/checks">Checks</a>
+        <a href="/preflight">Preflight</a>
+        <a href="/mcp">MCP server</a>
+        <a href="/live">Live findings</a>
+        <a href="/proof">Proof &amp; receipts</a>
+        <a href="/blog">Blog</a>
+        <a href="/testers">Test the gate</a>
+        <a href="/docs">Docs</a>
+        <a href="/start">Quickstart</a>
+        <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">GitHub</a>
+      </nav>
+    </details>
+  </div>
+</header>
+
+<main>
+  <div class="wrap page-head">
+    <p class="eyebrow">Scope · 8 min read · Oct 25, 2026</p>
+    <h1>What a pre-signing gate can check — and what it can't.</h1>
+    <p class="lead">A gate is useful only if its boundary is honest. Here is the checklist it can run against an intent, and the list of things it must say it does not know.</p>
+  </div>
+
+  <article class="wrap prose">
+    <p>An agent with a wallet does not fail the way a human does. It does not get nervous, ask a friend, or notice that the address looks wrong. It builds an intent, signs it, and the chain executes. By the time a dashboard shows the result, the money has moved.</p>
+
+    <p>A <b>pre-signing gate</b> inserts one step before that signature: take the exact intent, check it against the chain and a caller-supplied policy, return a verdict, and issue a receipt. The point is not to predict whether the trade is profitable. The point is to catch the class of mistakes that are visible <i>before</i> signing and expensive <i>after</i>.</p>
+
+    <p>That class is narrower than a security audit and wider than a wallet warning. Being precise about the boundary is the whole product.</p>
+
+    <h2>What it can check</h2>
+
+    <h3>1. The shape of the payment</h3>
+    <p>For an x402 payment request, the gate can check the scheme, the CAIP-2 network, the asset contract, the raw amount, the <code>payTo</code> address, the resource URL, the timeout, and the authorization window. A swapped payee, a lookalike asset, the wrong chain, or an amount that exceeds the caller's cap is a reason to stop — not a reason to ask the model to try again.</p>
+
+    <p>The amount is read in raw units. On a six-decimal stablecoin, <code>10000</code> is 0.01, not 10,000. That distinction alone has ended more agent demos than any exploit.</p>
+
+    <h3>2. The caller's policy</h3>
+    <p>A verdict without a policy is just an opinion about the chain. The caller can supply a maximum amount, allowed networks and assets, allowed payees, allowed resource hosts, an expiry, and a rule against unlimited approvals. The gate checks the intent against those rules and names which one failed.</p>
+
+    <p>If the caller never supplies a limit, the gate cannot enforce it. "It stayed under my cap" is only meaningful when the cap was part of the request.</p>
+
+    <h3>3. The calldata</h3>
+    <p>For an EVM transaction, the gate decodes <code>transfer</code>, <code>approve</code>, <code>transferFrom</code>, <code>permit</code>, and common V2/V3 swap selectors. It can flag an unlimited approval, an unknown spender, a swap deadline that has passed, a zero minimum output, or an output recipient that is not the signer. When a <code>from</code> address is supplied, it simulates the call from that wallet at the current block.</p>
+
+    <p>This is EVM-only today (Ethereum, Arbitrum, Base). It is not a general transaction interpreter, and it does not know what an arbitrary contract will do after the call returns.</p>
+
+    <h3>4. Freshness</h3>
+    <p>Chain state expires. A quote, a balance, or an allowance read at an old block can be true and useless at the same time. The gate pins a block, reports its age, and treats stale state as a reason rather than a silent pass.</p>
+
+    <h3>5. The obligation, when the caller supplies one</h3>
+    <p>If the caller provides an idempotency key and an obligation policy, the gate can check a settled key and a cumulative spend or grant against the stated limit. That turns "I already paid this" and "this would exceed the budget" into explicit reasons instead of assumptions held in the agent's prompt.</p>
+
+    <h3>6. The receipt itself</h3>
+    <p>Every response carries a short-lived HMAC-signed receipt. It binds the normalized intent, the original request, the block, and the expiry. A second endpoint can verify the signature and both bindings without another chain call. An executor can require a valid receipt before it calls the signer.</p>
+
+    <h2>What it cannot check</h2>
+
+    <p>This list is not a disclaimer at the bottom of the page. It is part of every response, under <code>notChecked</code>, because a PASS without scope is a blank check.</p>
+
+    <ul>
+      <li><b>Whether the payee is honest, or owns the wallet.</b> A matching address is not a reputation score. A payout allowlist is a list the caller chose; a signed manifest is a stronger binding, but neither proves the counterparty will deliver.</li>
+      <li><b>Whether the agent's goal is legitimate.</b> Prompt injection, a manipulated plan, or a user who was tricked upstream can produce a perfectly well-formed intent. The gate checks the intent, not the reasoning that produced it.</li>
+      <li><b>What the contract does after the payment.</b> An upgradeable proxy, a hook, or a transfer restriction can change the outcome after a valid call. The gate can simulate the call; it cannot audit the contract.</li>
+      <li><b>Whether an off-chain resource will be delivered.</b> A resource URL can be bound to the receipt. The content behind it is still an off-chain promise.</li>
+      <li><b>Whether the trade is profitable.</b> That is a measurement question, handled by the paid checks, and even those return a verdict at a block — not a forecast.</li>
+      <li><b>A limit the caller never supplied.</b> The gate is not a mind reader. Policy is an input, not a guess.</li>
+    </ul>
+
+    <p>A gate that claimed all of this would be lying. A gate that names the boundary is useful, because the operator can see exactly which decision is still theirs.</p>
+
+    <h2>Why a scoped PASS is stronger than a green check</h2>
+
+    <p>"Safe" is not a testable claim. "At block N, with this policy, these checks ran, these did not, and the receipt is bound to this intent" is testable. It can be verified, disputed, and re-run. It can also be wrong in a way that produces a useful bug report.</p>
+
+    <p>That is the design goal: make the failure falsifiable. A false PASS — an intent the gate allowed that the operator believes is unsafe — is the only finding that matters. A false BLOCK is annoying; a false PASS is the reason the gate exists.</p>
+
+    <h2>Try it on an intent you would actually sign</h2>
+
+    <p>The free gate is read-only. It does not connect a wallet, move funds, or require an account. The public demo settles testnet payments only; analysis reads mainnet chain data.</p>
+
+    <p>If you build agents that sign, send three intents: one you expect to pass, one you are unsure about, and one you think should be blocked. I will run them and reply with the raw verdict, the reason codes, and the <code>notChecked</code> list — including where the gate disagrees with you.</p>
+
+    <div class="post-cta">
+      <p class="eyebrow">The ask</p>
+      <h2>Bring three intents.</h2>
+      <p>One expected PASS, one uncertain, one expected BLOCK. No wallet, no payment, no signup. Redact anything sensitive.</p>
+      <div class="btn-row">
+        <a class="btn" href="/testers">Open the tester kit</a>
+        <a class="btn ghost" href="/preflight#try">Run one free check</a>
+      </div>
+    </div>
+
+    <p class="post-foot">Next: <a class="textlink" href="/blog/a-receipt-is-a-falsifiable-record">A receipt is not a guarantee. It's a falsifiable record.</a> · <a class="textlink" href="/blog">All notes</a></p>
+  </article>
+</main>
+
+<footer class="site-foot">
+  <div class="foot-mark" aria-hidden="true">verify<span>[402]</span></div>
+  <div class="foot-links">
+    <div>
+      <h2>Product</h2>
+      <a href="/preflight">Preflight gate</a>
+      <a href="/checks">The five checks</a>
+      <a href="/mcp">MCP server</a>
+      <a href="/live">Live findings</a>
+      <a href="/testers">Tester kit</a>
+      <a href="/blog">Blog</a>
+      <a href="/start">Quickstart</a>
+    </div>
+    <div>
+      <h2>Project</h2>
+      <a href="/proof">Proof &amp; receipts</a>
+      <a href="/docs">Documentation</a>
+      <a href="/donate">Donate</a>
+      <a href="/sponsor">Sponsor hosting</a>
+      <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">Source code</a>
+      <a href="https://github.com/x402-foundation/x402/issues/3847" rel="noopener">x402 proposal</a>
+    </div>
+    <div>
+      <h2>For machines</h2>
+      <a href="/.well-known/verify402.json">Service manifest</a>
+      <a href="/openapi.json">OpenAPI 3.1</a>
+      <a href="/llms.txt">llms.txt</a>
+      <a href="/findings">/findings</a>
+      <a href="/blog/rss.xml">RSS</a>
+    </div>
+    <div>
+      <h2>For teams</h2>
+      <p class="foot-note">Embedding a pre-signing check in a wallet, agent, or treasury workflow?</p>
+      <a href="mailto:a32116150@gmail.com?subject=verify402%20walkthrough">Talk to the builder</a>
+      <a href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener">npm package</a>
+    </div>
+  </div>
+  <p class="foot-legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data; demo payments are testnet. The only settlement ever recorded is the operator's own testnet transaction. No external buyer yet. Prices are per call, paid in testnet USDC over x402; /preflight is free.</p>
+</footer>
+
+<script src="/assets/site.js"></script>
+</body>
+</html>

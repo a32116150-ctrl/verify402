@@ -810,6 +810,11 @@ app.get("/sitemap.xml", (_req, res) => {
   <url><loc>https://verify402.onrender.com/docs</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
   <url><loc>https://verify402.onrender.com/mcp</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
   <url><loc>https://verify402.onrender.com/preflight</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://verify402.onrender.com/testers</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://verify402.onrender.com/blog</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://verify402.onrender.com/blog/what-a-pre-signing-gate-can-check</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://verify402.onrender.com/blog/a-receipt-is-a-falsifiable-record</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://verify402.onrender.com/blog/three-intents-never-sign-unchecked</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://verify402.onrender.com/checks</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://verify402.onrender.com/proof</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://verify402.onrender.com/live</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
@@ -1202,6 +1207,14 @@ app.post("/preflight/verify", preflightRateLimit, (req, res) => {
   if (req.body?.intent !== undefined) options.intent = req.body.intent;
   if (req.body?.request !== undefined) options.request = req.body.request;
   res.json(verifyReceipt(receipt, options));
+});
+
+// The blog index and its post directory share a prefix: /blog is a page,
+// /blog/<slug> is a static file. Route the index explicitly before static so
+// Express does not redirect to a directory listing that does not exist.
+app.get(["/blog", "/blog/"], (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.sendFile(`${SITE_DIR}/blog.html`);
 });
 
 // Static pages for humans: /start, /checks, /live, /proof, /docs, /donate, /sponsor (+ /assets).

@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bring three intents — verify402 tester kit</title>
+<meta name="description" content="Send three real payment intents to the free verify402 pre-signing gate: one you expect to pass, one you are unsure about, one you think should be blocked. No wallet, no payment, no signup.">
+<link rel="canonical" href="https://verify402.onrender.com/testers">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Bring three intents — verify402 tester kit">
+<meta property="og:description" content="Three intents, raw verdicts, reason codes, and the notChecked list. Free, read-only, no wallet.">
+<meta property="og:url" content="https://verify402.onrender.com/testers">
+<meta property="og:image" content="https://verify402.onrender.com/assets/logo-400.png">
+<meta name="twitter:card" content="summary">
+<meta name="google-site-verification" content="iGmI2QL110IkjnW0thU3DRZrdgQe_7mZsPWgkZVte7o">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+
+<header class="site-head">
+  <a class="brand" href="/" aria-label="verify402 home">verify<span>[</span>402<span>]</span></a>
+  <nav class="site-nav" aria-label="Primary">
+    <a href="/checks">Checks</a>
+    <a href="/preflight">Preflight</a>
+    <a href="/mcp">MCP</a>
+    <a href="/proof">Proof</a>
+    <a href="/blog">Blog</a>
+    <a href="/docs">Docs</a>
+  </nav>
+  <div class="site-actions">
+    <a class="site-status" href="/live"><span class="status-dot"></span><span data-block>live · block —</span></a>
+    <a class="btn sm" href="/preflight#try">Run free check</a>
+    <details class="site-menu">
+      <summary>Menu</summary>
+      <nav aria-label="Menu">
+        <a href="/checks">Checks</a>
+        <a href="/preflight">Preflight</a>
+        <a href="/mcp">MCP server</a>
+        <a href="/live">Live findings</a>
+        <a href="/proof">Proof &amp; receipts</a>
+        <a href="/blog">Blog</a>
+        <a href="/testers">Test the gate</a>
+        <a href="/docs">Docs</a>
+        <a href="/start">Quickstart</a>
+        <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">GitHub</a>
+      </nav>
+    </details>
+  </div>
+</header>
+
+<main>
+  <div class="wrap page-head">
+    <p class="eyebrow">Tester kit · three slots · no wallet</p>
+    <h1>Bring three intents.<br>I'll run them.</h1>
+    <p class="lead">I'm opening three tester slots for teams whose agents sign payments. Send one intent you expect to pass, one you're unsure about, and one you think should be blocked. You get the raw verdict, the reason codes, and the checks that did not run — not a sales call.</p>
+    <div class="btn-row">
+      <a class="btn" href="#send">Send the first intent</a>
+      <a class="btn ghost" href="/preflight#try">Run one yourself first</a>
+    </div>
+    <p class="small muted" style="margin-top:18px">Free and read-only. The public demo settles testnet payments only; analysis reads mainnet chain data. No wallet connection, no signup, no payment.</p>
+  </div>
+
+  <section class="tight">
+    <div class="wrap">
+      <div class="proof-grid">
+        <div class="pcard2">
+          <p class="tag"><span class="dot"></span>What you get</p>
+          <h3>The raw verdict</h3>
+          <p><b>PASS / CAUTION / BLOCK</b>, the typed reasons, the checks that ran, and the <code class="inline">notChecked</code> list. No summary written by a model.</p>
+        </div>
+        <div class="pcard2">
+          <p class="tag"><span class="dot"></span>What you get</p>
+          <h3>A receipt you can verify</h3>
+          <p>A short-lived HMAC receipt bound to the exact intent and block, plus the verify endpoint. Change one field and the binding should fail.</p>
+        </div>
+        <div class="pcard2">
+          <p class="tag"><span class="dot"></span>What you get</p>
+          <h3>A written answer</h3>
+          <p>I reply with what the gate saw, where it disagreed with you, and what I will change. If a false PASS is reproducible, it gets fixed and credited — or kept anonymous.</p>
+        </div>
+        <div class="pcard2">
+          <p class="tag"><span class="dot gray"></span>The honest part</p>
+          <h3>No applause</h3>
+          <p>If the gate is not useful for your workflow, that is a valid result. I would rather hear it than have you run a demo you will never use.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="soft">
+    <div class="wrap">
+      <div class="sec-head">
+        <p class="eyebrow">The three intents</p>
+        <h2>One pass. One unknown. One block.</h2>
+        <p class="lead">Use something your agent would actually sign, not a test vector. Redact addresses and amounts if you need to. The samples below are starting points; the real value is your intent.</p>
+      </div>
+
+      <div class="stack" style="margin-top:36px">
+
+        <article>
+          <h3>1 · A payment you expect to pass</h3>
+          <p class="small muted" style="margin-top:10px">A normal x402 payment on the testnet demo. Replace the payee and resource with your own, or send the shape and I will adapt it.</p>
+          <details class="request" open>
+            <summary>Payment intent</summary>
+<pre><span class="c">POST</span> /preflight
+{
+  <span class="y">"kind"</span>: <span class="g">"payment"</span>,
+  <span class="y">"payment"</span>: {
+    <span class="y">"scheme"</span>: <span class="g">"exact"</span>,
+    <span class="y">"network"</span>: <span class="g">"eip155:84532"</span>,
+    <span class="y">"asset"</span>: <span class="g">"0x036CbD53842c5426634e7929541eC2318f3dCF7e"</span>,
+    <span class="y">"amount"</span>: <span class="g">"10000"</span>,
+    <span class="y">"payTo"</span>: <span class="g">"0xYourSeller"</span>,
+    <span class="y">"resource"</span>: <span class="g">"https://your-service.example/endpoint"</span>
+  },
+  <span class="y">"policy"</span>: {
+    <span class="y">"maxAmountUsd"</span>: 0.25,
+    <span class="y">"allowedResourceHosts"</span>: [<span class="g">"your-service.example"</span>]
+  }
+}</pre>
+          </details>
+        </article>
+
+        <article>
+          <h3>2 · A payment you are unsure about</h3>
+          <p class="small muted" style="margin-top:10px">A real intent where the answer is not obvious: a new payee, a resource you have not bound before, a timeout near the edge, or an asset you have not used.</p>
+          <details class="request">
+            <summary>What makes a good “unsure” case</summary>
+<pre><span class="c">Examples</span>
+- a seller that is new to you, with no payout manifest
+- a resource URL on a host your policy does not name
+- a payment near your cap, or with a short timeout
+- a chain or asset you support but have not tested
+- an intent where you expect CAUTION, not PASS or BLOCK</pre>
+          </details>
+        </article>
+
+        <article>
+          <h3>3 · An intent you think should be blocked</h3>
+          <p class="small muted" style="margin-top:10px">The adversarial case. An unlimited approval, a swapped payee, the wrong chain, a zero minimum output, or calldata you do not recognize.</p>
+          <details class="request">
+            <summary>Unlimited approval sample</summary>
+<pre><span class="c">POST</span> /preflight
+{
+  <span class="y">"kind"</span>: <span class="g">"transaction"</span>,
+  <span class="y">"chainId"</span>: 8453,
+  <span class="y">"to"</span>: <span class="g">"0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"</span>,
+  <span class="y">"data"</span>: <span class="g">"0x095ea7b30000000000000000000000001111111111111111111111111111111111111111ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"</span>,
+  <span class="y">"value"</span>: <span class="g">"0"</span>,
+  <span class="y">"policy"</span>: { <span class="y">"forbidUnlimitedApproval"</span>: <span class="g">true</span> }
+}</pre>
+            <p class="small muted" style="margin-top:10px">Expected: <b>BLOCK</b> with <code class="inline">unlimited_approval</code>. If it passes, that is the finding.</p>
+          </details>
+        </article>
+
+      </div>
+    </div>
+  </section>
+
+  <section id="send">
+    <div class="wrap">
+      <div class="sec-head">
+        <p class="eyebrow">How to send</p>
+        <h2>Two ways. Both are fine.</h2>
+      </div>
+      <div class="proof-grid" style="margin-top:36px">
+        <div class="pcard2">
+          <p class="tag"><span class="dot"></span>Public or private</p>
+          <h3>GitHub issue</h3>
+          <p>Open a tester feedback issue with the redacted intent, the verdict you got, and what you expected. This keeps the record public and easy to link.</p>
+          <p style="margin-top:16px"><a class="textlink" href="https://github.com/a32116150-ctrl/verify402/issues/new?template=tester-feedback.yml" rel="noopener">Open a tester issue →</a></p>
+        </div>
+        <div class="pcard2">
+          <p class="tag"><span class="dot"></span>Private</p>
+          <h3>Email</h3>
+          <p>Send the intent JSON with anything sensitive redacted. No keys, seed phrases, or unredacted wallet data. I will reply from the project address.</p>
+          <p style="margin-top:16px"><a class="textlink" href="mailto:a32116150@gmail.com?subject=verify402%20tester%20intent">Email the builder →</a></p>
+        </div>
+      </div>
+
+      <div class="callout" style="margin-top:28px">
+        <h3>What I commit to</h3>
+        <p>I reply within two business days. I publish an anonymized finding only with permission. I name you only if you ask. If the gate produces a reproducible false PASS, I fix it and say what changed. If I cannot reproduce it, I say that too.</p>
+      </div>
+
+      <div class="callout warn" style="margin-top:20px">
+        <h3>What this is not</h3>
+        <p>No wallet connection, no payment, no mainnet settlement, no token, no funding ask. The public demo uses Base Sepolia testnet USDC; analysis reads mainnet chain data. Do not send mainnet funds for this test. The gate is a check, not an audit, a guarantee, or financial advice.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="soft">
+    <div class="wrap">
+      <div class="sec-head">
+        <p class="eyebrow">If it fits</p>
+        <h2>Three design-partner slots.</h2>
+        <p class="lead">If the gate is useful, the next step is embedding it where the signing happens. I will do the first integration with you — the hook, the receipt check, and the fail-closed path — and write it up as a public case study only if you approve the details.</p>
+      </div>
+      <div class="btn-row" style="margin-top:24px">
+        <a class="btn" href="mailto:a32116150@gmail.com?subject=verify402%20design%20partner">Ask about a design-partner slot</a>
+        <a class="btn ghost" href="/mcp">See the MCP server</a>
+      </div>
+      <p class="small muted" style="margin-top:16px">No payment, no exclusivity, no token, no equity. The free gate stays free.</p>
+    </div>
+  </section>
+</main>
+
+<footer class="site-foot">
+  <div class="foot-mark" aria-hidden="true">verify<span>[402]</span></div>
+  <div class="foot-links">
+    <div>
+      <h2>Product</h2>
+      <a href="/preflight">Preflight gate</a>
+      <a href="/checks">The five checks</a>
+      <a href="/mcp">MCP server</a>
+      <a href="/live">Live findings</a>
+      <a href="/testers">Tester kit</a>
+      <a href="/blog">Blog</a>
+      <a href="/start">Quickstart</a>
+    </div>
+    <div>
+      <h2>Project</h2>
+      <a href="/proof">Proof &amp; receipts</a>
+      <a href="/docs">Documentation</a>
+      <a href="/donate">Donate</a>
+      <a href="/sponsor">Sponsor hosting</a>
+      <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">Source code</a>
+      <a href="https://github.com/x402-foundation/x402/issues/3847" rel="noopener">x402 proposal</a>
+    </div>
+    <div>
+      <h2>For machines</h2>
+      <a href="/.well-known/verify402.json">Service manifest</a>
+      <a href="/openapi.json">OpenAPI 3.1</a>
+      <a href="/llms.txt">llms.txt</a>
+      <a href="/findings">/findings</a>
+      <a href="/blog/rss.xml">RSS</a>
+    </div>
+    <div>
+      <h2>For teams</h2>
+      <p class="foot-note">Embedding a pre-signing check in a wallet, agent, or treasury workflow?</p>
+      <a href="mailto:a32116150@gmail.com?subject=verify402%20walkthrough">Talk to the builder</a>
+      <a href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener">npm package</a>
+    </div>
+  </div>
+  <p class="foot-legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data; demo payments are testnet. The only settlement ever recorded is the operator's own testnet transaction. No external buyer yet. Prices are per call, paid in testnet USDC over x402; /preflight is free.</p>
+</footer>
+
+<script src="/assets/site.js"></script>
+</body>
+</html>

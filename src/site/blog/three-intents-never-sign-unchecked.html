@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Three payment intents your agent should never sign unchecked · verify402</title>
+<meta name="description" content="An unlimited approval, an x402 offer that does not match the resource, and a swap with no floor. In each case the signature is valid; the intent is not.">
+<link rel="canonical" href="https://verify402.onrender.com/blog/three-intents-never-sign-unchecked">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Three payment intents your agent should never sign unchecked">
+<meta property="og:description" content="Three common failure shapes, what to check before signing, and what a pre-signing gate can and cannot see.">
+<meta property="og:url" content="https://verify402.onrender.com/blog/three-intents-never-sign-unchecked">
+<meta property="og:image" content="https://verify402.onrender.com/assets/logo-400.png">
+<meta name="twitter:card" content="summary">
+<meta name="google-site-verification" content="iGmI2QL110IkjnW0thU3DRZrdgQe_7mZsPWgkZVte7o">
+<link rel="alternate" type="application/rss+xml" title="verify402 blog" href="/blog/rss.xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+
+<header class="site-head">
+  <a class="brand" href="/" aria-label="verify402 home">verify<span>[</span>402<span>]</span></a>
+  <nav class="site-nav" aria-label="Primary">
+    <a href="/checks">Checks</a>
+    <a href="/preflight">Preflight</a>
+    <a href="/mcp">MCP</a>
+    <a href="/proof">Proof</a>
+    <a href="/blog">Blog</a>
+    <a href="/docs">Docs</a>
+  </nav>
+  <div class="site-actions">
+    <a class="site-status" href="/live"><span class="status-dot"></span><span data-block>live · block —</span></a>
+    <a class="btn sm" href="/preflight#try">Run free check</a>
+    <details class="site-menu">
+      <summary>Menu</summary>
+      <nav aria-label="Menu">
+        <a href="/checks">Checks</a>
+        <a href="/preflight">Preflight</a>
+        <a href="/mcp">MCP server</a>
+        <a href="/live">Live findings</a>
+        <a href="/proof">Proof &amp; receipts</a>
+        <a href="/blog">Blog</a>
+        <a href="/testers">Test the gate</a>
+        <a href="/docs">Docs</a>
+        <a href="/start">Quickstart</a>
+        <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">GitHub</a>
+      </nav>
+    </details>
+  </div>
+</header>
+
+<main>
+  <div class="wrap page-head">
+    <p class="eyebrow">Failure modes · 9 min read · Oct 25, 2026</p>
+    <h1>Three payment intents your agent should never sign unchecked.</h1>
+    <p class="lead">An unlimited approval, an x402 offer that does not match the resource, and a swap with no floor. In each case the signature is valid; the intent is not.</p>
+  </div>
+
+  <article class="wrap prose">
+    <p>The most expensive agent payment is not the one that fails. It is the one that succeeds exactly as signed, on an intent nobody should have approved.</p>
+
+    <p>These three shapes are common because they are convenient. Each one is a valid transaction. Each one can be built by a competent model. Each one has a check that belongs before the signature, not after the loss.</p>
+
+    <p>They are examples, not a complete list. The point is the pattern: <b>decode the intent, compare it to a policy, and make the decision explicit.</b></p>
+
+    <h2>1. The unlimited approval</h2>
+
+    <p>An ERC-20 approval grants a spender permission to move your tokens. An unlimited approval grants that permission up to the maximum integer — forever, or until it is revoked. If the spender is a fresh contract, a compromised router, or a typo of a real address, the approval is the whole balance.</p>
+
+    <p>The signature prompt often says "approve." It rarely says "this contract can move everything, later, without another signature." That is the gap.</p>
+
+<pre><span class="c">POST</span> /preflight
+{
+  <span class="y">"kind"</span>: <span class="g">"transaction"</span>,
+  <span class="y">"chainId"</span>: 8453,
+  <span class="y">"to"</span>: <span class="g">"0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"</span>,
+  <span class="y">"data"</span>: <span class="g">"0x095ea7b30000000000000000000000001111111111111111111111111111111111111111ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"</span>,
+  <span class="y">"value"</span>: <span class="g">"0"</span>,
+  <span class="y">"policy"</span>: { <span class="y">"forbidUnlimitedApproval"</span>: <span class="g">true</span> }
+}</pre>
+
+    <p>What to check: the selector is <code>approve</code>; the spender is on an allowlist or is the expected router; the allowance is not the maximum; the token contract is the one you think it is; and when a <code>from</code> address is supplied, the simulation does not revert.</p>
+
+    <p>What a gate can return: <b>BLOCK</b> with <code>unlimited_approval</code>. What it cannot tell you: whether the spender is honest six months from now. An allowlist is a decision you make; the gate enforces it.</p>
+
+    <div class="callout warn">
+      <h3>The practical rule</h3>
+      <p>Approve the exact amount for the exact router, or use a permit with a deadline and a signature you can revoke. If the workflow truly needs an unlimited approval, make it an explicit, logged decision — not a default in a helper function.</p>
+    </div>
+
+    <h2>2. The x402 offer that does not match the resource</h2>
+
+    <p>An x402 payment is a small JSON object: scheme, network, asset, amount, payee, resource, timeout. It looks harmless. It is also the easiest place to swap one field and turn a 0.01 USDC call into a 10 USDC payment to a different address.</p>
+
+    <p>The failure is not "the payment failed." The failure is that the agent paid the wrong payee, on the wrong chain, for a resource it did not bind — and the facilitator settled it correctly.</p>
+
+<pre><span class="c">POST</span> /preflight
+{
+  <span class="y">"kind"</span>: <span class="g">"payment"</span>,
+  <span class="y">"payment"</span>: {
+    <span class="y">"scheme"</span>: <span class="g">"exact"</span>,
+    <span class="y">"network"</span>: <span class="g">"eip155:84532"</span>,
+    <span class="y">"asset"</span>: <span class="g">"0x036CbD53842c5426634e7929541eC2318f3dCF7e"</span>,
+    <span class="y">"amount"</span>: <span class="g">"10000"</span>,
+    <span class="y">"payTo"</span>: <span class="g">"0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb"</span>,
+    <span class="y">"resource"</span>: <span class="g">"https://verify402.onrender.com/verify"</span>
+  },
+  <span class="y">"policy"</span>: {
+    <span class="y">"maxAmountUsd"</span>: 0.25,
+    <span class="y">"allowedResourceHosts"</span>: [<span class="g">"verify402.onrender.com"</span>]
+  }
+}</pre>
+
+    <p>What to check: the scheme is the one you expect; the network is the one you expect; the asset is the canonical USDC contract for that network, not a lookalike; the amount in raw units is under the cap; the payee is the seller you intended; the resource host is bound by policy; the timeout is not already in the past.</p>
+
+    <p>What a gate can return: <b>PASS</b> for the intent above, and <b>BLOCK</b> when the payee, asset, amount, or resource host is swapped. What it cannot tell you: whether the seller will deliver the resource, or whether the <code>payTo</code> address is controlled by the seller. Those stay in <code>notChecked</code> unless you supply a payout manifest.</p>
+
+    <div class="callout">
+      <h3>Why host binding matters</h3>
+      <p>A resource URL is part of the offer. If the policy binds a host, a payment for a resource on another host is a different offer. That is not a formatting error; it is a different purchase.</p>
+    </div>
+
+    <h2>3. The swap with no floor</h2>
+
+    <p>A swap can be valid and still be a donation. If <code>amountOutMinimum</code> is zero and the deadline is open, the transaction can execute at almost any price. The agent sees "swap succeeded." The wallet sees the result.</p>
+
+    <p>This is not a prediction problem. It is a parameter problem: the intent does not contain a floor, so the chain is free to fill it at the worst price available in the block.</p>
+
+    <p>The shape to inspect (illustrative fields; the raw calldata is what the gate decodes):</p>
+
+<pre>{
+  <span class="y">"kind"</span>: <span class="g">"transaction"</span>,
+  <span class="y">"chainId"</span>: 8453,
+  <span class="y">"from"</span>: <span class="g">"0xYourAgentWallet"</span>,
+  <span class="y">"to"</span>: <span class="g">"0xRouter"</span>,
+  <span class="y">"data"</span>: <span class="g">"0x…"</span>,          <span class="c">// a common V2/V3 swap selector</span>
+  <span class="y">"value"</span>: <span class="g">"0"</span>,
+  <span class="y">"policy"</span>: { <span class="y">"maxValueWei"</span>: <span class="g">"0"</span> }
+}</pre>
+
+    <p>What to check in the decoded call: the selector is a swap you recognize; <code>amountOutMinimum</code> is greater than zero; the deadline is in the future; the recipient is the agent's wallet, not an arbitrary address; the input token and amount match the plan; and the simulation from the agent's address does not revert.</p>
+
+    <p>What a gate can return: <b>CAUTION</b> or <b>BLOCK</b> with a named reason, depending on the policy and the decoded fields. What it cannot tell you: whether the price is good. That is a measurement question, not a preflight question.</p>
+
+    <h2>What the three have in common</h2>
+
+    <p>Each one is a valid signature on an intent that should have been stopped or questioned. Each check is cheaper than the loss. And each one is visible before the signature — if something looks at the decoded intent instead of the model's summary of it.</p>
+
+    <p>That is the job of a pre-signing gate: not to predict the future, but to make the present intent explicit, bounded, and auditable.</p>
+
+    <div class="callout good">
+      <h3>Test these against the gate</h3>
+      <p>Run the unlimited approval above and expect <b>BLOCK</b>. Run the x402 payment and expect <b>PASS</b>; then change <code>payTo</code>, the asset, or the resource host and run it again. If any swapped version still passes, that is the finding worth reporting.</p>
+    </div>
+
+    <div class="post-cta">
+      <p class="eyebrow">The ask</p>
+      <h2>Send the intent you are afraid of.</h2>
+      <p>One you expect to pass, one you are unsure about, one you think should be blocked. I will run all three and reply with the raw verdict and reason codes.</p>
+      <div class="btn-row">
+        <a class="btn" href="/testers">Open the tester kit</a>
+        <a class="btn ghost" href="/preflight#try">Run the approval sample</a>
+      </div>
+    </div>
+
+    <p class="post-foot">Previous: <a class="textlink" href="/blog/what-a-pre-signing-gate-can-check">What a pre-signing gate can check — and what it can't.</a> · <a class="textlink" href="/blog">All notes</a></p>
+  </article>
+</main>
+
+<footer class="site-foot">
+  <div class="foot-mark" aria-hidden="true">verify<span>[402]</span></div>
+  <div class="foot-links">
+    <div>
+      <h2>Product</h2>
+      <a href="/preflight">Preflight gate</a>
+      <a href="/checks">The five checks</a>
+      <a href="/mcp">MCP server</a>
+      <a href="/live">Live findings</a>
+      <a href="/testers">Tester kit</a>
+      <a href="/blog">Blog</a>
+      <a href="/start">Quickstart</a>
+    </div>
+    <div>
+      <h2>Project</h2>
+      <a href="/proof">Proof &amp; receipts</a>
+      <a href="/docs">Documentation</a>
+      <a href="/donate">Donate</a>
+      <a href="/sponsor">Sponsor hosting</a>
+      <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">Source code</a>
+      <a href="https://github.com/x402-foundation/x402/issues/3847" rel="noopener">x402 proposal</a>
+    </div>
+    <div>
+      <h2>For machines</h2>
+      <a href="/.well-known/verify402.json">Service manifest</a>
+      <a href="/openapi.json">OpenAPI 3.1</a>
+      <a href="/llms.txt">llms.txt</a>
+      <a href="/findings">/findings</a>
+      <a href="/blog/rss.xml">RSS</a>
+    </div>
+    <div>
+      <h2>For teams</h2>
+      <p class="foot-note">Embedding a pre-signing check in a wallet, agent, or treasury workflow?</p>
+      <a href="mailto:a32116150@gmail.com?subject=verify402%20walkthrough">Talk to the builder</a>
+      <a href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener">npm package</a>
+    </div>
+  </div>
+  <p class="foot-legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data; demo payments are testnet. The only settlement ever recorded is the operator's own testnet transaction. No external buyer yet. Prices are per call, paid in testnet USDC over x402; /preflight is free.</p>
+</footer>
+
+<script src="/assets/site.js"></script>
+</body>
+</html>

@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A receipt is not a guarantee. It's a falsifiable record. · verify402</title>
+<meta name="description" content="A green check nobody can verify is a logo. A receipt binds the exact intent, block, verdict, and expiry — so a third party can tell what was checked and when.">
+<link rel="canonical" href="https://verify402.onrender.com/blog/a-receipt-is-a-falsifiable-record">
+<meta property="og:type" content="article">
+<meta property="og:title" content="A receipt is not a guarantee. It's a falsifiable record.">
+<meta property="og:description" content="What a preflight receipt proves, what it does not, and why intent binding matters more than a green icon.">
+<meta property="og:url" content="https://verify402.onrender.com/blog/a-receipt-is-a-falsifiable-record">
+<meta property="og:image" content="https://verify402.onrender.com/assets/logo-400.png">
+<meta name="twitter:card" content="summary">
+<meta name="google-site-verification" content="iGmI2QL110IkjnW0thU3DRZrdgQe_7mZsPWgkZVte7o">
+<link rel="alternate" type="application/rss+xml" title="verify402 blog" href="/blog/rss.xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+
+<header class="site-head">
+  <a class="brand" href="/" aria-label="verify402 home">verify<span>[</span>402<span>]</span></a>
+  <nav class="site-nav" aria-label="Primary">
+    <a href="/checks">Checks</a>
+    <a href="/preflight">Preflight</a>
+    <a href="/mcp">MCP</a>
+    <a href="/proof">Proof</a>
+    <a href="/blog">Blog</a>
+    <a href="/docs">Docs</a>
+  </nav>
+  <div class="site-actions">
+    <a class="site-status" href="/live"><span class="status-dot"></span><span data-block>live · block —</span></a>
+    <a class="btn sm" href="/preflight#try">Run free check</a>
+    <details class="site-menu">
+      <summary>Menu</summary>
+      <nav aria-label="Menu">
+        <a href="/checks">Checks</a>
+        <a href="/preflight">Preflight</a>
+        <a href="/mcp">MCP server</a>
+        <a href="/live">Live findings</a>
+        <a href="/proof">Proof &amp; receipts</a>
+        <a href="/blog">Blog</a>
+        <a href="/testers">Test the gate</a>
+        <a href="/docs">Docs</a>
+        <a href="/start">Quickstart</a>
+        <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">GitHub</a>
+      </nav>
+    </details>
+  </div>
+</header>
+
+<main>
+  <div class="wrap page-head">
+    <p class="eyebrow">Receipts · 7 min read · Oct 25, 2026</p>
+    <h1>A receipt is not a guarantee. It's a falsifiable record.</h1>
+    <p class="lead">A green check that nobody can verify is a logo. A receipt binds the exact intent, the block, the verdict, and an expiry — so a third party can tell what was checked and when.</p>
+  </div>
+
+  <article class="wrap prose">
+    <p>Most payment systems record what happened. A pre-signing gate records what it saw <i>before</i> anything happened. That difference is the whole value of a receipt: it moves the evidence to the moment of the decision.</p>
+
+    <p>But "receipt" is an overloaded word. A screenshot is not a receipt. A log line is not a receipt. A JSON blob with a green checkmark is not a receipt unless it is bound to the exact thing that was signed and can be checked by someone who does not trust the issuer.</p>
+
+    <h2>What is inside the receipt</h2>
+
+    <p>A verify402 preflight receipt carries six things that matter:</p>
+
+    <ul>
+      <li><b>The intent hash.</b> A hash of the normalized intent — the chain, asset, amount, payee, resource, calldata, and policy as the gate understood them.</li>
+      <li><b>The request hash.</b> A hash of the original request body, so a caller can prove the receipt belongs to the request it actually sent.</li>
+      <li><b>The block.</b> The pinned block where the chain state was read. A verdict is only meaningful at a block.</li>
+      <li><b>The expiry.</b> Receipts are short-lived by default. A check from ten minutes ago is not a check of the chain now.</li>
+      <li><b>The verdict and reasons.</b> PASS, CAUTION, or BLOCK, plus typed reason codes. Not a paragraph the model has to interpret.</li>
+      <li><b>The signature.</b> An HMAC over the receipt payload, so a verifier can detect tampering without calling the issuer's database.</li>
+    </ul>
+
+    <p>The response also carries <code>checked</code> and <code>notChecked</code>. Those lists are part of the record, not decoration. They are how a reader knows whether the gate looked at the thing they care about.</p>
+
+    <h2>What the receipt proves</h2>
+
+    <p>It proves a narrow, useful set of facts:</p>
+
+    <ul>
+      <li>this service saw this normalized intent at this block;</li>
+      <li>it returned this verdict, with these reasons and this scope;</li>
+      <li>the receipt has not been altered since it was signed;</li>
+      <li>it has not expired, if the verifier checks the clock.</li>
+    </ul>
+
+    <p>That is enough to make the decision auditable. An executor can require a valid receipt before it calls the signer. A treasury can keep the receipt next to the transaction. A counterparty can ask for it and verify it without trusting a dashboard.</p>
+
+    <h2>What it does not prove</h2>
+
+    <p>A receipt is not a guarantee that the payment is wise, the counterparty is honest, the contract is safe, or the trade will work. It is a record of a check, not a promise about the future.</p>
+
+    <p>It also does not prove that the signer used the receipt. That is an executor problem. The gate can issue a PASS; only the code that holds the key can refuse to sign without one. This is why the reference guard checks both bindings and fails closed, rather than trusting the agent to remember.</p>
+
+    <h2>Why intent binding is the part people skip</h2>
+
+    <p>Imagine a gate returns PASS for a 0.01 USDC payment to a known payee. The agent then signs a 100 USDC payment to a different address. The receipt is genuine. The signature is valid. The payment is wrong. If the receipt is not bound to the exact intent, it is theater.</p>
+
+    <p>This is why verification has two booleans, not one:</p>
+
+    <ul>
+      <li><code>intentBound</code> — the caller's normalized intent matches the hash in the receipt;</li>
+      <li><code>requestBound</code> — the original request body matches the request hash.</li>
+    </ul>
+
+    <p>Require both. A receipt-only check is still signature-valid, but it is unbound: it tells you the receipt is authentic, not that it belongs to the transaction in front of you. That distinction is the difference between evidence and a souvenir.</p>
+
+    <h2>The executor is where the gate becomes real</h2>
+
+    <p>A gate that returns BLOCK and an agent that signs anyway is not a gate. The enforcement point is the code that calls the signer. The pattern is simple:</p>
+
+    <ol>
+      <li>build the intent;</li>
+      <li>call the gate;</li>
+      <li>require <code>sign_allowed</code>;</li>
+      <li>verify the receipt against the intent and request;</li>
+      <li>require <code>intentBound</code> and <code>requestBound</code>;</li>
+      <li>check the expiry;</li>
+      <li>only then call the signer.</li>
+    </ol>
+
+    <p>No bypass flag. No "continue anyway" button in the agent's tool loop. If the receipt is missing, expired, or unbound, the signer does not run.</p>
+
+    <h2>What to ask a receipt for</h2>
+
+    <p>If a service shows you a green check before a payment, ask four questions:</p>
+
+    <ul>
+      <li>What exact intent is this bound to?</li>
+      <li>At what block was the chain state read?</li>
+      <li>What did it <i>not</i> check?</li>
+      <li>Can I verify it without trusting your dashboard?</li>
+    </ul>
+
+    <p>If the answer to the last one is no, you have a logo, not a receipt.</p>
+
+    <div class="post-cta">
+      <p class="eyebrow">Test the binding</p>
+      <h2>Break my receipt.</h2>
+      <p>Run a free intent, change one field, and try to verify the old receipt against the new intent. If it still passes, that is a bug I want to see.</p>
+      <div class="btn-row">
+        <a class="btn" href="/preflight#try">Run a free check</a>
+        <a class="btn ghost" href="/testers">Send three intents</a>
+      </div>
+    </div>
+
+    <p class="post-foot">Next: <a class="textlink" href="/blog/three-intents-never-sign-unchecked">Three payment intents your agent should never sign unchecked.</a> · <a class="textlink" href="/blog">All notes</a></p>
+  </article>
+</main>
+
+<footer class="site-foot">
+  <div class="foot-mark" aria-hidden="true">verify<span>[402]</span></div>
+  <div class="foot-links">
+    <div>
+      <h2>Product</h2>
+      <a href="/preflight">Preflight gate</a>
+      <a href="/checks">The five checks</a>
+      <a href="/mcp">MCP server</a>
+      <a href="/live">Live findings</a>
+      <a href="/testers">Tester kit</a>
+      <a href="/blog">Blog</a>
+      <a href="/start">Quickstart</a>
+    </div>
+    <div>
+      <h2>Project</h2>
+      <a href="/proof">Proof &amp; receipts</a>
+      <a href="/docs">Documentation</a>
+      <a href="/donate">Donate</a>
+      <a href="/sponsor">Sponsor hosting</a>
+      <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">Source code</a>
+      <a href="https://github.com/x402-foundation/x402/issues/3847" rel="noopener">x402 proposal</a>
+    </div>
+    <div>
+      <h2>For machines</h2>
+      <a href="/.well-known/verify402.json">Service manifest</a>
+      <a href="/openapi.json">OpenAPI 3.1</a>
+      <a href="/llms.txt">llms.txt</a>
+      <a href="/findings">/findings</a>
+      <a href="/blog/rss.xml">RSS</a>
+    </div>
+    <div>
+      <h2>For teams</h2>
+      <p class="foot-note">Embedding a pre-signing check in a wallet, agent, or treasury workflow?</p>
+      <a href="mailto:a32116150@gmail.com?subject=verify402%20walkthrough">Talk to the builder</a>
+      <a href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener">npm package</a>
+    </div>
+  </div>
+  <p class="foot-legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data; demo payments are testnet. The only settlement ever recorded is the operator's own testnet transaction. No external buyer yet. Prices are per call, paid in testnet USDC over x402; /preflight is free.</p>
+</footer>
+
+<script src="/assets/site.js"></script>
+</body>
+</html>
