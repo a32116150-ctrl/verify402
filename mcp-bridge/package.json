@@ -9,16 +9,17 @@
   },
   "main": "index.mjs",
   "files": [
-    "index.mjs",
-    "budget.mjs",
-    "payment-policy.mjs",
-    "paid-call.mjs",
-    "log.mjs",
-    "client-id.mjs",
-    "README.md",
     ".env.example",
+    "budget.mjs",
+    "client-id.mjs",
+    "index.mjs",
     "LICENSE",
-    "NOTICE"
+    "log.mjs",
+    "NOTICE",
+    "paid-call.mjs",
+    "payment-policy.mjs",
+    "README.md",
+    "x402-client.mjs"
   ],
   "scripts": {
     "start": "node index.mjs",
@@ -55,8 +56,6 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.1",
-    "@x402/axios": "2.28.0",
-    "@x402/evm": "2.28.0",
     "axios": "^1.13.2",
     "dotenv": "^16.4.5",
     "viem": "^2.39.0",

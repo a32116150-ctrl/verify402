@@ -14,18 +14,20 @@
 //   2. paid GET/POST        4. sign payment (wallet in env)
 //                           5. retry with proof → verdict
 //
-// PAYMENT POLICY (load-bearing, do not remove): before a signature exists,
-// x402Client's spend controls enforce the USD cap and the default-asset
-// (USDC) allowlist; payment-policy.mjs then enforces the network allowlist,
-// the verify402 payee, and a known paid resource on the configured server.
-// Redirects are refused. An MCP server that signs anything any remote 402
-// asks for is a blank cheque. This one is not.
+// PAYMENT POLICY (load-bearing, do not remove): before a signature exists, the
+// local x402 payer (x402-client.mjs) selects a requirement, payment-policy.mjs
+// validates the whole challenge against the network allowlist, the verify402
+// payee, canonical USDC, the per-payment USD cap, and a known paid resource on
+// the configured server, and the tool-bound guard refuses any challenge that is
+// not for the route the current tool owns. Redirects are refused. An MCP server
+// that signs anything any remote 402 asks for is a blank cheque. This one is
+// not. The payer is implemented here on viem; it carries no @x402 dependency,
+// so installing the bridge does not pull the nested zod 3.x advisory.
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import axios from "axios";
-import { x402Client, wrapAxiosWithPayment } from "@x402/axios";
-import { ExactEvmScheme } from "@x402/evm/exact/client";
+import { x402Client, wrapAxiosWithPayment, createExactEvmScheme } from "./x402-client.mjs";
 import { privateKeyToAccount } from "viem/accounts";
 import { config } from "dotenv";
 import { z } from "zod";
@@ -55,9 +57,10 @@ const SERVER_URL = (process.env.VERIFY402_URL || "https://verify402.onrender.com
 // two clients separate means a misconfigured 402 on a free route can never
 // turn into a signature.
 const freeApi = axios.create({ baseURL: SERVER_URL, timeout: 30_000, maxRedirects: 0, headers: CLIENT_HEADERS });
-// Spend guard: the x402 client refuses to SIGN any payment above this, before
-// a signature exists. Enforced inside x402Client (applySpendControls), not by
-// our own request code - so it cannot be bypassed by a caller.
+// Spend guard: the payer refuses to SIGN any payment above this, before a
+// signature exists. Enforced by the pre-signature guard in payment-policy.mjs
+// (validatePaymentChallenge), not by request code - so it cannot be bypassed
+// by a caller.
 const MAX_PAYMENT_USD = Number(process.env.MAX_PAYMENT_USD || 0.25);
 
 // Free-only mode is deliberate: an agent can install the bridge and call the
@@ -141,11 +144,11 @@ export function createBridgeClientFromEnv() {
     policies: [(version, requirements) => policy.filter(version, requirements)],
   });
   for (const network of policy.allowedNetworks) {
-    client.register(network, new ExactEvmScheme(account));
+    client.register(network, createExactEvmScheme(account));
   }
   // Full-challenge guard (version, every EVM offer, canonical asset/domain,
   // payee, amount cap, timeout, EIP-3009) plus the resource/route layer. It
-  // runs after the SDK has selected a requirement and before the signer.
+  // runs after the client has selected a requirement and before the signer.
   // The expected resource is resolved per invocation from the tool handler
   // context, never from the 402 challenge.
   client.onBeforePaymentCreation(

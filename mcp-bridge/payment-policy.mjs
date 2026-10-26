@@ -8,10 +8,10 @@
 //   - payTo to be the verify402 payee (default the EVM payTo);
 //   - the 402 resource to be on the configured server and a known paid route.
 //
-// The amount cap and the canonical-USDC allowlist are enforced both by
-// x402Client's spendControls and by validatePaymentChallenge(), which runs
-// before the signing hook in first-payment.mjs and index.mjs. Redirects are
-// refused by the axios clients in index.mjs and first-payment.mjs.
+// The amount cap and the canonical-USDC allowlist are enforced by
+// validatePaymentChallenge(), which runs before any signer is reached.
+// Redirects are refused by the axios clients in index.mjs and
+// first-payment.mjs.
 //
 // Mainnet is available only through an explicit VERIFY402_NETWORKS value. The
 // demo default must never silently select Base mainnet.
@@ -24,10 +24,10 @@ export const DEFAULT_NETWORKS = [DEMO_NETWORK];
 export const DEFAULT_PAY_TO = "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb";
 export const DEFAULT_PAID_ROUTES = ["/verify", "/safety", "/route", "/quotecheck", "/depth"];
 
-// Hard upper bound for a single EIP-3009 authorization. The SDK signs
-// `validBefore = now + maxTimeoutSeconds`; an unbounded value hands the payee a
-// long-lived transferable authorization. 300 seconds is the documented cap and
-// matches the live verify402 challenge.
+// Hard upper bound for a single EIP-3009 authorization. The exact-EVM payer
+// signs `validBefore = now + maxTimeoutSeconds`; an unbounded value hands the
+// payee a long-lived transferable authorization. 300 seconds is the documented
+// cap and matches the live verify402 challenge.
 export const MAX_TIMEOUT_SECONDS = 300;
 
 // The canonical USDC contract for each network this bridge knows how to pay.
@@ -43,7 +43,7 @@ export const NETWORK_USDC = {
 // EIP-712 domain parameters for the canonical USDC contract on each supported
 // network. These are signing-relevant: a server that supplies a different
 // `extra.name`/`extra.version` asks the wallet to sign a different token
-// domain. Values mirror the installed @x402/evm default-asset table.
+// domain. Values match the canonical USDC metadata the live server advertises.
 export const NETWORK_USDC_DOMAIN = {
   [DEMO_NETWORK]: { name: "USDC", version: "2" },
   [MAINNET_NETWORK]: { name: "USD Coin", version: "2" },
@@ -51,7 +51,7 @@ export const NETWORK_USDC_DOMAIN = {
 
 // The only networks the bridge will ever register a signer for. VERIFY402_NETWORKS
 // is constrained to this map; an arbitrary eip155:<chainId> is refused rather
-// than inferred from an asset the SDK happens to recognise.
+// than inferred from an asset a challenge happens to name.
 export const SUPPORTED_PAYMENT_NETWORKS = new Set(Object.keys(NETWORK_USDC));
 
 const EVM_ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
@@ -111,8 +111,8 @@ function validateTimeoutSeconds(value) {
 
 /**
  * Validate the EIP-712 domain and transfer mode of an EVM requirement. The
- * installed SDK selects EIP-3009 unless `extra.assetTransferMethod === "permit2"`,
- * so permit2 (and any unvalidated extension key) is refused here.
+ * payer selects EIP-3009 unless `extra.assetTransferMethod === "permit2"`, so
+ * permit2 (and any unvalidated extension key) is refused here.
  */
 function validateEvmExtra(requirement, index, expectedDomainByNetwork) {
   const prefix = `402 accepts[${index}]`;
@@ -350,7 +350,7 @@ export function createPaymentPolicy({
     paidRoutes: [...routes],
 
     /**
-     * x402Client policy: runs after spend controls and before the selector.
+     * Payer policy: runs after the challenge is parsed and before selection.
      * Returning an empty array would also fail, but a typed error is easier to
      * debug and is surfaced to the caller as a refused payment.
      */
@@ -370,7 +370,7 @@ export function createPaymentPolicy({
     },
 
     /**
-     * x402Client onBeforePaymentCreation hook: runs after selection and before
+     * Payer onBeforePaymentCreation hook: runs after selection and before
      * the scheme creates a signature. Returning `{ abort: true }` fails closed.
      *
      * This is the resource/route layer of the policy. The full challenge and
@@ -441,7 +441,7 @@ export function createPaymentPolicy({
 
 /**
  * Build the pre-signature guard shared by every payer. It validates the whole
- * 402 challenge, proves the SDK's selected requirement is the exact object that
+ * 402 challenge, proves the client's selected requirement is the exact object that
  * was validated, re-validates that object, and then applies the resource/route
  * layer in policy.checkBeforeSign().
  *
@@ -452,7 +452,7 @@ export function createPaymentPolicy({
  * never signs a challenge that is not tied to locally known tool configuration.
  *
  * Returns a hook `(context) => { abort: true, reason } | undefined` suitable
- * for x402Client.onBeforePaymentCreation().
+ * for client.onBeforePaymentCreation().
  */
 export function createPaymentGuard(policy, {
   expectedResource,
@@ -516,7 +516,7 @@ export function createPaymentGuard(policy, {
       return { abort: true, reason: "selected payment requirement changed after validation" };
     }
 
-    // Reference identity: the SDK selector returns an element of
+    // Reference identity: the selector returns an element of
     // paymentRequired.accepts, so a clone/substitution is refused here.
     if (!Array.isArray(challenge.accepts) || !challenge.accepts.includes(selected)) {
       return { abort: true, reason: "selected payment requirement is not from the 402 challenge" };

@@ -10,7 +10,7 @@ import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { encodePaymentRequiredHeader } from "@x402/core/http";
+import { encodePaymentRequiredHeader } from "../x402-client.mjs";
 
 process.env.EVM_PRIVATE_KEY = "0x" + "11".repeat(32);
 process.env.VERIFY402_URL = "https://verify402.onrender.com";
@@ -242,7 +242,7 @@ test("the installed client and the shared policy guard make the same decision", 
 // Tool/resource binding through the real tool path.
 //
 // These tests drive runPaidTool -> paidPost -> the x402-wrapped axios instance
-// -> the SDK's createPaymentPayload -> the shared guard -> the fake signer. The
+// -> the local payer's createPaymentPayload -> the shared guard -> the fake signer. The
 // transport is a local axios adapter, so the complete production path is
 // exercised without a socket.
 // ---------------------------------------------------------------------------

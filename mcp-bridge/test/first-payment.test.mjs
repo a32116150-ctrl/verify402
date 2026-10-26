@@ -166,7 +166,7 @@ test("payer config refuses explicitly empty network or payee values", () => {
 });
 
 // --- maxTimeoutSeconds -------------------------------------------------------
-// The SDK signs `validBefore = now + maxTimeoutSeconds`, so an unbounded or
+// The exact-EVM payer signs `validBefore = now + maxTimeoutSeconds`, so an unbounded or
 // non-integer timeout is a signing-safety problem, not a formatting problem.
 
 test("payer rejects a missing maxTimeoutSeconds", () => {

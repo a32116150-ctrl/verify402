@@ -197,7 +197,9 @@ In x402 v2 (`@x402/express`), challenge metadata is delivered in the `payment-re
 - **Status:** **PASS**.
 
 ### Spend Controls Verification
-- `MAX_PAYMENT_USD` (default $0.25) is enforced inside `@x402/axios` `applySpendControls` before creating a transaction signature.
+- `MAX_PAYMENT_USD` (default $0.25) is enforced inside the pre-signature guard
+  (`mcp-bridge/payment-policy.mjs`) before any transaction signature exists; the
+  bridge's local x402 payer refuses the challenge instead of signing it.
 - `MAX_DAILY_USD` is enforced via persisted JSON ledger (`mcp-bridge/budget.mjs`), verified across 12 unit tests in `mcp-bridge/test/payment-policy.test.mjs`.
 - **Status:** **PASS**.
 

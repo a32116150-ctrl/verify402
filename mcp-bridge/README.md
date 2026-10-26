@@ -225,6 +225,36 @@ Once configured, your agent automatically sees the tools in its context. You can
 - Use the [reference executor](https://github.com/a32116150-ctrl/verify402/blob/master/examples/preflight-guard.mjs)
   when you want enforcement rather than advice.
 
+## Dependencies and `npm audit`
+
+This package no longer depends on `@x402/axios` or `@x402/evm`. The x402 payer
+(PAYMENT-REQUIRED / PAYMENT-SIGNATURE / PAYMENT-RESPONSE, scheme `exact`,
+EIP-3009 authorization) is implemented here on `viem`, and the runtime
+dependency list is: the MCP SDK, axios, dotenv, viem, zod 4.
+
+Why: `@x402` 2.28.0 depended on `zod ^3.24.2`, which resolves into
+[GHSA-mrhx-c7xc-m3w5](https://github.com/advisories/GHSA-mrhx-c7xc-m3w5)
+(memory-exhaustion DoS while validating oversized arrays; the advisory covers
+all zod < 4.6.6, and no patched 3.x exists). npm ignores `overrides` declared
+inside a dependency, so installs of 1.0.8 and earlier showed a "high severity"
+audit banner. The upstream request is
+[x402-foundation/x402#3953](https://github.com/x402-foundation/x402/issues/3953).
+
+The current package, installed from its tarball:
+
+```console
+$ npm i verify402-mcp
+added 123 packages
+$ npm audit
+found 0 vulnerabilities
+```
+
+The bridge pays the same wire protocol. The only behavior change is cosmetic:
+`npm ls @x402` shows nothing, and the install is 5 packages smaller. The
+paid-call policy (network allowlist, configured payee, canonical USDC,
+per-payment cap, tool-bound resource) is unchanged and still runs before any
+signature exists, in `payment-policy.mjs`.
+
 ## Explicit mainnet configuration (not the public demo)
 
 Mainnet settlement is a separate deployment choice, not a bridge or demo

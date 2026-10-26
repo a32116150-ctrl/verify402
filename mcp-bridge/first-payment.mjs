@@ -28,8 +28,7 @@
 // treated as proof of settlement by callers that also look for the marker.
 
 import axios from "axios";
-import { decodePaymentResponseHeader, x402Client, wrapAxiosWithPayment } from "@x402/axios";
-import { ExactEvmScheme } from "@x402/evm/exact/client";
+import { createExactEvmScheme, decodePaymentResponseHeader, wrapAxiosWithPayment, x402Client } from "./x402-client.mjs";
 import { privateKeyToAccount } from "viem/accounts";
 import { fileURLToPath } from "node:url";
 import { realpathSync } from "node:fs";
@@ -109,7 +108,7 @@ export function createPayerClient(config, { onSelected } = {}) {
     policies: [(version, requirements) => config.policy.filter(version, requirements)],
   });
   for (const network of config.policy.allowedNetworks) {
-    client.register(network, new ExactEvmScheme(account));
+    client.register(network, createExactEvmScheme(account));
   }
   client.onBeforePaymentCreation(createPayerGuard(config));
   if (typeof onSelected === "function") {
@@ -124,9 +123,9 @@ export function createPayerClient(config, { onSelected } = {}) {
 /**
  * Verify a decoded x402 settlement receipt.
  *
- * The supported receipt (SettleResponse from @x402) proves, at minimum, that
- * settlement succeeded, the settling network, and the settlement transaction
- * hash. It only sometimes includes `payer` and `amount`; when it does, they are
+ * The supported receipt (SettleResponse from the x402 facilitator) proves, at
+ * minimum, that settlement succeeded, the settling network, and the settlement
+ * transaction hash. It only sometimes includes `payer` and `amount`; when it does, they are
  * checked against the expected payer and the selected requirement's amount. It
  * does not itself carry an asset or payee field, so those are proven by the
  * signed authorization the guard validated, not by this object.
