@@ -244,7 +244,7 @@ export function buildOpenapi(prices, { mode = "testnet", baseUrl = DEMO_BASE_URL
           tags: ["Discovery"],
           operationId: "getHealth",
           summary: "Liveness and network configuration check",
-          description: "Liveness only: this endpoint does not read the chain. Returns the runtime mode, current /verify price, free-preflight marker, settlement-network label, and the readiness path. Free, no authentication.",
+          description: "Liveness only: this endpoint does not read the chain. Returns the runtime mode, current /verify price, free-preflight marker, settlement-network label, the readiness path, and the durable settlement recovery store state. Free, no authentication.",
           responses: {
             200: {
               description: "Service is healthy and reachable.",
@@ -260,6 +260,7 @@ export function buildOpenapi(prices, { mode = "testnet", baseUrl = DEMO_BASE_URL
                       preflight: { type: "string", example: "free" },
                       networks: { type: "string", example: rail.label },
                       ready: { type: "string", example: "/ready" },
+                      recoveryStore: { type: "string", enum: ["ok", "unavailable", "memory-only"], description: "Durable settlement recovery store state. ok = durable journal healthy; unavailable = fail-closed on paid routes; memory-only = no RECOVERY_DB_PATH configured." },
                     },
                   },
                 },

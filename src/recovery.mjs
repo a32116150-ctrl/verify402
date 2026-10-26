@@ -130,6 +130,64 @@ export const IDEMPOTENCY_REMEASURE_MS = 6 * 60 * 60 * 1000;  // 6 hours
 
 const settled = new Map();    // key -> entry (shared between aliases; settled flag gates replayability)
 const tombstones = new Map(); // key -> { responseHash, settledAt, expiredAt }
+
+// ------------------------------------------------------------- durability --
+// When RECOVERY_DB_PATH is set, the maps above are write-through backed by a
+// SQLite store (src/recovery-store.mjs): a staged record is committed to disk
+// BEFORE the settlement call, and promotion/abandon/expiry are mirrored, so a
+// restart cannot cause a double charge. Without the variable, behavior is
+// exactly the historical memory-only one (all existing semantics and tests).
+import {
+  initRecoveryStore, loadRecoveryFromDb, listStagedEntries,
+  stageEntry, promoteEntry, abandonEntry, evictEntry, updateEntry,
+  tombstoneSet as storeTombstoneSet, tombstoneDelete as storeTombstoneDelete,
+  storeHealth,
+} from "./recovery-store.mjs";
+import { logError, logWarn } from "./log.mjs";
+
+const RECOVERY_DB_PATH = process.env.RECOVERY_DB_PATH || null;
+let storeReady = false;
+if (RECOVERY_DB_PATH) {
+  const opened = initRecoveryStore(RECOVERY_DB_PATH);
+  if (opened.ok) {
+    storeReady = true;
+    const loaded = loadRecoveryFromDb();
+    if (loaded) {
+      // The alias rows are the authority for alias membership after a restart;
+      // entry objects stay shared per operation, exactly like in memory.
+      for (const [opId, entry] of loaded.entries) {
+        entry.aliases = loaded.aliases.get(opId) || [];
+        for (const k of entry.aliases) settled.set(k, entry);
+      }
+      for (const [k, t] of loaded.tombstones) tombstones.set(k, t);
+    }
+  } else {
+    logError(
+      `REFUSING memory-only fallback: the recovery store failed to open (${opened.error?.message ?? opened.error}). Paid routes will fail closed (503 recovery_unavailable) until it is healthy.`,
+    );
+  }
+}
+
+export function recoveryStoreHealth() {
+  return { ...storeHealth(), ready: storeReady };
+}
+
+// A staged entry may only be dropped/aged out when its payment is KNOWN not to
+// have settled. In memory-only mode there is no durable state to protect, so
+// the historical TTL applies; in durable mode only a definitive on-chain
+// reconciliation ("not settled") may expire a staged record — anything else
+// stays pending (fail closed) rather than risking a second payment.
+function entryCanExpire(e) {
+  if (!storeReady) return true;
+  return e.reconciled === "not_settled";
+}
+
+function dropEntryFromMemory(e) {
+  for (const a of e.aliases) {
+    if (settled.get(a) === e) settled.delete(a);
+    inFlight.delete(a);
+  }
+}
 // In-process request reservations. This closes the concurrent-request window:
 // the first same-key request reserves the key before the paywall, and a second
 // request gets a typed pending response instead of doing the work twice.
@@ -192,6 +250,11 @@ export function recordSettlement(key, payload, _companionKey = null, {
   settledNow = false,
   requestHash: operationRequestHash = null,
   operationId = randomUUID(),
+  // How to re-check this payment on-chain if the process restarts before the
+  // settle hook fires. Shape: { chainId, token, payer, nonce, validBefore,
+  // network }. Extracted by server.mjs from the verified x-payment header —
+  // never part of the response payload or its hash.
+  paymentRef = null,
 } = {}) {
   // The projection strips `recovery` (and `operationId`) entirely, so the hash
   // is stable regardless of what operationId the caller or server attaches.
@@ -212,18 +275,34 @@ export function recordSettlement(key, payload, _companionKey = null, {
     settledAt: settledNow ? t : null,
     replays: 0,
     aliases: [key].filter(Boolean),
+    paymentRef: paymentRef ?? null,
   };
-  // staged-entry GC: drop staged records that were never promoted
+  // WRITE-AHEAD: the staged record is committed to disk here — BEFORE the x402
+  // middleware submits the settlement (which happens after this handler
+  // returns). If the journaling fails, the paid route fails closed (503
+  // recovery_unavailable) instead of reaching an unrecorded settlement.
+  stageEntry(entry); // no-op when the store is disabled; throws when enabled+broken
+  // staged-entry GC: drop staged records that were never promoted — but only
+  // when their payment is known not to have settled (reconciliation), never
+  // "silently expire into charge again" while the outcome is unknown.
   for (const [k, e] of settled) {
-    if (!e.settled && t - e.stagedAt > IDEMPOTENCY_STAGE_TTL_MS) {
-      for (const a of e.aliases) if (settled.get(a) === e) settled.delete(a);
+    if (!e.settled && t - e.stagedAt > IDEMPOTENCY_STAGE_TTL_MS && entryCanExpire(e)) {
+      dropEntryFromMemory(e);
+      evictEntry(e.operationId);
     }
   }
   if (settled.size >= IDEMPOTENCY_MAX_KEYS && !settled.has(key)) {
-    // drop the oldest entry; the store is a cache, not a ledger
-    const oldest = settled.keys().next().value;
-    const oe = settled.get(oldest);
-    for (const a of oe.aliases) if (settled.get(a) === oe) settled.delete(a);
+    // drop the oldest entry; the store is a cache, not a ledger. Only an
+    // entry that may expire may be evicted: an unresolved staged payment
+    // cannot be discarded to make room.
+    for (const k of settled.keys()) {
+      const oe = settled.get(k);
+      if (oe && entryCanExpire(oe)) {
+        for (const a of oe.aliases) if (settled.get(a) === oe) settled.delete(a);
+        evictEntry(oe.operationId);
+        break;
+      }
+    }
   }
   for (const k of entry.aliases) {
     tombstones.delete(k); // a fresh settlement re-opens the window
@@ -287,6 +366,10 @@ export function promoteSettlement(body, settlement) {
     payer: settlement.payer ?? null,
   };
   for (const a of e.aliases) tombstones.delete(a);
+  // Mirror to the durable store (best-effort): if this write fails, the row
+  // stays 'staged' on disk, so a restart answers pending — fail closed, never
+  // double-chargeable — and the unhealthy flag 503s paid routes meanwhile.
+  promoteEntry(e.operationId, e);
   return 1;
 }
 
@@ -340,10 +423,8 @@ export function abandonSettlement(body) {
   let removed = 0;
   for (const [k, e] of settled) {
     if (e.operationId === opId && !e.settled) {
-      for (const a of e.aliases) {
-        if (settled.get(a) === e) settled.delete(a);
-        inFlight.delete(a);
-      }
+      dropEntryFromMemory(e);
+      abandonEntry(opId); // durable mirror; a failed delete leaves the row pending (fail closed)
       removed = 1;
     }
   }
@@ -374,10 +455,21 @@ export function lookupRecovery({
   if (!entry.settled) {
     // A staged entry means the handler ran and its settlement is still
     // unresolved (or failed without an explicit failure hook). Do not let a
-    // retry do the work again while that outcome is unknown. The staged record
-    // expires after IDEMPOTENCY_STAGE_TTL_MS, after which a retry is allowed.
+    // retry do the work again while that outcome is unknown.
+    //
+    // Durable mode: a staged entry whose stage TTL has passed must NOT simply
+    // expire into "charge again". The payment may already have settled (lost
+    // settle hook). The entry stays pending and a reconciliation check —
+    // EIP-3009 authorizationState on the token contract — decides: consumed
+    // => promote to settled (replayable); past validBefore and not consumed
+    // => definitive not-settled, expire; check unavailable/failed => stay
+    // pending (the route answers recovery_unavailable rather than pay again).
+    if (nowFn() - entry.stagedAt > IDEMPOTENCY_STAGE_TTL_MS && !entryCanExpire(entry)) {
+      return { pending: "reconciliation_required", stale: true, operationId: entry.operationId };
+    }
     if (nowFn() - entry.stagedAt > IDEMPOTENCY_STAGE_TTL_MS) {
-      for (const a of entry.aliases) if (settled.get(a) === entry) settled.delete(a);
+      dropEntryFromMemory(entry);
+      evictEntry(entry.operationId);
       return null;
     }
     return { pending: "settlement_pending" };
@@ -392,10 +484,11 @@ export function lookupRecovery({
 export function replayFor(key) {
   const entry = settled.get(key);
   if (!entry || !entry.settled) {
-    // staged entries that aged out silently leave no tombstone: nothing
-    // was ever settled, so there is no "lost verdict" to report.
-    if (entry && !entry.settled && nowFn() - entry.stagedAt > IDEMPOTENCY_STAGE_TTL_MS) {
-      for (const a of entry.aliases) if (settled.get(a) === entry) settled.delete(a);
+    // staged entries age out only when their payment is known not settled:
+    // nothing was ever settled, so there is no "lost verdict" to report.
+    if (entry && !entry.settled && nowFn() - entry.stagedAt > IDEMPOTENCY_STAGE_TTL_MS && entryCanExpire(entry)) {
+      dropEntryFromMemory(entry);
+      evictEntry(entry.operationId);
     }
     if (!entry) return null;
     if (!entry.settled) return null;
@@ -404,16 +497,21 @@ export function replayFor(key) {
     for (const a of entry.aliases) {
       if (settled.get(a) === entry) settled.delete(a);
       if (settled.size + tombstones.size < 4000) {
-        tombstones.set(a, { responseHash: entry.responseHash, settledAt: entry.settledAt, expiredAt: nowFn() });
+        const t = { responseHash: entry.responseHash, settledAt: entry.settledAt, expiredAt: nowFn() };
+        tombstones.set(a, t);
+        storeTombstoneSet(a, t);
       }
     }
+    evictEntry(entry.operationId);
     return null;
   }
   if (entry.replays >= IDEMPOTENCY_MAX_REPLAYS) {
     for (const a of entry.aliases) if (settled.get(a) === entry) settled.delete(a);
+    evictEntry(entry.operationId);
     return null;
   }
   entry.replays += 1;
+  updateEntry(entry.operationId, entry); // durable replay counter
   return { payload: entry.payload, responseHash: entry.responseHash, replays: entry.replays };
 }
 
@@ -425,9 +523,136 @@ export function expiredRecoveryInfo(key) {
   if (!t) return null;
   if (nowFn() - t.expiredAt > IDEMPOTENCY_REMEASURE_MS) {
     tombstones.delete(key);
+    storeTombstoneDelete(key); // durable mirror; a failed delete is benign (typed signal reappears after reload)
     return null;
   }
   return { previousResponseHash: t.responseHash, expiredAt: new Date(t.expiredAt).toISOString() };
+}
+
+// ------------------------------------------------- payment reconciliation --
+// Staged entries whose settle outcome was lost must not silently expire into
+// "charge again". The codebase's available ground truth is the token contract
+// itself: x402 v2 "exact" on EVM settles via EIP-3009 transferWithAuthorization,
+// and the USDC contract exposes `authorizationState(authorizer, nonce)` — a
+// free view call. Consumed => the payment moved (promote to settled); not
+// consumed AFTER validBefore => the authorization can never settle now
+// (definitively safe to expire). Before validBefore the outcome is genuinely
+// unknown and the record stays pending. Solana staged records carry no
+// checkable payment reference and fail closed (stay pending; the route answers
+// recovery_unavailable) — no equivalent check exists in this codebase.
+//
+// The checker is injected (server.mjs wires the viem public client); tests
+// inject a stub. It receives the paymentRef recorded at stage time and
+// resolves true/false, or rejects when the check cannot be made.
+let paymentChecker = null;
+export function setRecoveryPaymentChecker(fn) {
+  paymentChecker = fn;
+}
+
+const reconciling = new Set();     // operationIds with an attempt in flight
+const reconcileFailures = new Map(); // operationId -> last failure reason
+
+// Typed reconciliation status for the paid routes:
+//   "ok"        the record resolved (settled or definitively expired)
+//   "inflight"  an attempt is running — answer pending
+//   "failed"    the last attempt errored — answer recovery_unavailable (503)
+//   "unknown"   no attempt recorded — kick one off
+export function reconciliationState(operationId) {
+  if (reconciling.has(operationId)) return "inflight";
+  return reconcileFailures.has(operationId) ? "failed" : "unknown";
+}
+
+function findStagedEntry(operationId) {
+  for (const e of new Set(settled.values())) {
+    if (e.operationId === operationId) return e.settled ? null : e;
+  }
+  return null;
+}
+
+// Promote a staged entry using on-chain evidence (no facilitator result
+// exists — the settle hook was lost). The evidence is recorded in
+// `settlement.reconciled`; transaction stays null because no receipt hash is
+// available from a view call. replayable exactly like a hook-promoted entry.
+function promoteReconciled(entry, ref) {
+  const t = nowFn();
+  entry.settled = true;
+  entry.settledAt = t;
+  entry.verified_payer = typeof ref.payer === "string" ? ref.payer.toLowerCase() : null;
+  entry.identity = entry.verified_payer ? "settlement_payer" : "settlement_only";
+  entry.settlement = {
+    transaction: null,
+    network: ref.network ?? null,
+    payer: ref.payer ?? null,
+    reconciled: "eip3009_authorizationState",
+    note: "promoted after restart: the token contract reports this payment's authorization was consumed",
+  };
+  for (const a of entry.aliases) tombstones.delete(a);
+  promoteEntry(entry.operationId, entry);
+}
+
+// Re-check one staged operation against the chain. Returns:
+//   "settled"       payment found on-chain; promoted, replayable
+//   "expired_safe"  past validBefore and not consumed; record expired
+//   "pending"       still inside the validBefore window; outcome unknown
+//   "failed"        the check errored — fail closed
+//   "unavailable"   no checker / no paymentRef (e.g. Solana) — fail closed
+export async function reconcileStagedEntry(operationId) {
+  const entry = findStagedEntry(operationId);
+  if (!entry) return "settled_or_gone";
+  const ref = entry.paymentRef;
+  if (!ref || !paymentChecker) {
+    reconcileFailures.set(operationId, "no payment reference or no checker configured");
+    return "unavailable";
+  }
+  if (reconciling.has(operationId)) return "inflight";
+  reconciling.add(operationId);
+  try {
+    const t = nowFn();
+    const deadlineMs = Number.isFinite(ref.validBefore) && ref.validBefore > 0
+      ? ref.validBefore * 1000
+      : null;
+    const pastDeadline = deadlineMs !== null && t >= deadlineMs;
+    let consumed;
+    try {
+      consumed = Boolean(await paymentChecker(ref));
+    } catch (e) {
+      reconcileFailures.set(operationId, e?.message ?? String(e));
+      logWarn(`recovery reconciliation failed for ${operationId}: ${e?.message ?? e}`);
+      return "failed";
+    }
+    reconcileFailures.delete(operationId);
+    if (consumed) {
+      promoteReconciled(entry, ref);
+      return "settled";
+    }
+    if (pastDeadline) {
+      entry.reconciled = "not_settled";
+      dropEntryFromMemory(entry);
+      evictEntry(entry.operationId);
+      return "expired_safe";
+    }
+    return "pending"; // outcome unknown: stays pending, fail closed
+  } finally {
+    reconciling.delete(operationId);
+  }
+}
+
+// Startup pass: reconcile every staged record loaded from the store. Runs
+// before listen() in server.mjs; bounded by the staged-row count (<= key cap).
+export async function reconcileStagedOnStartup() {
+  if (!storeReady) return 0;
+  const staged = listStagedEntries();
+  if (staged === null) return 0; // store read failed: unhealthy, lookups fail closed
+  let n = 0;
+  for (const e of staged) {
+    if (e.settled) continue;
+    const r = await reconcileStagedEntry(e.operationId);
+    n += 1;
+    if (r !== "settled") {
+      logWarn(`recovery startup: staged operation ${e.operationId} reconciles as ${r}`);
+    }
+  }
+  return n;
 }
 
 // Standard evidence bundle on every paid response. responseHash uses the SAME

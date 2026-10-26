@@ -82,8 +82,56 @@ a reputation surface, not buyers.
   (create a CDP API key; do NOT reuse `x402.org/facilitator` - it is testnet-only)
 - The server refuses to start in mainnet mode without `FACILITATOR_URL`. That
   refusal is a feature; never bypass it.
+- `RECOVERY_DB_PATH` (see section 3.1) - **required in mainnet mode**; the
+  server refuses to start without it.
 - Settle one real $0.05 payment yourself as the first buyer before letting
   strangers pay: proof the rail works and receipts land.
+
+### 3.1 Settlement recovery store (RECOVERY_DB_PATH) - durable, single instance
+
+The settlement recovery store is a SQLite file on one disk. It is write-ahead
+(a staged payment is journaled **before** the facilitator settlement call) with
+`PRAGMA journal_mode=WAL` and `PRAGMA synchronous=FULL`, so a committed row
+survives even a SIGKILL. A restart can never cause a double charge.
+
+- Run **exactly one** server instance per database file. Two instances against
+  the same path is undefined and can double-charge. Do not enable horizontal
+  autoscaling with this configuration.
+- In mainnet mode the file must be on a **persistent** disk. Recommended on
+  Render: attach a persistent disk (paid instance; disks are $0.25/GB/mo)
+  mounted at e.g. `/var/data` and set
+  `RECOVERY_DB_PATH=/var/data/recovery/recovery.sqlite`. The WAL sidecars
+  (`-wal`, `-shm`) live beside the file on the same disk. The `.data` default
+  is a development convenience and is refused in mainnet mode.
+- In testnet/dev mode the variable is optional: unset = the historical
+  memory-only behavior; set = full durability with identical semantics.
+
+Fail-closed semantics:
+
+- Store fails to open at boot (corrupt file, unwritable dir): mainnet exits
+  with `REFUSING TO START`; testnet stays up but every paid route answers
+  `503 recovery_unavailable` until the store is healthy. The free gate
+  (`/preflight`, `/`, `/info`, `/health`, `/ready`, `/.well-known/*`) is
+  unaffected.
+- Journaling fails at payment time (disk full, lock timeout): the paid call
+  fails closed with `503 recovery_unavailable` - no verdict, no settlement,
+  no unrecorded money movement.
+- Staged-but-unconfirmed records (settle outcome lost, e.g. a restart before
+  the settle hook fired) never silently expire into "charge again". They are
+  reconciled against the token contract via the EIP-3009 view
+  `authorizationState(payer, nonce)`: authorization consumed -> promoted to
+  settled (replayable); past the authorization's `validBefore` deadline and
+  not consumed -> definitively safe to expire, the retry pays normally; check
+  cannot be made (RPC error, or a Solana-shaped record with no equivalent
+  view call) -> the key stays pending and the paid route answers 503
+  `recovery_unavailable` instead of letting the retry pay again.
+- The unhealthy-store flag clears itself on the next successful store
+  operation; `/health` exposes it as `recoveryStore: ok | unavailable |
+  memory-only`.
+
+Driver: `node:sqlite`, built into Node >= 22.13.0 (`engines.node`) - no native
+dependency was added; verified on 22.23.3.
+
 
 ## 4. Distribution (the actual bottleneck)
 
