@@ -7,7 +7,7 @@ Rule: X402_MODE=testnet only on free instances. Mainnet requires an always-on pa
 - Published `verify402-mcp@1.0.8` and `1.0.7` are immutable and default the bridge to Base Sepolia testnet (`eip155:84532`). The older `1.0.6`, `1.0.5`, and `1.0.4` artifacts are also immutable and must not be republished.
 - This source tree is `1.0.9`: it removes the `@x402` client SDK from the published bridge and implements the x402 v2 payer locally on viem, so a clean install audits clean. It keeps the `1.0.8` payout-provenance correction (`sellerPayoutWallets` is an allowlist; only a verified seller manifest adds `payee_payout_binding`), the x402 preflight hook, and anonymous MCP client labels.
 - `server.json` and the service manifest describe the **source** release: `VERIFY402_NETWORKS` is optional with an explicit `eip155:84532` default, and Base mainnet is an opt-in (`eip155:8453`).
-- The `1.0.9` package is published on npm, active in the MCP Registry, published as GitHub release `mcp-v1.0.9`, and deployed on Render; `/info` reports `1.0.9` and the free-only post-deploy check passed. Do not attach this source tree to an existing version or move an existing `mcp-v1.0.x` tag.
+- The `1.0.9` package is published on npm, active in the MCP Registry, published as GitHub release `mcp-v1.0.9`, and deployed on Render; `/info` reports `1.0.9` and the free-only post-deploy check passed 29/29. Do not attach this source tree to an existing version or move an existing `mcp-v1.0.x` tag.
 
 ## Mode-aware runtime metadata and the static site
 

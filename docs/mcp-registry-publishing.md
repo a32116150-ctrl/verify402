@@ -140,11 +140,13 @@ do not publish.
 ## Current status
 
 Current release: `verify402-mcp@1.0.9` is published on npm and is `latest`.
-That version is immutable and defaults the bridge to Base Sepolia testnet
-(`eip155:84532`). The previous `1.0.8` and `1.0.7` packages remain published
-and immutable.
+That version is immutable, maps to git commit
+`60c7b6fcffb1c1d47561577b752d9c68b8ecba16`, and defaults the bridge to Base
+Sepolia testnet (`eip155:84532`). The previous `1.0.8` and `1.0.7` packages
+remain published and immutable.
 
-The official MCP Registry lists `1.0.9` as active and latest. The checked-in `server.json`
+The official MCP Registry lists `1.0.9` as active and latest
+(`publishedAt: 2026-10-26T11:56:38.535824Z`). The checked-in `server.json`
 matches the published package. This repository does **not** publish packages or
 registry entries automatically.
 

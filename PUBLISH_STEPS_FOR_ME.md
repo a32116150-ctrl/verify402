@@ -1,15 +1,20 @@
 # Release verify402-mcp 1.0.9 — for me
 
-Status: prepared **2026-10-26**. This is the release of
-`verify402-mcp@1.0.9`, which removes the `@x402` client SDK from the published
-bridge (local x402 v2 payer on viem) so a clean install audits clean. Steps run
-in order. A step is marked complete only after its verification command
-returned the expected result; the facts it produced are recorded in the
-repository in step 7.
+Status: **complete, 2026-10-26**. `verify402-mcp@1.0.9` removes the `@x402`
+client SDK from the published bridge (local x402 v2 payer on viem) so a clean
+install audits clean. Every gate below was verified with the command shown:
+
+- npm `verify402-mcp@1.0.9` published; `gitHead
+  60c7b6fcffb1c1d47561577b752d9c68b8ecba16`; shasum
+  `ce1742d7b187b6881a7ba396d978de61c935750c`; clean install 123 packages,
+  `npm audit` → 0.
+- MCP Registry `1.0.9` active and latest
+  (`publishedAt: 2026-10-26T11:56:38.535824Z`).
+- GitHub release `mcp-v1.0.9` published `2026-10-26T11:58:20Z`.
+- Render reports `1.0.9`; free-only post-deploy check passed 29/29.
 
 The previous release, `1.0.8`, remains immutable on npm, in the MCP Registry,
-as GitHub release `mcp-v1.0.8`, and on Render until this release replaces it as
-`latest`.
+and as GitHub release `mcp-v1.0.8`.
 
 ## 1. Account for the immutable npm 1.0.8 and 1.0.7 packages
 

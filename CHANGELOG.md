@@ -34,6 +34,18 @@ zero audit findings.
   transaction `0x2506afa3087f86cdf64072741be77d30d92613b74143118c5b5b72ca3c5825f7`
   with an on-chain Transfer from the payer to the configured payee.
 
+### Release metadata
+
+- npm: `verify402-mcp@1.0.9`, `gitHead
+  60c7b6fcffb1c1d47561577b752d9c68b8ecba16`, shasum
+  `ce1742d7b187b6881a7ba396d978de61c935750c`.
+- MCP Registry: `1.0.9` active and latest
+  (`publishedAt: 2026-10-26T11:56:38.535824Z`).
+- GitHub: release `mcp-v1.0.9` published `2026-10-26T11:58:20Z`.
+- Render: `/info` reports `1.0.9`; free-only post-deploy check passed 29/29.
+- Clean install from the public registry: 123 packages, `npm audit` →
+  0 vulnerabilities, no `@x402` in the tree.
+
 ## 1.0.8 — 2026-10-24
 
 `verify402-mcp@1.0.8` corrects payout provenance, adds an automatic x402
