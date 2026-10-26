@@ -10,12 +10,12 @@ dedicated hot wallet funded with **Base Sepolia testnet USDC** (`eip155:84532`).
 The analysis reads mainnet chain data, but the demo never settles mainnet
 payments. The bridge never signs or sends a trade.
 
-> **Published package note:** `verify402-mcp@1.0.8` is published to npm and
+> **Published package note:** `verify402-mcp@1.0.9` is published to npm and
 > defaults paid calls to Base Sepolia testnet (`eip155:84532`) for the public
 > demo. Base mainnet (`eip155:8453`) requires an explicit `VERIFY402_NETWORKS`
 > opt-in in a separate deployment and is not enabled by this release. The
-> previously published `1.0.6` package is immutable; `1.0.5` and `1.0.4` are
-> also immutable, and `1.0.4` used Base mainnet by default. Do not republish or
+> previously published `1.0.8`, `1.0.6`, `1.0.5`, and `1.0.4` packages are
+> immutable, and `1.0.4` used Base mainnet by default. Do not republish or
 > overwrite any of them.
 
 ## Tools

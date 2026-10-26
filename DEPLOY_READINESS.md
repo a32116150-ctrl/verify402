@@ -4,10 +4,10 @@ Rule: X402_MODE=testnet only on free instances. Mainnet requires an always-on pa
 
 ## Immutable npm release boundary
 
-- Published `verify402-mcp@1.0.7` is immutable and defaults the bridge to Base Sepolia testnet (`eip155:84532`). The older `1.0.6`, `1.0.5`, and `1.0.4` artifacts are also immutable and must not be republished.
-- This source tree is `1.0.8`: it corrects payout provenance (`sellerPayoutWallets` is an allowlist; only a verified seller manifest adds `payee_payout_binding`), adds the x402 preflight hook, and sends anonymous MCP client labels.
+- Published `verify402-mcp@1.0.8` and `1.0.7` are immutable and default the bridge to Base Sepolia testnet (`eip155:84532`). The older `1.0.6`, `1.0.5`, and `1.0.4` artifacts are also immutable and must not be republished.
+- This source tree is `1.0.9`: it removes the `@x402` client SDK from the published bridge and implements the x402 v2 payer locally on viem, so a clean install audits clean. It keeps the `1.0.8` payout-provenance correction (`sellerPayoutWallets` is an allowlist; only a verified seller manifest adds `payee_payout_binding`), the x402 preflight hook, and anonymous MCP client labels.
 - `server.json` and the service manifest describe the **source** release: `VERIFY402_NETWORKS` is optional with an explicit `eip155:84532` default, and Base mainnet is an opt-in (`eip155:8453`).
-- The `1.0.8` package is published on npm, active in the MCP Registry, published as GitHub release `mcp-v1.0.8`, and deployed on Render; `/info` reports `1.0.8` and the free-only post-deploy check passed 29/29. Do not attach this source tree to the existing `1.0.7` version or move the `mcp-v1.0.7` tag.
+- The `1.0.9` package is published on npm, active in the MCP Registry, published as GitHub release `mcp-v1.0.9`, and deployed on Render; `/info` reports `1.0.9` and the free-only post-deploy check passed. Do not attach this source tree to an existing version or move an existing `mcp-v1.0.x` tag.
 
 ## Mode-aware runtime metadata and the static site
 
@@ -37,7 +37,7 @@ Rule: X402_MODE=testnet only on free instances. Mainnet requires an always-on pa
 Run after deploy:
 
 ```sh
-SMOKE_BASE_URL=<url> EXPECTED_VERSION=1.0.8 EXPECTED_MODE=testnet npm run post-deploy
+SMOKE_BASE_URL=<url> EXPECTED_VERSION=1.0.9 EXPECTED_MODE=testnet npm run post-deploy
 ```
 
 Paste the full output to the reviewer.
@@ -80,11 +80,11 @@ Common optional values:
 1. Revert the deployed commit or redeploy the previous known-good commit.
 2. Restore the previous host environment if it changed.
 3. Confirm `/health`, `/ready`, and `/preflight` work.
-4. Run `SMOKE_BASE_URL=<url> EXPECTED_VERSION=<rollback version> EXPECTED_MODE=testnet npm run post-deploy` (the default expects `1.0.8`, so a `1.0.3` rollback must state its own expected version).
+4. Run `SMOKE_BASE_URL=<url> EXPECTED_VERSION=<rollback version> EXPECTED_MODE=testnet npm run post-deploy` (the default expects `1.0.9`, so a `1.0.3` rollback must state its own expected version).
 5. If an RPC key was rotated, keep the old key until rollback is complete, then revoke it.
 
 ## Actions requiring your account access
 
 1. Open the host dashboard and set or update the environment variables listed above.
 2. Open the RPC provider dashboard and create or revoke RPC keys.
-3. `verify402-mcp@1.0.8` is published on npm and is `latest`; do not republish it. Future changes require a new patch version and a fresh release gate. Do not move the `mcp-v1.0.8` tag onto later commits.
+3. `verify402-mcp@1.0.9` is published on npm and is `latest`; do not republish it. Future changes require a new patch version and a fresh release gate. Do not move the `mcp-v1.0.9` tag onto later commits.

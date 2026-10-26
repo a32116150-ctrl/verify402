@@ -3,6 +3,37 @@
 All notable changes to verify402. This file records repository changes; it does
 not imply a deploy or an npm publish.
 
+## 1.0.9 — 2026-10-26
+
+`verify402-mcp@1.0.9` removes the `@x402` client SDK from the published bridge
+and implements the x402 v2 payer locally on `viem`. A clean install now reports
+zero audit findings.
+
+### Changed
+
+- Removed the `@x402/axios` and `@x402/evm` dependencies. They pulled a nested
+  `zod` 3.25.76 copy covered by
+  [GHSA-mrhx-c7xc-m3w5](https://github.com/advisories/GHSA-mrhx-c7xc-m3w5)
+  (memory-exhaustion DoS; every 3.x is in range, no patched 3.x exists), and npm
+  ignores `overrides` declared inside a dependency, so consumers could not clear
+  the banner. Upstream: x402-foundation/x402#3953.
+- Added `mcp-bridge/x402-client.mjs`: x402 v2 wire format
+  (`PAYMENT-REQUIRED` / `PAYMENT-SIGNATURE` / `PAYMENT-RESPONSE`), scheme
+  `exact`, EIP-3009 `transferWithAuthorization` with a random 32-byte nonce and
+  `validBefore = now + maxTimeoutSeconds`. It signs only after the unchanged
+  selection, policy, and tool-bound guard in `payment-policy.mjs` pass.
+- No change to tools, routes, prices, spend caps, network allowlists, payee
+  checks, settlement, or `/usage` labels.
+
+### Verified
+
+- Packed-tarball install: 123 packages, `npm audit` → **0 vulnerabilities**
+  (was 5–6 high).
+- 243/243 offline tests, discovery validation 35/35.
+- Live end-to-end paid call: 0.03 Base Sepolia testnet USDC settled;
+  transaction `0x2506afa3087f86cdf64072741be77d30d92613b74143118c5b5b72ca3c5825f7`
+  with an on-chain Transfer from the payer to the configured payee.
+
 ## 1.0.8 — 2026-10-24
 
 `verify402-mcp@1.0.8` corrects payout provenance, adds an automatic x402

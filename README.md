@@ -486,30 +486,35 @@ or any MCP client.
 - **Paid tools:** add a dedicated hot wallet with testnet USDC for the public
   demo (mainnet only in an explicit deployment). The bridge signs the x402
   payment only — never a trade — and enforces `MAX_PAYMENT_USD` (default $0.25)
-  inside the x402 client before a signature exists. It also requires an
+  in the pre-signature guard before any signature exists. It also requires an
   allowlisted EVM network, the verify402 payee, and a known paid resource on the
   configured server, and refuses redirects. `MAX_DAILY_USD` is optional.
-- **New in `1.0.8`:** payout provenance is no longer inferred from a
+- **New in `1.0.9`:** the bridge no longer depends on the `@x402/axios` or
+  `@x402/evm` SDK. The x402 v2 payer is implemented locally on `viem`
+  (`mcp-bridge/x402-client.mjs`), so a clean install reports **0 audit
+  vulnerabilities** instead of the nested-zod advisory carried by the SDK.
+  The wire protocol, spend guard, and paid-tool behavior are unchanged.
+- **`1.0.8` added:** payout provenance is no longer inferred from a
   caller-supplied wallet list. `policy.sellerPayoutWallets` is an allowlist;
   only a verified, seller-signed `policy.sellerPayoutManifest` adds
-  `payee_payout_binding`. The release also adds
+  `payee_payout_binding`. It also adds
   `createX402PreflightHook()` / `guardX402Payment()` to the example executor,
   and sends `X-Verify402-Client: verify402-mcp/<version>` so `/usage` can
   separate MCP bridge calls from generic HTTP. Labels are self-declared and
   spoofable, not identities.
 - **Install:** `npx -y verify402-mcp@latest` from the public npm registry
-  (currently `1.0.8`). For a pinned install of the published package, use
-  `npx -y verify402-mcp@1.0.8`; its npm tarball is
-  `https://registry.npmjs.org/verify402-mcp/-/verify402-mcp-1.0.8.tgz`. No npm
+  (currently `1.0.9`). For a pinned install of the published package, use
+  `npx -y verify402-mcp@1.0.9`; its npm tarball is
+  `https://registry.npmjs.org/verify402-mcp/-/verify402-mcp-1.0.9.tgz`. No npm
   account is required to run the published package. Client configs, the exact
   OpenCode V2 shape, and the release command are at
-  [`/mcp`](https://verify402.onrender.com/mcp). The published `1.0.8`
+  [`/mcp`](https://verify402.onrender.com/mcp). The published `1.0.9`
   defaults paid calls to Base Sepolia testnet (`eip155:84532`) for the public
   demo; Base mainnet (`eip155:8453`) requires an explicit `VERIFY402_NETWORKS`
   opt-in in a separate deployment and is not enabled by this release. The
-  immutable `1.0.7` package remains published; the older `1.0.6` package
-  remains installable, and `1.0.4` predates the testnet default and used Base
-  mainnet. The official MCP Registry lists `1.0.8` as active
+  immutable `1.0.8` and `1.0.7` packages remain published; the older `1.0.6`
+  package remains installable, and `1.0.4` predates the testnet default and
+  used Base mainnet. The official MCP Registry lists `1.0.9` as active
   (`isLatest: true`).
 
 ## Settlement, response delivery, and recovery (honest contract)

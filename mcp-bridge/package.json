@@ -1,6 +1,6 @@
 {
   "name": "verify402-mcp",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "mcpName": "io.github.a32116150-ctrl/verify402-mcp",
   "description": "MCP server for verify402: a free, fail-closed preflight gate before signing, plus five paid on-chain checks paid per call via x402.",
   "type": "module",

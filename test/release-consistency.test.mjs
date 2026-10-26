@@ -136,15 +136,15 @@ test("release metadata uses one version across package, lockfile, registry, mani
   );
 });
 
-test("MCP Registry metadata truthfully describes the published 1.0.8 release", () => {
+test("MCP Registry metadata truthfully describes the published 1.0.9 release", () => {
   const server = json("server.json");
   const env = server.packages?.[0]?.environmentVariables ?? [];
   const network = env.find((entry) => entry.name === "VERIFY402_NETWORKS");
   assert.ok(network, "server.json must document VERIFY402_NETWORKS");
 
-  // The registry entry describes the published 1.0.8 release. Its built-in
+  // The registry entry describes the published 1.0.9 release. Its built-in
   // runtime default is Base Sepolia testnet; Base mainnet is an explicit opt-in.
-  assert.equal(Object.hasOwn(network, "default"), true, "server.json must declare the 1.0.8 default network");
+  assert.equal(Object.hasOwn(network, "default"), true, "server.json must declare the 1.0.9 default network");
   assert.equal(network.default, DEMO_NETWORK);
   assert.equal(network.isRequired, false, "the safe Base Sepolia default means configuration is optional");
   assert.match(network.description, /Base Sepolia/);
@@ -454,7 +454,7 @@ test("payment proof documentation uses PAYMENT-SIGNATURE and preserves the legac
   assert.equal(example.payment.asset, TESTNET_USDC);
 });
 
-test("public install docs pin the published package 1.0.8", () => {
+test("public install docs pin the published package 1.0.9", () => {
   for (const rel of [
     "README.md",
     "examples/ONBOARDING.md",
@@ -491,7 +491,7 @@ test("public install docs pin the published package 1.0.8", () => {
   assert.match(registry.pathname, /\/versions$/, "registry URL must resolve before and after the manual publish");
 });
 
-test("public surfaces describe 1.0.8 as published and never link a non-existent tag", () => {
+test("public surfaces describe 1.0.9 as published and never link a non-existent tag", () => {
   for (const rel of [
     "README.md",
     "examples/ONBOARDING.md",
@@ -512,7 +512,7 @@ test("public surfaces describe 1.0.8 as published and never link a non-existent 
   }
 });
 
-test("registry metadata describes the published 1.0.8 package without claiming registry publication", () => {
+test("registry metadata describes the published 1.0.9 package without claiming registry publication", () => {
   const server = json("server.json");
   assert.equal(server.version, RELEASE_VERSION);
   const pkg = server.packages[0];

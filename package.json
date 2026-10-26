@@ -1,6 +1,6 @@
 {
   "name": "verify402",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "private": true,
   "type": "module",
   "description": "A machine-payable truth service: AI agents pay per call via x402 for a rigorous verdict on whether an arbitrage opportunity is real.",

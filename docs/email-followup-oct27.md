@@ -21,17 +21,19 @@ recipient replied in the meantime, answer that reply instead of sending this.
 ## 1. Glama — listing correction
 
 **To:** `support@glama.ai`
-**Subject:** Re: verify402 MCP listing — 1.0.8 is current (ticket #148620911)
+**Subject:** Re: verify402 MCP listing — 1.0.9 is current (ticket #148620911)
 
 ```text
 Hi Glama team — following up once on ticket #148620911.
 
 The listing still points at verify402-mcp 1.0.2. The current npm release is
-1.0.8, and the install command is:
+1.0.9, and the install command is:
 
   npx -y verify402-mcp@latest
 
-The 1.0.8 release adds caller-supplied payout allowlists, obligation checks
+The 1.0.9 release removes the `@x402` SDK from the bridge (the payer is now
+implemented locally on viem, so `npm audit` is clean) and keeps the earlier
+caller-supplied payout allowlists, obligation checks
 (caller-supplied idempotency key and cumulative spend/grant), and a receipt
 binding that an executor can verify before signing. The listing description
 does not need to change; only the version/tarball reference does.
@@ -44,8 +46,9 @@ No rush, and no need to reply if the queue already has this. Thanks.
 — verify402
 ```
 
-**Why this one:** transactional, not a pitch. It corrects a stale version that
-misleads anyone installing from the directory.
+**Why this one:** transactional, not a pitch. Check first: Glama synced to
+1.0.8 on 2026-10-24 (ticket #148620911), so send this only if the listing is
+still behind `latest`; otherwise use this slot for a tester follow-up.
 
 ---
 
