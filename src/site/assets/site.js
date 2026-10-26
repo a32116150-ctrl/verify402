@@ -80,8 +80,9 @@
     }).catch(function () {});
   }
 
-  // Live free verdicts: fill any [data-findings] list from GET /findings.
+  // Free verdicts: fill any [data-findings] list from GET /findings.
   // The nav block label is updated on every page, with or without a card.
+  // The label says snapshot + block + age honestly; it is not a live stream.
   // One retry covers a cold free-tier instance; after that, say so honestly.
   var lists = document.querySelectorAll("[data-findings]");
   var statuses = document.querySelectorAll("[data-block]");
@@ -89,8 +90,9 @@
 
   function render(d) {
     var block = d.blockNumber || "—";
-    var label = "block " + block;
-    if (d.ageSeconds > 90) label += " · cached";
+    var age = Number(d.ageSeconds);
+    var label = "block " + block + (Number.isFinite(age) ? " · " + age + "s old" : "");
+    if (d.stale) label += " · stale";
     statuses.forEach(function (s) { s.textContent = label; });
     var items = d.results || [];
     lists.forEach(function (list) {

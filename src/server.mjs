@@ -1010,13 +1010,14 @@ async function measureFindingPair(target) {
         gas: {
           units: r.costs.gasUnits,
           priceGwei: r.costs.gasPriceGwei,
+          pricePinned: false,
           tokenUsd: r.costs.gasTokenUsd,
           usd: r.costs.gasUsd,
         },
         flashLoanPremiumBps: r.costs.flashLoanPremiumBps,
       },
       method:
-        "exact-input quote at the pinned block: buy then sell through the named venue routers, net = gross - gasUsd - flashLoanPremium. Re-quote both legs at blockNumber with any RPC to re-derive grossBps/netBps.",
+        "exact-input quote at the pinned block: buy then sell through the named venue routers, net = gross - gasUsd - flashLoanPremium. The gas price is sampled at measurement time, not from blockNumber (getGasPrice() has no block tag); re-derive grossBps/netBps by re-quoting both legs at blockNumber and sampling gas again.",
     };
     findingsPairs.set(target, { at: Date.now(), row });
     return row;
