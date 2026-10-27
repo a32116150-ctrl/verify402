@@ -1,7 +1,7 @@
 target,route,address_or_url,segment,why,status,next_action
-Glama,email,support@glama.ai,listing,Listing still points at the 1.0.2 tarball; current is 1.0.8,sent 2026-10-23,Ticket #148620911 auto-ack; wait for update/human reply; one follow-up 4-7 days; cite 1.0.8
+Glama,email,support@glama.ai,listing,Listing still points at the 1.0.2 tarball; current is 1.0.8,sent 2026-10-23; followed up 2026-10-27 in-thread,Listing synced to 1.0.8 by send date (still behind 1.0.9); wait; no second follow-up
 PulseMCP,email,hello@pulsemcp.com,directory,Directory + The Agentic Loop; submissions are paused,sent 2026-10-23,Wait; one follow-up 4-7 days
-Cloudflare x402 team,email,x402@cloudflare.com,protocol,Cloudflare co-launched the x402 Foundation; closest team to the protocol,sent 2026-10-23,Wait for reply; one follow-up 4-7 days
+Cloudflare x402 team,email,x402@cloudflare.com,protocol,Cloudflare co-launched the x402 Foundation; closest team to the protocol,sent 2026-10-23; followed up 2026-10-27 in-thread,Wait for reply; no second follow-up
 Solana Foundation,email,hello@solana.com,ecosystem,Demo accepts Solana devnet payment challenges; simulation is EVM-only,sent 2026-10-23,Wait; one follow-up 4-7 days
 Base,form,https://www.base.org/contact-us,ecosystem,Base Sepolia demo + Base mainnet analysis,ready,Submit form copy after email round
 Ethereum Foundation ESP,form,https://esp.ethereum.foundation/applicants,grant,Public-good grant fit; open grants paused in 2025,paused-check,Verify current program status before submitting
@@ -10,12 +10,12 @@ kvnya Auditor,platform,MoltJobs Seven rails thread,warm,Already engaged with ver
 SameDayDesk,platform,MoltJobs launch thread,warm,Previous audit exchange; low-pressure follow-up,ready,Reply only if the thread is active
 Imperium X402 Broker,platform,MoltJobs thread 91415b7c,warm,Already replied 3553c6cf,waiting,No action unless they respond
 NLnet,none,form only,grant,Policy explicitly excludes AI-generated projects,do-not-contact,Do not email
-MetaMask,email,hello@metamask.io,wallet,Ships the approval warnings users see before signing,sent 2026-10-23,Wait; one follow-up 4-7 days
+MetaMask,email,hello@metamask.io,wallet,Ships the approval warnings users see before signing,sent 2026-10-23; followed up 2026-10-27 in-thread,Wait; no second follow-up
 WalletConnect,email,contact@walletconnect.com,wallet,Sits between dapps and wallets at the signing boundary,sent 2026-10-23,Wait; one follow-up 4-7 days
 Circle,email,devmarketing@circle.com,stablecoin,USDC is the demo asset; developer marketing can route,sent 2026-10-23,Wait; one follow-up 4-7 days
-OpenZeppelin,email,contact@openzeppelin.com,security,Maintains approval/security tooling; falsification test,sent 2026-10-23,Wait; one follow-up 4-7 days
+OpenZeppelin,email,contact@openzeppelin.com,security,Maintains approval/security tooling; falsification test,sent 2026-10-23; followed up 2026-10-27 in-thread,Auto-acked receipt Oct 23; wait; no second follow-up
 Offchain Labs,email,info@offchain.io,ecosystem,Arbitrum 42161 is supported by the transaction gate,sent 2026-10-23,Wait; one follow-up 4-7 days
-Privy,email,hi@privy.io,wallet,Embedded wallets sign without a wallet UI to catch a bad approval,sent 2026-10-23 via Resend,Wait; one follow-up 4-7 days
+Privy,email,hi@privy.io,wallet,Embedded wallets sign without a wallet UI to catch a bad approval,sent 2026-10-23 via Resend; followed up 2026-10-27 via Resend,Resend id 01a17ad5-bd4d-7056-8df4-1205d3bd80f9; wait; no second follow-up
 Safe,email,info@safe.global,wallet,Smart-account wallet; nested execTransaction calldata,bounced 2026-10-23,Address published on imprint but 550 no such user; use contact form or drop
 Rabby,email,support@rabby.io,wallet,Ships transaction previews before signing,sent 2026-10-23 via Resend,Wait; one follow-up 4-7 days
 Rainbow,email,hello@rainbow.me,wallet,Consumer wallet at the signing screen,sent 2026-10-23 via Resend,Wait; one follow-up 4-7 days

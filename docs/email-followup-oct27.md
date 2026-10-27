@@ -1,7 +1,8 @@
 # Follow-up wave — Oct 27–30, 2026
 
-**Status:** prepared, not sent. The first campaign emails went out **2026-10-23**.
-This is the one allowed follow-up per recipient, 4–7 days later.
+**Status:** **sent 2026-10-27** (one batch, within the Oct 27–30 window). The
+first campaign emails went out **2026-10-23**. This is the one allowed
+follow-up per recipient, 4 days later. Send receipt below.
 
 **Rules**
 
@@ -182,11 +183,24 @@ not a product pitch. The message explicitly disclaims an audit ask.
 
 | Target | Address | Send date | Reply | Outcome | Next |
 |---|---|---|---|---|---|
-| Glama | support@glama.ai |  |  |  |  |
-| Cloudflare x402 | x402@cloudflare.com |  |  |  |  |
-| MetaMask | hello@metamask.io |  |  |  |  |
-| Privy | hi@privy.io |  |  |  |  |
-| OpenZeppelin | contact@openzeppelin.com |  |  |  |  |
+| Glama | support@glama.ai | 2026-10-27 (in-thread reply, msg `<010001a17ad27c0d...>`) |  |  | wait; no second follow-up |
+| Cloudflare x402 | x402@cloudflare.com | 2026-10-27 (in-thread reply, msg `<010001a17ad27fd9...>`) |  |  | wait; no second follow-up |
+| MetaMask | hello@metamask.io | 2026-10-27 (in-thread reply, msg `<010001a17ad2818b...>`) |  |  | wait; no second follow-up |
+| Privy | hi@privy.io | 2026-10-27 (new message via Resend, id `01a17ad5-bd4d-7056-8df4-1205d3bd80f9`) |  |  | wait; no second follow-up |
+| OpenZeppelin | contact@openzeppelin.com | 2026-10-27 (in-thread reply, msg `<010001a17ad28141...>`) |  |  | wait; no second follow-up |
+
+**Send receipt (2026-10-27):** all five sent as one batch. Glama, Cloudflare,
+MetaMask, OpenZeppelin replied in-thread via AgentMail (threads kept, subjects
+unchanged); Privy had no AgentMail thread (original went via Resend), so a new
+message with a "Following up:" subject was sent from
+`verify402 <verify402@anoir.space>`, Reply-To `sankou7-1754@agentmail.to`
+(Resend id `01a17ad5-bd4d-7056-8df4-1205d3bd80f9`). Pre-send checks: no human
+replies anywhere (Glama ack = Intercom auto-ticket #148620911; OpenZeppelin
+auto-ack = receipt confirmation; OpenZeppelin's original `bounced` label
+contradicted by the received confirmation, message delivered). Two accuracy
+fixes vs. the drafted text: Glama body updated 1.0.2 → "has since synced to
+1.0.8, still one behind 1.0.9" (verified live on glama.ai before sending);
+OpenZeppelin typo "a endorsement" → "an endorsement".
 
 After Oct 30, the remaining wave-1 recipients can get the same one-follow-up
 treatment if they have not replied. Do not send a second follow-up to anyone.
