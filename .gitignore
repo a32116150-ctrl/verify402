@@ -2,3 +2,5 @@ node_modules/
 # Local secrets. This pattern matches .env at any depth, including mcp-bridge/.env.
 .env
 .DS_Store
+# Dev-default SQLite store for settlement recovery (RECOVERY_DB_PATH unset).
+.data/

@@ -23,6 +23,7 @@ export const HEALTH_OK_KEYS = Object.freeze([
   "preflight",
   "networks",
   "ready",
+  "recoveryStore",
 ]);
 
 export const READY_OK_KEYS = Object.freeze([

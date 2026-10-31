@@ -519,10 +519,14 @@ or any MCP client.
 
 ## Settlement, response delivery, and recovery (honest contract)
 
-> **Process-local state (important):** recovery records and `/usage` counters live
-> only in this process. A restart or deploy loses both: a previously settled
-> idempotency key may be charged again, and usage counts reset. Neither is
-> shared across instances.
+> **Recovery state (read this before relying on it):** with `RECOVERY_DB_PATH` set, the
+> recovery store is a write-ahead SQLite file — a staged payment is journaled to disk
+> *before* the facilitator settlement call — so a settled verdict and its replay counter
+> survive a restart, a redeploy, or a SIGKILL, and a caller retrying after a lost response
+> is not charged again. Without the variable the service keeps the historical memory-only
+> behavior: a restart loses the records, and a previously settled key may be charged again.
+> `/usage` counters are process-local in both modes. The store is **single-instance by
+> construction**: one server process per database file (see `DEPLOY.md` §3.1).
 
 - **Delivery:** the verdict is returned inside the settlement response — the paid answer
   arrives together with the payment confirmation (testnet receipt: tx
@@ -542,15 +546,20 @@ or any MCP client.
     until the 10-minute window closes or the 3-replay cap is reached. Do not put it in
     logs, URLs, screenshots, or public issue reports. If it leaks, use a new key for the
     next operation; the old key cannot be revoked except by the short TTL/cap.
-  - **What recovery does not guarantee:** it is not a durable ledger and does not
-    survive a process restart; it does not prove payment, refund a failed call, replay
-    after the TTL or cap, cross instances, or recover a response if the caller lost the
-    key. `/usage` counters are likewise process-local and reset on restart. Recovery
-    only returns the exact settled response bytes while the record is live.
+  - **What recovery does not guarantee:** it does not prove payment, refund a failed call, replay
+    after the TTL or cap, or recover a response if the caller lost the key. Durability (with
+    `RECOVERY_DB_PATH`) covers the verdict and its replay budget only — not `/usage` counters —
+    and it is not a cross-instance ledger: one database file, one server process. Without the
+    variable, recovery does not survive a restart at all.
   - **Concurrent retries:** the first same-key request reserves the key before the
     paywall. A second request gets a typed `409 recovery_conflict` with
     `code: operation_in_flight`, or `settlement_pending` while a staged settlement is
-    unresolved. The reservation is in-process and is lost on restart, like the records.
+    unresolved. Without a durable store the reservation is in-process and lost on restart;
+    with `RECOVERY_DB_PATH` the staged row survives the restart and stays unreplayable until
+    reconciliation resolves it (on-chain `authorizationState(payer, nonce)` check — see
+    `DEPLOY.md` §3.1). If the store cannot journal a payment, the paid route answers
+    `503 recovery_unavailable` instead of settling unrecorded; `/health` reports the store as
+    `ok`, `unavailable`, or `memory-only`.
   - **Settlement-gated (fail-closed):** a verdict record only becomes replayable
     **after the facilitator confirms the settlement** (official x402 `onAfterSettle`
     hook). Promotion is keyed on a server-generated `operationId` carried in the
@@ -581,7 +590,10 @@ or any MCP client.
     a different key with a known body, the victim's replay budget under forged traffic, and
     legitimate replay. Two staged operations with byte-identical output do not cross-promote;
     promotion is refused on failed/pending settle, a missing/empty transaction, or a missing
-    `operationId`.
+    `operationId`. `test/recovery-durable.test.mjs` does the same across **fresh processes and
+    real SQLite files**: SIGKILL after staging, a corrupt database, a locked database, restart
+    reconciliation of a staged record, and the mainnet start guard that refuses to boot without
+    `RECOVERY_DB_PATH`.
 - **Evidence bundle — implemented (`verify402/evidence-bundle@1`):** every paid response
   carries `evidence_bundle: { requestHash, responseHash, pinnedBlock, mode, createdAt,
   payment.in }`. Both hashes are sha256 over canonical JSON (keys sorted recursively, no

@@ -5,6 +5,7 @@
 // Complies with official OpenAPI 3.1 specification (https://spec.openapis.org/oas/v3.1.0.html).
 
 import { IDEMPOTENCY_MAX_REPLAYS, IDEMPOTENCY_TTL_MS } from "./recovery.mjs";
+import { statePersistence } from "./recovery-persistence.mjs";
 import { DEFAULT_TTL_SECONDS, MAX_TTL_SECONDS, MIN_TTL_SECONDS, RECEIPT_SPEC } from "./preflight.mjs";
 import { DEFAULT_SIZE } from "./config.mjs";
 import { RELEASE_VERSION } from "./version.mjs";
@@ -215,8 +216,7 @@ export function buildOpenapi(prices, { mode = "testnet", baseUrl = DEMO_BASE_URL
       description: rail.openapiDescription,
       "x-guidance":
         "Call POST /preflight for free before signing any payment request or raw transaction. It answers PASS/CAUTION/BLOCK with typed reasons, checked/notChecked lists, and a 90-second HMAC receipt. For market truth questions, use the paid POST routes (/verify, /safety, /route, /quotecheck, /depth). Paid routes use x402 exact settlement (0.03-0.10 USDC) and return an evidence_bundle with pinnedBlock, requestHash, and responseHash for cryptographic auditability. The 402 challenge is authoritative for prices and the payment network. CORS: free read-only discovery GET/HEAD/OPTIONS routes allow any origin; POST /preflight and paid routes send no Access-Control-Allow-Origin, so browser-based agents must use a server-side client, the MCP bridge, or an SDK.",
-      "x-state-persistence":
-        "Recovery records and /usage counters are process-local and lost on restart or deploy; they are not shared across instances. A previously settled idempotency key may be charged again after a restart.",
+      "x-state-persistence": statePersistence().warning,
       contact: {
         name: "verify402 Maintainers",
         url: "https://github.com/a32116150-ctrl/verify402",
@@ -244,7 +244,7 @@ export function buildOpenapi(prices, { mode = "testnet", baseUrl = DEMO_BASE_URL
           tags: ["Discovery"],
           operationId: "getHealth",
           summary: "Liveness and network configuration check",
-          description: "Liveness only: this endpoint does not read the chain. Returns the runtime mode, current /verify price, free-preflight marker, settlement-network label, and the readiness path. Free, no authentication.",
+          description: "Liveness only: this endpoint does not read the chain. Returns the runtime mode, current /verify price, free-preflight marker, settlement-network label, the readiness path, and the durable settlement recovery store state. Free, no authentication.",
           responses: {
             200: {
               description: "Service is healthy and reachable.",
@@ -260,6 +260,7 @@ export function buildOpenapi(prices, { mode = "testnet", baseUrl = DEMO_BASE_URL
                       preflight: { type: "string", example: "free" },
                       networks: { type: "string", example: rail.label },
                       ready: { type: "string", example: "/ready" },
+                      recoveryStore: { type: "string", enum: ["ok", "unavailable", "memory-only"], description: "Durable settlement recovery store state. ok = durable journal healthy; unavailable = fail-closed on paid routes; memory-only = no RECOVERY_DB_PATH configured." },
                     },
                   },
                 },
@@ -365,8 +366,8 @@ export function buildOpenapi(prices, { mode = "testnet", baseUrl = DEMO_BASE_URL
                         type: "object",
                         required: ["scope", "lostOnRestart"],
                         properties: {
-                          scope: { type: "string", const: "process-local" },
-                          lostOnRestart: { type: "boolean", const: true },
+                          scope: { type: "string", enum: ["process-local", "durable-single-instance"] },
+                          lostOnRestart: { type: "boolean" },
                         },
                       },
                       readiness: {

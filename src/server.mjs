@@ -23,7 +23,7 @@ import { HTTPFacilitatorClient } from "@x402/core/server";
 import { createCdpFacilitatorClient } from "@coinbase/cdp-sdk/x402";
 import { declareDiscoveryExtension } from "@x402/extensions/bazaar";
 
-import { measureRoundTrip, clientFor, readinessProbe, isHardQuoteFailure } from "./measure.mjs";
+import { measureRoundTrip, clientFor, readinessProbe, readinessClientFor, isHardQuoteFailure } from "./measure.mjs";
 import { preTradeCheck } from "./safety.mjs";
 import { fairQuoteCheck, bestRouteBook, parseRawPositive } from "./quotecheck.mjs";
 import { depthProfile } from "./depth.mjs";
@@ -40,7 +40,11 @@ import {
   reserveRecovery, releaseRecovery,
   evidenceBundle, requestHash, expiredRecoveryInfo,
   validateIdempotencyKey,
+  reconciliationState, reconcileStagedEntry, reconcileStagedOnStartup,
+  setRecoveryPaymentChecker, recoveryStoreHealth,
 } from "./recovery.mjs";
+import { RecoveryStoreError, closeRecoveryStore } from "./recovery-store.mjs";
+import { setDurableRecovery, statePersistence, recoveryDoesNotGuarantee, persistenceLine } from "./recovery-persistence.mjs";
 import {
   preflight, verifyReceipt, PreflightError,
   PREFLIGHT_SPEC, RECEIPT_SPEC, RECEIPT_SECRET_SOURCE,
@@ -97,6 +101,11 @@ if (MODE === "mainnet" && !String(process.env.PREFLIGHT_SECRET || "").trim()) {
   process.exit(1);
 }
 
+// Durable settlement recovery store: explicit, persistent path. Mainnet
+// requires it (guard below); other modes default to memory-only unless set —
+// see DEPLOY.md. Recovery.mjs performs the actual open + startup load.
+const RECOVERY_DB_PATH = process.env.RECOVERY_DB_PATH || null;
+
 if (MODE === "mainnet") {
   const alwaysOnConfirmed =
     String(process.env.MAINNET_ALWAYS_ON_CONFIRMED || "").trim().toLowerCase() === "yes" ||
@@ -109,6 +118,34 @@ if (MODE === "mainnet") {
     logError("REFUSING TO START: ALLOW_MAINNET_ON_FREE_TIER must not be set. Mainnet is not allowed on a free tier.");
     process.exit(1);
   }
+  // Mainnet money records must survive a restart. The durable recovery store
+  // (src/recovery-store.mjs, bootstrapped in recovery.mjs) is required,
+  // explicitly configured, and must have opened cleanly. There is no implicit
+  // default path: an unset variable refuses at boot.
+  if (!RECOVERY_DB_PATH) {
+    logError("REFUSING TO START: X402_MODE=mainnet requires RECOVERY_DB_PATH — a persistent, writable path for the settlement recovery store. Without it a restart could charge a caller twice. There is no default; do not point mainnet at a development path such as .data.");
+    process.exit(1);
+  }
+}
+
+// The recovery store opened (or failed) during recovery.mjs module bootstrap.
+// Mainnet refuses to run without a healthy durable store; other modes stay up
+// (the free gate must serve) but fail closed on paid routes until it is
+// healthy again — 503 recovery_unavailable.
+if (RECOVERY_DB_PATH && MODE === "mainnet") {
+  const health = recoveryStoreHealth();
+  if (!health.enabled || !health.healthy) {
+    logError(`REFUSING TO START: RECOVERY_DB_PATH=${RECOVERY_DB_PATH} did not open as a healthy SQLite store: ${health.lastError ?? "unknown error"}. Mainnet cannot run without durable settlement recovery.`);
+    process.exit(1);
+  }
+}
+
+// Publish the persistence mode this process actually runs in. Without this,
+// /info, /openapi.json and the manifest would keep describing the default
+// memory-only behaviour even on an instance with a healthy durable store.
+{
+  const rs = recoveryStoreHealth();
+  setDurableRecovery(rs.enabled && rs.healthy);
 }
 
 const NETWORKS = { evm: RAIL.evmNetwork, svm: RAIL.svmNetwork, label: RAIL.label };
@@ -308,6 +345,38 @@ app.use((req, res, next) => {
       });
     }
     if (found?.pending) {
+      if (found.pending === "reconciliation_required") {
+        // Past the stage TTL with the settle outcome unknown: the payment may
+        // already have settled. Never expire into "charge again" without an
+        // on-chain check — reconcile (EIP-3009 authorizationState), and until
+        // it resolves answer pending; if the check itself failed, fail closed
+        // with 503 recovery_unavailable.
+        const state = reconciliationState(found.operationId);
+        if (state === "unknown") {
+          void reconcileStagedEntry(found.operationId).catch(() => {});
+        }
+        const h = honestFailure(req.path, null);
+        if (state === "failed") {
+          res.set("Cache-Control", "no-store");
+          return res.status(503).json({
+            error: "recovery_unavailable",
+            code: "recovery_unavailable",
+            message: "the payment for this idempotency key could not be reconciled on-chain; refusing to accept a second payment for it — retry later, or use a new key to start a fresh operation",
+            requestId: req.requestId,
+            ...h,
+          });
+        }
+        res.set("Cache-Control", "no-store");
+        res.set("Retry-After", "1");
+        return res.status(409).json({
+          error: "recovery_conflict",
+          code: "settlement_pending",
+          conflict: "operation_in_flight",
+          message: "a staged payment for this idempotency key has an unresolved settle outcome; it is being reconciled on-chain and will resolve to a replay or a fresh payment — do not pay again until it resolves",
+          requestId: req.requestId,
+          ...h,
+        });
+      }
       const h = honestFailure(req.path, null);
       res.set("Cache-Control", "no-store");
       res.set("Retry-After", "1");
@@ -365,6 +434,67 @@ app.use((req, res, next) => {
   next();
 });
 
+// How to reconcile this payment on-chain if the process restarts before the
+// settle hook fires: decode the (middleware-verified) x-payment envelope and
+// keep the EIP-3009 authorization identity — payer `from`, `nonce`, and the
+// `validBefore` settle deadline. Nothing here is trusted for AUTHORIZATION
+// (C-1 stands: the key is the only credential); the payer/nonce are used only
+// as arguments to a token-contract view call whose answer is ground truth.
+// Returns null when the header is absent (bypass mode), undecodable, or not
+// an EVM exact authorization (e.g. Solana) — those records fail closed on
+// reconciliation instead.
+function paymentRefFromRequest(req, core) {
+  try {
+    const chainId = Number(core?.chainId);
+    const token = CHAINS[chainId]?.tokens?.USDC?.address;
+    const raw = req.get("x-payment");
+    if (!token || !raw) return null;
+    const env = JSON.parse(Buffer.from(raw, "base64").toString("utf8"));
+    const auth = env?.payload?.authorization ?? env?.authorization;
+    const nonce = auth?.nonce;
+    const payer = auth?.from;
+    if (typeof payer !== "string" || !/^0x[0-9a-fA-F]{40}$/.test(payer)) return null;
+    if (typeof nonce !== "string" || !/^0x[0-9a-fA-F]{64}$/.test(nonce)) return null;
+    const validBefore = Number(auth?.validBefore);
+    return {
+      chainId,
+      token,
+      payer,
+      nonce,
+      validBefore: Number.isFinite(validBefore) ? validBefore : null,
+      network: env?.x402?.network ?? env?.network ?? `eip155:${chainId}`,
+    };
+  } catch {
+    return null;
+  }
+}
+
+// EIP-3009 reconciliation: the token contract itself is the ground truth for
+// "did this payment settle". USDC (the settlement asset on every route) exposes
+// authorizationState(authorizer, nonce) as a free view call. The readiness
+// client is reused: short timeout, no retries, no new dependency.
+const EIP3009_AUTHORIZATION_STATE_ABI = [{
+  name: "authorizationState",
+  type: "function",
+  stateMutability: "view",
+  inputs: [
+    { name: "authorizer", type: "address" },
+    { name: "nonce", type: "bytes32" },
+  ],
+  outputs: [{ name: "used", type: "bool" }],
+}];
+setRecoveryPaymentChecker(async ({ chainId, token, payer, nonce }) => {
+  readinessChain(chainId);
+  const client = readinessClientFor(chainId);
+  const used = await client.readContract({
+    address: token,
+    abi: EIP3009_AUTHORIZATION_STATE_ABI,
+    functionName: "authorizationState",
+    args: [payer, nonce],
+  });
+  return Boolean(used);
+});
+
 // Shared exit path for the paid handlers: attach the honesty contract and the
 // standard evidence bundle, remember the settlement under the caller's
 // idempotency key (if provided), then send. `core` is the handler's result;
@@ -404,10 +534,25 @@ function emitPaid(req, res, core) {
     // operation identity. In local bypass mode there is no settlement to wait
     // for, so the record promotes immediately (same loud warning as the
     // paywall bypass: local testing only).
-    recordSettlement(req.idempotencyKey, full, null, {
-      settledNow: BYPASS_PAYMENT,
-      requestHash: bundle.requestHash,
-    });
+    //
+    // WRITE-AHEAD: with RECOVERY_DB_PATH set, recordSettlement journals the
+    // staged record to SQLite (WAL, synchronous=FULL) right here — before the
+    // middleware submits the settlement after this handler returns. If that
+    // journaling fails, fail closed: no verdict, no settlement, 503.
+    try {
+      recordSettlement(req.idempotencyKey, full, null, {
+        settledNow: BYPASS_PAYMENT,
+        requestHash: bundle.requestHash,
+        paymentRef: paymentRefFromRequest(req, clean),
+      });
+    } catch (e) {
+      if (e instanceof RecoveryStoreError) {
+        return paidFail(req, res, 503, "recovery_unavailable",
+          "the settlement journal is unavailable; no verdict was issued and no payment should be made for this request",
+          { log: e });
+      }
+      throw e;
+    }
   }
   res.json(full);
 }
@@ -1264,7 +1409,7 @@ app.get("/", (req, res) => {
       "Send x-idempotency-key on the first call: within 10 min a retry of a paid call",
       "replays the SAME verdict with no second charge (3 replays max). Use crypto.randomUUID();",
       "weak keys are rejected with 400 weak_idempotency_key. The key is a secret: a leaked key",
-      "allows replay until the TTL/cap. Recovery records and /usage counters are process-local and lost on restart/deploy; state is not shared across instances.",
+      "allows replay until the TTL/cap. " + persistenceLine(),
       "Every paid response carries an evidence_bundle (requestHash/responseHash/pinnedBlock).",
       "",
     ].join("\n"),
@@ -1272,7 +1417,11 @@ app.get("/", (req, res) => {
 });
 
 app.get("/health", (_req, res) => {
-  res.json({ ok: true, mode: MODE, price: PRICE, preflight: "free", networks: NETWORKS.label, ready: "/ready" });
+  const rs = recoveryStoreHealth();
+  res.json({
+    ok: true, mode: MODE, price: PRICE, preflight: "free", networks: NETWORKS.label, ready: "/ready",
+    recoveryStore: rs.enabled ? (rs.healthy ? "ok" : "unavailable") : "memory-only",
+  });
 });
 
 // Readiness is a DEEP check: read the latest block with a short timeout. A
@@ -1324,12 +1473,7 @@ app.get("/info", (_req, res) => {
       scope: "this process instance; resets on restart or deploy",
       note: "Anonymous free-gate call counts. Not a unique-agent count; paid settlements are the identity-backed signal.",
     },
-    state_persistence: {
-      scope: "process-local",
-      lostOnRestart: true,
-      appliesTo: ["recovery", "/usage"],
-      warning: "Recovery records and /usage counters are process-local: they live only in this process. A restart or deploy loses both: a previously settled idempotency key may be charged again, and usage counts reset. State is not shared across instances.",
-    },
+    state_persistence: statePersistence(),
     hosting: buildInfoHosting(MODE),
     payment: {
       protocol: "x402",
@@ -1532,7 +1676,7 @@ app.get("/info", (_req, res) => {
       afterWindow: "expired verdicts leave a tombstone holding the previous responseHash for 6 hours; a retry re-measures with the paywall re-armed and the response carries recovery.remeasured + previousResponseHash so agents can branch instead of guessing",
       delegatedSpend: "the caps here are client-side for the signer that constructs the payment; spend through wallets delegated to OTHER agents is outside this contract and governed by the delegating owner's own controls",
       warn: "The key is the caller's secret: whoever presents it can replay the verdict for free until the TTL/replay cap. Do not log it publicly. A leaked key cannot be revoked; use a new key for the next operation.",
-      doesNotGuarantee: "Recovery is not a durable ledger and does not survive a restart; recovery and usage state are process-local and lost on restart/deploy, so it does not prove payment, refund a failed call, cross instances, or replay after the TTL/cap, and it cannot help if the caller lost the key.",
+      doesNotGuarantee: recoveryDoesNotGuarantee(),
     },
     evidence_bundle: {
       spec: "verify402/evidence-bundle@1",
@@ -1882,7 +2026,17 @@ export { app };
 
 const IS_MAIN = Boolean(process.argv[1]) && import.meta.url === pathToFileURL(process.argv[1]).href;
 if (IS_MAIN) {
-  const server = app.listen(PORT, () => {
+  (async () => {
+    // Before accepting traffic: reconcile every staged payment loaded from the
+    // durable store. A payment that settled while the process was down
+    // promotes here (replayable), instead of risking a second charge.
+    try {
+      const n = await reconcileStagedOnStartup();
+      if (n > 0) logInfo(`recovery startup: reconciled ${n} staged operation(s) from the durable store`);
+    } catch (e) {
+      logWarn(`recovery startup reconciliation errored: ${e?.message ?? e}`);
+    }
+    const server = app.listen(PORT, () => {
     const address = server.address();
     const listeningPort = address && typeof address === "object" ? address.port : PORT;
     logInfo(`\nverify402 listening on http://localhost:${listeningPort}`);
@@ -1925,6 +2079,7 @@ if (IS_MAIN) {
         logError("graceful shutdown failed", err);
         process.exit(1);
       }
+      closeRecoveryStore();
       logInfo("graceful shutdown complete");
       process.exit(0);
     });
@@ -1933,4 +2088,5 @@ if (IS_MAIN) {
   }
   process.once("SIGTERM", () => shutdown("SIGTERM"));
   process.once("SIGINT", () => shutdown("SIGINT"));
+  })();
 }

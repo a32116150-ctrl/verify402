@@ -3,6 +3,7 @@
 // Reuses canonical pricing and configuration from server runtime to avoid drift.
 
 import { IDEMPOTENCY_MAX_REPLAYS, IDEMPOTENCY_TTL_MS } from "./recovery.mjs";
+import { statePersistence, recoveryDoesNotGuarantee } from "./recovery-persistence.mjs";
 import { DEFAULT_TTL_SECONDS, MAX_TTL_SECONDS, MIN_TTL_SECONDS } from "./preflight.mjs";
 import { PUBLISHED_VERSION, RELEASE_STATUS, RELEASE_VERSION } from "./version.mjs";
 import {
@@ -263,7 +264,7 @@ export function buildServiceManifest({
         conflictStatus: 409,
         weakKeyStatus: 400,
         secret: `Treat the key as a bearer credential. A leaked key allows anyone to replay the settled verdict until the ${IDEMPOTENCY_TTL_SECONDS / 60}-minute window closes or the ${IDEMPOTENCY_MAX_REPLAYS}-replay cap is reached.`,
-        doesNotGuarantee: "Recovery is not a durable ledger, does not survive a restart, does not prove payment or refund a failed call, and does not replay after the TTL/cap. If the caller loses the key, recovery is unavailable.",
+        doesNotGuarantee: recoveryDoesNotGuarantee(),
       },
       endpoints: {
         health: {
@@ -280,11 +281,7 @@ export function buildServiceManifest({
           failureFields: [...READY_FAILURE_KEYS],
         },
       },
-      statePersistence: {
-        scope: "process-local",
-        appliesTo: ["recovery", "/usage"],
-        warning: "Recovery records and /usage counters are process-local and live only in this process; they are lost on restart or deploy. A previously settled idempotency key may be charged again, and usage counts reset. State is not shared across instances.",
-      },
+      statePersistence: statePersistence(),
       requestValidation: {
         chainId: "Required on every paid route and every transaction preflight. Missing => 400 missing_chain; wrong type => 400 invalid_chain; unsupported => 400 unsupported_chain. No silent default.",
         honesty: "Every 200 and typed failure on a paid route includes non-empty checked[] and notChecked[].",
