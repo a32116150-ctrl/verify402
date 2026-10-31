@@ -14,6 +14,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { initRecoveryStore, loadRecoveryFromDb, closeRecoveryStore } from "../src/recovery-store.mjs";
+import { setDurableRecovery, statePersistence, recoveryDoesNotGuarantee, persistenceLine } from "../src/recovery-persistence.mjs";
 
 const root = new URL("..", import.meta.url).pathname;
 let passed = 0;
@@ -326,6 +327,33 @@ assert.equal(process.env.RECOVERY_DB_PATH, undefined, "driver must run without R
   check("MAINNET GUARD: with RECOVERY_DB_PATH the server starts", () => {
     assert.equal(listening, true);
   });
+}
+
+// The public contract must describe the mode the process actually runs in.
+// /info, /openapi.json and /.well-known/verify402.json all read this module,
+// so a durable instance can never keep advertising memory-only semantics.
+{
+  setDurableRecovery(false);
+  check("CONTRACT: without a durable store the published state is process-local", () => {
+    const p = statePersistence();
+    assert.equal(p.scope, "process-local");
+    assert.equal(p.lostOnRestart, true);
+    assert.match(p.warning, /process-local/i);
+    assert.match(recoveryDoesNotGuarantee(), /does not survive a restart/i);
+    assert.match(persistenceLine(), /process-local/i);
+  });
+  setDurableRecovery(true);
+  check("CONTRACT: a healthy durable store flips every published surface", () => {
+    const p = statePersistence();
+    assert.equal(p.scope, "durable-single-instance");
+    assert.equal(p.lostOnRestart, false);
+    assert.match(p.warning, /SQLite/i);
+    assert.match(p.warning, /one server process per database file/i);
+    assert.match(recoveryDoesNotGuarantee(), /durable for the verdict record/i);
+    assert.match(recoveryDoesNotGuarantee(), /\/usage counters stay process-local/i);
+    assert.match(persistenceLine(), /durable SQLite store/i);
+  });
+  setDurableRecovery(false);
 }
 
 console.log(`\nrecovery-durable: ${passed} checks passed`);

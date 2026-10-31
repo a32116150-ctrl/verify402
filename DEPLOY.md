@@ -101,8 +101,9 @@ survives even a SIGKILL. A restart can never cause a double charge.
   Render: attach a persistent disk (paid instance; disks are $0.25/GB/mo)
   mounted at e.g. `/var/data` and set
   `RECOVERY_DB_PATH=/var/data/recovery/recovery.sqlite`. The WAL sidecars
-  (`-wal`, `-shm`) live beside the file on the same disk. The `.data` default
-  is a development convenience and is refused in mainnet mode.
+  (`-wal`, `-shm`) live beside the file on the same disk. There is **no
+  implicit default**: the variable must be set explicitly in mainnet mode, and
+  a development path such as `.data/recovery.sqlite` (gitignored) is refused.
 - In testnet/dev mode the variable is optional: unset = the historical
   memory-only behavior; set = full durability with identical semantics.
 

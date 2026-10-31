@@ -44,6 +44,7 @@ import {
   setRecoveryPaymentChecker, recoveryStoreHealth,
 } from "./recovery.mjs";
 import { RecoveryStoreError, closeRecoveryStore } from "./recovery-store.mjs";
+import { setDurableRecovery, statePersistence, recoveryDoesNotGuarantee, persistenceLine } from "./recovery-persistence.mjs";
 import {
   preflight, verifyReceipt, PreflightError,
   PREFLIGHT_SPEC, RECEIPT_SPEC, RECEIPT_SECRET_SOURCE,
@@ -119,10 +120,10 @@ if (MODE === "mainnet") {
   }
   // Mainnet money records must survive a restart. The durable recovery store
   // (src/recovery-store.mjs, bootstrapped in recovery.mjs) is required,
-  // explicitly configured, and must have opened cleanly. The .data default is
-  // a development convenience only.
+  // explicitly configured, and must have opened cleanly. There is no implicit
+  // default path: an unset variable refuses at boot.
   if (!RECOVERY_DB_PATH) {
-    logError("REFUSING TO START: X402_MODE=mainnet requires RECOVERY_DB_PATH — a persistent, writable path for the settlement recovery store. Without it a restart could charge a caller twice. Never run mainnet against the .data default.");
+    logError("REFUSING TO START: X402_MODE=mainnet requires RECOVERY_DB_PATH — a persistent, writable path for the settlement recovery store. Without it a restart could charge a caller twice. There is no default; do not point mainnet at a development path such as .data.");
     process.exit(1);
   }
 }
@@ -137,6 +138,14 @@ if (RECOVERY_DB_PATH && MODE === "mainnet") {
     logError(`REFUSING TO START: RECOVERY_DB_PATH=${RECOVERY_DB_PATH} did not open as a healthy SQLite store: ${health.lastError ?? "unknown error"}. Mainnet cannot run without durable settlement recovery.`);
     process.exit(1);
   }
+}
+
+// Publish the persistence mode this process actually runs in. Without this,
+// /info, /openapi.json and the manifest would keep describing the default
+// memory-only behaviour even on an instance with a healthy durable store.
+{
+  const rs = recoveryStoreHealth();
+  setDurableRecovery(rs.enabled && rs.healthy);
 }
 
 const NETWORKS = { evm: RAIL.evmNetwork, svm: RAIL.svmNetwork, label: RAIL.label };
@@ -1400,7 +1409,7 @@ app.get("/", (req, res) => {
       "Send x-idempotency-key on the first call: within 10 min a retry of a paid call",
       "replays the SAME verdict with no second charge (3 replays max). Use crypto.randomUUID();",
       "weak keys are rejected with 400 weak_idempotency_key. The key is a secret: a leaked key",
-      "allows replay until the TTL/cap. Recovery records and /usage counters are process-local and lost on restart/deploy; state is not shared across instances.",
+      "allows replay until the TTL/cap. " + persistenceLine(),
       "Every paid response carries an evidence_bundle (requestHash/responseHash/pinnedBlock).",
       "",
     ].join("\n"),
@@ -1464,12 +1473,7 @@ app.get("/info", (_req, res) => {
       scope: "this process instance; resets on restart or deploy",
       note: "Anonymous free-gate call counts. Not a unique-agent count; paid settlements are the identity-backed signal.",
     },
-    state_persistence: {
-      scope: "process-local",
-      lostOnRestart: true,
-      appliesTo: ["recovery", "/usage"],
-      warning: "Recovery records and /usage counters are process-local: they live only in this process. A restart or deploy loses both: a previously settled idempotency key may be charged again, and usage counts reset. State is not shared across instances.",
-    },
+    state_persistence: statePersistence(),
     hosting: buildInfoHosting(MODE),
     payment: {
       protocol: "x402",
@@ -1672,7 +1676,7 @@ app.get("/info", (_req, res) => {
       afterWindow: "expired verdicts leave a tombstone holding the previous responseHash for 6 hours; a retry re-measures with the paywall re-armed and the response carries recovery.remeasured + previousResponseHash so agents can branch instead of guessing",
       delegatedSpend: "the caps here are client-side for the signer that constructs the payment; spend through wallets delegated to OTHER agents is outside this contract and governed by the delegating owner's own controls",
       warn: "The key is the caller's secret: whoever presents it can replay the verdict for free until the TTL/replay cap. Do not log it publicly. A leaked key cannot be revoked; use a new key for the next operation.",
-      doesNotGuarantee: "Recovery is not a durable ledger and does not survive a restart; recovery and usage state are process-local and lost on restart/deploy, so it does not prove payment, refund a failed call, cross instances, or replay after the TTL/cap, and it cannot help if the caller lost the key.",
+      doesNotGuarantee: recoveryDoesNotGuarantee(),
     },
     evidence_bundle: {
       spec: "verify402/evidence-bundle@1",
