@@ -46,6 +46,9 @@ import {
 import { RecoveryStoreError, closeRecoveryStore } from "./recovery-store.mjs";
 import { setDurableRecovery, statePersistence, recoveryDoesNotGuarantee, persistenceLine } from "./recovery-persistence.mjs";
 import {
+  initSiteAnalytics, siteAnalyticsMiddleware, siteAnalyticsSnapshot, flushSiteAnalytics,
+} from "./site-analytics.mjs";
+import {
   preflight, verifyReceipt, PreflightError,
   PREFLIGHT_SPEC, RECEIPT_SPEC, RECEIPT_SECRET_SOURCE,
   DEFAULT_TTL_SECONDS, MAX_TTL_SECONDS,
@@ -148,6 +151,21 @@ if (RECOVERY_DB_PATH && MODE === "mainnet") {
   setDurableRecovery(rs.enabled && rs.healthy);
 }
 
+if (!RECOVERY_DB_PATH) {
+  // Testnet default. Say it out loud at boot: /health already reports
+  // "memory-only", but a deploy log should not leave the operator guessing.
+  logWarn("RECOVERY_DB_PATH is not set: paid idempotency records are process-local, so a restart or deploy can charge a retried call again. See DEPLOY.md 3.1.");
+}
+
+// Aggregate page-view counting. It shares the durable disk with the recovery
+// store when one is configured, so a funnel number survives a deploy instead of
+// resetting every time a free instance spins down. Without a durable path it
+// stays in memory and snapshot() says so.
+const SITE_ANALYTICS = initSiteAnalytics();
+if (!SITE_ANALYTICS.enabled) {
+  logWarn("site analytics are process-local (no SITE_ANALYTICS_PATH or RECOVERY_DB_PATH): page-view counts reset on restart or deploy");
+}
+
 const NETWORKS = { evm: RAIL.evmNetwork, svm: RAIL.svmNetwork, label: RAIL.label };
 
 const PAY_TO_EVM = process.env.PAY_TO_EVM || "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb";
@@ -232,6 +250,7 @@ const DISCOVERY_GET_PATHS = new Set([
   "/ready",
   "/info",
   "/usage",
+  "/usage/site",
   "/findings",
   "/openapi.json",
   "/llms.txt",
@@ -256,6 +275,9 @@ app.use((req, res, next) => {
 
 app.use(express.json({ limit: "64kb" }));
 app.use(requestIdMiddleware);
+// Count HTML page views (never paid calls, assets, or JSON discovery). The
+// middleware only listens for response completion, so it cannot delay a reply.
+app.use(siteAnalyticsMiddleware);
 
 // Same price on both rails, so an agent can pay on whichever chain it already
 // holds funds - and a Solana agent never has to bridge.
@@ -1346,6 +1368,13 @@ app.get("/usage", (req, res) => {
   res.json(usageSnapshot());
 });
 
+// Aggregate page views of the human site: which pages are reached, from where,
+// on which days. No cookies, no IP, no query strings. Honest about scope.
+app.get("/usage/site", (req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json(siteAnalyticsSnapshot());
+});
+
 app.post("/preflight/verify", preflightRateLimit, (req, res) => {
   res.set("Cache-Control", "no-store");
   const receipt = req.body?.receipt ?? req.body;
@@ -1398,6 +1427,7 @@ app.get("/", (req, res) => {
       `  POST /depth    ${DEPTH_PRICE} per call        how big can I trade before cost eats me?`,
       "  GET  /findings free                 live verdicts on Ethereum majors, free",
       "  GET  /usage    free                 anonymous free-gate call counts (process-local)",
+      "  GET  /usage/site free               aggregate page views of the human site (no cookies, no IP)",
       "  GET  /mcp      free                 MCP server: free gate + five paid tools",
       "  GET  /start    free                 five-minute quickstart for developers (human page)",
       "  GET  /info     free                 machine-readable service description",
@@ -2080,6 +2110,7 @@ if (IS_MAIN) {
         process.exit(1);
       }
       closeRecoveryStore();
+      flushSiteAnalytics();
       logInfo("graceful shutdown complete");
       process.exit(0);
     });

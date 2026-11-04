@@ -254,6 +254,8 @@ header. In testnet/local mode the card falls back to a Host allowlist
 | `POST /depth` | $0.05 (x402) | position sizing: how big can I trade before the round trip eats me? |
 | `GET /findings` | free | live no_edge verdicts on Ethereum majors |
 | `GET /info` | free | machine-readable service description |
+| `GET /usage` | free | anonymous free-gate call counts (process-local) |
+| `GET /usage/site` | free | aggregate HTML page views of the human site: no cookies, no IP, no query strings |
 | `GET /health` | free | liveness |
 
 `POST /depth` is the pre-trade sizing question nothing on-chain answers.

@@ -3,6 +3,40 @@
 All notable changes to verify402. This file records repository changes; it does
 not imply a deploy or an npm publish.
 
+## Unreleased
+
+No version bump, deploy, or publish is implied by this section.
+
+### Added
+
+- `GET /usage/site`: aggregate HTML page views by path, referring host, and day
+  for the human site, plus the count of skipped crawlers/clients. No cookies, no
+  IP addresses, no query strings, no per-visitor identifiers, and no unique
+  visitor claim. Counts persist to `<RECOVERY_DB_PATH dir>/site-analytics.json`
+  (or `SITE_ANALYTICS_PATH`) and fall back to a process-local window that says
+  so. See `docs/site-analytics.md`.
+- `npm run check:durability` (`scripts/durability-cutover.mjs`): reads the live
+  `/health` and `/info` and reports whether settlement recovery is durable.
+  Exit 0 only when a restart replays a settled idempotency key instead of
+  charging again.
+- Boot warnings that name the two memory-only gaps (`RECOVERY_DB_PATH` unset,
+  analytics process-local) instead of leaving them to be discovered on
+  `/health`.
+
+### Changed
+
+- `DEPLOY.md` 3.2: one-time durable-recovery cutover checklist (paid instance,
+  1 GB disk at `/var/data`, `RECOVERY_DB_PATH`, verification, rollback).
+- `render.yaml` carries the disk configuration as a commented block, because a
+  free instance cannot attach one.
+- `README.md` endpoint table lists `/usage` and `/usage/site`.
+
+### Docs
+
+- Historical deploy guides moved to `docs/archive/` with an index; current
+  guidance stays in `DEPLOY.md`.
+- `video/`, `renders/`, and `*.mp4` are ignored so local media cannot enter git.
+
 ## 1.0.9 — 2026-10-26
 
 `verify402-mcp@1.0.9` removes the `@x402` client SDK from the published bridge

@@ -133,6 +133,43 @@ Fail-closed semantics:
 Driver: `node:sqlite`, built into Node >= 22.13.0 (`engines.node`) - no native
 dependency was added; verified on 22.23.3.
 
+### 3.2 Cutover: making the deployed instance durable (one-time)
+
+The testnet demo runs on the free plan with no disk, so `/health` honestly
+reports `recoveryStore: "memory-only"`. That means a paid retry after a restart
+or deploy can be charged again. The code is ready; the cutover is a dashboard
+action.
+
+Check the current state from the outside:
+
+```bash
+npm run check:durability          # exit 0 = durable, 1 = memory-only
+```
+
+Cutover steps:
+
+1. Render dashboard -> verify402 -> Settings -> Instance Type: move off **Free**
+   (free instances cannot attach disks and spin down by design).
+2. Add a **Disk**: name `recovery`, mount path `/var/data`, size 1 GB
+   ($0.25/GB/mo). Keep **one** instance: SQLite is single-writer, so do not
+   enable horizontal autoscaling against this file.
+3. Add env var `RECOVERY_DB_PATH=/var/data/recovery/recovery.sqlite`.
+   Render creates the directory. Do not point it at `.data` (refused in
+   mainnet mode).
+4. Deploy, then re-run `npm run check:durability`. Expect
+   `recoveryStore ok` and `statePersistence durable-single-instance`.
+5. Prove the fix: settle one paid call, restart the service, retry with the same
+   `x-idempotency-key`. It must replay the same verdict with no second
+   settlement.
+
+Same disk, same cutover, also makes `/usage/site` page-view counts durable
+(`SITE_ANALYTICS_PATH` defaults to the recovery store's directory). To keep
+analytics elsewhere, set `SITE_ANALYTICS_PATH` explicitly.
+
+Rollback: remove `RECOVERY_DB_PATH` and redeploy. The service falls back to
+memory-only and says so on `/health`; no migration is required, and the SQLite
+file is simply ignored.
+
 
 ## 4. Distribution (the actual bottleneck)
 

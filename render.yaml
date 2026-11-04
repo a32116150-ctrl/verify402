@@ -22,3 +22,15 @@ services:
       # instances.
       - key: PREFLIGHT_SECRET
         generateValue: true
+    # Durability cutover (see DEPLOY.md 3.1/3.2). Disks require a paid instance,
+    # so this stays commented while the demo is on the free plan. Uncomment all
+    # three blocks together, deploy, then run `npm run check:durability`.
+    #
+    # disk:
+    #   name: recovery
+    #   mountPath: /var/data
+    #   sizeGB: 1
+    #
+    # envVars (add):
+    #   - key: RECOVERY_DB_PATH
+    #     value: /var/data/recovery/recovery.sqlite
