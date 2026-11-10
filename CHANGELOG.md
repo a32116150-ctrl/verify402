@@ -23,6 +23,17 @@ No version bump, deploy, or publish is implied by this section.
   analytics process-local) instead of leaving them to be discovered on
   `/health`.
 
+### Security
+
+- `npm audit --omit=dev` is back to **0 vulnerabilities**. `@x402/*` moves from
+  2.28.0 to 2.30.0 (zod 4.6.7, clearing GHSA-mrhx-c7xc-m3w5), `viem` to
+  2.57.17, and the transitive `body-parser` to 2.4.0 (GHSA-27r3-jxmh-p828).
+- `@coinbase/cdp-sdk` is no longer a hard dependency. It was only reachable when
+  `MODE=mainnet` and `CDP_API_KEY_ID` were both set; that branch now imports it
+  lazily and fails closed with an install hint. The live testnet deployment
+  never took the branch, and the package's zod 3 tree was the last advisory in
+  the audit.
+
 ### Changed
 
 - `DEPLOY.md` 3.2: one-time durable-recovery cutover checklist (paid instance,

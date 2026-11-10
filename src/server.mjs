@@ -20,7 +20,6 @@ import { paymentMiddleware, x402ResourceServer } from "@x402/express";
 import { ExactEvmScheme } from "@x402/evm/exact/server";
 import { ExactSvmScheme } from "@x402/svm/exact/server";
 import { HTTPFacilitatorClient } from "@x402/core/server";
-import { createCdpFacilitatorClient } from "@coinbase/cdp-sdk/x402";
 import { declareDiscoveryExtension } from "@x402/extensions/bazaar";
 
 import { measureRoundTrip, clientFor, readinessProbe, readinessClientFor, isHardQuoteFailure } from "./measure.mjs";
@@ -290,8 +289,26 @@ const accepts = (price) => [
 // Mainnet: CDP when CDP_API_KEY_ID is present; otherwise the plain HTTP
 // facilitator named by FACILITATOR_URL (e.g. PayAI, keyless). Same interface,
 // zero changes downstream.
+//
+// The CDP SDK is loaded on demand and is not a hard dependency: it carries a
+// separate zod 3 tree with an open advisory, and the live testnet deployment
+// never takes this branch. Operators who enable CDP install it explicitly.
+async function cdpFacilitatorClient() {
+  try {
+    const { createCdpFacilitatorClient } = await import("@coinbase/cdp-sdk/x402");
+    return createCdpFacilitatorClient();
+  } catch {
+    logError(
+      "CDP facilitator selected (CDP_API_KEY_ID is set) but @coinbase/cdp-sdk is not installed. " +
+        "Install it with `npm install @coinbase/cdp-sdk`, or set FACILITATOR_URL to a keyless " +
+        "mainnet facilitator such as https://facilitator.payai.network.",
+    );
+    process.exit(1);
+  }
+}
+
 const facilitatorClient = MODE === "mainnet" && process.env.CDP_API_KEY_ID
-  ? createCdpFacilitatorClient()
+  ? await cdpFacilitatorClient()
   : new HTTPFacilitatorClient({ url: FACILITATOR_URL });
 
 // Local development escape hatch. Loud on purpose: a service that believes it
