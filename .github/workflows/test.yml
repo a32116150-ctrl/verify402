@@ -23,6 +23,8 @@ jobs:
           node-version: "22"
           cache: npm
       - run: npm ci
+      - name: Dependency audit (production)
+        run: npm audit --omit=dev --audit-level=high
       - name: Refuse tracked .env files
         run: |
           if git ls-files | grep -E '(^|/)\.env$'; then
