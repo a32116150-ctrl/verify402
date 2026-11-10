@@ -96,6 +96,19 @@
           <h3>Donation ledger</h3>
           <p><b>No donations or hosting sponsors yet.</b> Every contribution will be acknowledged here with a transaction link, if the donor wants it named. <a href="/donate">Donation options</a> · <a href="/sponsor">Sponsor one month of hosting — $7</a>.</p>
         </div>
+
+        <h3 id="traction" style="margin-top:34px">Traction ledger — dated, monthly</h3>
+        <p class="small muted" style="margin-top:8px">The three numbers a buyer would check before believing any traction claim, kept as a dated record rather than a dashboard. A paid call counts only when the payer is not the operator; a repeat buyer is an external payer with two or more settled calls; a disputed verdict is one a buyer formally contested with evidence. Counts come from settlement records reviewed by hand, so a zero month stays visible instead of being quietly dropped.</p>
+        <div class="table-wrap" style="margin-top:18px">
+          <table class="table">
+            <thead><tr><th>Month</th><th>External paid calls</th><th>Repeat buyers</th><th>Disputed verdicts</th><th>Records checked</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">2026-10 <span class="muted">(from 19 Oct)</span></td><td class="mono">0</td><td class="mono">0</td><td class="mono">0</td><td class="muted">2026-11-10</td></tr>
+              <tr><td class="mono">2026-11 <span class="muted">(to 10 Nov)</span></td><td class="mono">0</td><td class="mono">0</td><td class="mono">0</td><td class="muted">2026-11-10</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="small muted" style="margin-top:12px">First published 10 November 2026, after the 1 November date first promised in public. The free instance keeps no durable settlement store, so this table is maintained from the operator's records, not read from a database. When the first external payment lands, its transaction is added here the same day.</p>
       </article>
 
       <article id="recompute">
