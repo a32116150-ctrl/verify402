@@ -855,6 +855,21 @@ await check("POST /usage/ping accepts a valid ping and counts it", async () => {
   assert.ok(after.byClientSource["mcp-ping"] >= 1, "mcp-ping source must be recorded");
 });
 
+await check("POST /inspect counts the target host without leaking path or identity", async () => {
+  const before = await fetch(`${base}/usage`).then((r) => r.json());
+  await fetch(`${base}/inspect`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ url: `${base}/verify`, method: "POST" }),
+  });
+  const after = await fetch(`${base}/usage`).then((r) => r.json());
+  assert.equal(typeof after.byInspectHost, "object", "usage must expose byInspectHost");
+  const host = new URL(base).hostname;
+  const n = (after.byInspectHost || {})[host] || 0;
+  const n0 = (before.byInspectHost || {})[host] || 0;
+  assert.ok(n > n0, "target host count must increase");
+});
+
 server.close();
 console.log(`\nhttp: ${passed} passed, ${failed} failed\n`);
 if (failed) process.exit(1);

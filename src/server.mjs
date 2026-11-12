@@ -70,7 +70,7 @@ import {
   paymentRail,
 } from "./payment-mode.mjs";
 import { parseAgentUrl, parseTrustedHosts, resolvePublicBaseUrl } from "./public-url.mjs";
-import { recordPreflight, recordToolPing, usageSnapshot, initUsage, flushUsage, PINGABLE_TOOLS } from "./usage.mjs";
+import { recordPreflight, recordInspectHost, recordToolPing, usageSnapshot, initUsage, flushUsage, PINGABLE_TOOLS } from "./usage.mjs";
 import {
   HttpError, requestIdMiddleware, sendPublicError, sendClassifiedError, classifyError,
 } from "./errors.mjs";
@@ -1553,6 +1553,7 @@ app.post("/inspect", inspectRateLimit, preflightConcurrency, async (req, res) =>
       if (method !== "GET" && method !== "POST") {
         return res.status(400).json({ error: "invalid_method", code: "invalid_method", message: "method must be GET or POST", requestId: req.requestId });
       }
+      recordInspectHost(String(body.url));
       result = await inspectUrl(String(body.url), { method });
     } else if (body.challenge) {
       result = await inspectPaymentChallenge({

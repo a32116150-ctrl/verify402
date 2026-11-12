@@ -61,6 +61,12 @@ const MS = 1000;
 // not a binding. A binding requires a seller-signed manifest fetched from a
 // caller-pinned HTTPS origin, outside the 402 challenge itself.
 export const SELLER_PAYOUT_MANIFEST_SPEC = "verify402/seller-payout@1";
+// The"seller-signed terms" manifest: a seller publishes, once, what they
+// charge for each resource — and the gate can therefore refuse a challenge
+// whose price, asset, network or timeout drifted from that publication.
+// Same rules as the payout manifest: caller-pinned HTTPS origin, seller-
+// signed, expiry-checked, never certified by the 402 itself.
+export const SELLER_TERMS_MANIFEST_SPEC = "verify402/seller-terms@1";
 const SELLER_MANIFEST_MAX_BYTES = 64 * 1024;
 const SELLER_MANIFEST_TIMEOUT_MS = 3000;
 const SELLER_MANIFEST_FUTURE_SKEW_MS = 5 * 60 * 1000;
@@ -368,6 +374,88 @@ function normalizeSellerPayoutManifest(raw) {
   return out;
 }
 
+// terms: [{ resource, network, asset, amount, maxTimeoutSeconds }]
+function normalizeSellerTermsEntry(term, i, chainId) {
+  if (term == null || typeof term !== "object" || Array.isArray(term)) {
+    throw new PreflightError(400, "invalid_terms", `terms[${i}] must be an object`);
+  }
+  const resource = String(term.resource ?? "").trim();
+  let url;
+  try {
+    url = new URL(resource);
+  } catch {
+    throw new PreflightError(400, "invalid_terms", `terms[${i}].resource must be an absolute https URL`);
+  }
+  if (url.protocol !== "https:" || url.username || url.password) {
+    throw new PreflightError(400, "invalid_terms", `terms[${i}].resource must be an absolute https URL without credentials`);
+  }
+  if (isPrivateManifestHost(url.hostname)) {
+    throw new PreflightError(400, "invalid_terms", `terms[${i}].resource host must be public`);
+  }
+  const rawNet = String(term.network ?? "").trim();
+  if (!rawNet) throw new PreflightError(400, "invalid_terms", `terms[${i}].network must be a CAIP-2 network id`);
+  const asset = String(term.asset ?? "").trim();
+  if (!/^(0x[0-9a-fA-F]{40}|[1-9A-HJ-NP-Za-km-z]{32,44})$/.test(asset)) {
+    throw new PreflightError(400, "invalid_terms", `terms[${i}].asset must be an EVM address or Solana mint`);
+  }
+  const amount = String(term.amount ?? "").trim();
+  try {
+    const n = BigInt(amount);
+    if (n <= 0n) throw new Error("non-positive");
+  } catch {
+    throw new PreflightError(400, "invalid_terms", `terms[${i}].amount must be a positive integer in raw units`);
+  }
+  let maxTimeoutSeconds = null;
+  if (term.maxTimeoutSeconds != null) {
+    const t = Number(term.maxTimeoutSeconds);
+    if (!Number.isInteger(t) || t < 0) {
+      throw new PreflightError(400, "invalid_terms", `terms[${i}].maxTimeoutSeconds must be a non-negative integer`);
+    }
+    maxTimeoutSeconds = t;
+  }
+  return {
+    resource: url.toString(),
+    network: rawNet,
+    asset,
+    amount,
+    maxTimeoutSeconds,
+  };
+}
+
+function normalizeSellerTermsManifest(raw) {
+  if (raw == null) return null;
+  if (typeof raw !== "object" || Array.isArray(raw)) {
+    throw new PreflightError(400, "invalid_policy", "policy.sellerTermsManifest must be an object");
+  }
+  if (typeof raw.url !== "string" || raw.url.trim() === "") {
+    throw new PreflightError(400, "invalid_policy", "policy.sellerTermsManifest.url must be a non-empty HTTPS URL");
+  }
+  let url;
+  try {
+    url = new URL(raw.url.trim());
+  } catch {
+    throw new PreflightError(400, "invalid_policy", "policy.sellerTermsManifest.url must be a valid HTTPS URL");
+  }
+  if (url.protocol !== "https:") {
+    throw new PreflightError(400, "invalid_policy", "policy.sellerTermsManifest.url must use HTTPS");
+  }
+  if (url.username || url.password) {
+    throw new PreflightError(400, "invalid_policy", "policy.sellerTermsManifest.url must not contain credentials");
+  }
+  if (isPrivateManifestHost(url.hostname)) {
+    throw new PreflightError(400, "invalid_policy", "policy.sellerTermsManifest.url must point to a public host");
+  }
+  const out = { url: url.toString() };
+  if (raw.expectedSigner != null) {
+    const signer = normalizeEvmAddress(String(raw.expectedSigner));
+    if (!signer) {
+      throw new PreflightError(400, "invalid_policy", "policy.sellerTermsManifest.expectedSigner must be a valid EVM address");
+    }
+    out.expectedSigner = signer;
+  }
+  return out;
+}
+
 export function parseNetwork(raw) {
   let s = String(raw ?? "").trim();
   if (!s) return null;
@@ -511,6 +599,9 @@ function normalizePolicy(p) {
   }
   if (p.sellerPayoutManifest != null) {
     out.sellerPayoutManifest = normalizeSellerPayoutManifest(p.sellerPayoutManifest);
+  }
+  if (p.sellerTermsManifest != null) {
+    out.sellerTermsManifest = normalizeSellerTermsManifest(p.sellerTermsManifest);
   }
   // Obligation state is supplied by the caller because this public gate does
   // not keep a cross-process payment ledger. Supplying it turns the named
@@ -789,7 +880,7 @@ function checkDecoded(decoded, { from, policy, now, value }) {
 
 // ---------------------------------------------------------------- receipt ---
 
-function makeReceipt({ kind, verdict, intentHash, requestHash, block: chainBlock, ttlSeconds, checked, notChecked, payeeBinding, now }) {
+function makeReceipt({ kind, verdict, intentHash, requestHash, block: chainBlock, ttlSeconds, checked, notChecked, payeeBinding, termsBinding, now }) {
   const payload = {
     spec: RECEIPT_SPEC,
     id: `pf_${randomBytes(8).toString("hex")}`,
@@ -805,6 +896,7 @@ function makeReceipt({ kind, verdict, intentHash, requestHash, block: chainBlock
     checked,
     notChecked,
     ...(payeeBinding ? { payeeBinding } : {}),
+    ...(termsBinding ? { termsBinding } : {}),
     algorithm: "hmac-sha256",
   };
   const signature = createHmac("sha256", RECEIPT_SECRET).update(canonicalStable(payload)).digest("hex");
@@ -916,7 +1008,7 @@ export function verifyReceipt(receipt, { now = Date.now(), intent, request } = {
 
 const NOTE = "A PASS is not a guarantee, a counterparty audit, or a prompt-injection filter. It means the checks listed in `checked` passed at this block; `notChecked` lists what was not examined, including tool metadata and response content. Receipts expire and are bound to the exact intent and request; older receipts without requestHash are unbound.";
 
-function finish({ kind, reasons, checked, notChecked, intent, request, block: chainBlock, simulation, decoded, payerBalance, obligation, payeeBinding, ttlSeconds, now, structuralOnly = false, structuralOnlyReasons = [] }) {
+function finish({ kind, reasons, checked, notChecked, intent, request, block: chainBlock, simulation, decoded, payerBalance, obligation, payeeBinding, termsBinding, ttlSeconds, now, structuralOnly = false, structuralOnlyReasons = [] }) {
   const reasonsFinal = [...reasons];
   let blockAgeSeconds = null;
   if (chainBlock?.timestamp != null) {
@@ -948,6 +1040,7 @@ function finish({ kind, reasons, checked, notChecked, intent, request, block: ch
     checked: checkedFinal,
     notChecked: notCheckedFinal,
     payeeBinding,
+    termsBinding,
     now,
   });
   return {
@@ -978,6 +1071,7 @@ function finish({ kind, reasons, checked, notChecked, intent, request, block: ch
     payerBalance: payerBalance ?? undefined,
     obligation: obligation ?? undefined,
     payeeBinding: payeeBinding ?? undefined,
+    termsBinding: termsBinding ?? undefined,
     receipt,
     note: NOTE,
   };
@@ -1253,6 +1347,304 @@ async function verifySellerPayoutManifest(manifestPolicy, { net, payTo, now, fet
   };
 }
 
+function netIdFor(net) {
+  if (!net) return null;
+  if (net.family === "evm") return `eip155:${net.chainId}`;
+  if (net.family === "svm") return `solana:${net.genesis}`;
+  return null;
+}
+
+async function verifySellerTermsManifest(manifestPolicy, { net, now, fetchImpl, resolveHost }) {
+  const url = manifestPolicy.url;
+  const origin = new URL(url).origin;
+  let resolved;
+  try {
+    resolved = await resolveHost(new URL(url).hostname);
+  } catch {
+    return {
+      ok: false,
+      severity: "caution",
+      code: "terms_manifest_unavailable",
+      message: "seller terms manifest host could not be resolved; published terms were not checked",
+      origin,
+    };
+  }
+  if (!Array.isArray(resolved) || resolved.length === 0 || resolved.some((ip) => isPrivateIpAddress(ip))) {
+    return {
+      ok: false,
+      severity: "block",
+      code: "terms_manifest_invalid",
+      message: "seller terms manifest host resolves to a private or invalid address",
+      origin,
+    };
+  }
+  let response;
+  try {
+    response = await fetchImpl(url, {
+      headers: { accept: "application/json", "user-agent": "verify402-preflight/1" },
+      redirect: "error",
+      signal: AbortSignal.timeout(SELLER_MANIFEST_TIMEOUT_MS),
+    });
+  } catch {
+    return {
+      ok: false,
+      severity: "caution",
+      code: "terms_manifest_unavailable",
+      message: "seller terms manifest could not be fetched; published terms were not checked",
+      origin,
+    };
+  }
+  if (!response?.ok) {
+    return {
+      ok: false,
+      severity: "caution",
+      code: "terms_manifest_unavailable",
+      message: "seller terms manifest returned a non-2xx response; published terms were not checked",
+      origin,
+    };
+  }
+  let text;
+  try {
+    text = await readResponseTextLimited(response, SELLER_MANIFEST_MAX_BYTES);
+  } catch (e) {
+    if (e?.code === "too_large") {
+      return {
+        ok: false,
+        severity: "block",
+        code: "terms_manifest_invalid",
+        message: `seller terms manifest is larger than ${SELLER_MANIFEST_MAX_BYTES} bytes`,
+        origin,
+      };
+    }
+    return {
+      ok: false,
+      severity: "caution",
+      code: "terms_manifest_unavailable",
+      message: "seller terms manifest could not be read; published terms were not checked",
+      origin,
+    };
+  }
+  if (typeof text !== "string") {
+    return {
+      ok: false,
+      severity: "block",
+      code: "terms_manifest_invalid",
+      message: "seller terms manifest is not text",
+      origin,
+    };
+  }
+  let raw;
+  try {
+    raw = JSON.parse(text);
+  } catch {
+    return {
+      ok: false,
+      severity: "block",
+      code: "terms_manifest_invalid",
+      message: "seller terms manifest is not valid JSON",
+      origin,
+    };
+  }
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return {
+      ok: false,
+      severity: "block",
+      code: "terms_manifest_invalid",
+      message: "seller terms manifest must be a JSON object",
+      origin,
+    };
+  }
+  if (raw.spec !== SELLER_TERMS_MANIFEST_SPEC) {
+    return {
+      ok: false,
+      severity: "block",
+      code: "terms_manifest_invalid",
+      message: `seller terms manifest spec must be ${SELLER_TERMS_MANIFEST_SPEC}`,
+      origin,
+    };
+  }
+  const chainId = Number(raw.chainId);
+  if (!Number.isInteger(chainId) || chainId <= 0) {
+    return {
+      ok: false,
+      severity: "block",
+      code: "terms_manifest_invalid",
+      message: "seller terms manifest chainId must be a positive integer",
+      origin,
+    };
+  }
+  if (!Array.isArray(raw.terms) || raw.terms.length === 0 || raw.terms.length > 200) {
+    return {
+      ok: false,
+      severity: "block",
+      code: "terms_manifest_invalid",
+      message: "seller terms manifest terms must contain between 1 and 200 entries",
+      origin,
+    };
+  }
+  const terms = [];
+  const seen = new Map();
+  for (let i = 0; i < raw.terms.length; i++) {
+    try {
+      terms.push(normalizeSellerTermsEntry(raw.terms[i], i, chainId));
+    } catch (e) {
+      return {
+        ok: false,
+        severity: "block",
+        code: "terms_manifest_invalid",
+        message: e instanceof PreflightError ? e.message : `terms[${i}] is invalid`,
+        origin,
+      };
+    }
+    const res = terms[i].resource;
+    if (seen.has(res)) {
+      return {
+        ok: false,
+        severity: "block",
+        code: "terms_manifest_invalid",
+        message: `seller terms manifest publishes terms[${i}] twice; publish one entry per resource`,
+        origin,
+      };
+    }
+    seen.set(res, true);
+  }
+  const signerRaw = typeof raw.signer === "string" ? raw.signer.trim() : "";
+  const signer = normalizeEvmAddress(signerRaw);
+  if (!signer) {
+    return {
+      ok: false,
+      severity: "block",
+      code: "terms_manifest_invalid",
+      message: "seller terms manifest signer must be a valid EVM address",
+      origin,
+    };
+  }
+  if (typeof raw.signature !== "string" || !/^0x[0-9a-fA-F]+$/.test(raw.signature)) {
+    return {
+      ok: false,
+      severity: "block",
+      code: "terms_manifest_invalid",
+      message: "seller terms manifest signature must be a 0x-prefixed hex string",
+      origin,
+    };
+  }
+  if (typeof raw.expiresAt !== "string") {
+    return {
+      ok: false,
+      severity: "block",
+      code: "terms_manifest_invalid",
+      message: "seller terms manifest expiresAt must be an ISO-8601 timestamp",
+      origin,
+    };
+  }
+  const expiresMs = Date.parse(raw.expiresAt);
+  if (!Number.isFinite(expiresMs)) {
+    return {
+      ok: false,
+      severity: "block",
+      code: "terms_manifest_invalid",
+      message: "seller terms manifest expiresAt must be an ISO-8601 timestamp",
+      origin,
+    };
+  }
+  const issuedAt = raw.issuedAt == null ? null : String(raw.issuedAt);
+  if (issuedAt != null) {
+    const issuedMs = Date.parse(issuedAt);
+    if (!Number.isFinite(issuedMs) || issuedMs > now + SELLER_MANIFEST_FUTURE_SKEW_MS) {
+      return {
+        ok: false,
+        severity: "block",
+        code: "terms_manifest_invalid",
+        message: "seller terms manifest issuedAt is invalid or in the future",
+        origin,
+      };
+    }
+  }
+  const payload = {
+    spec: SELLER_TERMS_MANIFEST_SPEC,
+    seller: typeof raw.seller === "string" ? raw.seller : null,
+    chainId,
+    terms: terms.map((t) => ({
+      resource: t.resource,
+      network: t.network,
+      asset: t.asset,
+      amount: t.amount,
+      maxTimeoutSeconds: t.maxTimeoutSeconds,
+    })),
+    issuedAt,
+    expiresAt: raw.expiresAt,
+    signer: signerRaw,
+  };
+  const manifestHash = sha256Hex(canonicalStable(payload));
+  let signatureValid = false;
+  try {
+    signatureValid = await verifyMessage({
+      address: signerRaw,
+      message: canonicalStable(payload),
+      signature: raw.signature,
+    });
+  } catch {
+    signatureValid = false;
+  }
+  if (!signatureValid) {
+    return {
+      ok: false,
+      severity: "block",
+      code: "terms_manifest_signature_invalid",
+      message: "seller terms manifest signature does not match its signer",
+      origin,
+      signer,
+      expiresAt: raw.expiresAt,
+      manifestHash,
+    };
+  }
+  if (manifestPolicy.expectedSigner && signer !== manifestPolicy.expectedSigner) {
+    return {
+      ok: false,
+      severity: "block",
+      code: "terms_manifest_signer_mismatch",
+      message: "seller terms manifest signer does not match policy.sellerTermsManifest.expectedSigner",
+      origin,
+      signer,
+      expiresAt: raw.expiresAt,
+      manifestHash,
+    };
+  }
+  if (chainId !== Number(net?.chainId)) {
+    return {
+      ok: false,
+      severity: "block",
+      code: "terms_manifest_chain_mismatch",
+      message: `seller terms manifest is for chain ${chainId}, not ${net?.chainId}`,
+      origin,
+      signer,
+      expiresAt: raw.expiresAt,
+      manifestHash,
+    };
+  }
+  if (expiresMs <= now) {
+    return {
+      ok: false,
+      severity: "block",
+      code: "terms_manifest_expired",
+      message: "seller terms manifest has expired",
+      origin,
+      signer,
+      expiresAt: raw.expiresAt,
+      manifestHash,
+    };
+  }
+  return {
+    ok: true,
+    origin,
+    seller: typeof raw.seller === "string" ? raw.seller : null,
+    signer,
+    expiresAt: raw.expiresAt,
+    manifestHash,
+    terms,
+  };
+}
+
 // ---------------------------------------------------------------- payment ---
 
 async function paymentPreflight(body, { clientFactory, now, fetchImpl = globalThis.fetch, resolveHost = resolveManifestHost }) {
@@ -1442,6 +1834,7 @@ async function paymentPreflight(body, { clientFactory, now, fetchImpl = globalTh
   // `payee_payout_binding`; the 402 is never allowed to certify its own payee.
   let payeeBinding = null;
   let allowlistMatched = null;
+  let termsBinding = null;
   if (policy.sellerPayoutWallets && payTo) {
     allowlistMatched = matchesList(policy.sellerPayoutWallets, payTo, net);
     if (!allowlistMatched) {
@@ -1488,6 +1881,83 @@ async function paymentPreflight(body, { clientFactory, now, fetchImpl = globalTh
         ...(allowlistMatched != null ? { allowlistMatched } : {}),
       };
     }
+  }
+
+  // Seller-signed terms: is the price, token, network and timeout exactly
+  // what this seller published, once, for this resource? A drift BLOCKs
+  // (that is the whole failure mode of a 402); an unlisted resource is a
+  // CAUTION (check the seller's publication manually); a bad or expired
+  // manifest degrades the same way the payout manifest does.
+  if (policy.sellerTermsManifest) {
+    const termsResource = raw.resource == null ? null : String(raw.resource);
+    const manifest = await verifySellerTermsManifest(policy.sellerTermsManifest, {
+      net,
+      now,
+      fetchImpl,
+      resolveHost,
+    });
+    if (manifest.ok) {
+      notChecked.push("seller terms accuracy (the gate cannot vouch for a seller's publication; it binds the challenge to the seller's own file)");
+      const term = termsResource ? manifest.terms.find((t) => t.resource === termsResource) : null;
+      if (!termsResource || !term) {
+        reasons.push(caution("terms_resource_unlisted", "the seller's manifest does not publish terms for this resource; the price, asset, network and timeout were not checked against a seller publication"));
+        termsBinding = {
+          source: "seller_terms_manifest",
+          matched: false,
+          resource: termsResource,
+          origin: manifest.origin,
+          signer: manifest.signer,
+          expiresAt: manifest.expiresAt,
+          manifestHash: manifest.manifestHash,
+          ...(manifest.seller ? { seller: manifest.seller } : {}),
+        };
+      } else {
+        const netId = netIdFor(net);
+        let field = null;
+        if (term.network !== netId) field = "network";
+        else if (!sameAsset(net, term.asset, asset)) field = "asset";
+        else if (String(term.amount) !== String(raw.amount)) field = "amount";
+        else if (term.maxTimeoutSeconds != null && Number(raw.maxTimeoutSeconds) > term.maxTimeoutSeconds) field = "maxTimeoutSeconds";
+        if (field) {
+          reasons.push(block("terms_mismatch", `the payment's ${field} does not match the seller's published terms for this resource`));
+          termsBinding = {
+            source: "seller_terms_manifest",
+            matched: false,
+            resource: term.resource,
+            field,
+            origin: manifest.origin,
+            signer: manifest.signer,
+            expiresAt: manifest.expiresAt,
+            manifestHash: manifest.manifestHash,
+            ...(manifest.seller ? { seller: manifest.seller } : {}),
+          };
+        } else {
+          checked.push("terms_match");
+          termsBinding = {
+            source: "seller_terms_manifest",
+            matched: true,
+            resource: term.resource,
+            origin: manifest.origin,
+            signer: manifest.signer,
+            expiresAt: manifest.expiresAt,
+            manifestHash: manifest.manifestHash,
+            ...(manifest.seller ? { seller: manifest.seller } : {}),
+          };
+        }
+      }
+    } else {
+      reasons.push(manifest.severity === "block" ? block(manifest.code, manifest.message) : caution(manifest.code, manifest.message));
+      termsBinding = {
+        source: "seller_terms_manifest",
+        matched: false,
+        ...(manifest.origin ? { origin: manifest.origin } : {}),
+        ...(manifest.signer ? { signer: manifest.signer } : {}),
+        ...(manifest.expiresAt ? { expiresAt: manifest.expiresAt } : {}),
+        ...(manifest.manifestHash ? { manifestHash: manifest.manifestHash } : {}),
+      };
+    }
+  } else {
+    notChecked.push("seller terms binding (price and asset vs. the seller's published terms; set policy.sellerTermsManifest to bind them)");
   }
 
   let obligation = null;
@@ -1757,6 +2227,7 @@ async function paymentPreflight(body, { clientFactory, now, fetchImpl = globalTh
     payerBalance,
     obligation,
     payeeBinding,
+    termsBinding,
     ttlSeconds: ttlOf(body),
     now,
     structuralOnly: structuralOnlyReasons.length > 0,

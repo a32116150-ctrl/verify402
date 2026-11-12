@@ -47,6 +47,7 @@ let byTool = Object.create(null);
 let byClient = Object.create(null);
 let byClientSource = Object.create(null);
 let byStatus = Object.create(null);
+let byInspectHost = Object.create(null);
 let filePath = null;
 let saveTimer = null;
 let dirty = false;
@@ -90,6 +91,7 @@ function serialize() {
     byClient,
     byClientSource,
     byStatus,
+    byInspectHost,
     updatedAt: new Date().toISOString(),
   });
 }
@@ -235,6 +237,30 @@ export function recordToolPing({ tool, ok = true, client = "mcp", now = Date.now
   return { tool: safe, ok: success };
 }
 
+// Anonymous host-level counts of /inspect calls: which URLs were checked.
+// Host only — no path, no query, no identity. Sellers get a signal about
+// what their endpoint's callers look like without learning who they are.
+export function recordInspectHost(rawUrl, now = Date.now()) {
+  const at = new Date(now).toISOString();
+  let host = null;
+  try {
+    const url = new URL(String(rawUrl));
+    if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+    host = url.hostname.toLowerCase();
+  } catch {
+    return null;
+  }
+  if (!host || host.length > 253) return null;
+  if (!(host in byInspectHost) && Object.keys(byInspectHost).length >= 96 - 1) {
+    byInspectHost.other = (byInspectHost.other || 0) + 1;
+  } else {
+    byInspectHost[host] = (byInspectHost[host] || 0) + 1;
+  }
+  lastAt = at;
+  scheduleSave();
+  return { host };
+}
+
 export function usageSnapshot() {
   return {
     spec: "verify402/usage@1",
@@ -250,12 +276,14 @@ export function usageSnapshot() {
     byClient: { ...byClient },
     byClientSource: { ...byClientSource },
     byStatus: { ...byStatus },
+    byInspectHost: { ...byInspectHost },
     ...(filePath ? { file: filePath, saveFailed } : { file: null }),
     note:
       "Anonymous call counter. Client labels are self-declared via X-Verify402-Client or inferred from User-Agent; " +
       "they are not identities and can be spoofed. A call is not a unique agent: the free gate has no account or wallet. " +
       "The only identity-backed usage signal is a paid settlement and its payer address. " +
-      "MCP-bridge pings are counted in byTool and byKind as mcp:<tool>; they carry no arguments, no intent, no result.",
+      "MCP-bridge pings are counted in byTool and byKind as mcp:<tool>; they carry no arguments, no intent, no result. " +
+      "Inspect host counts are host-level totals only; no path, no identity, no outcome pairing.",
   };
 }
 
@@ -310,4 +338,5 @@ export function resetUsage() {
   byClient = Object.create(null);
   byClientSource = Object.create(null);
   byStatus = Object.create(null);
+  byInspectHost = Object.create(null);
 }
