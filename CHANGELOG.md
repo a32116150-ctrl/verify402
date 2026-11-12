@@ -22,6 +22,14 @@ No version bump, deploy, or publish is implied by this section.
   downloads, not unique agents.
 - `src/explorer.mjs` with exact fixed-point USDC formatting and normalization,
   covered by eight offline tests (suite now 251).
+- Recovery audit (`npm run audit:recovery`, `test/recovery-concurrency.test.mjs`
+  and `test/recovery-crash.test.mjs`, `docs/recovery-audit.md`): three concurrent
+  copies through the real `@x402/express` middleware (3 handler runs and 3
+  settles without the claim; 1 and 1 with it, losers 409 not 402), plus a
+  ten-case crash matrix that SIGKILLs a process at each durable store write and
+  asserts one charge, one handler run, and no replay before promotion. Kill
+  points live in `src/recovery-store.mjs` behind `VERIFY402_CRASH_AT`, inert
+  unless the audit sets them.
 
 - `GET /usage/site`: aggregate HTML page views by path, referring host, and day
   for the human site, plus the count of skipped crawlers/clients. No cookies, no

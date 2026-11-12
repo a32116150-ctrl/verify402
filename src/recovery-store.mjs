@@ -202,11 +202,21 @@ export function loadRecoveryFromDb() {
   }
 }
 
+const CRASH_AT = process.env.VERIFY402_CRASH_AT || "";
+
+// Crash injection for the offline recovery audit. Inert unless the env names
+// this exact point, and then the process dies the way a power loss would: just
+// before or just after the SQLite write lands. Test-only; never set in deploy.
+function crashPoint(point) {
+  if (CRASH_AT === point) process.kill(process.pid, "SIGKILL");
+}
+
 // Write-ahead: the staged entry (including its paymentRef) is committed to
 // disk before anything else may happen to the payment. Throws when the store
 // is enabled but cannot journal the row (fail closed).
 export function stageEntry(entry) {
   return strict(() => {
+    crashPoint("stage:before");
     const json = JSON.stringify(entry);
     // BYPASS mode settles immediately (settledNow) — journal the real state,
     // never a forced 'staged'.
@@ -221,21 +231,26 @@ export function stageEntry(entry) {
        ON CONFLICT(key) DO UPDATE SET operation_id=excluded.operation_id`,
     );
     for (const a of entry.aliases) aliasStmt.run(a, entry.operationId);
+    crashPoint("stage:after");
   });
 }
 
 export function promoteEntry(operationId, entry) {
   return bestEffort(() => {
+    crashPoint("promote:before");
     db.prepare(
       `UPDATE recovery_entry SET state='settled', ts=?, entry=? WHERE operation_id=? AND state='staged'`,
     ).run(entry.settledAt, JSON.stringify(entry), operationId);
+    crashPoint("promote:after");
   });
 }
 
 export function abandonEntry(operationId) {
   return bestEffort(() => {
+    crashPoint("abandon:before");
     db.prepare(`DELETE FROM recovery_alias WHERE operation_id=?`).run(operationId);
     db.prepare(`DELETE FROM recovery_entry WHERE operation_id=?`).run(operationId);
+    crashPoint("abandon:after");
   });
 }
 
@@ -248,17 +263,21 @@ export function updateEntry(operationId, entry) {
 
 export function evictEntry(operationId) {
   return bestEffort(() => {
+    crashPoint("evict:before");
     db.prepare(`DELETE FROM recovery_alias WHERE operation_id=?`).run(operationId);
     db.prepare(`DELETE FROM recovery_entry WHERE operation_id=?`).run(operationId);
+    crashPoint("evict:after");
   });
 }
 
 export function tombstoneSet(key, tombstone) {
   return bestEffort(() => {
+    crashPoint("tombstone:before");
     db.prepare(
       `INSERT INTO recovery_tombstone (key, response_hash, settled_at, expired_at) VALUES (?, ?, ?, ?)
        ON CONFLICT(key) DO UPDATE SET response_hash=excluded.response_hash, settled_at=excluded.settled_at, expired_at=excluded.expired_at`,
     ).run(key, tombstone.responseHash, tombstone.settledAt, tombstone.expiredAt);
+    crashPoint("tombstone:after");
   });
 }
 
