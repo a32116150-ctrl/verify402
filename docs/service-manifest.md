@@ -63,7 +63,7 @@ The `paymentRequirements` section specifies:
 
 ### 3. Operational Policies
 
-> **Process-local state:** recovery records and `/usage` counters live only in this process. A restart or deploy loses both: a previously settled idempotency key may be charged again, and usage counts reset. Neither is shared across instances.
+> **Process-local vs persisted state:** recovery records stay in this process unless `RECOVERY_DB_PATH` is set (durable SQLite, write-ahead). `/usage` counters become durable when `VERIFY402_USAGE_PATH` is set (or when a durable path exists next to `RECOVERY_DB_PATH`); otherwise they reset on restart or deploy. Neither is shared across instances.
 
 - **Rate Limits:** `POST /preflight` enforces 60 requests/minute per IP with a concurrency cap of 8.
 - **Idempotency:** Callers can provide `x-idempotency-key` on paid routes. A settled verdict is cached and replayable up to 3 times within 600 seconds without incurring a second charge. Use `crypto.randomUUID()` or at least 32 URL-safe characters with at least 16 distinct characters; weak keys return `400 weak_idempotency_key`. The key is a secret: a leaked key allows replay until the TTL/replay cap. Recovery is not a durable ledger unless `RECOVERY_DB_PATH` is set: with it, the staged record is journaled to SQLite before settlement and survives a restart (one server process per database file); without it, recovery is memory-only and does not survive a restart.

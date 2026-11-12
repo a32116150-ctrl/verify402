@@ -824,6 +824,37 @@ await check("GET /directory.json returns the watch shape", async () => {
   assert.ok(json.intervalMinutes >= 1);
 });
 
+await check("POST /usage/ping rejects unknown tool names and non-boolean ok", async () => {
+  const badTool = await fetch(`${base}/usage/ping`, {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-verify402-client": "verify402-mcp/1.1.0" },
+    body: JSON.stringify({ tool: "not_a_tool", ok: true }),
+  });
+  assert.equal(badTool.status, 400);
+  const badOk = await fetch(`${base}/usage/ping`, {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-verify402-client": "verify402-mcp/1.1.0" },
+    body: JSON.stringify({ tool: "preflight_gate", ok: "yes" }),
+  });
+  assert.equal(badOk.status, 400);
+});
+
+await check("POST /usage/ping accepts a valid ping and counts it", async () => {
+  const before = await fetch(`${base}/usage`).then((r) => r.json());
+  const res = await fetch(`${base}/usage/ping`, {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-verify402-client": "verify402-mcp/1.1.0" },
+    body: JSON.stringify({ tool: "inspect_402", ok: true }),
+  });
+  assert.equal(res.status, 202);
+  const after = await fetch(`${base}/usage`).then((r) => r.json());
+  assert.ok(after.total > before.total, "total must increase");
+  assert.ok(after.byTool.inspect_402 >= 1, "byTool must record inspect_402");
+  assert.ok(after.byKind["mcp:inspect_402"] >= 1, "byKind must record mcp:inspect_402");
+  assert.ok(after.mcpPings >= 1, "mcpPings must be exposed");
+  assert.ok(after.byClientSource["mcp-ping"] >= 1, "mcp-ping source must be recorded");
+});
+
 server.close();
 console.log(`\nhttp: ${passed} passed, ${failed} failed\n`);
 if (failed) process.exit(1);

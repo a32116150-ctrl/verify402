@@ -70,7 +70,7 @@ import {
   paymentRail,
 } from "./payment-mode.mjs";
 import { parseAgentUrl, parseTrustedHosts, resolvePublicBaseUrl } from "./public-url.mjs";
-import { recordPreflight, usageSnapshot } from "./usage.mjs";
+import { recordPreflight, recordToolPing, usageSnapshot, initUsage, flushUsage, PINGABLE_TOOLS } from "./usage.mjs";
 import {
   HttpError, requestIdMiddleware, sendPublicError, sendClassifiedError, classifyError,
 } from "./errors.mjs";
@@ -165,6 +165,7 @@ if (!RECOVERY_DB_PATH) {
 // resetting every time a free instance spins down. Without a durable path it
 // stays in memory and snapshot() says so.
 const SITE_ANALYTICS = initSiteAnalytics();
+const USAGE_INIT = initUsage();
 if (!SITE_ANALYTICS.enabled) {
   logWarn("site analytics are process-local (no SITE_ANALYTICS_PATH or RECOVERY_DB_PATH): page-view counts reset on restart or deploy");
 }
@@ -1404,6 +1405,15 @@ let preflightInFlight = 0;
 // Each free endpoint gets its own per-IP bucket: a busy preflight caller must
 // not spend the inspector's budget, and an inspector URL fetch is slower and
 // more expensive than a structural preflight.
+// The ping is self-reported, so the label is either a recognisable bridge
+// identity (verify402-mcp/<version>) or a short lower-case token; anything else
+// is bucketed as "mcp" rather than invented.
+function normalizeDeclaredPingClient(value) {
+  const v = String(value ?? "").trim().toLowerCase().slice(0, 64);
+  if (!/^[a-z0-9][a-z0-9._/-]{0,63}$/.test(v)) return "mcp";
+  return v;
+}
+
 function perIpRateLimit({ max, label }) {
   const buckets = new Map();
   let sweptAt = 0;
@@ -1437,6 +1447,7 @@ function perIpRateLimit({ max, label }) {
 
 const preflightRateLimit = perIpRateLimit({ max: PREFLIGHT_RATE_PER_MIN, label: "free gate calls" });
 const inspectRateLimit = perIpRateLimit({ max: INSPECT_RATE_PER_MIN, label: "inspections" });
+const pingRateLimit = perIpRateLimit({ max: 120, label: "pings" });
 
 function preflightConcurrency(req, res, next) {
   if (preflightInFlight >= PREFLIGHT_MAX_IN_FLIGHT) {
@@ -1491,6 +1502,26 @@ app.post("/preflight", preflightRateLimit, preflightConcurrency, async (req, res
 app.get("/usage", (req, res) => {
   res.set("Cache-Control", "no-store");
   res.json(usageSnapshot());
+});
+
+// Anonymous tool-call pings from the MCP bridge, opt-in via VERIFY402_TELEMETRY=1
+// on the bridge side. Payload: { tool, ok } and nothing else. No arguments, no
+// intent, no result. The tool name must come from the shared allowlist and the
+// body is tiny by construction; clients are labelled by the X-Verify402-Client
+// header.
+app.post("/usage/ping", pingRateLimit, (req, res) => {
+  res.set("Cache-Control", "no-store");
+  const body = req.body ?? {};
+  const tool = typeof body.tool === "string" ? body.tool.trim().toLowerCase() : "";
+  if (!PINGABLE_TOOLS.includes(tool)) {
+    return res.status(400).json({ error: "unknown_tool", message: "tool must be one of the known MCP tool names", requestId: req.requestId });
+  }
+  if (typeof body.ok !== "boolean") {
+    return res.status(400).json({ error: "invalid_body", message: "ok must be a boolean", requestId: req.requestId });
+  }
+  const client = normalizeDeclaredPingClient(req.get("x-verify402-client"));
+  const event = recordToolPing({ tool, ok: body.ok, client, now: Date.now() });
+  return res.status(202).json({ accepted: Boolean(event) });
 });
 
 // Aggregate page views of the human site: which pages are reached, from where,
@@ -2288,6 +2319,7 @@ if (IS_MAIN) {
       }
       closeRecoveryStore();
       flushSiteAnalytics();
+      flushUsage();
       logInfo("graceful shutdown complete");
       process.exit(0);
     });

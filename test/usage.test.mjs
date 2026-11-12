@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { recordPreflight, usageSnapshot, resetUsage, clientLabel, clientInfo } from "../src/usage.mjs";
+import { recordPreflight, recordToolPing, usageSnapshot, resetUsage, initUsage, flushUsage, clientLabel, clientInfo } from "../src/usage.mjs";
 
 const req = (headers = {}) => ({
   get(name) {
@@ -94,8 +94,60 @@ try {
   assert.equal(empty.total, 0);
   assert.equal(empty.lastAt, null);
   assert.deepEqual(empty.byClientSource, {});
+
+  // Persistence: counters survive a simulated restart when a file is configured.
+  const { mkdtempSync, rmSync, writeFileSync, readFileSync, existsSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const dir = mkdtempSync(join(tmpdir(), "verify402-usage-"));
+  try {
+    const file = join(dir, "usage.json");
+    initUsage({ path: file });
+    recordPreflight({
+      req: req({ "x-verify402-client": "mcp/1.1.0" }),
+      result: { kind: "payment", verdict: "PASS", receipt: { signature: "x" } },
+      status: 200,
+      ms: 3,
+      now: 9000,
+    });
+    flushUsage();
+    const onDisk = JSON.parse(readFileSync(file, "utf8"));
+    assert.equal(onDisk.total, 1);
+    assert.deepEqual(onDisk.byTool, {});
+
+    // Simulate a restart: zero in memory, restore from disk.
+    resetUsage();
+    initUsage({ path: file });
+    const again = usageSnapshot();
+    assert.equal(again.total, 1);
+    assert.equal(again.byClient["mcp/1.1.0"], 1);
+    assert.equal(again.scope, "persisted; totals survive restart and deploy");
+
+    // Corrupt file: fresh window, no throw.
+    writeFileSync(file, "{ definitely not json", "utf8");
+    resetUsage();
+    initUsage({ path: file });
+    const healed = usageSnapshot();
+    assert.equal(healed.total, 0);
+    assert.ok(healed.file);
+
+    // Ping recorder: counts byTool, mcp-ping source, and refuses unknown names.
+    const ping = recordToolPing({ tool: "preflight_gate", ok: true, client: "verify402-mcp/1.1.0", now: 10000 });
+    assert.equal(ping.tool, "preflight_gate");
+    const snapped = usageSnapshot();
+    assert.equal(snapped.byTool.preflight_gate, 1);
+    assert.equal(snapped.byClientSource["mcp-ping"], 1);
+    assert.equal(snapped.byStatus[200], 1);
+    assert.equal(recordToolPing({ tool: "not a tool!!", ok: true }), null);
+
+    flushUsage();
+    assert.equal(JSON.parse(readFileSync(file, "utf8")).byTool.preflight_gate, 1);
+  } finally {
+    resetUsage();
+    rmSync(dir, { recursive: true, force: true });
+  }
   console.log = originalLog;
-  console.log("usage: 31 passed");
+  console.log("usage: 37 passed");
 } catch (e) {
   console.log = originalLog;
   console.error(e);

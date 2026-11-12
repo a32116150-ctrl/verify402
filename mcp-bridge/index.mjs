@@ -57,6 +57,25 @@ const SERVER_URL = (process.env.VERIFY402_URL || "https://verify402.onrender.com
 // two clients separate means a misconfigured 402 on a free route can never
 // turn into a signature.
 const freeApi = axios.create({ baseURL: SERVER_URL, timeout: 30_000, maxRedirects: 0, headers: CLIENT_HEADERS });
+
+// Anonymous usage telemetry, strictly opt-in (VERIFY402_TELEMETRY=1). One
+// fire-and-forget line per tool call: the tool name and whether it worked.
+// No arguments, no intent, no result, no wallet. A ping failure never blocks
+// or changes the tool's answer, and the bridge never pings when it is off.
+const TELEMETRY_ENABLED = process.env.VERIFY402_TELEMETRY === "1";
+
+// Fire-and-forget. Exported for tests; the tool handlers call it positionally.
+export function pingUsage(tool, ok, deps = {}) {
+  if (!TELEMETRY_ENABLED) return false;
+  const post = deps.post ?? ((body) => freeApi.post("/usage/ping", body, { timeout: 3000 }).catch(() => {}));
+  try {
+    const result = post({ tool, ok: Boolean(ok) });
+    if (result && typeof result.then === "function") result.catch(() => {});
+    return true;
+  } catch {
+    return false;
+  }
+}
 // Spend guard: the payer refuses to SIGN any payment above this, before a
 // signature exists. Enforced by the pre-signature guard in payment-policy.mjs
 // (validatePaymentChallenge), not by request code - so it cannot be bypassed
@@ -332,8 +351,10 @@ async function main() {
       };
       try {
         const res = await freeApi.post("/preflight", payload);
+        pingUsage("preflight_gate", true);
         return { content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }] };
       } catch (e) {
+        pingUsage("preflight_gate", false);
         const status = e.response?.status;
         const body = e.response?.data;
         return {
@@ -371,8 +392,10 @@ async function main() {
       };
       try {
         const res = await freeApi.post("/inspect", payload);
+        pingUsage("inspect_402", true);
         return { content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }] };
       } catch (e) {
+        pingUsage("inspect_402", false);
         const status = e.response?.status;
         const body = e.response?.data;
         return {
@@ -394,8 +417,10 @@ async function main() {
     async () => {
       try {
         const res = await freeApi.get("/directory.json");
+        pingUsage("directory_402", true);
         return { content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }] };
       } catch (e) {
+        pingUsage("directory_402", false);
         const status = e.response?.status;
         const body = e.response?.data;
         return {
@@ -422,7 +447,9 @@ async function main() {
       size: z.number().optional().describe("Trade size in whole base units, e.g. 100000 (default 100000)"),
     },
     async (args) => {
-      const res = await runPaidTool({
+      let res;
+      try {
+        res = await runPaidTool({
         tool: "verify_arbitrage",
         client: paidApi,
         body: {
@@ -432,6 +459,11 @@ async function main() {
           size: args.size ?? 100000,
         },
       });
+        pingUsage("verify_arbitrage", true);
+      } catch (err) {
+        pingUsage("verify_arbitrage", false);
+        throw err;
+      }
       return { content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }] };
     },
   );
@@ -446,7 +478,9 @@ async function main() {
       offeredPriceUsd: z.number().optional().describe("Optional price per token someone offered you"),
     },
     async (args) => {
-      const res = await runPaidTool({
+      let res;
+      try {
+        res = await runPaidTool({
         tool: "check_token_safety",
         client: paidApi,
         body: {
@@ -456,6 +490,11 @@ async function main() {
           offeredPriceUsd: args.offeredPriceUsd ?? null,
         },
       });
+        pingUsage("check_token_safety", true);
+      } catch (err) {
+        pingUsage("check_token_safety", false);
+        throw err;
+      }
       return { content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }] };
     },
   );
@@ -470,7 +509,9 @@ async function main() {
       chainId: z.number().int().describe("REQUIRED. 1 Ethereum, 42161 Arbitrum, 8453 Base. There is no default; omitting it returns 400 missing_chain."),
     },
     async (args) => {
-      const res = await runPaidTool({
+      let res;
+      try {
+        res = await runPaidTool({
         tool: "get_best_route",
         client: paidApi,
         body: {
@@ -480,6 +521,11 @@ async function main() {
           amountIn: args.amountIn,
         },
       });
+        pingUsage("get_best_route", true);
+      } catch (err) {
+        pingUsage("get_best_route", false);
+        throw err;
+      }
       return { content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }] };
     },
   );
@@ -496,7 +542,9 @@ async function main() {
       chainId: z.number().int().describe("REQUIRED. 1 Ethereum, 42161 Arbitrum, 8453 Base. There is no default; omitting it returns 400 missing_chain."),
     },
     async (args) => {
-      const res = await runPaidTool({
+      let res;
+      try {
+        res = await runPaidTool({
         tool: "verify_quote_fairness",
         client: paidApi,
         body: {
@@ -508,6 +556,11 @@ async function main() {
           venueClaimed: args.venueClaimed ?? null,
         },
       });
+        pingUsage("verify_quote_fairness", true);
+      } catch (err) {
+        pingUsage("verify_quote_fairness", false);
+        throw err;
+      }
       return { content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }] };
     },
   );
@@ -523,7 +576,9 @@ async function main() {
       maxRoundTripPct: z.number().optional().describe("Your round-trip cost tolerance, default 1%"),
     },
     async (args) => {
-      const res = await runPaidTool({
+      let res;
+      try {
+        res = await runPaidTool({
         tool: "get_trade_depth",
         client: paidApi,
         body: {
@@ -534,6 +589,11 @@ async function main() {
           maxRoundTripPct: args.maxRoundTripPct ?? 1.0,
         },
       });
+        pingUsage("get_trade_depth", true);
+      } catch (err) {
+        pingUsage("get_trade_depth", false);
+        throw err;
+      }
       return { content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }] };
     },
   );

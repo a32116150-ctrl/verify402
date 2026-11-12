@@ -18,6 +18,16 @@ payments. The bridge never signs or sends a trade.
 > immutable, and `1.0.4` used Base mainnet by default. Do not republish or
 > overwrite any of them.
 
+## Anonymous usage telemetry (opt-in)
+
+The bridge can send one anonymous line per tool call to the service: the tool
+name and whether it succeeded (`POST /usage/ping`). Never arguments, intents,
+results, wallet data, or IPs. Off by default; set `VERIFY402_TELEMETRY=1` to
+turn it on. A failed ping never changes the tool's answer, and only these
+tool names are accepted: `preflight_gate`, `inspect_402`, `directory_402`,
+`verify_arbitrage`, `check_token_safety`, `get_best_route`,
+`verify_quote_fairness`, `get_trade_depth`.
+
 ## Tools
 
 | tool | price | what it answers |

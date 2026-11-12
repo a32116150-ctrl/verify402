@@ -256,7 +256,7 @@ header. In testnet/local mode the card falls back to a Host allowlist
 | `POST /depth` | $0.05 (x402) | position sizing: how big can I trade before the round trip eats me? |
 | `GET /findings` | free | live no_edge verdicts on Ethereum majors |
 | `GET /info` | free | machine-readable service description |
-| `GET /usage` | free | anonymous free-gate call counts (process-local) |
+| `GET /usage` | free | anonymous tool and gate call counts (persisted when a durable path is configured) |
 | `GET /usage/site` | free | aggregate HTML page views of the human site: no cookies, no IP, no query strings |
 | `GET /health` | free | liveness |
 
@@ -369,12 +369,17 @@ Response: `PASS` / `CAUTION` / `BLOCK`, `reasons[]`, `checked[]`,
   instead of being implied. A PASS is not a counterparty audit.
 - Free is rate-limited (60/min per IP, 8 concurrent) so it cannot become a
   public RPC proxy.
-- `GET /usage` is an anonymous, process-local call counter. The MCP bridge
-  sends `X-Verify402-Client: verify402-mcp/<version>` so its calls can be
-  separated from generic HTTP probes. The label is self-declared, spoofable,
-  and never an identity; `/usage` also reports whether each label came from the
-  header or the User-Agent. The number of distinct labels is capped so a caller
-  cannot grow the counter without bound. It resets on restart or deploy.
+- `GET /usage` is an anonymous call counter. The MCP bridge sends
+  `X-Verify402-Client: verify402-mcp/<version>` so its calls can be separated
+  from generic HTTP probes. The label is self-declared, spoofable, and never an
+  identity; `/usage` also reports whether each label came from the header or the
+  User-Agent. The number of distinct labels is capped so a caller cannot grow
+  the counter without bound. When `VERIFY402_USAGE_PATH` is set (or a durable
+  path exists next to `RECOVERY_DB_PATH`), the counters are written to a small
+  JSON file and survive restart and deploy; otherwise they are process-local and
+  reset on restart or deploy. The bridge can also opt into an anonymous usage
+  ping (`VERIFY402_TELEMETRY=1`) that reports only the tool name and whether it
+  worked, never arguments or intents.
 
 The MCP server exposes it as `preflight_gate`. It runs with no wallet (free gate
 only); add `EVM_PRIVATE_KEY` for the five paid tools. If `sign_allowed` is
