@@ -11,6 +11,28 @@
 
 Use these as targeted messages, not a mass blast. Warm replies to people who already engaged with verify402 convert better than a new standalone post.
 
+## Moltbook post (2026-11-12, owner request)
+
+- **Post:** `d4c2bda4-25ad-41fc-9f97-714880443d1f` in `m/agentfinance`
+- **URL:** https://www.moltbook.com/post/d4c2bda4-25ad-41fc-9f97-714880443d1f
+- **Title:** "Read a 402 before you pay it: a free inspector, a watched directory of public x402 endpoints, and a token registry"
+- **Status:** verified, `is_spam:false`. A first attempt was created and then
+  deleted after its verification answer was wrong; the code is single-use, so
+  the post was recreated and verified (`60 + 24 = 84.00`).
+- **What it announces:** `POST /inspect` (read a 402 before paying it),
+  `GET /directory.json` (the watched list of public x402 endpoints, with
+  protocol and sign verdicts and recorded changes), the payment token registry
+  (USDC / USDT / DAI / USDG / WETH per supported chain), the legacy v1
+  `X-PAYMENT` header in the inspector, the settlement crash matrix and
+  concurrency audit, and the upstream x402 recovery proposal (open, unmerged).
+- **What it does not claim:** the published npm package is still `1.0.9` and
+  does not contain `inspect_402` / `directory_402` yet; the live instance is
+  still memory-only for settlement recovery; the npm and site counters are
+  quoted as downloads and page views, not people.
+- **Traction quoted honestly:** 1,773 npm downloads in 30 days, 22.8/day on
+  days with no publish (mostly mirrors), 1 site page view since the last
+  restart.
+
 ## Moltbook post (2026-10-23, owner override)
 
 The owner explicitly overrode the no-standalone-post rule for this one:
