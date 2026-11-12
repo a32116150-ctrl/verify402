@@ -23,6 +23,18 @@ No version bump, deploy, or publish is implied by this section.
   shares the in-flight cap. Covered by 13 unit tests plus three HTTP-level
   checks (suite now 264). Linked from the nav, footer, sitemap, landing page,
   and `llms.txt`; also listed in the plain-text root menu.
+- `GET /directory.json` and the `/directory` page: a watched list of public
+  x402 endpoints, re-inspected every 15 minutes. Each entry carries two
+  verdicts: `protocol` (is the challenge well-formed x402? network-agnostic)
+  and `sign` (should an agent on this instance's supported networks sign it?).
+  The watch diffs status, price, payee, network, and both verdicts on every
+  refresh and records the changes. Seed entries are data, not endorsements:
+  this service's own `/verify`, Naven's Robinhood Chain demo, and three
+  grug402 intentional edge cases (missing header, non-base64 header, legacy v1
+  header). History is process-local unless `VERIFY402_DIRECTORY_FILE` is set;
+  on a free host that file is ephemeral, so a restart starts a fresh history.
+  `/inspect` now also accepts the legacy v1 `X-PAYMENT` header. Covered by ten
+  unit tests plus two HTTP checks (suite now 274).
 
 - `GET /explorer` and the `/activity` page: a testnet explorer with two tables.
   Payments are every ERC-20 transfer to the service payTo address on Base

@@ -808,6 +808,22 @@ await check("POST /inspect preflights a pasted challenge end to end", async () =
   assert.ok(json.receipt?.signature);
 });
 
+await check("GET /directory serves the directory page", async () => {
+  const res = await fetch(`${base}/directory`, { headers: { accept: "text/html" } });
+  assert.equal(res.status, 200);
+  const html = await res.text();
+  assert.match(html, /directory\.js/);
+});
+
+await check("GET /directory.json returns the watch shape", async () => {
+  const res = await fetch(`${base}/directory.json`);
+  assert.equal(res.status, 200);
+  const json = await res.json();
+  assert.equal(json.mode, "memory");
+  assert.ok(Array.isArray(json.entries));
+  assert.ok(json.intervalMinutes >= 1);
+});
+
 server.close();
 console.log(`\nhttp: ${passed} passed, ${failed} failed\n`);
 if (failed) process.exit(1);

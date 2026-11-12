@@ -146,6 +146,7 @@ export function buildLlmsText({
     `Blog: ${baseUrl}/blog`,
     `Activity: ${baseUrl}/activity`,
     `Inspector: ${baseUrl}/inspect`,
+    `Directory: ${baseUrl}/directory`,
     `Interactive Docs: ${baseUrl}/docs`,
     `MCP Information: ${baseUrl}/mcp`,
     "Code: https://github.com/a32116150-ctrl/verify402",

@@ -50,6 +50,7 @@ import {
 } from "./site-analytics.mjs";
 import { fetchExplorer } from "./explorer.mjs";
 import { inspectUrl, inspectPaymentChallenge, extractChallenge, InspectError } from "./inspect.mjs";
+import { createDirectory } from "./directory.mjs";
 import {
   preflight, verifyReceipt, PreflightError,
   PREFLIGHT_SPEC, RECEIPT_SPEC, RECEIPT_SECRET_SOURCE,
@@ -1000,6 +1001,7 @@ app.get("/sitemap.xml", (_req, res) => {
   <url><loc>https://verify402.onrender.com/mcp</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
   <url><loc>https://verify402.onrender.com/preflight</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://verify402.onrender.com/inspect</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://verify402.onrender.com/directory</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://verify402.onrender.com/testers</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
   <url><loc>https://verify402.onrender.com/blog</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://verify402.onrender.com/blog/what-a-pre-signing-gate-can-check</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
@@ -1319,6 +1321,22 @@ app.get("/npm-stats", async (_req, res) => {
 // indexer is fixed, never caller-supplied, so this route cannot be used to
 // reach an arbitrary host.
 let explorerSnap = null;
+// 402 directory: a small seed list, re-inspected on a schedule. The watch is
+// off in offline tests and can be disabled with VERIFY402_DIRECTORY_WATCH=0.
+const directory = createDirectory({
+  filePath: process.env.VERIFY402_DIRECTORY_FILE || null,
+});
+if (process.env.VERIFY402_DIRECTORY_WATCH === "1" && process.env.TEST_OFFLINE !== "1") {
+  directory.start();
+  const boot = setTimeout(() => directory.runOnce().catch(() => {}), 2000);
+  if (typeof boot.unref === "function") boot.unref();
+}
+
+app.get("/directory.json", (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json(directory.snapshot());
+});
+
 app.get("/explorer", async (_req, res) => {
   const now = Date.now();
   if (explorerSnap && now - explorerSnap.at < 60_000) {
@@ -1577,6 +1595,7 @@ app.get("/", (req, res) => {
       "  POST /preflight free               should I sign this payment or transaction? (gate)",
       "  POST /preflight/verify free        verify a preflight receipt (HMAC + expiry)",
       "  POST /inspect  free                read an x402 402 challenge and preflight it (no wallet)",
+      "  GET  /directory.json free          watched public x402 endpoints + changes",
       `  POST /verify   ${PRICE} per call        is this arbitrage opportunity real?`,
       `  POST /safety   ${SAFETY_PRICE} per call        is this token safe to buy? (pre-trade gate)`,
       `  POST /route    ${ROUTE_PRICE} per call        what would the chain actually pay for this swap?`,

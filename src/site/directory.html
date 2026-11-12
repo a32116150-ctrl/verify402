@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>402 directory — verify402</title>
+<meta name="description" content="A small public list of x402 endpoints, re-inspected every 15 minutes. Two verdicts per entry: protocol health (is the challenge well-formed?) and sign (should an agent on our supported networks sign it?).">
+<meta name="google-site-verification" content="iGmI2QL110IkjnW0thU3DRZrdgQe_7mZsPWgkZVte7o">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/site.css">
+<link rel="modulepreload" href="/assets/hairline.js">
+</head>
+<body>
+
+<header class="site-head">
+  <a class="brand" href="/" aria-label="verify402 home">verify<span>[</span>402<span>]</span></a>
+  <nav class="site-nav" aria-label="Primary">
+    <a href="/checks">Checks</a>
+    <a href="/preflight">Preflight</a>
+    <a href="/inspect">Inspect</a>
+    <a href="/directory" aria-current="page">Directory</a>
+    <a href="/mcp">MCP</a>
+    <a href="/proof">Proof</a>
+    <a href="/activity">Activity</a>
+    <a href="/blog">Blog</a>
+    <a href="/docs">Docs</a>
+  </nav>
+  <div class="site-actions">
+    <a class="site-status" href="/live"><span class="status-dot"></span><span data-block>snapshot · block —</span></a>
+    <a class="btn sm" href="/inspect">Inspect a 402</a>
+    <details class="site-menu">
+      <summary>Menu</summary>
+      <nav aria-label="Menu">
+        <a href="/checks">Checks</a>
+        <a href="/preflight">Preflight</a>
+        <a href="/inspect">Inspect a 402</a>
+        <a href="/directory">402 directory</a>
+        <a href="/mcp">MCP server</a>
+        <a href="/live">Live findings</a>
+        <a href="/activity">Activity</a>
+        <a href="/proof">Proof &amp; receipts</a>
+        <a href="/blog">Blog</a>
+        <a href="/testers">Test the gate</a>
+        <a href="/docs">Docs</a>
+        <a href="/start">Quickstart</a>
+        <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">GitHub</a>
+      </nav>
+    </details>
+  </div>
+</header>
+
+<main>
+
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <p class="eyebrow">Live watch · no wallet</p>
+        <h1>Known x402 endpoints, watched.</h1>
+        <p class="lead">A small public list, re-inspected every 15 minutes. Each entry carries <b>two verdicts</b>: <b>protocol</b> — is the challenge well-formed x402? — and <b>sign</b> — should an agent on our supported networks sign it? Most live 402s sit on chains this instance cannot verify, so sign is often BLOCK while protocol is PASS. Both are shown, and changes are recorded.</p>
+        <div class="btn-row">
+          <a class="btn" href="/inspect">Inspect your own endpoint</a>
+          <a class="btn ghost" href="#how">How the watch works</a>
+        </div>
+        <p class="hero-note">
+          <span><span class="dot"></span>Free · no wallet</span>
+          <span>15-minute refresh</span>
+          <span>No signatures</span>
+          <span>Fail-closed</span>
+        </p>
+      </div>
+      <aside>
+        <div class="vcard" data-ui>
+          <div class="vcard-head"><span>directory · last run</span><span class="ok" id="dir-status">● loading</span></div>
+          <div class="vcard-body">
+            <div class="vrow"><span class="pair" id="dir-entries">—</span><span class="verdict" id="dir-protocol">—</span><span class="meta">protocol health</span></div>
+            <div class="vrow"><span class="pair" id="dir-sign">—</span><span class="verdict warn" id="dir-sign-chip">—</span><span class="meta">sign verdict</span></div>
+            <div class="vrow"><span class="pair" id="dir-changes">—</span><span class="verdict" id="dir-changes-chip">—</span><span class="meta">changes recorded</span></div>
+          </div>
+          <div class="vcard-foot" id="dir-next">—</div>
+        </div>
+        <p class="small muted" style="margin-top:12px">A directory of what the ecosystem asks for, not a ranking of who to trust.</p>
+      </aside>
+    </div>
+  </section>
+
+  <section id="directory" class="tight">
+    <div class="wrap">
+      <div class="try-shell">
+        <div class="try-head">
+          <div>
+            <p class="eyebrow">The list · public endpoints only</p>
+            <h2>Every entry, every check.</h2>
+            <p class="lead">Each row is one endpoint, its latest challenge, and what changed since the previous check. Nothing here is an endorsement; a PASS means the challenge is well-formed, not that the seller is honest.</p>
+          </div>
+          <div class="try-badges" aria-label="Watch properties">
+            <span class="chip" id="dir-mode">memory</span>
+            <span class="chip">15 min</span>
+            <span class="chip">No auth sent</span>
+          </div>
+        </div>
+
+        <div class="table-wrap" data-ui>
+          <table class="table dtable">
+            <thead>
+              <tr>
+                <th>Endpoint</th>
+                <th>Price</th>
+                <th>Network</th>
+                <th>Payee</th>
+                <th>Protocol</th>
+                <th>Sign</th>
+                <th>Last checked</th>
+                <th>Changes</th>
+              </tr>
+            </thead>
+            <tbody id="dir-rows">
+              <tr><td colspan="8" class="small muted">Loading the directory…</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p class="small muted" style="margin-top:14px">Times are UTC. “—” means the challenge did not name that field, or the endpoint could not be inspected. Unsupported networks show sign BLOCK by design: this instance only verifies Base Sepolia and Solana devnet.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="how">
+    <div class="wrap">
+      <div class="sec-head">
+        <div class="sec-copy">
+          <p class="eyebrow">Two verdicts, one reason</p>
+          <h2>Protocol ≠ permission.</h2>
+          <p class="lead">A challenge can be perfectly formed and still be unpayable by this gate. The directory keeps those answers apart so a BLOCK never hides a well-formed endpoint, and a PASS never implies a safe seller.</p>
+        </div>
+      </div>
+      <div class="grid three">
+        <div class="card">
+          <span class="chip">Protocol</span>
+          <h3>Is it well-formed?</h3>
+          <p>Accepts present, scheme exact, amount positive, payee named and not the burn address, resource bound over https, expiry parseable, no duplicate payees on one network. Network-agnostic.</p>
+        </div>
+        <div class="card">
+          <span class="chip">Sign</span>
+          <h3>Should our agent sign?</h3>
+          <p>The same structural payment preflight an agent runs before signing, on this instance's supported networks. A canonical USDC asset, a sane amount, a payee the policy allows.</p>
+        </div>
+        <div class="card">
+          <span class="chip">Watch</span>
+          <h3>What changed?</h3>
+          <p>Status, price, payee, network, and both verdicts are diffed on every refresh. A price jump or a payee swap shows up as a change row, not a silent rewrite.</p>
+        </div>
+      </div>
+      <div class="callout" style="margin-top:32px">
+        <h3>Limits, stated plainly</h3>
+        <p>The directory only inspects public endpoints with no authentication. It cannot see paywalls behind an API key, a logged-in session, or a private network. History is process-local unless <code class="inline">VERIFY402_DIRECTORY_FILE</code> is set; on a free host that file is ephemeral, so a restart starts a fresh history and re-inspects the seeds. A BLOCK is a refusal to sign, not a verdict on the seller's honesty.</p>
+      </div>
+      <div class="callout good" style="margin-top:18px">
+        <h3>Keep the watch running.</h3>
+        <p>The directory and the inspector are free. The mainnet cutover — where the gate can verify real payments instead of testnet — is funded by <a class="textlink" href="/sponsor">one-month sponsorships</a>. No token, no equity, no influence on verdicts.</p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-foot">
+  <div class="foot-mark" aria-hidden="true">verify<span>[402]</span></div>
+  <div class="foot-links">
+    <div>
+      <h2>Product</h2>
+      <a href="/directory">402 directory</a>
+      <a href="/inspect">402 inspector</a>
+      <a href="/directory">402 directory</a>
+      <a href="/preflight">Preflight gate</a>
+      <a href="/checks">The five checks</a>
+      <a href="/mcp">MCP server</a>
+      <a href="/live">Live findings</a>
+      <a href="/activity">Activity</a>
+      <a href="/testers">Tester kit</a>
+      <a href="/start">Quickstart</a>
+    </div>
+    <div>
+      <h2>Project</h2>
+      <a href="/proof">Proof &amp; receipts</a>
+      <a href="/docs">Documentation</a>
+      <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">Source code</a>
+      <a href="https://github.com/x402-foundation/x402/issues/3847" rel="noopener">x402 proposal</a>
+    </div>
+    <div>
+      <h2>For machines</h2>
+      <a href="/.well-known/verify402.json">Service manifest</a>
+      <a href="/openapi.json">OpenAPI 3.1</a>
+      <a href="/llms.txt">llms.txt</a>
+      <a href="/findings">/findings</a>
+      <a href="/blog/rss.xml">RSS</a>
+    </div>
+    <div>
+      <h2>For teams</h2>
+      <p class="foot-note">Embedding a pre-signing check in a wallet, agent, or treasury workflow?</p>
+      <a href="mailto:a32116150@gmail.com?subject=verify402%20walkthrough">Talk to the builder</a>
+      <a href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener">npm package</a>
+    </div>
+  </div>
+  <p class="foot-legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data; demo payments are testnet. The only settlements ever recorded are the operator's own testnet transactions. No external buyer yet. Prices are per call, paid in testnet USDC over x402; /preflight, /inspect, and /directory are free.</p>
+</footer>
+
+<script src="/assets/site.js"></script>
+<script src="/assets/directory.js"></script>
+</body>
+</html>

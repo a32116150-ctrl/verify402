@@ -316,7 +316,11 @@ export async function inspectUrl(rawUrl, { now = Date.now(), fetchImpl = safeFet
   // POST body is enough to read a paywalled POST route.
   const response = await fetchImpl(rawUrl, { method });
   const challenge = extractChallenge({
-    header: response.headers?.["payment-required"] ?? response.headers?.["x-payment-required"],
+    // v2 uses PAYMENT-REQUIRED; v1 used X-PAYMENT. Accept both, but only the
+    // v2 header is advertised as supported.
+    header: response.headers?.["payment-required"]
+      ?? response.headers?.["x-payment-required"]
+      ?? response.headers?.["x-payment"],
     body: response.body,
   });
   const result = await inspectPaymentChallenge({ challenge, targetUrl: rawUrl, now });
