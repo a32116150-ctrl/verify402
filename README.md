@@ -71,7 +71,7 @@ It works with **Claude Desktop**, **Cursor**, **Windsurf**, **Cline**, **OpenCod
 ### Step 1: Add the MCP Server to Your Agent
 
 #### Option A: Free Mode (Zero Config, No Wallet, No Key)
-Gives your AI agent the free **`preflight_gate`** tool. It checks payment challenges, token approvals, payee/amount, and transaction calldata at a fresh block before signing. The paid `check_token_safety` check adds a quote-based sellability check; it does not execute a transfer and is not a honeypot guarantee.
+Gives your AI agent three free tools: **`preflight_gate`** (check payment challenges, token approvals, payee/amount, and transaction calldata at a fresh block before signing), **`inspect_402`** (read a 402 challenge before paying it), and **`directory_402`** (the watched list of public x402 endpoints). The paid `check_token_safety` check adds a quote-based sellability check; it does not execute a transfer and is not a honeypot guarantee.
 
 Paste this into your client config file:
 - **Claude Desktop**: `~/Library/Application Support/Claude/claude_desktop_config.json` (Mac) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows)
@@ -157,6 +157,8 @@ Once configured, restart your AI client. The agent automatically has access to t
 | What you want to do | Example Prompt to your AI Agent | Tool Called | Cost |
 | :--- | :--- | :--- | :--- |
 | **Verify a transaction before signing** | *"Before signing, run `preflight_gate` on the calldata to check payee, amount, approvals, and block freshness. If it returns BLOCK, stop; a PASS is not a guarantee."* | `preflight_gate` | **Free** |
+| **Read a 402 before paying it** | *"Before paying this x402 endpoint, run `inspect_402` on its URL. Show me the price, token, and payee, and stop if it is BLOCK."* | `inspect_402` | **Free** |
+| **See what the ecosystem charges** | *"Call `directory_402` and show me the watched x402 endpoints with their prices and verdicts."* | `directory_402` | **Free** |
 | **Check measured token safety / sellability** | *"Run `check_token_safety` on token `0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE` and tell me whether it is sellable at a realistic size, what the round-trip cost is, and whether the result is TRUST / CAUTION / AVOID. This is not a code audit."* | `check_token_safety` | $0.10 |
 | **Verify an arbitrage opportunity** | *"Use `verify_arbitrage` to check if the claimed arb between Uniswap V3 and Sushiswap on WETH/USDC is real right now on chain 1."* | `verify_arbitrage` | $0.05 |
 | **Audit a swap quote** | *"I was quoted 0.35 WETH for 1,000 USDC. Call `verify_quote_fairness` to see if this quote is honest or if I'm being overcharged."* | `verify_quote_fairness` | $0.05 |
@@ -478,13 +480,13 @@ wiring, and the distribution order.
 ## MCP: how AI agents consume this
 
 `mcp-bridge/` is packaged as **`verify402-mcp`** (stdio). It exposes the free
-pre-signing gate (`preflight_gate`) and the five paid endpoints
+pre-signing gate (`preflight_gate`), the 402 inspector and directory, and the five paid endpoints
 (`verify_arbitrage`, `check_token_safety`, `get_best_route`,
 `verify_quote_fairness`, `get_trade_depth`) to Claude Desktop, Cursor, OpenCode,
 or any MCP client.
 
 - **Free gate only:** omit `EVM_PRIVATE_KEY`; the server registers only
-  `preflight_gate` and nothing can be charged.
+  `preflight_gate`, `inspect_402`, and `directory_402`, and nothing can be charged.
 - **Paid tools:** add a dedicated hot wallet with testnet USDC for the public
   demo (mainnet only in an explicit deployment). The bridge signs the x402
   payment only — never a trade — and enforces `MAX_PAYMENT_USD` (default $0.25)

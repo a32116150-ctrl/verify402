@@ -101,6 +101,8 @@
           <thead><tr><th>Tool</th><th>Price</th><th>Question</th><th>What comes back</th></tr></thead>
           <tbody>
             <tr><td class="mono">preflight_gate</td><td class="mono">free</td><td>Should I sign this payment or transaction?</td><td>PASS / CAUTION / BLOCK, typed reasons, <code class="inline">checked</code> / <code class="inline">notChecked</code>, and a short-lived receipt</td></tr>
+            <tr><td class="mono">inspect_402</td><td class="mono">free</td><td>What does this 402 actually ask for?</td><td>Price, token, network, payee, the bound resource, and a PASS / CAUTION / BLOCK verdict from a read-only fetch</td></tr>
+            <tr><td class="mono">directory_402</td><td class="mono">free</td><td>What is the ecosystem asking for right now?</td><td>Watched public x402 endpoints with protocol and sign verdicts, plus recorded changes</td></tr>
             <tr><td class="mono">verify_arbitrage</td><td class="mono">$0.05</td><td>Is this cross-venue arbitrage real, right now?</td><td>Verdict + evidence + <code class="inline">no_edge</code> when there is none</td></tr>
             <tr><td class="mono">check_token_safety</td><td class="mono">$0.10</td><td>Can this token be sold on the configured venues?</td><td>TRUST / CAUTION / AVOID, live contract facts, liquidity, a quote-based sellability check</td></tr>
             <tr><td class="mono">get_best_route</td><td class="mono">$0.03</td><td>What would the chain actually pay?</td><td>Every quoted venue at one pinned block, best first</td></tr>
@@ -125,7 +127,7 @@
         <div class="pcard2">
           <p class="tag"><span class="dot"></span>Mode 1 · no key</p>
           <h3>Free gate only.</h3>
-          <p>Omit <code class="inline">EVM_PRIVATE_KEY</code>. The server registers only <code class="inline">preflight_gate</code>, logs <code class="inline">free preflight_gate only</code>, and nothing can be charged. This is the safest way to try it.</p>
+          <p>Omit <code class="inline">EVM_PRIVATE_KEY</code>. The server registers only the free tools (<code class="inline">preflight_gate</code>, <code class="inline">inspect_402</code>, <code class="inline">directory_402</code>), and nothing can be charged. This is the safest way to try it.</p>
         </div>
         <div class="pcard2">
           <p class="tag"><span class="dot"></span>Mode 2 · paid tools</p>

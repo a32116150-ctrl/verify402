@@ -137,6 +137,16 @@ export function buildServiceManifest({
             description: "Advisory pre-signing check for payments and transactions. Evaluates limits, allowances, recipient and freshness. Returns PASS/CAUTION/BLOCK with HMAC receipt.",
           },
           {
+            name: "inspect_402",
+            type: "free",
+            description: "Reads an x402 402 challenge before an agent pays it: price, token, network, payee, bound resource, and a PASS/CAUTION/BLOCK verdict with typed reasons. Read-only fetch; never signs.",
+          },
+          {
+            name: "directory_402",
+            type: "free",
+            description: "Lists the watched public x402 endpoints with their price, network, payee, protocol verdict, sign verdict, and recorded changes.",
+          },
+          {
             name: "verify_arbitrage",
             type: "paid",
             priceUsd: numPrice(prices.verify),

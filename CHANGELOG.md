@@ -9,6 +9,16 @@ No version bump, deploy, or publish is implied by this section.
 
 ### Added
 
+- Two new free MCP tools in the bridge: `inspect_402` (read an x402 402
+  challenge before paying it — endpoint URL or a challenge you already have;
+  returns price, token, network, payee, the bound resource, a PASS / CAUTION /
+  BLOCK verdict, typed reasons, and a receipt) and `directory_402` (the watched
+  list of public x402 endpoints with protocol and sign verdicts and recorded
+  changes). Both are registered without a wallet, are not bound to any paid
+  route, and are advertised as free in the manifest and on the `/mcp` page.
+  This is the first change to the published package since `1.0.9`, so a new
+  package release is now meaningful rather than cosmetic. Five bridge tests
+  cover the free-tool guarantees.
 - `src/tokens.mjs`: a payment token registry for the chains the gate already
   supports — USDC, USDT, DAI, USDG, and WETH on Ethereum, Arbitrum, Base, the
   two testnet rails, and Solana mainnet/devnet. Addresses were cross-checked
@@ -20,7 +30,7 @@ No version bump, deploy, or publish is implied by this section.
   `volatile_asset` caution because the gate cannot price them in USD; unknown
   addresses still get the old caution. The manifest now advertises the
   recognized assets per network. Covered by eight registry tests plus four
-  preflight tests (suite now 286).
+  preflight tests (suite now 477).
 
 - `POST /inspect` and the `/inspect` page: a free, no-wallet x402 inspector.
   Paste an endpoint URL (GET or an empty POST) and the service fetches the
@@ -34,7 +44,7 @@ No version bump, deploy, or publish is implied by this section.
   it; the 402 is treated as untrusted data. `/inspect` has its own per-IP
   rate bucket (20/min) so preflight traffic cannot spend its budget, and it
   shares the in-flight cap. Covered by 13 unit tests plus three HTTP-level
-  checks (suite now 264). Linked from the nav, footer, sitemap, landing page,
+  checks (suite now 477). Linked from the nav, footer, sitemap, landing page,
   and `llms.txt`; also listed in the plain-text root menu.
 - `GET /directory.json` and the `/directory` page: a watched list of public
   x402 endpoints, re-inspected every 15 minutes. Each entry carries two
@@ -47,7 +57,7 @@ No version bump, deploy, or publish is implied by this section.
   header). History is process-local unless `VERIFY402_DIRECTORY_FILE` is set;
   on a free host that file is ephemeral, so a restart starts a fresh history.
   `/inspect` now also accepts the legacy v1 `X-PAYMENT` header. Covered by ten
-  unit tests plus two HTTP checks (suite now 274).
+  unit tests plus two HTTP checks (suite now 477).
 
 - `GET /explorer` and the `/activity` page: a testnet explorer with two tables.
   Payments are every ERC-20 transfer to the service payTo address on Base
@@ -61,7 +71,7 @@ No version bump, deploy, or publish is implied by this section.
   downloads for `verify402-mcp`, cached for an hour server-side. Labeled as
   downloads, not unique agents.
 - `src/explorer.mjs` with exact fixed-point USDC formatting and normalization,
-  covered by eight offline tests (suite now 251).
+  covered by eight offline tests (suite now 477).
 - Recovery audit (`npm run audit:recovery`, `test/recovery-concurrency.test.mjs`
   and `test/recovery-crash.test.mjs`, `docs/recovery-audit.md`): three concurrent
   copies through the real `@x402/express` middleware (3 handler runs and 3

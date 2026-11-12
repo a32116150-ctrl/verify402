@@ -23,13 +23,17 @@ payments. The bridge never signs or sends a trade.
 | tool | price | what it answers |
 |---|---|---|
 | `preflight_gate` | **free** | "Should I sign this payment request or transaction?" — PASS / CAUTION / BLOCK with reasons, `checked` / `notChecked`, and a short-lived receipt |
+| `inspect_402` | **free** | "What does this 402 actually ask for?" — price, token, network, payee, bound resource, and a PASS / CAUTION / BLOCK verdict from a read-only fetch |
+| `directory_402` | **free** | "What is the x402 ecosystem asking for right now?" — watched public endpoints with protocol and sign verdicts, plus recorded changes |
 | `verify_arbitrage` | $0.05 | "Is this cross-venue arbitrage opportunity real, right now?" |
 | `check_token_safety` | $0.10 | "Is this token sellable at a realistic size, and what does the round trip cost?" — TRUST / CAUTION / AVOID with evidence; not a code audit |
 | `get_best_route` | $0.03 | "What would the chain actually pay for this swap?" — best route + every quoted venue |
 | `verify_quote_fairness` | $0.05 | "A broker/bot offered me this number — is it honest?" fair / overpaying / too_good_to_be_true |
 | `get_trade_depth` | $0.05 | "How big can I trade here before the round trip eats me?" — per-size impact, round-trip cost, capacity |
 
-`preflight_gate` is the front door. Call it before signing any crypto
+`preflight_gate` is the front door. `inspect_402` reads a 402 challenge
+before an agent pays it, and `directory_402` lists the endpoints we watch.
+Call the gate before signing any crypto
 transaction or x402 payment request. If `sign_allowed` is false, **do not
 sign**. If `requires_ack` is true, surface the reasons to the operator. The
 receipt expires (default 90s); call again instead of reusing it.

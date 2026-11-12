@@ -117,7 +117,7 @@ Environment:
   VERIFY402_PAY_TO    EVM payee the 402 must name (default the verify402 payee)
   VERIFY402_RESOURCE_PREFIX  resource origin/prefix the 402 must match (default VERIFY402_URL)
 
-The free gate is preflight_gate. The paid tools are verify_arbitrage,
+The free tools are preflight_gate, inspect_402 and directory_402. The paid tools are verify_arbitrage,
 check_token_safety, get_best_route, verify_quote_fairness and get_trade_depth.
 The bridge signs x402 payments only; it never signs or sends a trade.
 `);
@@ -224,6 +224,17 @@ const DESCRIPTIONS = {
     "Optional caller-supplied checks: policy.sellerPayoutWallets is a payout allowlist, not provenance; " +
     "policy.sellerPayoutManifest fetches a seller-signed manifest from a caller-pinned HTTPS origin and is the only source of payee_payout_binding; " +
     "policy.obligation checks a local settled-key ledger and cumulative spend against a grant. The gate does not persist either state.",
+  inspect_402:
+    "Read an x402 402 challenge BEFORE paying it. Pass a public endpoint URL (or the challenge you already have) " +
+    "and get back the price, token, network, payee, the bound resource, and a PASS / CAUTION / BLOCK verdict " +
+    "with typed reasons and a receipt. Use this when an agent is about to pay a server you do not control. " +
+    "The service fetches the challenge once, read-only: it never signs, pays, or settles. " +
+    "A recognized dollar stable (USDC, USDT, DAI, USDG) is named; a volatile asset gets a caution because it " +
+    "cannot be priced in USD. Free.",
+  directory_402:
+    "List the public x402 endpoints verify402 watches, with the price, network, payee, a protocol verdict " +
+    "(is the challenge well-formed?) and a sign verdict (should an agent sign it?), plus any changes " +
+    "since the previous check. Use it to see what the ecosystem is asking for before wiring an agent to it. Free.",
   verify_arbitrage:
     "Ask verify402 whether a cross-venue arbitrage opportunity is REAL, right now. " +
     "Quotes come from Uniswap's canonical QuoterV2 and each DEX router at one pinned block. " +
@@ -334,6 +345,64 @@ async function main() {
                 ? "No receipt was issued; stop and retry later."
                 : "Do not sign without a verifiable receipt."
             }`,
+          }],
+        };
+      }
+    },
+  );
+
+  server.tool(
+    "inspect_402",
+    DESCRIPTIONS.inspect_402,
+    {
+      url: z.string().optional().describe("Public http(s) endpoint that answers with an x402 402 challenge. Only public hosts are fetched; localhost and private ranges are refused."),
+      method: z.enum(["GET", "POST"]).optional().describe("HTTP method for the probe (default GET). A POST sends an empty {} body."),
+      challenge: z.record(z.string(), z.unknown()).optional().describe("A 402 challenge you already have. Makes no request."),
+      header: z.string().optional().describe("The base64 PAYMENT-REQUIRED header value. Makes no request."),
+      target: z.string().optional().describe("The URL the challenge belongs to. Binds the challenge's resource so the verdict can check it."),
+    },
+    async (args) => {
+      const payload = {
+        url: args.url,
+        method: args.method,
+        challenge: args.challenge,
+        header: args.header,
+        target: args.target,
+      };
+      try {
+        const res = await freeApi.post("/inspect", payload);
+        return { content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }] };
+      } catch (e) {
+        const status = e.response?.status;
+        const body = e.response?.data;
+        return {
+          isError: true,
+          content: [{
+            type: "text",
+            text: `inspect failed${status ? ` (${status})` : ""}: ${JSON.stringify(body ?? e.message)}. ` +
+              "No payment was attempted and nothing was signed.",
+          }],
+        };
+      }
+    },
+  );
+
+  server.tool(
+    "directory_402",
+    DESCRIPTIONS.directory_402,
+    {},
+    async () => {
+      try {
+        const res = await freeApi.get("/directory.json");
+        return { content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }] };
+      } catch (e) {
+        const status = e.response?.status;
+        const body = e.response?.data;
+        return {
+          isError: true,
+          content: [{
+            type: "text",
+            text: `directory failed${status ? ` (${status})` : ""}: ${JSON.stringify(body ?? e.message)}.`,
           }],
         };
       }

@@ -17,7 +17,7 @@ npx -y verify402-mcp@1.0.9 --help
 
 This pins the published `1.0.9` package. Paid tools in the public demo use Base Sepolia testnet USDC; mainnet settlement is not enabled by this release.
 
-Expected: a usage line listing `preflight_gate` and the five paid tools.
+Expected: a usage line listing the free tools (`preflight_gate`, `inspect_402`, `directory_402`) and the five paid tools.
 
 ## 2. Add the MCP server
 
@@ -40,7 +40,7 @@ Free gate only — no wallet, nothing can be charged:
 }
 ```
 
-Restart the client. The registered tool is `preflight_gate`.
+Restart the client. The registered free tools are `preflight_gate`, `inspect_402`, and `directory_402`.
 
 ## 3. Test it
 

@@ -68,11 +68,15 @@ test("discovery: canonical service manifest matches implemented tools and runtim
   assert.equal(manifest.canonicalUrl, "https://verify402.onrender.com");
 
   const tools = manifest.integrations.mcp.tools;
-  assert.equal(tools.length, 6, "Must advertise exactly 6 MCP tools");
+  assert.equal(tools.length, 8, "Must advertise exactly 8 MCP tools");
 
   const freeTools = tools.filter((t) => t.type === "free");
-  assert.equal(freeTools.length, 1);
-  assert.equal(freeTools[0].name, "preflight_gate");
+  assert.equal(freeTools.length, 3);
+  assert.deepEqual(
+    freeTools.map((t) => t.name),
+    ["preflight_gate", "inspect_402", "directory_402"],
+    "the three free tools must be advertised as free",
+  );
 
   const paidTools = tools.filter((t) => t.type === "paid");
   assert.equal(paidTools.length, 5);
@@ -80,6 +84,8 @@ test("discovery: canonical service manifest matches implemented tools and runtim
   const toolNames = new Set(tools.map((t) => t.name));
   const expectedTools = [
     "preflight_gate",
+    "inspect_402",
+    "directory_402",
     "verify_arbitrage",
     "check_token_safety",
     "get_best_route",
