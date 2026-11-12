@@ -157,7 +157,7 @@ export function buildLlmsText({
     "- POST /preflight/verify — recompute a receipt. Tampered or expired",
     "  receipts return valid: false.",
     "- GET /findings — free published verdicts.",
-    "- GET /explorer — on-chain payments this service received, read from the chain.",
+    "- GET /explorer — on-chain payments and published verdicts, with explorer links.",
     "- GET /npm-stats — npm download counters for the MCP package.",
     "- GET /health — liveness and network configuration.",
     "- GET /info — JSON capabilities and pricing.",

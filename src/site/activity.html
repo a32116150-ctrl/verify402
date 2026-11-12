@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Activity — verify402</title>
-<meta name="description" content="Every on-chain payment this service received, read from Base Sepolia and linked to the explorer, plus the test results behind each deploy. Testnet only; mainnet is not armed.">
-<meta name="google-site-verification" content="iGmI2QL110IkjnW0thU3DRZrdgQe_7mZsPWgkZVte7o">
+<title>Activity — testnet explorer for verify402</title>
+<meta name="description" content="A testnet explorer for verify402: every payment the service received on Base Sepolia, every verdict it published, and a search box for a transaction hash, address, pair, or verdict.">
+<meta name="google-site-verification" content="iGmIQL110IkjnW0thU3DRZrdgQe_7mZsPWgkZVte7o">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -48,42 +48,77 @@
   </div>
 </header>
 
+<div class="net-ribbon" role="note">
+  <strong>TESTNET</strong> · Base Sepolia · every payment on this page is testnet USDC. No real funds moved, and no mainnet payment has been accepted.
+</div>
+
 <main>
   <div class="wrap page-head">
-    <p class="eyebrow">On-chain · no account</p>
-    <h1>Every payment<br>this service received.</h1>
-    <p class="lead">Read live from Base Sepolia and linked to the explorer. Four testnet calls so far, all funded by the operator. Mainnet is not armed.</p>
+    <p class="eyebrow">On-chain · testnet <span class="tag-testnet">TESTNET</span></p>
+    <h1>Payments in.<br>Verdicts out.</h1>
+    <p class="lead">A testnet explorer for this service: every payment it received, every verdict it published, and a search box for a hash, an address, a pair, or a verdict.</p>
     <div class="btn-row" style="margin-top:24px">
       <a class="btn" href="/proof">See the proof page</a>
       <a class="btn ghost" href="#tests">Test results</a>
     </div>
   </div>
 
-  <section class="tight" id="settlements">
+  <section class="tight" id="explorer">
     <div class="wrap">
-      <div class="vcard" data-ui>
-        <div class="vcard-head"><span>GET /explorer · free</span><span class="ok" data-net>● loading</span></div>
+      <label class="search-label" for="explorer-search">Search this explorer</label>
+      <input class="search" id="explorer-search" data-search type="search" placeholder="0x2506…, WETH/USDC, no_edge, or 2026-10-26" autocomplete="off" spellcheck="false">
+      <p class="search-hint muted" data-lookup hidden></p>
+
+      <div class="tabs" role="tablist" aria-label="Explorer tables">
+        <button class="tab" type="button" role="tab" data-tab="payments" aria-selected="true">Payments <span data-count-payments>—</span></button>
+        <button class="tab" type="button" role="tab" data-tab="verdicts" aria-selected="false">Verdicts <span data-count-verdicts>—</span></button>
+      </div>
+
+      <div class="vcard" data-panel="payments">
+        <div class="vcard-head"><span>Payments received</span><span class="ok" data-net>● loading</span></div>
         <div class="vcard-body">
           <div class="table-wrap">
             <table class="table">
-              <thead><tr><th>Time (UTC)</th><th>Amount</th><th>From</th><th>Transaction</th></tr></thead>
+              <thead><tr><th>Time (UTC)</th><th>Amount (testnet USDC)</th><th>From</th><th>Transaction</th></tr></thead>
               <tbody data-settlements>
                 <tr><td colspan="4" class="muted">loading…</td></tr>
               </tbody>
             </table>
           </div>
         </div>
-        <div class="vcard-foot"><span data-total>—</span> · <a class="textlink" data-address href="#">payTo</a> · read from the chain indexer</div>
+        <div class="vcard-foot"><span data-total>—</span> · <a class="textlink" data-address href="#">payTo</a> · Base Sepolia testnet</div>
       </div>
-      <p class="small muted" style="margin-top:14px">A row exists because the transfer exists at that hash. These are the operator's own testnet calls; no external buyer has paid yet. The machine-readable list is <a class="textlink" href="/explorer">/explorer</a>.</p>
+
+      <div class="vcard" data-panel="verdicts" hidden>
+        <div class="vcard-head"><span>Verdicts published</span><span class="ok" data-verdicts-meta>● loading</span></div>
+        <div class="vcard-body">
+          <div class="table-wrap">
+            <table class="table">
+              <thead><tr><th>Pair</th><th>Verdict</th><th>Net bps</th><th>Gross bps</th><th>Pinned block</th><th>Detail</th></tr></thead>
+              <tbody data-verdicts>
+                <tr><td colspan="6" class="muted">loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="vcard-foot"><span data-verdict-count>—</span> · measured on Ethereum mainnet · <a class="textlink" href="/findings">read /findings</a></div>
+      </div>
+
+      <p class="small muted" style="margin-top:14px">
+        <span class="chip real">real</span> the round trip cleared fees at the pinned block ·
+        <span class="chip no_edge">no_edge</span> it did not; the usual honest answer ·
+        <span class="chip unavailable">unavailable</span> the measurement failed, so there is no verdict.
+      </p>
+      <p class="small muted" style="margin-top:10px">A payment row exists because the transfer exists at that hash. A verdict row exists because the service measured that pair at that block. Neither is a claim about unique buyers or future returns.</p>
+      <noscript><p class="small muted">This explorer renders from <a class="textlink" href="/explorer">/explorer</a> with JavaScript. The raw JSON works without it.</p></noscript>
     </div>
   </section>
 
   <section class="tight">
     <div class="wrap">
       <div class="callout warn">
-        <h3>Mainnet: not armed.</h3>
-        <p>No mainnet payment has been accepted, so this table has no mainnet rows. It stays empty rather than showing a placeholder or a countdown. <a class="textlink" href="/info">/info</a> states the mode the process is actually running in, and <a class="textlink" href="/health">/health</a> states the recovery store.</p>
+        <h3>Two networks, one page. Read the label.</h3>
+        <p><strong>Payments</strong> are Base Sepolia testnet USDC; no real funds moved, and no mainnet payment has been accepted. <strong>Verdicts</strong> are measurements of public Ethereum mainnet liquidity; they are not payments. <a class="textlink" href="/info">/info</a> states the mode the process is actually running in, and <a class="textlink" href="/health">/health</a> states the recovery store.</p>
       </div>
     </div>
   </section>
@@ -99,7 +134,7 @@
         <table class="table">
           <thead><tr><th>Check</th><th>Result</th><th>When it runs</th></tr></thead>
           <tbody>
-            <tr><td>Offline suite</td><td class="mono">249 / 249</td><td>every push · <a class="textlink" href="https://github.com/a32116150-ctrl/verify402/actions/workflows/test.yml" rel="noopener">GitHub Actions</a></td></tr>
+            <tr><td>Offline suite</td><td class="mono">251 / 251</td><td>every push · <a class="textlink" href="https://github.com/a32116150-ctrl/verify402/actions/workflows/test.yml" rel="noopener">GitHub Actions</a></td></tr>
             <tr><td>Post-deploy checks</td><td class="mono">29 / 29</td><td>after each deploy · <a class="textlink" href="https://github.com/a32116150-ctrl/verify402/blob/master/scripts/post-deploy-check.mjs" rel="noopener">script</a></td></tr>
             <tr><td>Production dependency audit</td><td class="mono">0 vulnerabilities</td><td>every push · <code class="inline">npm audit</code></td></tr>
           </tbody>

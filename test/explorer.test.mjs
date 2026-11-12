@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { formatUnits, normalizeTransfer, buildExplorerPayload, chainFor } from "../src/explorer.mjs";
+import { formatUnits, normalizeTransfer, buildExplorerPayload, buildVerdictRows, chainFor } from "../src/explorer.mjs";
 
 const TX = "0x2506afa3087f86cdf64072741be77d30d92613b74143118c5b5b72ca3c5825f7";
 
@@ -68,4 +68,32 @@ test("buildExplorerPayload keeps the payments token and reports what it skipped"
 test("mainnet is reported as armed only when it is", () => {
   assert.equal(buildExplorerPayload({ mode: "testnet", payTo: "0x0", transfers: [] }).mainnet.armed, false);
   assert.equal(buildExplorerPayload({ mode: "mainnet", payTo: "0x0", transfers: [] }).mainnet.armed, true);
+});
+
+test("buildVerdictRows turns findings into explorer rows", () => {
+  const rows = buildVerdictRows(
+    [
+      { target: "WETH", verdict: "no_edge", grossBps: 3.1, netBps: -1.2, blockNumber: 123, blockHash: "0xabc" },
+      { target: "WBTC", verdict: "real", grossBps: 12, netBps: 4.5, blockNumber: 123 },
+    ],
+    { baseUrl: "https://verify402.onrender.com", measuredAt: "2026-11-12T00:00:00.000Z" },
+  );
+  assert.equal(rows.length, 2);
+  assert.equal(rows[0].pair, "WBTC/USDC");
+  assert.equal(rows[0].verdict, "real");
+  assert.equal(rows[1].verdict, "no_edge");
+  assert.equal(rows[0].url, "https://verify402.onrender.com/findings");
+});
+
+test("buildExplorerPayload carries verdicts next to payments", () => {
+  const payload = buildExplorerPayload({
+    mode: "testnet",
+    payTo: "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb",
+    transfers: [transfer("30000")],
+    results: [{ target: "WETH", verdict: "no_edge", grossBps: 2, netBps: -1, blockNumber: 9 }],
+    baseUrl: "https://verify402.onrender.com",
+  });
+  assert.equal(payload.settlements.length, 1);
+  assert.equal(payload.verdicts.length, 1);
+  assert.equal(payload.verdicts[0].pair, "WETH/USDC");
 });

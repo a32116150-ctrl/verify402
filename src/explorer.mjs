@@ -53,7 +53,32 @@ export function normalizeTransfer(transfer, chain) {
   };
 }
 
-export function buildExplorerPayload({ mode, payTo, transfers = [], fetchedAt = new Date().toISOString() }) {
+export function buildVerdictRows(results = [], { baseUrl = "", measuredAt = null } = {}) {
+  return results
+    .filter((row) => row && row.target)
+    .map((row) => ({
+      id: String(row.target),
+      pair: `${row.target}/USDC`,
+      verdict: row.verdict || "unavailable",
+      grossBps: Number.isFinite(row.grossBps) ? row.grossBps : null,
+      netBps: Number.isFinite(row.netBps) ? row.netBps : null,
+      blockNumber: row.blockNumber ?? null,
+      blockHash: row.blockHash ?? null,
+      measuredAt,
+      url: `${baseUrl || ""}/findings`,
+    }))
+    .sort((a, b) => a.pair.localeCompare(b.pair));
+}
+
+export function buildExplorerPayload({
+  mode,
+  payTo,
+  transfers = [],
+  results = [],
+  measuredAt = null,
+  baseUrl = "",
+  fetchedAt = new Date().toISOString(),
+}) {
   const chain = chainFor(mode);
   const usdc = [];
   let skipped = 0;
@@ -85,6 +110,8 @@ export function buildExplorerPayload({ mode, payTo, transfers = [], fetchedAt = 
     mainnet: { armed: mode === "mainnet" },
     fetchedAt,
     settlements: usdc,
+    verdicts: buildVerdictRows(results, { baseUrl, measuredAt }),
+    verdictsMeasuredAt: measuredAt,
     totals: { count: usdc.length, amount: total, symbol: "USDC" },
     skipped,
     note:
@@ -93,7 +120,7 @@ export function buildExplorerPayload({ mode, payTo, transfers = [], fetchedAt = 
   };
 }
 
-export async function fetchExplorer({ mode, payTo, fetchImpl = fetch, timeoutMs = 8000 }) {
+export async function fetchExplorer({ mode, payTo, results = [], measuredAt = null, baseUrl = "", fetchImpl = fetch, timeoutMs = 8000 }) {
   const chain = chainFor(mode);
   const url = `${chain.blockscout}/api/v2/addresses/${payTo}/token-transfers?type=ERC-20`;
   const controller = new AbortController();
@@ -102,7 +129,7 @@ export async function fetchExplorer({ mode, payTo, fetchImpl = fetch, timeoutMs 
     const response = await fetchImpl(url, { signal: controller.signal, headers: { accept: "application/json" } });
     if (!response.ok) throw new Error(`blockscout ${response.status}`);
     const body = await response.json();
-    return buildExplorerPayload({ mode, payTo, transfers: body.items || [] });
+    return buildExplorerPayload({ mode, payTo, transfers: body.items || [], results, measuredAt, baseUrl });
   } finally {
     clearTimeout(timer);
   }

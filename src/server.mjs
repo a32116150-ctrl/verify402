@@ -1323,7 +1323,13 @@ app.get("/explorer", async (_req, res) => {
     return res.json({ ...explorerSnap.payload, ageSeconds: Math.round((now - explorerSnap.at) / 1000) });
   }
   try {
-    const payload = await fetchExplorer({ mode: MODE, payTo: PAY_TO_EVM });
+    const payload = await fetchExplorer({
+      mode: MODE,
+      payTo: PAY_TO_EVM,
+      results: findingsSnap?.payload?.results || [],
+      measuredAt: findingsSnap?.payload?.measuredAt || null,
+      baseUrl: PUBLIC_BASE_URL,
+    });
     explorerSnap = { at: now, payload };
     res.set("Cache-Control", "public, max-age=30");
     return res.json({ ...payload, ageSeconds: 0 });
