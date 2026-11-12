@@ -13,6 +13,9 @@ export const PRICE_DEFAULTS = Object.freeze({
 });
 
 export const PREFLIGHT_RATE_PER_MIN = 60;
+// The inspector performs one outbound fetch per call, so its default budget is
+// smaller than the purely local preflight gate.
+export const INSPECT_RATE_PER_MIN = 20;
 export const PREFLIGHT_MAX_IN_FLIGHT = 8;
 export const SHUTDOWN_TIMEOUT_MS_DEFAULT = 10000;
 

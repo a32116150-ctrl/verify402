@@ -18,9 +18,11 @@ No version bump, deploy, or publish is implied by this section.
   receipt. A pasted challenge (JSON or base64 header) needs no fetch. The
   fetch is pinned to a validated public address (private/loopback refused,
   no redirects, 64 KB cap, 6 s timeout) so a second DNS answer cannot rebind
-  it; the 402 is treated as untrusted data. Covered by 13 offline tests
-  (suite now 264). Linked from the nav, footer, sitemap, landing page, and
-  `llms.txt`; also listed in the plain-text root menu.
+  it; the 402 is treated as untrusted data. `/inspect` has its own per-IP
+  rate bucket (20/min) so preflight traffic cannot spend its budget, and it
+  shares the in-flight cap. Covered by 13 unit tests plus three HTTP-level
+  checks (suite now 264). Linked from the nav, footer, sitemap, landing page,
+  and `llms.txt`; also listed in the plain-text root menu.
 
 - `GET /explorer` and the `/activity` page: a testnet explorer with two tables.
   Payments are every ERC-20 transfer to the service payTo address on Base

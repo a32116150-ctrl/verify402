@@ -765,6 +765,49 @@ await check("mainnet refuses free-tier acknowledgement override", async () => {
   assert.match(logs.join(""), /ALLOW_MAINNET_ON_FREE_TIER/);
 });
 
+await check("GET /inspect serves the inspector page", async () => {
+  const res = await fetch(`${base}/inspect`, { headers: { accept: "text/html" } });
+  assert.equal(res.status, 200);
+  const html = await res.text();
+  assert.match(html, /inspect-demo\.js/);
+});
+
+await check("POST /inspect refuses a private URL before any fetch", async () => {
+  const res = await fetch(`${base}/inspect`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ url: `${base}/verify`, method: "POST" }),
+  });
+  assert.equal(res.status, 400);
+  const json = await res.json();
+  assert.equal(json.code, "blocked_host");
+});
+
+await check("POST /inspect preflights a pasted challenge end to end", async () => {
+  const challenge = {
+    x402Version: 2,
+    resource: "https://example.com/paid",
+    accepts: [{
+      scheme: "exact",
+      network: "eip155:84532",
+      asset: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+      amount: "30000",
+      payTo: "0x1111111111111111111111111111111111111111",
+      maxTimeoutSeconds: 60,
+    }],
+  };
+  const res = await fetch(`${base}/inspect`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ challenge, target: "https://example.com/paid" }),
+  });
+  assert.equal(res.status, 200);
+  const json = await res.json();
+  assert.equal(json.verdict, "PASS");
+  assert.equal(json.options.length, 1);
+  assert.ok(json.receipt?.signature);
+});
+
 server.close();
 console.log(`\nhttp: ${passed} passed, ${failed} failed\n`);
 if (failed) process.exit(1);

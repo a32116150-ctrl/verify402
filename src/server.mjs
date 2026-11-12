@@ -30,6 +30,7 @@ import { CHAINS, DEFAULT_SIZE, chain, readinessChain, resolveToken, requireChain
 import {
   PRICE_DEFAULTS,
   PREFLIGHT_RATE_PER_MIN,
+  INSPECT_RATE_PER_MIN,
   PREFLIGHT_MAX_IN_FLIGHT,
   SHUTDOWN_TIMEOUT_MS_DEFAULT,
 } from "./contract.mjs";
@@ -1379,35 +1380,44 @@ app.get("/findings", async (req, res) => {
 // measurements (/verify, /safety, /depth) stay paid. Free still costs RPC, so
 // the gate is rate-limited per IP and capped in flight; otherwise a free
 // endpoint becomes a public proxy for the chain.
-const preflightBuckets = new Map();
-let preflightBucketsSweptAt = 0;
 let preflightInFlight = 0;
 
-function preflightRateLimit(req, res, next) {
-  // trust proxy=1 makes req.ip the rightmost untrusted hop (the client address
-  // appended by Render), not a client-supplied leftmost X-Forwarded-For value.
-  const ip = req.ip || req.socket?.remoteAddress || "unknown";
-  const now = Date.now();
-  const bucket = preflightBuckets.get(ip);
-  if (!bucket || now - bucket.at >= 60_000) {
-    preflightBuckets.set(ip, { at: now, n: 1 });
-  } else {
-    bucket.n += 1;
-    if (bucket.n > PREFLIGHT_RATE_PER_MIN) {
-      res.set("Retry-After", "60");
-      return res.status(429).json({
-        error: "rate_limited",
-        message: `max ${PREFLIGHT_RATE_PER_MIN} free gate calls per minute per IP`,
-        requestId: req.requestId,
-      });
+// Each free endpoint gets its own per-IP bucket: a busy preflight caller must
+// not spend the inspector's budget, and an inspector URL fetch is slower and
+// more expensive than a structural preflight.
+function perIpRateLimit({ max, label }) {
+  const buckets = new Map();
+  let sweptAt = 0;
+  return function rateLimit(req, res, next) {
+    // trust proxy=1 makes req.ip the rightmost untrusted hop (the client
+    // address appended by Render), not a client-supplied leftmost
+    // X-Forwarded-For value.
+    const ip = req.ip || req.socket?.remoteAddress || "unknown";
+    const now = Date.now();
+    const bucket = buckets.get(ip);
+    if (!bucket || now - bucket.at >= 60_000) {
+      buckets.set(ip, { at: now, n: 1 });
+    } else {
+      bucket.n += 1;
+      if (bucket.n > max) {
+        res.set("Retry-After", "60");
+        return res.status(429).json({
+          error: "rate_limited",
+          message: `max ${max} ${label} per minute per IP`,
+          requestId: req.requestId,
+        });
+      }
     }
-  }
-  if (now - preflightBucketsSweptAt >= 60_000) {
-    preflightBucketsSweptAt = now;
-    for (const [k, v] of preflightBuckets) if (now - v.at > 120_000) preflightBuckets.delete(k);
-  }
-  next();
+    if (now - sweptAt >= 60_000) {
+      sweptAt = now;
+      for (const [k, v] of buckets) if (now - v.at > 120_000) buckets.delete(k);
+    }
+    next();
+  };
 }
+
+const preflightRateLimit = perIpRateLimit({ max: PREFLIGHT_RATE_PER_MIN, label: "free gate calls" });
+const inspectRateLimit = perIpRateLimit({ max: INSPECT_RATE_PER_MIN, label: "inspections" });
 
 function preflightConcurrency(req, res, next) {
   if (preflightInFlight >= PREFLIGHT_MAX_IN_FLIGHT) {
@@ -1483,7 +1493,7 @@ app.post("/preflight/verify", preflightRateLimit, (req, res) => {
 // Free x402 inspector: fetch a real 402 (or accept a pasted challenge) and run
 // the same structural payment preflight an agent runs before signing. The URL
 // fetch is pinned to a validated public address; see src/inspect.mjs.
-app.post("/inspect", preflightRateLimit, preflightConcurrency, async (req, res) => {
+app.post("/inspect", inspectRateLimit, preflightConcurrency, async (req, res) => {
   res.set("Cache-Control", "no-store");
   const body = req.body || {};
   try {
