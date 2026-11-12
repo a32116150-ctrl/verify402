@@ -129,6 +129,33 @@ test("payment: canonical USDC with enough balance is PASS and the receipt verifi
   assert.equal(verifyReceipt(out.receipt, { now: NOW }).valid, true);
 });
 
+test("payment: a known dollar stable other than USDC is recognized, not flagged", async () => {
+  const out = await run(payment({ payment: { asset: "0xfde4c96c8593536e31f229ea8f37b2ada2699bb2" } })); // USDT on Base
+  assert.equal(out.verdict, "PASS");
+  assert.ok(!out.reasons.some((r) => r.code === "non_canonical_asset"));
+  assert.ok(out.checked.includes("asset"));
+  assert.ok(out.notChecked.some((n) => n.startsWith("USDT parity")));
+});
+
+test("payment: a stable above the policy cap blocks and states the parity assumption", async () => {
+  const out = await run(payment({
+    payment: { asset: "0xfde4c96c8593536e31f229ea8f37b2ada2699bb2", amount: "1000000" },
+  }));
+  const reason = out.reasons.find((r) => r.code === "amount_over_policy");
+  assert.ok(reason, "expected the amount cap to block");
+  assert.match(reason.message, /parity assumed/);
+});
+
+test("payment: a volatile token is cautioned because it cannot be priced in USD", async () => {
+  const out = await run(payment({ payment: { asset: "0x4200000000000000000000000000000000000006" } })); // WETH on Base
+  assert.ok(out.reasons.some((r) => r.code === "volatile_asset"));
+});
+
+test("payment: an unknown token on a known chain is still cautioned", async () => {
+  const out = await run(payment({ payment: { asset: "0x1234567890123456789012345678901234567890" } }));
+  assert.ok(out.reasons.some((r) => r.code === "non_canonical_asset"));
+});
+
 test("payment: a resource with no binding policy is CAUTION, not a claimed resource check", async () => {
   const out = await run(payment({
     payment: { resource: "https://evil.example/steal" },

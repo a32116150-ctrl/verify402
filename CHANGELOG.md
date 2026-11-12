@@ -9,6 +9,19 @@ No version bump, deploy, or publish is implied by this section.
 
 ### Added
 
+- `src/tokens.mjs`: a payment token registry for the chains the gate already
+  supports — USDC, USDT, DAI, USDG, and WETH on Ethereum, Arbitrum, Base, the
+  two testnet rails, and Solana mainnet/devnet. Addresses were cross-checked
+  against CoinGecko's per-chain token lists and against the USDC addresses
+  already in `config.mjs`; Solana uses the Circle-issued mint, not a bridged
+  variant. A recognized dollar stable is now named instead of being flagged
+  `non_canonical_asset`, and a USD cap can be enforced on it with the $1
+  parity labelled as assumed, not verified. Volatile assets (WETH) get a
+  `volatile_asset` caution because the gate cannot price them in USD; unknown
+  addresses still get the old caution. The manifest now advertises the
+  recognized assets per network. Covered by eight registry tests plus four
+  preflight tests (suite now 286).
+
 - `POST /inspect` and the `/inspect` page: a free, no-wallet x402 inspector.
   Paste an endpoint URL (GET or an empty POST) and the service fetches the
   `402` once, reads the `PAYMENT-REQUIRED` header or body challenge, and runs

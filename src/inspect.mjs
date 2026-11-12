@@ -14,7 +14,8 @@ import { request as httpRequest } from "node:http";
 import { request as httpsRequest } from "node:https";
 import { lookup as dnsLookup } from "node:dns/promises";
 
-import { preflight, parseNetwork, canonicalUsdc } from "./preflight.mjs";
+import { preflight, parseNetwork } from "./preflight.mjs";
+import { findToken, STABLE } from "./tokens.mjs";
 
 export class InspectError extends Error {
   constructor(status, code, message) {
@@ -208,20 +209,26 @@ export function acceptToPayment(accept, resource = null) {
 export function summarizeAccept(accept, resource = null) {
   const payment = acceptToPayment(accept, resource);
   const net = parseNetwork(payment.network);
+  const token = findToken(net, payment.asset);
   let priceUsd = null;
-  if (net?.family === "evm") {
-    const canonical = canonicalUsdc(net);
-    if (canonical && String(payment.asset || "").toLowerCase() === canonical.toLowerCase()) {
-      const raw = Number(payment.amount);
-      if (Number.isFinite(raw)) priceUsd = raw / 1e6;
+  let priceBasis = null;
+  if (token && token.kind === STABLE) {
+    const raw = Number(payment.amount);
+    if (Number.isFinite(raw)) {
+      priceUsd = raw / 10 ** token.decimals;
+      // USDC is the canonical asset; every other stable is priced on an
+      // assumed $1 parity, which the UI must say out loud.
+      priceBasis = token.symbol === "USDC" ? "canonical" : "assumed $1 parity";
     }
   }
   return {
     scheme: payment.scheme ?? null,
     network: payment.network ?? null,
     asset: payment.asset ?? null,
+    token: token?.symbol ?? null,
     amount: payment.amount,
     priceUsd,
+    priceBasis,
     payTo: payment.payTo ?? null,
     resource: payment.resource,
     maxTimeoutSeconds: payment.maxTimeoutSeconds ?? null,

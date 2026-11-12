@@ -5,6 +5,7 @@
 import { IDEMPOTENCY_MAX_REPLAYS, IDEMPOTENCY_TTL_MS } from "./recovery.mjs";
 import { statePersistence, recoveryDoesNotGuarantee } from "./recovery-persistence.mjs";
 import { DEFAULT_TTL_SECONDS, MAX_TTL_SECONDS, MIN_TTL_SECONDS } from "./preflight.mjs";
+import { knownNetworks } from "./tokens.mjs";
 import { PUBLISHED_VERSION, RELEASE_STATUS, RELEASE_VERSION } from "./version.mjs";
 import {
   DEMO_NETWORK,
@@ -227,6 +228,13 @@ export function buildServiceManifest({
             "Configured testnet facilitator; the live 402 challenge is authoritative",
           ],
       supportedNetworks: networks,
+      // The gate recognizes these tokens per network when it reads a 402
+      // challenge. Recognizing an address is not the same as trusting it.
+      recognizedPaymentAssets: knownNetworks().map((network) => ({
+        network: network.id,
+        name: network.name,
+        tokens: network.tokens,
+      })),
       pricing: {
         verify: { route: "/verify", priceUsd: numPrice(prices.verify), atomicAmountUsdc: atomicUsdc(prices.verify) },
         safety: { route: "/safety", priceUsd: numPrice(prices.safety), atomicAmountUsdc: atomicUsdc(prices.safety) },

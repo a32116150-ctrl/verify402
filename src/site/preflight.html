@@ -223,7 +223,7 @@
         <div class="pcard2">
           <p class="tag"><span class="dot"></span>Intent · payment</p>
           <h3>Validate the 402 before you pay it.</h3>
-          <p>Checks the scheme, CAIP-2 network, canonical USDC asset, raw amount, <code class="inline">payTo</code>, resource URL, timeout and authorization window. On EVM it also reads the payer's USDC balance. A swapped <code class="inline">payTo</code> or a lookalike asset is exactly the failure this catches.</p>
+          <p>Checks the scheme, CAIP-2 network, the payment asset (canonical USDC, or another recognized dollar stable such as USDT, DAI, or USDG, named instead of flagged), raw amount, <code class="inline">payTo</code>, resource URL, timeout and authorization window. On EVM it also reads the payer's USDC balance. A swapped <code class="inline">payTo</code> or a lookalike asset is exactly the failure this catches.</p>
         </div>
         <div class="pcard2">
           <p class="tag"><span class="dot"></span>Intent · transaction</p>

@@ -121,7 +121,7 @@
           <table class="table">
             <thead><tr><th>Intent</th><th>What it needs</th><th>What it checks</th></tr></thead>
             <tbody>
-              <tr><td class="mono">payment</td><td class="mono">network, asset, amount, payTo, resource</td><td>scheme, CAIP-2 network, canonical USDC, amount/policy cap, payee allowlist, resource URL, resource host/exact match when policy binds it, timeout, authorization window, payer balance on EVM, EVM block freshness; seller payout binding and caller-supplied obligation state when provided</td></tr>
+              <tr><td class="mono">payment</td><td class="mono">network, asset, amount, payTo, resource</td><td>scheme, CAIP-2 network, payment asset (canonical USDC, or another recognized dollar stable named in the token registry), amount/policy cap, payee allowlist, resource URL, resource host/exact match when policy binds it, timeout, authorization window, payer balance on EVM, EVM block freshness; seller payout binding and caller-supplied obligation state when provided</td></tr>
               <tr><td class="mono">transaction</td><td class="mono">chainId (EVM 1/42161/8453), to, data, value, from</td><td>recipient, calldata decode, contract bytecode, approval/spender policy, swap deadline/minOut/recipient, <code class="inline">eth_call</code> simulation, EVM block freshness</td></tr>
             </tbody>
           </table>

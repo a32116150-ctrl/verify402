@@ -51,7 +51,12 @@
 
   function money(option) {
     if (!option) return "—";
-    if (option.priceUsd != null) return "$" + option.priceUsd.toFixed(6).replace(/0+$/, "").replace(/\.$/, "");
+    if (option.priceUsd != null) {
+      var text = "$" + option.priceUsd.toFixed(6).replace(/0+$/, "").replace(/\.$/, "");
+      if (option.token) text += " " + option.token;
+      if (option.priceBasis && option.priceBasis !== "canonical") text += " (parity assumed)";
+      return text;
+    }
     if (option.amount != null) return option.amount + " raw units";
     return "—";
   }
@@ -91,7 +96,9 @@
 
     price.textContent = money(accept);
     network.textContent = accept && accept.network ? accept.network : "—";
-    token.textContent = accept && accept.asset ? short(accept.asset, 10, 6) : "—";
+    token.textContent = accept && accept.asset
+      ? (accept.token ? accept.token + " · " : "") + short(accept.asset, 10, 6)
+      : "—";
     payee.textContent = accept && accept.payTo ? short(accept.payTo, 10, 6) : "—";
     resource.textContent = data.challenge && data.challenge.resource ? data.challenge.resource : "—";
 

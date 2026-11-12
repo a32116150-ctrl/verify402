@@ -218,6 +218,8 @@ export async function inspectEntry(entry, { now = Date.now(), fetchImpl } = {}) 
       ok: true,
       status: result.status,
       price: first?.accept?.priceUsd ?? null,
+      priceBasis: first?.accept?.priceBasis ?? null,
+      token: first?.accept?.token ?? null,
       amount: first?.accept?.amount ?? null,
       network: first?.accept?.network ?? null,
       payee: first?.accept?.payTo ?? null,

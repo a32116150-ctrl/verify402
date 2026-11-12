@@ -38,6 +38,7 @@ import {
 import { CHAINS } from "./config.mjs";
 import { clientFor } from "./measure.mjs";
 import { canonicalStable, sha256Hex } from "./recovery.mjs";
+import { findToken, STABLE } from "./tokens.mjs";
 
 export const PREFLIGHT_SPEC = "verify402/preflight@1";
 export const RECEIPT_SPEC = "verify402/preflight-receipt@1";
@@ -1336,12 +1337,22 @@ async function paymentPreflight(body, { clientFactory, now, fetchImpl = globalTh
     reasons.push(block("invalid_asset", "asset is not a valid Solana mint address"));
   } else {
     const canon = canonicalUsdc(net);
+    const known = findToken(net, asset);
     if (policy.allowedAssets && !policy.allowedAssets.some((a) => sameAsset(net, a, asset))) {
       reasons.push(block("asset_not_allowed", `asset "${asset}" is outside policy.allowedAssets`));
-    } else if (canon && !sameAsset(net, asset, canon)) {
-      reasons.push(caution("non_canonical_asset", `asset "${asset}" is not canonical USDC on ${net.name}; confirm the token is what the seller accepts`));
-    } else if (canon) {
+    } else if (known) {
+      // A recognized token on a chain we know: name it instead of flagging it.
       checked.push("asset");
+      if (known.symbol !== "USDC") {
+        notChecked.push(`${known.symbol} token contract (not read on chain)`);
+        if (known.kind !== STABLE) {
+          reasons.push(caution("volatile_asset", `asset ${known.symbol} is not a dollar stable; the gate cannot price it in USD`));
+        } else {
+          notChecked.push(`${known.symbol} parity (assumed $1, not verified)`);
+        }
+      }
+    } else if (canon) {
+      reasons.push(caution("non_canonical_asset", `asset "${asset}" is not canonical USDC on ${net.name}; confirm the token is what the seller accepts`));
     } else {
       notChecked.push("asset canonicality");
     }
@@ -1358,12 +1369,24 @@ async function paymentPreflight(body, { clientFactory, now, fetchImpl = globalTh
 
   if (amount != null && policy.maxAmountUsd != null && assetValid && net?.supported) {
     const canon = canonicalUsdc(net);
+    const token = findToken(net, asset);
     if (canon && sameAsset(net, asset, canon)) {
       const decimals = canonicalUsdcDecimals(net);
       const usd = Number(amount) / 10 ** decimals;
       if (usd > policy.maxAmountUsd) {
         reasons.push(block("amount_over_policy", `amount is $${usd.toFixed(6)}, above policy.maxAmountUsd $${policy.maxAmountUsd}`));
       }
+    } else if (token && token.kind === STABLE) {
+      // A known dollar stable: the decimals are known, but the $1 parity is
+      // assumed, so the cap is enforced on that assumption and says so.
+      const usd = Number(amount) / 10 ** token.decimals;
+      if (usd > policy.maxAmountUsd) {
+        reasons.push(block("amount_over_policy", `amount is ${usd.toFixed(6)} ${token.symbol} (parity assumed at $1), above policy.maxAmountUsd $${policy.maxAmountUsd}`));
+      } else {
+        checked.push("amount cap (parity assumed)");
+      }
+    } else if (token) {
+      reasons.push(block("amount_unit_unknown", `the asset ${token.symbol} is not a dollar stable, so policy.maxAmountUsd cannot be enforced`));
     } else {
       reasons.push(block("amount_unit_unknown", "policy.maxAmountUsd is set but the asset's decimals are unknown, so the cap cannot be enforced"));
     }

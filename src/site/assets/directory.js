@@ -20,8 +20,13 @@
     return text.slice(0, head) + "…" + text.slice(-tail);
   }
 
-  function money(value, amount) {
-    if (value != null) return "$" + Number(value).toFixed(6).replace(/0+$/, "").replace(/\.$/, "");
+  function money(value, amount, token, basis) {
+    if (value != null) {
+      var text = "$" + Number(value).toFixed(6).replace(/0+$/, "").replace(/\.$/, "");
+      if (token) text += " " + token;
+      if (basis && basis !== "canonical") text += "*";
+      return text;
+    }
     if (amount != null) return String(amount) + " raw units";
     return "—";
   }
@@ -104,7 +109,11 @@
       }
       tr.appendChild(nameCell);
 
-      tr.appendChild(textCell(money(current.price, current.amount)));
+      var priceCell = textCell(money(current.price, current.amount, current.token, current.priceBasis));
+      if (current.priceBasis && current.priceBasis !== "canonical") {
+        priceCell.title = "priced at an assumed $1 parity, not verified on chain";
+      }
+      tr.appendChild(priceCell);
       tr.appendChild(textCell(short(current.network, 18, 8), true));
       tr.appendChild(textCell(short(current.payee, 8, 6), true));
 
