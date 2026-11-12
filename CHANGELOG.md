@@ -7,6 +7,12 @@ not imply a deploy or an npm publish.
 
 No version bump, deploy, or publish is implied by this section.
 
+## 1.1.0
+
+Two new free MCP tools and a payment token registry. The npm package, the MCP
+Registry entry, and the deployment are separate approval steps; this entry
+records the source change. Release runbook: `PUBLISH_STEPS_FOR_ME.md`.
+
 ### Added
 
 - Two new free MCP tools in the bridge: `inspect_402` (read an x402 402
