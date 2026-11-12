@@ -367,7 +367,7 @@ function normalizeSellerPayoutManifest(raw) {
   return out;
 }
 
-function parseNetwork(raw) {
+export function parseNetwork(raw) {
   let s = String(raw ?? "").trim();
   if (!s) return null;
   s = NETWORK_ALIASES[s.toLowerCase()] || s;
@@ -420,7 +420,7 @@ function networkKey(raw) {
   return String(raw ?? "").toLowerCase();
 }
 
-function canonicalUsdc(net) {
+export function canonicalUsdc(net) {
   if (!net || !net.supported) return null;
   if (net.family === "evm") {
     return CHAINS[net.chainId]?.tokens?.USDC?.address ?? EXTRA_EVM[net.chainId]?.usdc ?? null;

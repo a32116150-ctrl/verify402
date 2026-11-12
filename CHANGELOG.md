@@ -9,6 +9,19 @@ No version bump, deploy, or publish is implied by this section.
 
 ### Added
 
+- `POST /inspect` and the `/inspect` page: a free, no-wallet x402 inspector.
+  Paste an endpoint URL (GET or an empty POST) and the service fetches the
+  `402` once, reads the `PAYMENT-REQUIRED` header or body challenge, and runs
+  the same structural payment preflight an agent runs before signing on every
+  accept. Returns price, token, network, payee, the bound `resource`, a
+  PASS/CAUTION/BLOCK verdict, typed reasons, the checks that ran, and a
+  receipt. A pasted challenge (JSON or base64 header) needs no fetch. The
+  fetch is pinned to a validated public address (private/loopback refused,
+  no redirects, 64 KB cap, 6 s timeout) so a second DNS answer cannot rebind
+  it; the 402 is treated as untrusted data. Covered by 13 offline tests
+  (suite now 264). Linked from the nav, footer, sitemap, landing page, and
+  `llms.txt`; also listed in the plain-text root menu.
+
 - `GET /explorer` and the `/activity` page: a testnet explorer with two tables.
   Payments are every ERC-20 transfer to the service payTo address on Base
   Sepolia, read from a public Blockscout indexer with explorer links, a USDC

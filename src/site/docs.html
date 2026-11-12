@@ -19,6 +19,7 @@
   <nav class="site-nav" aria-label="Primary">
     <a href="/checks">Checks</a>
     <a href="/preflight">Preflight</a>
+    <a href="/inspect">Inspect</a>
     <a href="/mcp">MCP</a>
     <a href="/proof">Proof</a>
     <a href="/activity">Activity</a>
@@ -33,6 +34,7 @@
       <nav aria-label="Menu">
         <a href="/checks">Checks</a>
         <a href="/preflight">Preflight</a>
+    <a href="/inspect">Inspect</a>
         <a href="/mcp">MCP server</a>
         <a href="/live">Live findings</a>
         <a href="/activity">Activity</a>
@@ -164,6 +166,7 @@
             <tbody>
               <tr><td class="mono">POST /preflight</td><td class="mono">free</td><td>Pre-signing gate: PASS / CAUTION / BLOCK + receipt</td></tr>
               <tr><td class="mono">POST /preflight/verify</td><td class="mono">free</td><td>Verify a preflight receipt (HMAC + expiry)</td></tr>
+              <tr><td class="mono">POST /inspect</td><td class="mono">free</td><td>Read a live x402 402 challenge (URL or pasted) and preflight every option</td></tr>
               <tr><td class="mono">POST /verify</td><td class="mono">$0.05</td><td>Cross-venue arbitrage measurement with three-state verdict</td></tr>
               <tr><td class="mono">POST /safety</td><td class="mono">$0.10</td><td>Pre-trade token gate: TRUST / CAUTION / AVOID</td></tr>
               <tr><td class="mono">POST /route</td><td class="mono">$0.03</td><td>Best execution route across quoted venues</td></tr>

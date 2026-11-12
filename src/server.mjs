@@ -48,6 +48,7 @@ import {
   initSiteAnalytics, siteAnalyticsMiddleware, siteAnalyticsSnapshot, flushSiteAnalytics,
 } from "./site-analytics.mjs";
 import { fetchExplorer } from "./explorer.mjs";
+import { inspectUrl, inspectPaymentChallenge, extractChallenge, InspectError } from "./inspect.mjs";
 import {
   preflight, verifyReceipt, PreflightError,
   PREFLIGHT_SPEC, RECEIPT_SPEC, RECEIPT_SECRET_SOURCE,
@@ -997,6 +998,7 @@ app.get("/sitemap.xml", (_req, res) => {
   <url><loc>https://verify402.onrender.com/docs</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
   <url><loc>https://verify402.onrender.com/mcp</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
   <url><loc>https://verify402.onrender.com/preflight</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://verify402.onrender.com/inspect</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
   <url><loc>https://verify402.onrender.com/testers</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
   <url><loc>https://verify402.onrender.com/blog</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://verify402.onrender.com/blog/what-a-pre-signing-gate-can-check</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
@@ -1395,7 +1397,7 @@ function preflightRateLimit(req, res, next) {
       res.set("Retry-After", "60");
       return res.status(429).json({
         error: "rate_limited",
-        message: `max ${PREFLIGHT_RATE_PER_MIN} preflight calls per minute per IP`,
+        message: `max ${PREFLIGHT_RATE_PER_MIN} free gate calls per minute per IP`,
         requestId: req.requestId,
       });
     }
@@ -1410,7 +1412,7 @@ function preflightRateLimit(req, res, next) {
 function preflightConcurrency(req, res, next) {
   if (preflightInFlight >= PREFLIGHT_MAX_IN_FLIGHT) {
     res.set("Retry-After", "2");
-    return res.status(429).json({ error: "busy", message: "too many concurrent preflights; retry shortly", requestId: req.requestId });
+    return res.status(429).json({ error: "busy", message: "too many concurrent gate calls; retry shortly", requestId: req.requestId });
   }
   preflightInFlight += 1;
   let released = false;
@@ -1478,6 +1480,56 @@ app.post("/preflight/verify", preflightRateLimit, (req, res) => {
   res.json(verifyReceipt(receipt, options));
 });
 
+// Free x402 inspector: fetch a real 402 (or accept a pasted challenge) and run
+// the same structural payment preflight an agent runs before signing. The URL
+// fetch is pinned to a validated public address; see src/inspect.mjs.
+app.post("/inspect", preflightRateLimit, preflightConcurrency, async (req, res) => {
+  res.set("Cache-Control", "no-store");
+  const body = req.body || {};
+  try {
+    let result;
+    if (body.url) {
+      const method = String(body.method || "GET").toUpperCase();
+      if (method !== "GET" && method !== "POST") {
+        return res.status(400).json({ error: "invalid_method", code: "invalid_method", message: "method must be GET or POST", requestId: req.requestId });
+      }
+      result = await inspectUrl(String(body.url), { method });
+    } else if (body.challenge) {
+      result = await inspectPaymentChallenge({
+        challenge: body.challenge,
+        targetUrl: body.target ? String(body.target) : null,
+      });
+    } else if (body.header) {
+      const challenge = extractChallenge({ header: String(body.header) });
+      result = await inspectPaymentChallenge({ challenge });
+    } else {
+      return res.status(400).json({
+        error: "invalid_request",
+        code: "invalid_request",
+        message: "send { url } to fetch a challenge, or { challenge } / { header } to inspect one you already have",
+        requestId: req.requestId,
+      });
+    }
+    return res.json({ ...result, requestId: req.requestId });
+  } catch (e) {
+    if (e instanceof InspectError) {
+      return res.status(e.status).json({
+        error: e.code,
+        code: e.code,
+        message: e.message,
+        requestId: req.requestId,
+      });
+    }
+    logError("[inspect] failed", e);
+    return res.status(502).json({
+      error: "inspect_failed",
+      code: "inspect_failed",
+      message: "could not inspect that endpoint; retry or paste the challenge instead",
+      requestId: req.requestId,
+    });
+  }
+});
+
 // The blog index and its post directory share a prefix: /blog is a page,
 // /blog/<slug> is a static file. Route the index explicitly before static so
 // Express does not redirect to a directory listing that does not exist.
@@ -1514,6 +1566,7 @@ app.get("/", (req, res) => {
       "",
       "  POST /preflight free               should I sign this payment or transaction? (gate)",
       "  POST /preflight/verify free        verify a preflight receipt (HMAC + expiry)",
+      "  POST /inspect  free                read an x402 402 challenge and preflight it (no wallet)",
       `  POST /verify   ${PRICE} per call        is this arbitrage opportunity real?`,
       `  POST /safety   ${SAFETY_PRICE} per call        is this token safe to buy? (pre-trade gate)`,
       `  POST /route    ${ROUTE_PRICE} per call        what would the chain actually pay for this swap?`,

@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inspect a 402 — verify402</title>
+<meta name="description" content="Paste any x402 endpoint URL and see the price, token, network, payee and the gate's PASS / CAUTION / BLOCK verdict before an agent pays. Free, no wallet, no signature.">
+<meta name="google-site-verification" content="iGmI2QL110IkjnW0thU3DRZrdgQe_7mZsPWgkZVte7o">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/site.css">
+<link rel="modulepreload" href="/assets/hairline.js">
+</head>
+<body>
+
+<header class="site-head">
+  <a class="brand" href="/" aria-label="verify402 home">verify<span>[</span>402<span>]</span></a>
+  <nav class="site-nav" aria-label="Primary">
+    <a href="/checks">Checks</a>
+    <a href="/preflight">Preflight</a>
+    <a href="/inspect" aria-current="page">Inspect</a>
+    <a href="/mcp">MCP</a>
+    <a href="/proof">Proof</a>
+    <a href="/activity">Activity</a>
+    <a href="/blog">Blog</a>
+    <a href="/docs">Docs</a>
+  </nav>
+  <div class="site-actions">
+    <a class="site-status" href="/live"><span class="status-dot"></span><span data-block>snapshot · block —</span></a>
+    <a class="btn sm" href="#try">Inspect a 402</a>
+    <details class="site-menu">
+      <summary>Menu</summary>
+      <nav aria-label="Menu">
+        <a href="/checks">Checks</a>
+        <a href="/preflight">Preflight</a>
+        <a href="/inspect">Inspect a 402</a>
+        <a href="/mcp">MCP server</a>
+        <a href="/live">Live findings</a>
+        <a href="/activity">Activity</a>
+        <a href="/proof">Proof &amp; receipts</a>
+        <a href="/blog">Blog</a>
+        <a href="/testers">Test the gate</a>
+        <a href="/docs">Docs</a>
+        <a href="/start">Quickstart</a>
+        <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">GitHub</a>
+      </nav>
+    </details>
+  </div>
+</header>
+
+<main>
+
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <p class="eyebrow">Free · no wallet · read-only</p>
+        <h1>Read the price tag before your agent pays.</h1>
+        <p class="lead">Paste an x402 endpoint. The inspector fetches its <code class="inline">402</code> once, then runs the same structural payment preflight an agent runs before signing: price, token, network, payee, expiry, and a <b>PASS / CAUTION / BLOCK</b> verdict with typed reasons and a receipt. Nothing is signed, paid, or settled.</p>
+        <div class="btn-row">
+          <a class="btn" href="#try">Inspect an endpoint</a>
+          <a class="btn ghost" href="/preflight">The full gate</a>
+          <a class="btn ghost" href="/docs#preflight">The 402 shape</a>
+        </div>
+        <p class="hero-note">
+          <span><span class="dot"></span>Free · no wallet</span>
+          <span>One fetch · no redirects</span>
+          <span>Never signs</span>
+          <span>Fail-closed</span>
+        </p>
+      </div>
+      <aside>
+        <div class="vcard" data-ui>
+          <div class="vcard-head"><span>POST /inspect · free</span><span class="ok">● read-only</span></div>
+          <div class="vcard-body">
+            <div class="vrow"><span class="pair">0.03 USDC</span><span class="verdict">PASS</span><span class="meta">canonical USDC · payee ok</span></div>
+            <div class="vrow"><span class="pair">unknown token</span><span class="verdict warn">CAUTION</span><span class="meta">not canonical USDC</span></div>
+            <div class="vrow"><span class="pair">0x000…000</span><span class="verdict bad">BLOCK</span><span class="meta">burn address</span></div>
+          </div>
+          <div class="vcard-foot">The 402 names what it wants. The gate says whether to believe it.</div>
+        </div>
+        <p class="small muted" style="margin-top:12px">A 402 is a request for money from an untrusted server. This reads it before an agent does.</p>
+      </aside>
+    </div>
+  </section>
+
+  <section id="try" class="tight">
+    <div class="wrap">
+      <div class="try-shell">
+        <div class="try-head">
+          <div>
+            <p class="eyebrow">Try it · free · no wallet</p>
+            <h2>One URL in. A verdict out.</h2>
+            <p class="lead">Spend 0.03 USDC on a story? Pay a random API? Point the inspector at it first. The default sample is this service's own paid endpoint, so you can see a real challenge without setup.</p>
+          </div>
+          <div class="try-badges" aria-label="Test properties">
+            <span class="chip">Read-only fetch</span>
+            <span class="chip">No wallet</span>
+            <span class="chip">Never signs</span>
+          </div>
+        </div>
+
+        <div class="try-grid">
+          <div class="try-panel">
+            <form id="inspect-form" class="try-approval" novalidate>
+              <p class="try-kicker">Inspect by URL</p>
+              <h3>Paste an x402 endpoint.</h3>
+              <p class="try-help">The inspector sends one unpaid request, reads the 402 challenge, and runs the payment preflight on each option. It does not forward cookies, auth headers, or a wallet.</p>
+              <div class="try-fields">
+                <div class="try-field">
+                  <label for="inspect-url">Endpoint URL</label>
+                  <input id="inspect-url" class="try-input-sm" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://…/paid-route" value="https://verify402.onrender.com/verify" aria-describedby="inspect-help">
+                </div>
+                <div class="try-field try-field-network">
+                  <label for="inspect-method">Method</label>
+                  <select id="inspect-method" class="try-input-sm" aria-describedby="inspect-help">
+                    <option value="GET">GET</option>
+                    <option value="POST" selected>POST</option>
+                  </select>
+                </div>
+              </div>
+              <div class="try-actions">
+                <button class="btn" id="inspect-run" type="submit">Inspect endpoint</button>
+                <span class="try-status" id="inspect-status" role="status" aria-live="polite">Ready</span>
+              </div>
+              <p class="try-help" id="inspect-help">Only public http(s) hosts are fetched: localhost, private ranges, and redirects are refused. The response is capped at 64&nbsp;KB. The sample takes POST, so POST is preselected; a POST sends an empty <code class="inline">{}</code> body. A slow endpoint can take a few seconds.</p>
+            </form>
+
+            <details class="try-advanced">
+              <summary>Advanced: paste a 402 challenge instead</summary>
+              <form id="inspect-paste-form" novalidate>
+                <label class="try-label" for="inspect-challenge">Challenge JSON, or the base64 PAYMENT-REQUIRED header</label>
+                <textarea id="inspect-challenge" class="try-input" rows="12" maxlength="60000" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder='{"x402Version":2,"resource":"https://…","accepts":[…]}'></textarea>
+                <p class="try-help">No fetch is made in this mode. Paste what <code class="inline">curl -i</code> showed you. Do not paste private keys or seed phrases.</p>
+                <div class="try-actions">
+                  <button class="btn" id="inspect-paste-run" type="submit">Inspect challenge</button>
+                  <span class="try-status" id="inspect-paste-status" role="status" aria-live="polite"></span>
+                </div>
+              </form>
+              <noscript><p class="small muted" style="margin-top:10px">JavaScript is off. Use the curl example below.</p></noscript>
+            </details>
+
+            <pre class="try-raw" style="margin-top:18px"><code>curl -s -X POST https://verify402.onrender.com/inspect \
+  -H 'content-type: application/json' \
+  -d '{"url":"https://verify402.onrender.com/verify","method":"POST"}'</code></pre>
+          </div>
+
+          <div class="try-result" id="inspect-result" aria-live="polite" data-ui>
+            <div id="inspect-empty">
+              <p class="try-empty-title">Nothing fetched yet.</p>
+              <p class="small muted">Run an inspection to see the price, the payee, the verdict, the reasons, and the checks that actually ran.</p>
+            </div>
+            <div id="inspect-output" hidden>
+              <div class="try-verdict-row">
+                <div>
+                  <p class="try-kicker">Verdict</p>
+                  <p class="try-verdict" id="inspect-verdict">—</p>
+                </div>
+                <p class="try-meta" id="inspect-meta"></p>
+              </div>
+              <p class="try-plain" id="inspect-plain"></p>
+              <dl class="try-kv">
+                <dt>Price</dt><dd id="inspect-price">—</dd>
+                <dt>Network</dt><dd id="inspect-network">—</dd>
+                <dt>Token</dt><dd id="inspect-token">—</dd>
+                <dt>Payee</dt><dd id="inspect-payee">—</dd>
+                <dt>Resource</dt><dd id="inspect-resource">—</dd>
+              </dl>
+              <div class="try-section">
+                <p class="try-kicker">Reasons</p>
+                <ul class="try-reasons" id="inspect-reasons"></ul>
+              </div>
+              <div class="try-section" id="inspect-options-wrap" hidden>
+                <p class="try-kicker">Payment options</p>
+                <ul class="try-reasons" id="inspect-options"></ul>
+              </div>
+              <div class="try-section">
+                <p class="try-kicker">Checked</p>
+                <p class="try-pills" id="inspect-checked">—</p>
+              </div>
+              <div class="try-section">
+                <p class="try-kicker">Not checked</p>
+                <p class="try-pills muted" id="inspect-notchecked">—</p>
+              </div>
+              <details class="try-raw">
+                <summary>Raw response</summary>
+                <pre id="inspect-raw"></pre>
+              </details>
+              <div class="try-actions">
+                <button class="btn ghost" id="inspect-copy" type="button">Copy JSON</button>
+                <button class="btn ghost" id="inspect-again" type="button">Inspect again</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="try-feedback">
+          <p><b>Built for the x402 ecosystem.</b> The inspector is free because it has to run before every payment. The paid checks stay paid. <a class="textlink" href="/docs#preflight">How the gate decides</a></p>
+          <p class="small muted">The 402 is not proof that the seller controls the payee. The inspector says what it verified and what it did not.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="sec-head">
+        <div class="sec-copy">
+          <p class="eyebrow">What it checks</p>
+          <h2>The same gate, pointed at a real 402.</h2>
+          <p class="lead">Every option in the challenge goes through the structural payment preflight. The inspector adds three checks that only make sense with a target URL, then reports one verdict.</p>
+        </div>
+      </div>
+      <div class="grid three">
+        <div class="card">
+          <span class="chip">1</span>
+          <h3>The money</h3>
+          <p>Scheme, network, asset, amount, and payee. A canonical USDC asset on a supported network, a non-zero non-burn payee, and an amount inside the policy.</p>
+        </div>
+        <div class="card">
+          <span class="chip">2</span>
+          <h3>The binding</h3>
+          <p>The challenge's <code class="inline">resource</code> must name the URL you asked about. If the response is not a 402, the inspector says so instead of pretending it checked a paywall.</p>
+        </div>
+        <div class="card">
+          <span class="chip">3</span>
+          <h3>The options</h3>
+          <p>Every accept is checked. Several payees, a missing resource, an unknown token, or a zero amount each become a typed reason — never a silent pass.</p>
+        </div>
+      </div>
+      <div class="callout" style="margin-top:32px">
+        <h3>What the fetch can and cannot do</h3>
+        <p>The URL is resolved first, every resolved address must be public, and the connection is pinned to that address — so a second DNS answer cannot point it at localhost. Redirects are refused, the body is capped at 64&nbsp;KB, and the request carries no credentials. The response is treated as untrusted data. The fetch is still a best-effort guard on a shared host; the pasted-challenge mode makes no request at all.</p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-foot">
+  <div class="foot-mark" aria-hidden="true">verify<span>[402]</span></div>
+  <div class="foot-links">
+    <div>
+      <h2>Product</h2>
+      <a href="/inspect">402 inspector</a>
+      <a href="/preflight">Preflight gate</a>
+      <a href="/checks">The five checks</a>
+      <a href="/mcp">MCP server</a>
+      <a href="/live">Live findings</a>
+      <a href="/activity">Activity</a>
+      <a href="/testers">Tester kit</a>
+      <a href="/start">Quickstart</a>
+    </div>
+    <div>
+      <h2>Project</h2>
+      <a href="/proof">Proof &amp; receipts</a>
+      <a href="/docs">Documentation</a>
+      <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">Source code</a>
+      <a href="https://github.com/x402-foundation/x402/issues/3847" rel="noopener">x402 proposal</a>
+    </div>
+    <div>
+      <h2>For machines</h2>
+      <a href="/.well-known/verify402.json">Service manifest</a>
+      <a href="/openapi.json">OpenAPI 3.1</a>
+      <a href="/llms.txt">llms.txt</a>
+      <a href="/findings">/findings</a>
+      <a href="/blog/rss.xml">RSS</a>
+    </div>
+    <div>
+      <h2>For teams</h2>
+      <p class="foot-note">Embedding a pre-signing check in a wallet, agent, or treasury workflow?</p>
+      <a href="mailto:a32116150@gmail.com?subject=verify402%20walkthrough">Talk to the builder</a>
+      <a href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener">npm package</a>
+    </div>
+  </div>
+  <p class="foot-legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data; demo payments are testnet. The only settlements ever recorded are the operator's own testnet transactions. No external buyer yet. Prices are per call, paid in testnet USDC over x402; /preflight and /inspect are free.</p>
+</footer>
+
+<script src="/assets/site.js"></script>
+<script src="/assets/inspect-demo.js"></script>
+</body>
+</html>
