@@ -5,7 +5,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { encodeFunctionData, parseAbi } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { preflight, verifyReceipt, intentHash, PreflightError, SELLER_PAYOUT_MANIFEST_SPEC } from "../src/preflight.mjs";
+import { preflight, verifyReceipt, intentHash, PreflightError, SELLER_PAYOUT_MANIFEST_SPEC, SELLER_TERMS_MANIFEST_SPEC } from "../src/preflight.mjs";
 import { canonicalStable } from "../src/recovery.mjs";
 
 const NOW = 1_700_000_000_000;
@@ -63,6 +63,31 @@ async function sellerManifest(overrides = {}) {
   };
   const signature = await SELLER_SIGNER.signMessage({ message: canonicalStable(payload) });
   return { ...payload, signature };
+}
+
+const NOW_MS = NOW;
+function termsManifest(overrides = {}) {
+  const payload = {
+    spec: SELLER_TERMS_MANIFEST_SPEC,
+    seller: "seller.example",
+    chainId: 8453,
+    terms: [
+      {
+        resource: "https://verify402.onrender.com/verify",
+        network: "eip155:8453",
+        asset: USDC,
+        amount: "10000",
+        maxTimeoutSeconds: 60,
+      },
+    ],
+    issuedAt: new Date(NOW - 60_000).toISOString(),
+    expiresAt: new Date(NOW + 3_600_000).toISOString(),
+    signer: SELLER_SIGNER.address,
+    ...overrides,
+  };
+  return SELLER_SIGNER
+    .signMessage({ message: canonicalStable(payload) })
+    .then((signature) => ({ ...payload, signature }));
 }
 
 function manifestFetch(manifest, { ok = true, status = 200 } = {}) {
@@ -283,6 +308,156 @@ test("payment: an unavailable manifest is CAUTION and keeps payTo ownership unch
   assert.ok(out.reasons.some((r) => r.code === "payee_manifest_unavailable"));
   assert.ok(!out.checked.includes("payee_payout_binding"));
   assert.ok(out.notChecked.includes("payTo ownership / proven seller payout wallet"));
+});
+
+test("payment: sellerTermsManifest matching the challenge records terms_match", async () => {
+  const manifest = await termsManifest();
+  const out = await run(
+    payment({
+      policy: {
+        sellerTermsManifest: { url: "https://seller.example/.well-known/verify402.json" },
+      },
+    }),
+    fakeClient(),
+    { fetchImpl: manifestFetch(manifest) },
+  );
+  assert.equal(out.verdict, "PASS");
+  assert.ok(out.checked.includes("terms_match"));
+  assert.equal(out.termsBinding.source, "seller_terms_manifest");
+  assert.equal(out.termsBinding.matched, true);
+  assert.equal(out.termsBinding.origin, "https://seller.example");
+  assert.equal(out.termsBinding.signer, SELLER_SIGNER.address.toLowerCase());
+  assert.match(out.termsBinding.manifestHash, /^[0-9a-f]{64}$/);
+  assert.ok(out.notChecked.some((n) => n.startsWith("seller terms accuracy")));
+});
+
+test("payment: sellerTermsManifest amount mismatch blocks with terms_mismatch", async () => {
+  const manifest = await termsManifest({ terms: [{ resource: "https://verify402.onrender.com/verify", network: "eip155:8453", asset: USDC, amount: "20000", maxTimeoutSeconds: 60 }] });
+  const out = await run(
+    payment({
+      policy: {
+        sellerTermsManifest: { url: "https://seller.example/.well-known/verify402.json" },
+      },
+    }),
+    fakeClient(),
+    { fetchImpl: manifestFetch(manifest) },
+  );
+  assert.equal(out.verdict, "BLOCK");
+  assert.ok(out.reasons.some((r) => r.code === "terms_mismatch"));
+  assert.equal(out.termsBinding.matched, false);
+  assert.equal(out.termsBinding.field, "amount");
+});
+
+test("payment: sellerTermsManifest asset mismatch blocks with terms_mismatch", async () => {
+  const OTHER = "0x1111111111111111111111111111111111111111";
+  const manifest = await termsManifest({ terms: [{ resource: "https://verify402.onrender.com/verify", network: "eip155:8453", asset: OTHER, amount: "10000", maxTimeoutSeconds: 60 }] });
+  const out = await run(
+    payment({
+      policy: {
+        sellerTermsManifest: { url: "https://seller.example/.well-known/verify402.json" },
+      },
+    }),
+    fakeClient(),
+    { fetchImpl: manifestFetch(manifest) },
+  );
+  assert.equal(out.verdict, "BLOCK");
+  assert.ok(out.reasons.some((r) => r.code === "terms_mismatch"));
+  assert.equal(out.termsBinding.field, "asset");
+});
+
+test("payment: sellerTermsManifest network mismatch blocks with terms_mismatch", async () => {
+  const manifest = await termsManifest({ terms: [{ resource: "https://verify402.onrender.com/verify", network: "eip155:84532", asset: USDC, amount: "10000", maxTimeoutSeconds: 60 }] });
+  const out = await run(
+    payment({
+      policy: {
+        sellerTermsManifest: { url: "https://seller.example/.well-known/verify402.json" },
+      },
+    }),
+    fakeClient(),
+    { fetchImpl: manifestFetch(manifest) },
+  );
+  assert.equal(out.verdict, "BLOCK");
+  assert.ok(out.reasons.some((r) => r.code === "terms_mismatch"));
+  assert.equal(out.termsBinding.field, "network");
+});
+
+test("payment: sellerTermsManifest a resource with no published terms is CAUTION", async () => {
+  const manifest = await termsManifest({ terms: [{ resource: "https://other.example/other", network: "eip155:8453", asset: USDC, amount: "10000", maxTimeoutSeconds: 60 }] });
+  const out = await run(
+    payment({
+      policy: {
+        sellerTermsManifest: { url: "https://seller.example/.well-known/verify402.json" },
+      },
+    }),
+    fakeClient(),
+    { fetchImpl: manifestFetch(manifest) },
+  );
+  assert.equal(out.verdict, "CAUTION");
+  assert.ok(out.reasons.some((r) => r.code === "terms_resource_unlisted"));
+  assert.equal(out.termsBinding.matched, false);
+});
+
+test("payment: sellerTermsManifest a bad signature blocks", async () => {
+  const manifest = await termsManifest();
+  manifest.signature = "0x" + "11".repeat(65);
+  const out = await run(
+    payment({
+      policy: {
+        sellerTermsManifest: { url: "https://seller.example/.well-known/verify402.json" },
+      },
+    }),
+    fakeClient(),
+    { fetchImpl: manifestFetch(manifest) },
+  );
+  assert.equal(out.verdict, "BLOCK");
+  assert.ok(out.reasons.some((r) => r.code === "terms_manifest_signature_invalid"));
+});
+
+test("payment: sellerTermsManifest expectedSigner mismatch blocks", async () => {
+  const manifest = await termsManifest();
+  const out = await run(
+    payment({
+      policy: {
+        sellerTermsManifest: {
+          url: "https://seller.example/.well-known/verify402.json",
+          expectedSigner: "0x9999999999999999999999999999999999999999",
+        },
+      },
+    }),
+    fakeClient(),
+    { fetchImpl: manifestFetch(manifest) },
+  );
+  assert.equal(out.verdict, "BLOCK");
+  assert.ok(out.reasons.some((r) => r.code === "terms_manifest_signer_mismatch"));
+});
+
+test("payment: sellerTermsManifest an expired manifest blocks", async () => {
+  const manifest = await termsManifest({ expiresAt: new Date(NOW - 1_000).toISOString() });
+  const out = await run(
+    payment({
+      policy: {
+        sellerTermsManifest: { url: "https://seller.example/.well-known/verify402.json" },
+      },
+    }),
+    fakeClient(),
+    { fetchImpl: manifestFetch(manifest) },
+  );
+  assert.equal(out.verdict, "BLOCK");
+  assert.ok(out.reasons.some((r) => r.code === "terms_manifest_expired"));
+});
+
+test("payment: sellerTermsManifest a fetch failure is CAUTION", async () => {
+  const out = await run(
+    payment({
+      policy: {
+        sellerTermsManifest: { url: "https://seller.example/.well-known/verify402.json" },
+      },
+    }),
+    fakeClient(),
+    { fetchImpl: async () => { throw new Error("connection reset"); } },
+  );
+  assert.equal(out.verdict, "CAUTION");
+  assert.ok(out.reasons.some((r) => r.code === "terms_manifest_unavailable"));
 });
 
 test("payment: sellerPayoutManifest rejects HTTP and private hosts", async () => {

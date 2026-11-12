@@ -15,6 +15,38 @@ records the source change. Release runbook: `PUBLISH_STEPS_FOR_ME.md`.
 
 ### Added
 
+- Durable `/usage` counters. When `VERIFY402_USAGE_PATH` is set (or a durable
+  path exists next to `RECOVERY_DB_PATH`), the free-gate call counters are
+  written to a small JSON file and survive restart and deploy; otherwise they
+  stay process-local and say so. Atomic write (tmp file + rename), corrupt file
+  starts a fresh window with a warning, and `flushUsage()` runs on graceful
+  shutdown. Includes new `byTool` and `mcpPings` buckets. The `/usage` response
+  now states its persistence scope explicitly. Covered by new persistence tests
+  in `test/usage.test.mjs`.
+- `POST /inspect` now counts the target host in `byInspectHost` — hostname
+  only, no path, no identity, counts-only. Sellers can see whether their
+  endpoint is getting looked at without learning who called. Exposed on
+  `GET /usage` and persisted with the same file as the other counters.
+- Seller-signed terms manifests: `policy.sellerTermsManifest` (caller-pinned
+  HTTPS origin, seller-signed, spec `verify402/seller-terms@1`) + the same
+  fetch-verify discipline as the payout manifest. The challenge's network,
+  asset, amount and timeout are bound to one seller publication: a drift of
+  any of the four **BLOCKs** (`terms_mismatch`, naming the field); a resource
+  with no published terms is a CAUTION (`terms_resource_unlisted`); a bad or
+  expired manifest degrades like the payout manifest (`terms_manifest_*`);
+  a match records `terms_match` and a signed `termsBinding` in the receipt.
+  Ten tests cover the matching/mismatch matrix plus signature and expiry.
+
+- `POST /usage/ping` — anonymous, opt-in usage pings from the MCP bridge. The
+  bridge sends one line per tool call (`tool` + `ok: boolean`) only when the
+  operator sets `VERIFY402_TELEMETRY=1`; never arguments, intents, results,
+  wallets, or IPs. Tool name comes from a shared allowlist; pings are labelled
+  by the `X-Verify402-Client` header, counted as `mcp:<tool>` in `byKind`,
+  `byTool`, `byStatus`, and a new `byClientSource: "mcp-ping"` bucket. A failed
+  ping never changes a tool's answer and the endpoint accepts at most 120/min
+  per IP. A new `mcp-bridge/test/telemetry.test.mjs` pins the opt-in-off default,
+  the minimal payload, and the never-throw guarantee.
+
 - Two new free MCP tools in the bridge: `inspect_402` (read an x402 402
   challenge before paying it — endpoint URL or a challenge you already have;
   returns price, token, network, payee, the bound resource, a PASS / CAUTION /
