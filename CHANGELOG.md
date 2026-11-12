@@ -9,6 +9,18 @@ No version bump, deploy, or publish is implied by this section.
 
 ### Added
 
+- `GET /explorer` and the `/activity` page: every ERC-20 transfer to the service
+  payTo address on Base Sepolia, read from a public Blockscout indexer with
+  explorer links, a USDC total, and `stale`/cache markers. Mainnet is reported
+  as `armed: false` and has no rows until it is. The page also lists the dated
+  test snapshot (suite, post-deploy checks, audit). Linked from the nav, footer,
+  sitemap, and `llms.txt`.
+- `GET /npm-stats` and a home-page counter: last-7-day and last-30-day npm
+  downloads for `verify402-mcp`, cached for an hour server-side. Labeled as
+  downloads, not unique agents.
+- `src/explorer.mjs` with exact fixed-point USDC formatting and normalization,
+  covered by six offline tests (suite now 249).
+
 - `GET /usage/site`: aggregate HTML page views by path, referring host, and day
   for the human site, plus the count of skipped crawlers/clients. No cookies, no
   IP addresses, no query strings, no per-visitor identifiers, and no unique

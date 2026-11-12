@@ -47,6 +47,7 @@ import { setDurableRecovery, statePersistence, recoveryDoesNotGuarantee, persist
 import {
   initSiteAnalytics, siteAnalyticsMiddleware, siteAnalyticsSnapshot, flushSiteAnalytics,
 } from "./site-analytics.mjs";
+import { fetchExplorer } from "./explorer.mjs";
 import {
   preflight, verifyReceipt, PreflightError,
   PREFLIGHT_SPEC, RECEIPT_SPEC, RECEIPT_SECRET_SOURCE,
@@ -251,6 +252,8 @@ const DISCOVERY_GET_PATHS = new Set([
   "/usage",
   "/usage/site",
   "/findings",
+  "/explorer",
+  "/npm-stats",
   "/openapi.json",
   "/llms.txt",
   "/robots.txt",
@@ -1002,6 +1005,7 @@ app.get("/sitemap.xml", (_req, res) => {
   <url><loc>https://verify402.onrender.com/checks</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://verify402.onrender.com/proof</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://verify402.onrender.com/live</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://verify402.onrender.com/activity</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
   <url><loc>https://verify402.onrender.com/donate</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
   <url><loc>https://verify402.onrender.com/sponsor</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
 </urlset>`
@@ -1268,6 +1272,73 @@ function refreshFindings() {
 }
 
 const findingsAge = () => Math.round((Date.now() - findingsSnap.at) / 1000);
+
+// Free, cached mirror of the npm counters. The home page reads this instead of
+// calling npm from the browser: one cache, no CSP exception, and a stale copy
+// beats a blank number when the registry is slow.
+let npmStatsSnap = null;
+app.get("/npm-stats", async (_req, res) => {
+  if (npmStatsSnap && Date.now() - npmStatsSnap.at < 3_600_000) {
+    res.set("Cache-Control", "public, max-age=300");
+    return res.json({ ...npmStatsSnap.payload, ageSeconds: Math.round((Date.now() - npmStatsSnap.at) / 1000) });
+  }
+  const point = (range) => `https://api.npmjs.org/downloads/point/${range}/verify402-mcp`;
+  const read = (range) =>
+    fetch(point(range), { signal: AbortSignal.timeout(8000) }).then((r) => {
+      if (!r.ok) throw new Error(`npm ${r.status}`);
+      return r.json();
+    });
+  try {
+    const [week, month] = await Promise.all([read("last-week"), read("last-month")]);
+    const payload = {
+      spec: "verify402/npm-stats@1",
+      package: "verify402-mcp",
+      lastWeek: week.downloads,
+      lastMonth: month.downloads,
+      fetchedAt: new Date().toISOString(),
+      note: "npm downloads, not unique agents. Mirror and automated installs are included.",
+    };
+    npmStatsSnap = { at: Date.now(), payload };
+    res.set("Cache-Control", "public, max-age=300");
+    return res.json({ ...payload, ageSeconds: 0 });
+  } catch (e) {
+    logError("[npm-stats] fetch failed", e);
+    if (npmStatsSnap) return res.json({ ...npmStatsSnap.payload, stale: true });
+    return res.status(503).json({
+      error: "npm_stats_unavailable",
+      message: "the npm registry did not answer; retry shortly",
+    });
+  }
+});
+
+// The settlement list is read from the chain, not from a local ledger: the free
+// instance has no durable store, so a local table would reset on deploy. The
+// indexer is fixed, never caller-supplied, so this route cannot be used to
+// reach an arbitrary host.
+let explorerSnap = null;
+app.get("/explorer", async (_req, res) => {
+  const now = Date.now();
+  if (explorerSnap && now - explorerSnap.at < 60_000) {
+    res.set("Cache-Control", "public, max-age=30");
+    return res.json({ ...explorerSnap.payload, ageSeconds: Math.round((now - explorerSnap.at) / 1000) });
+  }
+  try {
+    const payload = await fetchExplorer({ mode: MODE, payTo: PAY_TO_EVM });
+    explorerSnap = { at: now, payload };
+    res.set("Cache-Control", "public, max-age=30");
+    return res.json({ ...payload, ageSeconds: 0 });
+  } catch (e) {
+    logError("[explorer] chain indexer failed", e);
+    if (explorerSnap) {
+      res.set("Cache-Control", "no-store");
+      return res.json({ ...explorerSnap.payload, stale: true, ageSeconds: Math.round((now - explorerSnap.at) / 1000) });
+    }
+    return res.status(503).json({
+      error: "explorer_unavailable",
+      message: "the chain indexer did not answer; retry shortly",
+    });
+  }
+});
 
 app.get("/findings", async (req, res) => {
   if (findingsSnap && Date.now() - findingsSnap.at < FINDINGS_TTL_MS) {

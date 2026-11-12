@@ -95,4 +95,24 @@
     }, 2500);
   }
 
+  // Live npm counters: one same-origin fetch, one server cache. A dash beats a
+  // made-up number when the registry is slow.
+  var npmWeek = document.querySelector("[data-npm-week]");
+  var npmMonth = document.querySelector("[data-npm-month]");
+  if (npmWeek || npmMonth) {
+    fetch("/npm-stats")
+      .then(function (response) {
+        if (!response.ok) throw new Error("HTTP " + response.status);
+        return response.json();
+      })
+      .then(function (data) {
+        var fmt = function (value) {
+          return typeof value === "number" ? value.toLocaleString("en-US") : "—";
+        };
+        if (npmWeek) npmWeek.textContent = fmt(data.lastWeek);
+        if (npmMonth) npmMonth.textContent = fmt(data.lastMonth);
+      })
+      .catch(function () {});
+  }
+
 })();
