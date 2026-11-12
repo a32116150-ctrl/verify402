@@ -1326,7 +1326,8 @@ let explorerSnap = null;
 const directory = createDirectory({
   filePath: process.env.VERIFY402_DIRECTORY_FILE || null,
 });
-if (process.env.VERIFY402_DIRECTORY_WATCH === "1" && process.env.TEST_OFFLINE !== "1") {
+// On by default; VERIFY402_DIRECTORY_WATCH=0 disables it.
+if (process.env.VERIFY402_DIRECTORY_WATCH !== "0" && process.env.TEST_OFFLINE !== "1") {
   directory.start();
   const boot = setTimeout(() => directory.runOnce().catch(() => {}), 2000);
   if (typeof boot.unref === "function") boot.unref();
