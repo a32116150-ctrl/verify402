@@ -4,7 +4,7 @@ This file is a paste sheet, not a record of listings. **As of 2026-11-13:**
 
 | Directory | State |
 |---|---|
-| PulseMCP | "Showing 0 – 0 of 0 servers for verify402". Submissions were reported paused site-wide on 2026-10-26 — retry when they reopen. |
+| PulseMCP | "Showing 0 – 0 of 0 servers". **Submissions and listing changes are paused site-wide** while they rework how listings are ingested — the `/submit` page now redirects to the official MCP Registry docs, and their homepage banner says so. We are already in that registry (1.1.0, active), so nothing to submit today; retry when they reopen. |
 | mcp.so | "No servers match verify402" |
 | Smithery | Server page at `smithery.ai/server/@a32116150-ctrl/verify402-mcp` now redirects to www and **404s** — no listing. |
 | Glama | **Listed** (auto-indexed GitHub repo): https://glama.ai/mcp/servers/a32116150-ctrl/verify402 — shows older metadata (1.0.9-era). Nothing to submit; claiming/refreshing is optional. |
@@ -59,12 +59,12 @@ Paid (only when a wallet is configured; testnet USDC per call):
 
 ---
 
-## 1. PulseMCP — https://www.pulsemcp.com/submit
+## 1. PulseMCP — https://www.pulsemcp.com/submit (redirects to MCP Registry docs)
 
-Paste the shared facts. Fields to expect: name, description, repository URL,
-npm package, category/tags. Everything is already public; nothing requires a
-credential. **Do not** claim mainnet settlement, audits, or an external
-customer — none exists.
+Submissions are **paused site-wide**: `/submit` no longer shows a form; it
+redirects to the official MCP Registry docs, and the homepage carries the
+"new server submissions and listing changes are still paused" banner. The
+prerequisite they want is being in the MCP Registry — done (`io.github.a32116150-ctrl/verify402-mcp`, 1.1.0, active). Do not re-submit; do not "upgrade" anything on that page; check back when the banner comes down.
 
 ## 2. mcp.so — https://mcp.so/submit
 
