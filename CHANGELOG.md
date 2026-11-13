@@ -22,17 +22,24 @@ No version bump, deploy, or publish is implied by this section.
 
 ### Fixed
 
-- `POST /inspect` no longer answers `422 challenge_mismatch` when the header
-  and the JSON body carry the **same accepts** but the body omits the wrapper
-  `resource`. The mismatch check now compares only what a compliant client
-  pays (`accepts` + dialect version), not descriptive wrapper fields. Our own
-  scan of 300 live public x402 endpoints from the CDP Bazaar catalog found
-  31 endpoints — mainstream hosted gateways that echo the header challenge
-  next to their own error prose — being refused by a verdict instead of
-  being read, which is backwards for a tool that exists to read 402s. The
-  swapped-payee case still returns `challenge_mismatch`. Covered in the
-  existing header/body matrix test, extended with the two wrapper-resource
-  shapes.
+- `POST /inspect` now recognizes a challenge and its **v1-dialect twin** as the
+  same demand. Many live sellers announce the terms in both x402 v2 (header)
+  and v1 (body) — same amount/asset/payTo/chain, written as
+  `amount`+`eip155:8453` in the header and `maxAmountRequired`+`base` in the
+  body. The mismatch check now unfolds v1 aliases (network names with a
+  documented CAIP-2 mapping, `maxAmountRequired`, `timeout`, `payTo`) before
+  comparing, and wrapper fields that are not part of the term sheet (the
+  declared `resource`, the body's prose or error keys) do not participate.
+  Anything that does not normalize cleanly still fails closed
+  (`422 challenge_mismatch`) — including the gondola-ai/x402 mirror case,
+  which now reads `PASS`. Caught by our own Bazaar scan, which flagged 31
+  public endpoints before two fixes: 12 were the same-terms case our earlier
+  comparison treated as different; 16 are dual-dialect twins that now read
+  as the same demand; a handful advertise a **subset** of the header's
+  accepts and stay refused deliberately. Covered by extended header/body
+  tests, including the real gondola-ai shape. The original mismatch
+  behavior is unchanged for swapped-payee disagreement.
+
 
 ### Added
 

@@ -96,6 +96,32 @@ test("extractChallenge refuses a header and body that disagree, and accepts a ma
   });
   assert.equal(extractChallenge({ header, body: bodyNoResource }).accepts[0].payTo, same.accepts[0].payTo);
 
+  // Same terms in the v1 dialect the header echoes as v2 is not a contradiction
+  // either — real sellers announce the demand in both dialects (a v1 body
+  // beside a v2 header, sharing amount/asset/payTo/chain spelling differences).
+  const v1Mirror = {
+    x402Version: 1,
+    error: "Payment Required",
+    accepts: [{
+      scheme: "exact",
+      network: "base-sepolia",
+      maxAmountRequired: "30000",
+      resource: "https://example.com/paid",
+      payTo: same.accepts[0].payTo,
+      maxTimeoutSeconds: 60,
+      asset: same.accepts[0].asset,
+    }],
+  };
+  assert.equal(extractChallenge({ header, body: JSON.stringify(v1Mirror) }).accepts[0].payTo, same.accepts[0].payTo);
+
+  // A v1 mirror with its payee swapped is still a contradiction.
+  const v1Swapped = JSON.parse(JSON.stringify(v1Mirror));
+  v1Swapped.accepts[0].payTo = "0x2222222222222222222222222222222222222222";
+  assert.throws(
+    () => extractChallenge({ header, body: JSON.stringify(v1Swapped) }),
+    (e) => e instanceof InspectError && e.code === "challenge_mismatch",
+  );
+
   // Same accepts; the wrapper resource differs from the claim side. Still not
   // a contradiction: accepts are the contract.
   const bodyOtherResource = JSON.stringify({ x402Version: 2, resource: "https://other.example/x", accepts: same.accepts });

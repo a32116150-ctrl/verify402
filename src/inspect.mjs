@@ -179,20 +179,65 @@ function bodyChallenge(body) {
   return null;
 }
 
-// Stable shape for comparison: key order must not decide whether two
-// challenges are the same. Only the accepts (the term sheet a compliant
-// client pays) and the dialect version participate. The wrapper's declared
-// `resource` does not: a body that omits it while naming the same accepts is
-// not a contradiction, and refusing to read it would catch real endpoints
-// (e.g. sellers who echo the header challenge but attach their own error
-// prose beside it) for no security gain.
-function canonicalChallenge(challenge) {
-  const accept = (a) => JSON.stringify(
-    Object.fromEntries(Object.entries(a ?? {}).sort(([x], [y]) => (x < y ? -1 : x > y ? 1 : 0))),
-  );
+// Chain spellings used by x402 v1 sellers, normalized to CAIP-2. An unknown
+// spelling passes through unchanged — it still matches itself, but it cannot
+// be conjured equal to a different spelling.
+const CHAIN_ALIASES = new Map(Object.entries({
+  "ethereum": "eip155:1",
+  "sepolia": "eip155:11155111",
+  "ethereum-sepolia": "eip155:11155111",
+  "goerli": "eip155:5",
+  "base": "eip155:8453",
+  "base-sepolia": "eip155:84532",
+  "arbitrum": "eip155:42161",
+  "arbitrum-sepolia": "eip155:421614",
+  "polygon": "eip155:137",
+  "matic": "eip155:137",
+  "polygon-amoy": "eip155:80002",
+  "bsc": "eip155:56",
+  "binance": "eip155:56",
+  "bnb": "eip155:56",
+  "avalanche": "eip155:43114",
+  "optimism": "eip155:10",
+  "optimism-sepolia": "eip155:11155420",
+  "solana": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
+  "solana-mainnet": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
+  "solana-devnet": "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1",
+  "solana-testnet": "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1",
+}));
+
+function normalizeChain(name) {
+  const k = String(name ?? "").toLowerCase().trim().replace(/[_\s]+/g, "-");
+  return CHAIN_ALIASES.get(k) ?? k;
+}
+
+const low = (v) => (v == null ? null : String(v).toLowerCase());
+
+// One accept entry normalized to the six fields that decide who pays what —
+// scheme, chain, asset, raw amount, recipient, timeout. v1 dialect aliases
+// are unfolded so x402 dialect differences don't shadow payment equivalence.
+function canonicalAccept(a) {
+  const t = a ?? {};
+  const amount = t.amount ?? t.maxAmountRequired ?? t.maxPrice ?? t.maxAmount ?? null;
+  const timeout = t.maxTimeoutSeconds ?? t.timeout ?? null;
   return JSON.stringify({
-    x402Version: challenge?.x402Version ?? null,
-    accepts: (challenge?.accepts ?? []).map(accept).sort(),
+    scheme: t.scheme == null ? null : String(t.scheme).toLowerCase(),
+    network: normalizeChain(t.network),
+    asset: low(t.asset),
+    amount: amount == null ? null : String(amount),
+    payTo: low(t.payTo ?? t.to ?? t.recipient),
+    timeout: timeout == null ? null : String(timeout),
+  });
+}
+
+// Two challenges carry the same demand when their accepts (the term sheet a
+// compliant client signs) normalize equal. The wrapper — the declared
+// `resource`, the body's prose, its error keys — is not part of the contract
+// and does not participate. `x402Version` is not part of the contract either:
+// a v1 body and a v2 header advertising the same terms say the same thing.
+function canonicalChallenge(challenge) {
+  return JSON.stringify({
+    accepts: (challenge?.accepts ?? []).map(canonicalAccept).sort(),
   });
 }
 
