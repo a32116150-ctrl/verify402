@@ -1,19 +1,20 @@
 # Directory submission payloads — copy/paste, in this order
 
-This file is a paste sheet, not a record of listings. **None of the four
-directories below carries us yet** (checked 2026-11-13, direct query of each
-site):
+This file is a paste sheet, not a record of listings. **As of 2026-11-13:**
 
-| Directory | Query result |
+| Directory | State |
 |---|---|
-| PulseMCP | "Showing 0 – 0 of 0 servers for verify402" |
+| PulseMCP | "Showing 0 – 0 of 0 servers for verify402". Submissions were reported paused site-wide on 2026-10-26 — retry when they reopen. |
 | mcp.so | "No servers match verify402" |
-| Smithery | nothing |
-| Glama | nothing |
+| Smithery | Server page at `smithery.ai/server/@a32116150-ctrl/verify402-mcp` now redirects to www and **404s** — no listing. |
+| Glama | **Listed** (auto-indexed GitHub repo): https://glama.ai/mcp/servers/a32116150-ctrl/verify402 — shows older metadata (1.0.9-era). Nothing to submit; claiming/refreshing is optional. |
 
-All four were marked `PREPARED` in `docs/distribution-directory-checklist.md`
-and never submitted. Everything here is true of the live 1.1.0 release; nothing
-is claimed that the repo or the running service does not show.
+Re-check Glama before any public claim about what version it shows.
+
+All four were marked `PREPARED` in `docs/distribution-directory-checklist.md`;
+only Glama resolved that way. Everything else here is true of the live 1.1.0
+release; nothing is claimed that the repo or the running service does not
+show.
 
 **Before pasting anything:** these are browser/account forms, not APIs. Open
 them logged in as yourself. Do not fill in a field with something from this
@@ -81,11 +82,11 @@ endpoint we cannot provide, stop and say so — do not invent a URL.
 
 ## 4. Glama — https://glama.ai/mcp/servers
 
-Glama mostly indexes public GitHub repositories automatically and lets owners
-claim the result. Expect a delay rather than an instant listing; claim the
-repo once it appears. (Glama indexes repos with a clear MCP entry point —
-`mcp-bridge/index.mjs` is the bridge; the README documents
-`npx -y verify402-mcp`.)
+Glama indexes public GitHub repositories automatically; we are already there
+as `glama.ai/mcp/servers/a32116150-ctrl/verify402`, showing stale metadata
+(1.0.9-era). The only credible action is to claim/refresh the existing entry,
+not to submit a new one. If the refresh flow is not offered to us, leave it
+and re-check later. The `awesome-mcp-servers` entry below is independent.
 
 ---
 
