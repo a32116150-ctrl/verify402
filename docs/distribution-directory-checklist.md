@@ -6,6 +6,15 @@
 **Production URL:** [https://verify402.onrender.com](https://verify402.onrender.com)
 
 This checklist tracks official and third-party registry listings for Verify402. Every entry is backed by verified repository evidence and explicit status codes:
+
+> **Staleness notice (2026-11-13).** Version, dates, and several URLs in this
+> file are out of date — the intro says 1.0.3, the registry entry says 1.0.3,
+> and 402 Index is now `402index.io`. The four directories marked **PREPARED**
+> below were never submitted; direct queries on 2026-11-13 found no listing on
+> PulseMCP, mcp.so, Smithery, or Glama. The current paste sheets for those
+> submissions live in [`directory-submission-payloads.md`](directory-submission-payloads.md),
+> which is the operative copy for anyone filing one. This file is kept as
+> historical evidence of what was verified and when.
 - **VERIFIED**: Proven active and authenticated with cryptographic or on-chain proof.
 - **IMPLEMENTED**: Code and protocol metadata are deployed and serving live responses.
 - **PREPARED**: Manifests and submission texts are formatted and validated locally, pending external manual credentials or human approval.

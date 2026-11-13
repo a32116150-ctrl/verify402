@@ -151,7 +151,7 @@ each. Every post ends with the same tester ask, not a sales pitch.
 4. **What 15 outside intents changed in 1.0.8** — hardening note, not a defect
    list; only with tester permission and receipts.
 5. **How to put a pre-signing gate in an MCP agent in 15 minutes** — integration
-   walkthrough with the reference guard.
+   walkthrough with the reference guard. *Done 2026-11-13.*
 6. **The `notChecked` list is the product** — why scope beats a green check.
 7. **Why an unlimited approval is still the default failure** — ERC-20 allowance
    mechanics, no fear-mongering.
@@ -224,10 +224,18 @@ Distribution for each post:
 
 ### Week 3 — integration (Nov 9–15)
 
-- [ ] Publish the MCP integration walkthrough.
+- [x] Publish the MCP integration walkthrough. (2026-11-13 →
+  `/blog/pre-signing-gate-in-an-mcp-agent`; the promised 60–90 s screen
+  capture still does not exist — it needs a human at a terminal.)
+- [x] Publish the x402 inspection post. (2026-11-13 →
+  `/blog/check-an-x402-endpoint-before-you-pay`, aimed at the query "check an
+  x402 endpoint before paying it"; free `/inspect`, no wallet.)
 - [ ] Record a 60–90 second screen capture of the gate blocking an approval.
 - [ ] Pitch the gate to one wallet / agent-framework team (warm only).
-- [ ] Check mcprush + Glama listing status.
+- [x] Check mcprush listing status (1.1.0, 8 tools, done 2026-11-13). Glama,
+  PulseMCP, mcp.so and Smithery still have nothing — all were `PREPARED` and
+  never submitted; paste sheets: `docs/directory-submission-payloads.md`
+  (verified against each site 2026-11-13).
 
 ### Week 4 — commercial (Nov 16–22)
 
