@@ -1,8 +1,13 @@
 # mcprush server release: verify402-mcp 1.1.0
 
-Status: **npm and the Official MCP Registry are on 1.1.0; the mcprush listing
-still serves 1.0.9.** The badge reads `v1.0.9 · 26 Oct 2026` and the tool
-surface reads 6 tools.
+Status: **done — the mcprush listing serves 1.1.0.** Released 2026-11-13: the
+release row reads `1.1.0 · 13 Nov 2026`, the current release on file is
+`1.1.0`, the tool surface is **8 tools** (was 6), `inspect_402` and
+`directory_402` are both listed, and the badge reads
+`v1.1.0 · 8 tools · updated today`.
+
+The release note published on the listing is the shorter variant below. The
+steps and the long variant are kept for the next release.
 
 mcprush version updates are a publisher-side Studio action. The publisher API is
 read-only (`/api/pub/whoami`, `/api/pub/listings`, `/api/pub/calls`), so a key
@@ -10,20 +15,25 @@ alone cannot cut a release. The `mcprush` CLI is install-only (`add`,
 `add-list`, `stack add`, `skill add`, `budget`, `login`) and has no release
 command.
 
-## What mcprush shows today
+## What mcprush shows now
 
 | Field | Value |
 |---|---|
 | Listing | `a32116150-ctrl/verify402-mcp` |
 | Page | https://mcprush.com/a32116150-ctrl/verify402-mcp |
-| Current release on file | `1.0.9` (scanned 26 Oct 2026) |
-| Tool surface | 6 tools |
-| Release history | 6 rows (1.0.2, 1.0.3, 1.0.4, 1.0.5, 1.0.8, 1.0.9) |
+| Current release on file | `1.1.0` (13 Nov 2026) |
+| Tool surface | 8 tools (`inspect_402`, `directory_402` added) |
+| Release history | 7 rows (1.0.2, 1.0.3, 1.0.4, 1.0.5, 1.0.8, 1.0.9, 1.1.0) |
 | Transport | Local · stdio (buyers reach it directly, nothing proxied) |
 | Grade | A · 96/100 |
 | Badge | https://mcprush.com/badge/verify402-mcp/card.svg |
 
-## Cut the 1.1.0 release (~3 minutes, browser)
+Before the release it read `1.0.9` (scanned 26 Oct 2026) with a 6-tool surface.
+Opening the release form auto-filled `1.1.0` — a hand-cut release holds the
+version label until the next one is cut, which is why it had not moved on its
+own.
+
+## Cut a release (~3 minutes, browser)
 
 1. Sign in and open **Studio → Releases**.
 2. **Add new release** → **MCP server**.

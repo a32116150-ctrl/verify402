@@ -1,15 +1,26 @@
 # mcprush skill submission: verify402 preflight
 
-Status: **source pushed, not submitted**. The source lives at
-`skills/verify402-preflight/` in this repository and is live on `master` at
-commit `d87adf6`:
+Status: **live.** The skill is published at
+https://mcprush.com/a32116150-ctrl/verify402-preflight and the source lives at
+`skills/verify402-preflight/` in this repository:
 https://github.com/a32116150-ctrl/verify402/tree/master/skills/verify402-preflight
 
-> **Do the server listing first.** The mcprush listing for `verify402-mcp` still
-> serves release `1.0.9` and a 6-tool surface, while npm and the Official MCP
-> Registry are on `1.1.0`. Cut that release before submitting this skill, so the
-> "servers it uses" link resolves to the version you mean. Steps and paste-ready
-> release note: `docs/mcprush-server-release-1.1.0.md`.
+Verified 2026-11-13:
+
+- The skill page resolves and lists **1 MCP server it uses**.
+- The bundle serves: `/api/skills/verify402-preflight/bundle.tar.gz` → 200,
+  16.2 kB, containing `SKILL.md`, the five reference files and `.mcprush.json`.
+- `/api/skills/verify402-preflight/skill.md` → 200, 14.7 kB.
+- Install line: `npx mcprush@latest skill add a32116150-ctrl/verify402-preflight`
+- It sits beside the server listing, which now serves `1.1.0` with an 8-tool
+  surface (`docs/mcprush-server-release-1.1.0.md`).
+
+One normalisation to know about: mcprush folds the `requires:` block into
+listing metadata, so the distributed `SKILL.md` no longer carries
+`requires.mcp: [verify402-mcp]` in its front matter. The relationship is
+declared on the listing page instead ("It expects 1 MCP server to be
+connected"). Keep the block in the repository copy — that is what mcprush
+reads on a new upload.
 
 ## Listing fields
 

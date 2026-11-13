@@ -175,8 +175,9 @@ records the source change. Release runbook: `PUBLISH_STEPS_FOR_ME.md`.
 - Not part of this release: durable settlement recovery is still the dashboard
   cutover in `DEPLOY.md` §3.1/3.2; the deployed service reports
   `recoveryStore: memory-only`.
-- mcprush: the listing still serves `1.0.9` until a `1.1.0` release is cut in
-  Studio; see `docs/mcprush-server-release-1.1.0.md`.
+- mcprush: listing `a32116150-ctrl/verify402-mcp` serves `1.1.0` with an
+  8-tool surface (was 6), released `2026-11-13`; the agent skill
+  `a32116150-ctrl/verify402-preflight` is live alongside it.
 
 ## 1.0.9 — 2026-10-26
 
