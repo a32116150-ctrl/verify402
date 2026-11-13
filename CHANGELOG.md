@@ -158,6 +158,26 @@ records the source change. Release runbook: `PUBLISH_STEPS_FOR_ME.md`.
   guidance stays in `DEPLOY.md`.
 - `video/`, `renders/`, and `*.mp4` are ignored so local media cannot enter git.
 
+### Release metadata
+
+- npm: `verify402-mcp@1.1.0` (dist-tag `latest`), published
+  `2026-11-12T23:54:12Z`, `gitHead
+  f5d5d9afb0fbd4206d3f294ad13b0cab9ed4f3b1`, shasum
+  `9680417149657a1d8d267e12a6bec42d9a268bed`; 12 files, 33.2 kB.
+- MCP Registry: `io.github.a32116150-ctrl/verify402-mcp` `1.1.0` active and
+  latest (`publishedAt: 2026-11-13T00:05:20.114959Z`).
+- GitHub: release `mcp-v1.1.0` published `2026-11-13T12:30:31Z`; the tag points
+  at `f5d5d9a`, the commit npm built from, not the later docs-only commits.
+- Render: `/info` reports `1.1.0`; free-only post-deploy check passed 29/29
+  against `https://verify402.onrender.com`.
+- Clean install from the public registry: 12 files, 33.2 kB, `npm audit` →
+  0 vulnerabilities.
+- Not part of this release: durable settlement recovery is still the dashboard
+  cutover in `DEPLOY.md` §3.1/3.2; the deployed service reports
+  `recoveryStore: memory-only`.
+- mcprush: the listing still serves `1.0.9` until a `1.1.0` release is cut in
+  Studio; see `docs/mcprush-server-release-1.1.0.md`.
+
 ## 1.0.9 — 2026-10-26
 
 `verify402-mcp@1.0.9` removes the `@x402` client SDK from the published bridge
