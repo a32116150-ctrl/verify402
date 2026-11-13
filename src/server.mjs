@@ -1011,6 +1011,7 @@ app.get("/sitemap.xml", (_req, res) => {
   <url><loc>https://verify402.onrender.com/blog/check-an-x402-endpoint-before-you-pay</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://verify402.onrender.com/blog/pre-signing-gate-in-an-mcp-agent</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://verify402.onrender.com/blog/verify402-mcp-1-1-0</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://verify402.onrender.com/blog/what-public-402s-look-like</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://verify402.onrender.com/checks</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://verify402.onrender.com/proof</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://verify402.onrender.com/live</loc><changefreq>daily</changefreq><priority>0.8</priority></url>

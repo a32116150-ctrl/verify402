@@ -43,13 +43,20 @@ No version bump, deploy, or publish is implied by this section.
 
 ### Added
 
+- `GET /blog/what-public-402s-look-like` — a field note from the 300 top
+  most-called public x402 Bazaar endpoints, one read-only probe each: Base,
+  canonical USDC, five-minute authorizations in the majority and 57 asking
+  for one hour, 222 well-formed plus 60 well-formed-with-flags, the
+  inspector checks we refused, and the defects the scan surfaced in our own
+  tool (both fixed and live). Raw JSON is in `docs/bazaar-scan-2026-11.json`
+  so any number in the post can be re-checked independently.
 - `GET /blog/check-an-x402-endpoint-before-you-pay`,
   `GET /blog/pre-signing-gate-in-an-mcp-agent`, and
   `GET /blog/verify402-mcp-1-1-0` — three notes: the six fields a 402 decides
   and how to read them for free; a 15-minute MCP install with the guard wired
   so a BLOCK cannot reach the signer; and the 1.1.0 release note (two free
   tools, seller terms binding, token registry, durable counters, and what
-  did not change). All three are in the blog index, the RSS feed, the
+  did not change). All four are in the blog index, the RSS feed, the
   sitemap, and the index's structured data.
 
 ## 1.1.0

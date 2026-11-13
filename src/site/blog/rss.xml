@@ -6,7 +6,14 @@
     <atom:link href="https://verify402.onrender.com/blog/rss.xml" rel="self" type="application/rss+xml" />
     <description>Scope, receipts, and field notes from building a pre-signing gate for agent payments.</description>
     <language>en</language>
-    <lastBuildDate>Fri, 13 Nov 2026 13:30:00 GMT</lastBuildDate>
+    <lastBuildDate>Fri, 13 Nov 2026 18:20:00 GMT</lastBuildDate>
+    <item>
+      <title>What x402's 402s actually look like</title>
+      <link>https://verify402.onrender.com/blog/what-public-402s-look-like</link>
+      <guid isPermaLink="true">https://verify402.onrender.com/blog/what-public-402s-look-like</guid>
+      <pubDate>Fri, 13 Nov 2026 18:20:00 GMT</pubDate>
+      <description>300 most-called public x402 endpoints, one read-only probe each: Base, canonical USDC, five-minute authorizations — and the 57 that ask for an hour.</description>
+    </item>
     <item>
       <title>What verify402-mcp 1.1.0 ships</title>
       <link>https://verify402.onrender.com/blog/verify402-mcp-1-1-0</link>

@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What x402's 402s actually look like · verify402</title>
+<meta name="description" content="300 of the most-called public x402 endpoints, one read-only probe each: what a payment demand looks like in the wild — chains, tokens, timeouts, and what we refuse. Includes the raw JSON.">
+<link rel="canonical" href="https://verify402.onrender.com/blog/what-public-402s-look-like">
+<meta property="og:type" content="article">
+<meta property="og:title" content="What x402's 402s actually look like">
+<meta property="og:description" content="300 top public x402 endpoints read with the same code an agent runs before signing. Numbers, caveats, raw JSON, reproducible method.">
+<meta property="og:url" content="https://verify402.onrender.com/blog/what-public-402s-look-like">
+<meta property="og:image" content="https://verify402.onrender.com/assets/logo-400.png">
+<meta name="twitter:card" content="summary">
+<meta name="google-site-verification" content="iGmI2QL110IkjnW0thU3DRZrdgQe_7mZsPWgkZVte7o">
+<link rel="alternate" type="application/rss+xml" title="verify402 blog" href="/blog/rss.xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/site.css">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "BlogPosting", "headline": "What x402's 402s actually look like", "description": "300 of the most-called public x402 endpoints, one read-only probe each: chains, tokens, timeouts, and what we refuse. Raw JSON included.", "datePublished": "2026-11-13", "dateModified": "2026-11-13", "author": {"@type": "Organization", "name": "verify402", "url": "https://verify402.onrender.com"}, "publisher": {"@type": "Organization", "name": "verify402", "url": "https://verify402.onrender.com"}, "mainEntityOfPage": "https://verify402.onrender.com/blog/what-public-402s-look-like", "image": "https://verify402.onrender.com/assets/logo-400.png"}</script>
+</head>
+<body>
+
+<header class="site-head">
+  <a class="brand" href="/" aria-label="verify402 home">verify<span>[</span>402<span>]</span></a>
+  <nav class="site-nav" aria-label="Primary">
+    <a href="/checks">Checks</a>
+    <a href="/preflight">Preflight</a>
+    <a href="/mcp">MCP</a>
+    <a href="/proof">Proof</a>
+    <a href="/activity">Activity</a>
+    <a href="/blog">Blog</a>
+    <a href="/docs">Docs</a>
+  </nav>
+  <div class="site-actions">
+    <a class="site-status" href="/live"><span class="status-dot"></span><span data-block>snapshot · block —</span></a>
+    <a class="btn sm" href="/inspect">Inspect a 402</a>
+    <details class="site-menu">
+      <summary>Menu</summary>
+      <nav aria-label="Menu">
+        <a href="/checks">Checks</a>
+        <a href="/preflight">Preflight</a>
+        <a href="/inspect">Inspect a 402</a>
+        <a href="/mcp">MCP server</a>
+        <a href="/live">Live findings</a>
+        <a href="/activity">Activity</a>
+        <a href="/proof">Proof &amp; receipts</a>
+        <a href="/blog">Blog</a>
+        <a href="/testers">Test the gate</a>
+        <a href="/docs">Docs</a>
+        <a href="/start">Quickstart</a>
+        <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">GitHub</a>
+      </nav>
+    </details>
+  </div>
+</header>
+
+<main>
+  <div class="wrap page-head">
+    <p class="eyebrow">Field note · 8 min read · Nov 13, 2026</p>
+    <h1>What x402's 402s actually look like.</h1>
+    <p class="lead">300 of the most-called public paid endpoints, one read-only probe each, no wallet: what a payment demand looks like when you actually read it.</p>
+  </div>
+
+  <article class="wrap prose">
+    <p>Coinbase's x402 Bazaar catalog lists every paid endpoint that declared itself — 35,129 as of this week. We pulled the first 300 in the catalog's own order and read their 402s, using the same structural code an agent runs before signing anything. No wallet was involved. No payment was made. One probe per endpoint, 500 ms apart.</p>
+
+    <div class="callout good">
+      <h3>Scope, stated plainly</h3>
+      <p><b>This is not an audit, not a red-team sweep, and not a reputation list.</b> It is a measurement of what a payment demand looks like on the day we looked. Well-formed does not mean safe; your agent's policy is still what protects you.</p>
+    </div>
+
+    <h2>The headline</h2>
+
+    <table class="table">
+      <thead><tr><th>Result</th><th>Count</th><th>What it means</th></tr></thead>
+      <tbody>
+        <tr><td>PASS</td><td class="mono">222</td><td>Well-formed challenge: network readable, asset named, price in raw units, payee named, resource bound, timeout within our default posture.</td></tr>
+        <tr><td>CAUTION</td><td class="mono">60</td><td>Well-formed, one flag a buyer should see — usually a long authorization window.</td></tr>
+        <tr><td>Refused (<code class="inline">challenge_mismatch</code>)</td><td class="mono">9</td><td>Header and body disagree — or advertise only parts of one another. The inspector refuses to guess; that is its behavior, not a verdict on the seller.</td></tr>
+        <tr><td>BLOCK</td><td class="mono">1</td><td>One challenge carried terms we cannot square with a sane payment: multiple payees and an amount we cannot represent.</td></tr>
+        <tr><td>Unreadable</td><td class="mono">8</td><td>Not an x402 challenge, not JSON, one timed out, four didn't resolve on the day.</td></tr>
+      </tbody>
+    </table>
+
+    <p><b>282 of 300 were well-formed on read</b> — 94%. That is the most useful number here, and the one we would not have guessed in July. It says the ceiling is high. The 6% that are not fine is where the work lives.</p>
+
+    <h2>What the demand looks like</h2>
+
+    <p><b>Chains.</b> Across ~520 named accepts, Base (<code class="inline">eip155:8453</code>) carries 326, Solana 87, Arbitrum 41, Polygon 38, BSC 19, and everything else — Base Sepolia, X Layer, Algorand, Hyperliquid, a testnet or two — makes up the rest. Multi-chain challenges average about two accepts. If you support Base and Solana, you clear most of what is being sold.</p>
+
+    <p><b>Tokens.</b> Every priced challenge we could read resolves to canonical USDC — 283 of them, all the same token at the same decimals across Base, Solana, and Arbitrum. Stablecoin USDC is the price of admission on this shelf; other dollar tokens did not clear the list.</p>
+
+    <p><b>Prices.</b> Median $0.005 a call. p90 is $0.02. The largest request is $1,000. Menus are wide, adults are cheap.</p>
+
+    <p><b>Methods.</b> 209 are GET, 91 are POST. Half the priced endpoints would answer a plain GET probe.</p>
+
+    <p><b>Volume.</b> Across the sample, the catalog records 344,634 calls in the last 30 days — median 84 calls per endpoint, with a long tail dominated by a handful of endpoints doing 10–80k a month. One of them is mirroring our own price exactly (challenge 2000 USDC minor units vs our 50000). An uneven sample, but it is what the public said it used.</p>
+
+    <h2>The finding worth acting on</h2>
+
+    <p><b>56 challenges ask for an authorization window of one hour</b> (<code class="inline">maxTimeoutSeconds: 3600</code>), and 57 endpoints are flagged for it under a 15-minute posture. That does not make those sellers evil; it means the authorization you sign sits usable for an hour, and the reasons that window exists are commoditized convenience, not malice. Long-time listeners will notice the same thing we noticed: this is exactly the spot where a caller's own policy does the stopping — <code class="inline">policy.maxTimeoutSeconds: 900</code>, and the 57 over-long entries come back CAUTION to your agent before it signs.</p>
+
+    <h2>Names (well-formed only, by real volume)</h2>
+
+    <p>Not endorsements: names are given only because the demand is public data and the endpoint passed the same structural check we apply before any money moves. All resolve to Base USDC and all clean-parse.</p>
+
+    <table class="table">
+      <thead><tr><th>Endpoint</th><th>30d calls</th><th>Price</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">blockrun.ai/api/v1/chat/completions</td><td class="mono">80,319</td><td class="mono">$0.002</td></tr>
+        <tr><td class="mono">stableenrich.dev/api/exa/search</td><td class="mono">34,871</td><td class="mono">$0.010</td></tr>
+        <tr><td class="mono">api.agents-trust.com/recommend</td><td class="mono">16,441</td><td class="mono">$0.010</td></tr>
+        <tr><td class="mono">agent.pocket.network/v1/meadow</td><td class="mono">15,494</td><td class="mono">$0.005</td></tr>
+        <tr><td class="mono">api.exa.ai/search</td><td class="mono">12,810</td><td class="mono">$0.007 (CAUTION)</td></tr>
+        <tr><td class="mono">stableenrich.dev/api/exa/contents</td><td class="mono">8,527</td><td class="mono">$0.002</td></tr>
+        <tr><td class="mono">glim.sh/api/v1/twitter/search</td><td class="mono">6,237</td><td class="mono">$0.005 (Solana)</td></tr>
+        <tr><td class="mono">api.kadec0.xyz/v1/token-price</td><td class="mono">6,186</td><td class="mono">$0.020</td></tr>
+        <tr><td class="mono">www.api-xpay.com/x402/ping</td><td class="mono">5,787</td><td class="mono">$0.005</td></tr>
+      </tbody>
+    </table>
+
+    <p>Unnamed endpoints matter more than my handful of names: the 222 PASS and the 282 well-formed total are above the fold of anyone's catalog. Read yours if you run one; the check is free and it does not sign anything.</p>
+
+    <h2>What we refused — and what that means</h2>
+
+    <p>Nine endpoints got a <code class="inline">challenge_mismatch</code>. Some of those are dual-dialect twins (same demand in x402 v1 and x402 v2 to hedge client generations). Some advertise only part of what the header advertises — a subset. In both cases we refuse to compute a verdict instead of silently picking one; refusing is not an accusation, it is the correct behavior for a tool meant to pick <i>the demand</i> out of the noise of what a server says.</p>
+
+    <p>The one BLOCK had <code class="inline">multiple_payees</code> and an amount that does not survive representation. We do not publish which; the file carries the verdict and the reasons, not the name.</p>
+
+    <h2>The part where this report did its job on itself</h2>
+
+    <p>This scan ran twice before it read well. On the way, it caught two defects in our own inspector: (1) it compared the <i>wrapper</i> resource and refused real endpoints that echoed their challenge in both header and body; (2) it compared challenges dialect-naively and refused v1-body/v2-header twins of the same demand. Both fixed, tested, and live, in commits <code class="inline">41586f6</code> and <code class="inline">b788b32</code>. A measurement pass that does not improve its own instrument tells you nothing; we got a better instrument out of this exercise and so did the seller whose endpoint was refused the first time.</p>
+
+    <h2>The fine print</h2>
+
+    <p>The raw JSON for every endpoint is <a class="textlink" href="https://github.com/a32116150-ctrl/verify402/blob/master/docs/bazaar-scan-2026-11.json" rel="noopener">in the repository</a>. The method, the caveats, and the tool were published when the report was; nothing in it was selected on outcome. If your endpoint is listed and you disagree with our read of it — that is expected; check it yourself before anyone pays, and tell us what we got wrong. That is the best kind of finding, and the only kind we asked for.</p>
+
+    <div class="post-cta">
+      <p class="eyebrow">The ask</p>
+      <h2>Read one yourself.</h2>
+      <p>Paste any public 402 into <a class="textlink" href="/inspect">/inspect</a>. If it comes back CAUTION or BLOCK on a field you did not expect, that is worth knowing — before your buyer does.</p>
+      <div class="btn-row">
+        <a class="btn" href="/inspect">Inspect a 402</a>
+        <a class="btn ghost" href="/blog/check-an-x402-endpoint-before-you-pay">The six-field checklist</a>
+      </div>
+    </div>
+
+    <p class="post-foot">Previous: <a class="textlink" href="/blog/verify402-mcp-1-1-0">What verify402-mcp 1.1.0 ships.</a> · <a class="textlink" href="/blog">All notes</a></p>
+  </article>
+</main>
+
+<footer class="site-foot">
+  <div class="foot-mark" aria-hidden="true">verify<span>[402]</span></div>
+  <div class="foot-links">
+    <div>
+      <h2>Product</h2>
+      <a href="/preflight">Preflight gate</a>
+      <a href="/checks">The five checks</a>
+      <a href="/mcp">MCP server</a>
+      <a href="/live">Live findings</a>
+      <a href="/activity">Activity</a>
+      <a href="/testers">Tester kit</a>
+      <a href="/blog">Blog</a>
+      <a href="/start">Quickstart</a>
+    </div>
+    <div>
+      <h2>Project</h2>
+      <a href="/proof">Proof &amp; receipts</a>
+      <a href="/docs">Documentation</a>
+      <a href="/donate">Donate</a>
+      <a href="/sponsor">Sponsor hosting</a>
+      <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">Source code</a>
+      <a href="https://github.com/x402-foundation/x402/issues/3847" rel="noopener">x402 proposal</a>
+    </div>
+    <div>
+      <h2>For machines</h2>
+      <a href="/.well-known/verify402.json">Service manifest</a>
+      <a href="/openapi.json">OpenAPI 3.1</a>
+      <a href="/llms.txt">llms.txt</a>
+      <a href="/findings">/findings</a>
+      <a href="/blog/rss.xml">RSS</a>
+    </div>
+    <div>
+      <h2>For teams</h2>
+      <p class="foot-note">Embedding a pre-signing check in a wallet, agent, or treasury workflow?</p>
+      <a href="mailto:a32116150@gmail.com?subject=verify402%20walkthrough">Talk to the builder</a>
+      <a href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener">npm package</a>
+    </div>
+  </div>
+  <p class="foot-legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data; demo payments are testnet. The only settlements ever recorded are the operator's own testnet transactions. No external buyer yet. Prices are per call, paid in testnet USDC over x402; /preflight and /inspect are free.</p>
+</footer>
+
+<script src="/assets/site.js"></script>
+</body>
+</html>
