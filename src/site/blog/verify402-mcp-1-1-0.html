@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What verify402-mcp 1.1.0 ships · verify402</title>
+<meta name="description" content="The 1.1.0 release adds two free MCP tools (inspect_402, directory_402), seller-signed terms binding for a challenge's price, asset, network and timeout, a payment-token registry, durable /usage counters, and opt-in anonymous pings. No change to the free gate or to any price.">
+<link rel="canonical" href="https://verify402.onrender.com/blog/verify402-mcp-1-1-0">
+<meta property="og:type" content="article">
+<meta property="og:title" content="What verify402-mcp 1.1.0 ships">
+<meta property="og:description" content="Two free tools, provider-published terms binding, durable counters — and exactly what did not change.">
+<meta property="og:url" content="https://verify402.onrender.com/blog/verify402-mcp-1-1-0">
+<meta property="og:image" content="https://verify402.onrender.com/assets/logo-400.png">
+<meta name="twitter:card" content="summary">
+<meta name="google-site-verification" content="iGmI2QL110IkjnW0thU3DRZrdgQe_7mZsPWgkZVte7o">
+<link rel="alternate" type="application/rss+xml" title="verify402 blog" href="/blog/rss.xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/site.css">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "BlogPosting", "headline": "What verify402-mcp 1.1.0 ships", "description": "Two free MCP tools, seller-signed terms binding, a payment-token registry, durable /usage counters, opt-in anonymous pings — and what did not change.", "datePublished": "2026-11-13", "dateModified": "2026-11-13", "author": {"@type": "Organization", "name": "verify402", "url": "https://verify402.onrender.com"}, "publisher": {"@type": "Organization", "name": "verify402", "url": "https://verify402.onrender.com"}, "mainEntityOfPage": "https://verify402.onrender.com/blog/verify402-mcp-1-1-0", "image": "https://verify402.onrender.com/assets/logo-400.png"}</script>
+</head>
+<body>
+
+<header class="site-head">
+  <a class="brand" href="/" aria-label="verify402 home">verify<span>[</span>402<span>]</span></a>
+  <nav class="site-nav" aria-label="Primary">
+    <a href="/checks">Checks</a>
+    <a href="/preflight">Preflight</a>
+    <a href="/mcp">MCP</a>
+    <a href="/proof">Proof</a>
+    <a href="/activity">Activity</a>
+    <a href="/blog">Blog</a>
+    <a href="/docs">Docs</a>
+  </nav>
+  <div class="site-actions">
+    <a class="site-status" href="/live"><span class="status-dot"></span><span data-block>snapshot · block —</span></a>
+    <a class="btn sm" href="/preflight#try">Run free check</a>
+    <details class="site-menu">
+      <summary>Menu</summary>
+      <nav aria-label="Menu">
+        <a href="/checks">Checks</a>
+        <a href="/preflight">Preflight</a>
+        <a href="/inspect">Inspect a 402</a>
+        <a href="/mcp">MCP server</a>
+        <a href="/live">Live findings</a>
+        <a href="/activity">Activity</a>
+        <a href="/proof">Proof &amp; receipts</a>
+        <a href="/blog">Blog</a>
+        <a href="/testers">Test the gate</a>
+        <a href="/docs">Docs</a>
+        <a href="/start">Quickstart</a>
+        <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">GitHub</a>
+      </nav>
+    </details>
+  </div>
+</header>
+
+<main>
+  <div class="wrap page-head">
+    <p class="eyebrow">Release note · 7 min read · Nov 13, 2026</p>
+    <h1>What verify402-mcp 1.1.0 ships.</h1>
+    <p class="lead">Two free tools, a way to bind a challenge to the terms the seller actually published, durable counters — and a list of the things that did not change.</p>
+  </div>
+
+  <article class="wrap prose">
+    <p>1.1.0 was published after explicit approval: npm <code class="inline">verify402-mcp@1.1.0</code> (gitHead <code class="inline">f5d5d9a</code>), the MCP Registry active/latest, GitHub release <code class="inline">mcp-v1.1.0</code>, Render serving 1.1.0, and the listing on mcprush at 8 tools. Eight tools is the headline: the unchanged free preflight, two new free tools to inspect endpoints and watch the list, and the five paid checks — and the two additions are deliberately the ones that cost nothing to call.</p>
+
+    <h2>Two free tools: read the 402, and watch the list</h2>
+
+    <p><b>inspect_402</b> takes a challenge you already have — pasted bytes, a base64 header, or a URL to a public endpoint — decodes the accepted requirements, and runs the same structural payment preflight an agent runs before signing. It returns the parsed challenge next to the verdict, plus a receipt. It never signs and never settles. What it tells you is narrower than it sounds, and the <code class="inline">notChecked</code> list it prints is not boilerplate: it names what a structural PASS cannot see, such as recipient reputation and facilitator settlement.</p>
+
+    <p><b>directory_402</b> serves the watched list of public x402 endpoints — the same list behind <code class="inline">/directory</code> and <code class="inline">/directory.json</code>. Each entry keeps the protocol verdict and the sign verdict separate, because they are allowed to disagree: a challenge can be well-formed and still name a network this build cannot settle, and an entry blocked on an unsupported chain is not a malformed 402.</p>
+
+    <h2>Bind the challenge to what the seller published</h2>
+
+    <p>The gate can already compare a challenge to what <i>you</i> allow. 1.1.0 adds the other half: <code class="inline">policy.sellerTermsManifest</code>, bound to a seller-signed publication on an origin you pin. That is the terms the provider claims, stated by the provider — price, asset, network, timeout — not something reconstructed from inside the 402 asking to be paid.</p>
+
+    <p>The binding is strict on purpose. A drift in any of the four fields comes back a <b>BLOCK</b> with <code class="inline">terms_mismatch</code> and names the field that drifted. A resource the seller did not list is a <b>CAUTION</b> with <code class="inline">terms_resource_unlisted</code>. A bad or stale manifest degrades the same way the payout manifest does. A match records a signed <code class="inline">termsBinding</code> in the receipt, so the binding travels with the intent instead of living only in the checker's memory.</p>
+
+    <p>It will not tell you the price is fair or that the seller is honest. It tells you the 402 you were handed is the 402 the seller said they publish.</p>
+
+    <h2>A token registry, instead of guesses</h2>
+
+    <p>USDC has a different contract on every chain, and testnet USDC is different again. 1.1.0 replaces ad-hoc address checks with a registry (<code class="inline">src/tokens.mjs</code>): canonical asset per network, symbol, decimals, and an explicit <code class="inline">assumed $1 parity</code> marker when a stable is not the canonical USDC — because an assumed parity is worth something when it is printed out loud and worth nothing when it is silent.</p>
+
+    <h2>Durable counters, and pings you have to opt into</h2>
+
+    <p><code class="inline">/usage</code> now reports durable counters when a state path is configured, and says plainly when it is process-local instead — restart resets it, and clients are self-declared labels that are spoofable, not identities. The bridge can also emit an opt-in anonymous ping per tool call (<code class="inline">VERIFY402_TELEMETRY=1</code>, payload <code class="inline">{ tool, ok }</code> only). If you did not switch it on, nothing about your runs leaves your machine.</p>
+
+    <h2>What 1.1.0 does not change</h2>
+
+    <ul>
+      <li>The free gate contract. PASS / CAUTION / BLOCK, short-lived receipt, fail-closed.</li>
+      <li>Any price. The five checks remain testnet USDC, the free gate and <code class="inline">/inspect</code> remain free.</li>
+      <li>The honesty problem: no external buyer has paid a call. The only settlements on record are the operator's own testnet transactions.</li>
+      <li>Durability of settlement state — the deployed instance is memory-only, and its recovery behavior says so at <code class="inline">/health</code>.</li>
+      <li>The <code class="inline">notChecked</code> list. A longer list is not 1.1.0's point; a legible one is.</li>
+    </ul>
+
+    <p>Where to watch it: the <a class="textlink" href="/proof#traction">traction ledger</a>, which keeps the zero months visible rather than dropping them when the looking-at-nothing is embarrassing.</p>
+
+    <div class="callout good">
+      <h3>Run it</h3>
+      <p><code class="inline">npx -y verify402-mcp</code>. Free mode registers three tools and never spends. Then try <code class="inline">inspect_402</code> against any public 402 you can curl — that is the shortest honest demo of the product.</p>
+    </div>
+
+    <div class="post-cta">
+      <p class="eyebrow">The ask</p>
+      <h2>A falsifier is more useful than a fan.</h2>
+      <p>Send three intents against the 1.1.0 gate — one you expect to pass, one you are unsure about, one you think should be blocked — and I will reply with raw verdicts and the reason codes.</p>
+      <div class="btn-row">
+        <a class="btn" href="/testers">Open the tester kit</a>
+        <a class="btn ghost" href="/mcp">MCP install page</a>
+      </div>
+    </div>
+
+    <p class="post-foot">Previous: <a class="textlink" href="/blog/pre-signing-gate-in-an-mcp-agent">Put a pre-signing gate in an MCP agent in 15 minutes.</a> · <a class="textlink" href="/blog">All notes</a></p>
+  </article>
+</main>
+
+<footer class="site-foot">
+  <div class="foot-mark" aria-hidden="true">verify<span>[402]</span></div>
+  <div class="foot-links">
+    <div>
+      <h2>Product</h2>
+      <a href="/preflight">Preflight gate</a>
+      <a href="/checks">The five checks</a>
+      <a href="/mcp">MCP server</a>
+      <a href="/live">Live findings</a>
+      <a href="/activity">Activity</a>
+      <a href="/testers">Tester kit</a>
+      <a href="/blog">Blog</a>
+      <a href="/start">Quickstart</a>
+    </div>
+    <div>
+      <h2>Project</h2>
+      <a href="/proof">Proof &amp; receipts</a>
+      <a href="/docs">Documentation</a>
+      <a href="/donate">Donate</a>
+      <a href="/sponsor">Sponsor hosting</a>
+      <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">Source code</a>
+      <a href="https://github.com/x402-foundation/x402/issues/3847" rel="noopener">x402 proposal</a>
+    </div>
+    <div>
+      <h2>For machines</h2>
+      <a href="/.well-known/verify402.json">Service manifest</a>
+      <a href="/openapi.json">OpenAPI 3.1</a>
+      <a href="/llms.txt">llms.txt</a>
+      <a href="/findings">/findings</a>
+      <a href="/blog/rss.xml">RSS</a>
+    </div>
+    <div>
+      <h2>For teams</h2>
+      <p class="foot-note">Embedding a pre-signing check in a wallet, agent, or treasury workflow?</p>
+      <a href="mailto:a32116150@gmail.com?subject=verify402%20walkthrough">Talk to the builder</a>
+      <a href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener">npm package</a>
+    </div>
+  </div>
+  <p class="foot-legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data; demo payments are testnet. The only settlements ever recorded are the operator's own testnet transactions. No external buyer yet. Prices are per call, paid in testnet USDC over x402; /preflight and /inspect are free.</p>
+</footer>
+
+<script src="/assets/site.js"></script>
+</body>
+</html>

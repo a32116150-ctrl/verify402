@@ -22,11 +22,14 @@ No version bump, deploy, or publish is implied by this section.
 
 ### Added
 
-- `GET /blog/check-an-x402-endpoint-before-you-pay` and
-  `GET /blog/pre-signing-gate-in-an-mcp-agent` — two notes: the six fields a
-  402 decides and how to read them for free; and a 15-minute MCP install with
-  the guard wired so a BLOCK cannot reach the signer. Both are in the blog
-  index, the RSS feed, the sitemap, and the index's structured data.
+- `GET /blog/check-an-x402-endpoint-before-you-pay`,
+  `GET /blog/pre-signing-gate-in-an-mcp-agent`, and
+  `GET /blog/verify402-mcp-1-1-0` — three notes: the six fields a 402 decides
+  and how to read them for free; a 15-minute MCP install with the guard wired
+  so a BLOCK cannot reach the signer; and the 1.1.0 release note (two free
+  tools, seller terms binding, token registry, durable counters, and what
+  did not change). All three are in the blog index, the RSS feed, the
+  sitemap, and the index's structured data.
 
 ## 1.1.0
 
