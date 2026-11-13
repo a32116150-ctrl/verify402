@@ -5,6 +5,12 @@ Status: **source pushed, not submitted**. The source lives at
 commit `d87adf6`:
 https://github.com/a32116150-ctrl/verify402/tree/master/skills/verify402-preflight
 
+> **Do the server listing first.** The mcprush listing for `verify402-mcp` still
+> serves release `1.0.9` and a 6-tool surface, while npm and the Official MCP
+> Registry are on `1.1.0`. Cut that release before submitting this skill, so the
+> "servers it uses" link resolves to the version you mean. Steps and paste-ready
+> release note: `docs/mcprush-server-release-1.1.0.md`.
+
 ## Listing fields
 
 | Field | Value |
