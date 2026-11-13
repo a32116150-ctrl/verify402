@@ -161,27 +161,69 @@ export function safeFetchText(raw, {
   }));
 }
 
+// A body is only a challenge if it has an accepts array, either at the top
+// level or under the v1 wrappers. Returns null instead of throwing so the
+// caller can decide whether a missing body challenge is an error (header
+// absent) or just prose next to a valid header (normal for HTML 402s).
+function bodyChallenge(body) {
+  if (!body) return null;
+  let json;
+  try {
+    json = typeof body === "string" ? JSON.parse(body) : body;
+  } catch {
+    return { invalid: true };
+  }
+  if (Array.isArray(json?.accepts)) return json;
+  if (Array.isArray(json?.paymentRequired?.accepts)) return json.paymentRequired;
+  if (Array.isArray(json?.challenge?.accepts)) return json.challenge;
+  return null;
+}
+
+// Stable shape for comparison: key order must not decide whether two
+// challenges are the same.
+function canonicalChallenge(challenge) {
+  const accept = (a) => JSON.stringify(
+    Object.fromEntries(Object.entries(a ?? {}).sort(([x], [y]) => (x < y ? -1 : x > y ? 1 : 0))),
+  );
+  return JSON.stringify({
+    x402Version: challenge?.x402Version ?? null,
+    resource: resourceUrlOf(challenge),
+    accepts: (challenge?.accepts ?? []).map(accept).sort(),
+  });
+}
+
 export function extractChallenge({ header, body } = {}) {
+  let fromHeader = null;
   if (header) {
     try {
-      return JSON.parse(Buffer.from(String(header), "base64").toString("utf8"));
+      fromHeader = JSON.parse(Buffer.from(String(header), "base64").toString("utf8"));
     } catch {
       throw new InspectError(422, "invalid_challenge", "the PAYMENT-REQUIRED header is not base64 JSON");
     }
   }
-  if (body) {
-    let json;
-    try {
-      json = typeof body === "string" ? JSON.parse(body) : body;
-    } catch {
-      throw new InspectError(422, "invalid_challenge", "the response body is not JSON");
+  const fromBody = bodyChallenge(body);
+  if (fromBody?.invalid) {
+    if (!fromHeader) throw new InspectError(422, "invalid_challenge", "the response body is not JSON");
+  } else if (fromHeader && fromBody) {
+    // Both are well-formed challenges but they disagree. A compliant x402
+    // client pays the header; a human or a model usually reads the body. That
+    // split is exactly what a swapped-payee attack needs, so refuse instead of
+    // silently preferring one.
+    if (canonicalChallenge(fromHeader) !== canonicalChallenge(fromBody)) {
+      throw new InspectError(
+        422,
+        "challenge_mismatch",
+        "the PAYMENT-REQUIRED header and the response body carry different payment challenges; a compliant client pays the header while a reader sees the body",
+      );
     }
-    if (Array.isArray(json?.accepts)) return json;
-    if (Array.isArray(json?.paymentRequired?.accepts)) return json.paymentRequired;
-    if (Array.isArray(json?.challenge?.accepts)) return json.challenge;
-    throw new InspectError(422, "no_challenge", "the response is not an x402 payment challenge (no accepts)");
+    return fromHeader;
   }
-  throw new InspectError(422, "no_challenge", "the response carried neither a PAYMENT-REQUIRED header nor a challenge body");
+  if (fromHeader) return fromHeader;
+  if (fromBody) return fromBody;
+  if (!header && !body) {
+    throw new InspectError(422, "no_challenge", "the response carried neither a PAYMENT-REQUIRED header nor a challenge body");
+  }
+  throw new InspectError(422, "no_challenge", "the response is not an x402 payment challenge (no accepts)");
 }
 
 // x402 v2 may name the resource as a string (v1 style) or as an object with a

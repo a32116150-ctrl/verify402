@@ -65,6 +65,28 @@ test("extractChallenge reads the v2 header, a body challenge, and refuses junk",
   assert.throws(() => extractChallenge({ body: "not json" }), (e) => e.code === "invalid_challenge");
 });
 
+test("extractChallenge refuses a header and body that disagree, and accepts a matching pair", () => {
+  const same = challenge();
+  const header = Buffer.from(JSON.stringify(same)).toString("base64");
+  // Matching bytes, only key order differs: not a mismatch.
+  const reordered = {
+    ...same,
+    accepts: [{ maxTimeoutSeconds: 60, payTo: same.accepts[0].payTo, amount: "30000", asset: same.accepts[0].asset, network: "eip155:84532", scheme: "exact" }],
+  };
+  assert.equal(extractChallenge({ header, body: JSON.stringify(reordered) }).accepts[0].payTo, same.accepts[0].payTo);
+
+  // Same shape, one field swapped: the case a swapped-payee attack produces.
+  const swapped = { ...same, accepts: [{ ...same.accepts[0], payTo: "0x2222222222222222222222222222222222222222" }] };
+  assert.throws(
+    () => extractChallenge({ header, body: JSON.stringify(swapped) }),
+    (e) => e instanceof InspectError && e.code === "challenge_mismatch",
+  );
+
+  // Prose or a stub next to a valid header is normal for HTML 402s: keep the header.
+  assert.equal(extractChallenge({ header, body: "Payment required" }).accepts.length, 1);
+  assert.equal(extractChallenge({ header, body: '{"error":"Payment required"}' }).accepts.length, 1);
+});
+
 test("acceptToPayment maps the accept fields and keeps the resource", () => {
   const payment = acceptToPayment(challenge().accepts[0], "https://example.com/paid");
   assert.equal(payment.network, "eip155:84532");

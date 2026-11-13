@@ -7,6 +7,27 @@ not imply a deploy or an npm publish.
 
 No version bump, deploy, or publish is implied by this section.
 
+### Fixed
+
+- `POST /inspect` now refuses a response whose `PAYMENT-REQUIRED` header and
+  JSON body carry **different** payment challenges: `422 challenge_mismatch`.
+  Before, a header was read first and the body was never parsed when a header
+  existed, so two disagreeing challenges resolved silently to the header — the
+  exact split a swapped-payee attack needs, since a compliant x402 client pays
+  the header while a human or a model reads the body. A body that is prose or
+  a stub (`{"error":"Payment required"}`) still defers to the header, because
+  there is nothing to compare. Comparison is order-independent. Covered in
+  `test/inspect.test.mjs` (matching, reordered-but-equal, swapped payee,
+  prose, stub).
+
+### Added
+
+- `GET /blog/check-an-x402-endpoint-before-you-pay` and
+  `GET /blog/pre-signing-gate-in-an-mcp-agent` — two notes: the six fields a
+  402 decides and how to read them for free; and a 15-minute MCP install with
+  the guard wired so a BLOCK cannot reach the signer. Both are in the blog
+  index, the RSS feed, the sitemap, and the index's structured data.
+
 ## 1.1.0
 
 Two new free MCP tools and a payment token registry. The npm package, the MCP
