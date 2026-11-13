@@ -6,7 +6,21 @@
     <atom:link href="https://verify402.onrender.com/blog/rss.xml" rel="self" type="application/rss+xml" />
     <description>Scope, receipts, and field notes from building a pre-signing gate for agent payments.</description>
     <language>en</language>
-    <lastBuildDate>Sun, 25 Oct 2026 12:00:00 GMT</lastBuildDate>
+    <lastBuildDate>Fri, 13 Nov 2026 12:00:00 GMT</lastBuildDate>
+    <item>
+      <title>Check an x402 endpoint before you pay it</title>
+      <link>https://verify402.onrender.com/blog/check-an-x402-endpoint-before-you-pay</link>
+      <guid isPermaLink="true">https://verify402.onrender.com/blog/check-an-x402-endpoint-before-you-pay</guid>
+      <pubDate>Fri, 13 Nov 2026 12:00:00 GMT</pubDate>
+      <description>A 402 is a price tag, not a receipt. The six fields that decide what you sign, and a free way to check any endpoint without a wallet.</description>
+    </item>
+    <item>
+      <title>Put a pre-signing gate in an MCP agent in 15 minutes</title>
+      <link>https://verify402.onrender.com/blog/pre-signing-gate-in-an-mcp-agent</link>
+      <guid isPermaLink="true">https://verify402.onrender.com/blog/pre-signing-gate-in-an-mcp-agent</guid>
+      <pubDate>Fri, 13 Nov 2026 12:00:00 GMT</pubDate>
+      <description>Three free tools, one config block, and one hook that makes the signature unreachable until the receipt verifies.</description>
+    </item>
     <item>
       <title>What a pre-signing gate can check — and what it can't</title>
       <link>https://verify402.onrender.com/blog/what-a-pre-signing-gate-can-check</link>

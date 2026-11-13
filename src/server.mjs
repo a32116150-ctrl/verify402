@@ -1008,6 +1008,8 @@ app.get("/sitemap.xml", (_req, res) => {
   <url><loc>https://verify402.onrender.com/blog/what-a-pre-signing-gate-can-check</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://verify402.onrender.com/blog/a-receipt-is-a-falsifiable-record</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://verify402.onrender.com/blog/three-intents-never-sign-unchecked</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://verify402.onrender.com/blog/check-an-x402-endpoint-before-you-pay</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://verify402.onrender.com/blog/pre-signing-gate-in-an-mcp-agent</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://verify402.onrender.com/checks</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://verify402.onrender.com/proof</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://verify402.onrender.com/live</loc><changefreq>daily</changefreq><priority>0.8</priority></url>

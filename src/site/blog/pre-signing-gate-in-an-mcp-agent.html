@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Put a pre-signing gate in an MCP agent in 15 minutes · verify402</title>
+<meta name="description" content="Install the free verify402 MCP server, call the gate on a payment intent, and make the signature unreachable until the receipt verifies. No key, no wallet, no account.">
+<link rel="canonical" href="https://verify402.onrender.com/blog/pre-signing-gate-in-an-mcp-agent">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Put a pre-signing gate in an MCP agent in 15 minutes">
+<meta property="og:description" content="Three free tools, one config block, and one hook that makes the signature unreachable until the gate answers.">
+<meta property="og:url" content="https://verify402.onrender.com/blog/pre-signing-gate-in-an-mcp-agent">
+<meta property="og:image" content="https://verify402.onrender.com/assets/logo-400.png">
+<meta name="twitter:card" content="summary">
+<meta name="google-site-verification" content="iGmI2QL110IkjnW0thU3DRZrdgQe_7mZsPWgkZVte7o">
+<link rel="alternate" type="application/rss+xml" title="verify402 blog" href="/blog/rss.xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/site.css">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "BlogPosting", "headline": "Put a pre-signing gate in an MCP agent in 15 minutes", "description": "Install the free verify402 MCP server, call the gate on a payment intent, and make the signature unreachable until the receipt verifies.", "datePublished": "2026-11-13", "dateModified": "2026-11-13", "author": {"@type": "Organization", "name": "verify402", "url": "https://verify402.onrender.com"}, "publisher": {"@type": "Organization", "name": "verify402", "url": "https://verify402.onrender.com"}, "mainEntityOfPage": "https://verify402.onrender.com/blog/pre-signing-gate-in-an-mcp-agent", "image": "https://verify402.onrender.com/assets/logo-400.png"}</script>
+</head>
+<body>
+
+<header class="site-head">
+  <a class="brand" href="/" aria-label="verify402 home">verify<span>[</span>402<span>]</span></a>
+  <nav class="site-nav" aria-label="Primary">
+    <a href="/checks">Checks</a>
+    <a href="/preflight">Preflight</a>
+    <a href="/mcp">MCP</a>
+    <a href="/proof">Proof</a>
+    <a href="/activity">Activity</a>
+    <a href="/blog">Blog</a>
+    <a href="/docs">Docs</a>
+  </nav>
+  <div class="site-actions">
+    <a class="site-status" href="/live"><span class="status-dot"></span><span data-block>snapshot · block —</span></a>
+    <a class="btn sm" href="/preflight#try">Run free check</a>
+    <details class="site-menu">
+      <summary>Menu</summary>
+      <nav aria-label="Menu">
+        <a href="/checks">Checks</a>
+        <a href="/preflight">Preflight</a>
+        <a href="/inspect">Inspect a 402</a>
+        <a href="/mcp">MCP server</a>
+        <a href="/live">Live findings</a>
+        <a href="/activity">Activity</a>
+        <a href="/proof">Proof &amp; receipts</a>
+        <a href="/blog">Blog</a>
+        <a href="/testers">Test the gate</a>
+        <a href="/docs">Docs</a>
+        <a href="/start">Quickstart</a>
+        <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">GitHub</a>
+      </nav>
+    </details>
+  </div>
+</header>
+
+<main>
+  <div class="wrap page-head">
+    <p class="eyebrow">Integration · 10 min read · Nov 13, 2026</p>
+    <h1>Put a pre-signing gate in an MCP agent in 15 minutes.</h1>
+    <p class="lead">Three free tools, one config block, and one hook that makes the signature unreachable until the gate answers. No key, no wallet, no account.</p>
+  </div>
+
+  <article class="wrap prose">
+    <p>A check that runs after the signature is an audit. A check that runs before it is a gate. The difference is one line of control flow, and it is the only line that matters.</p>
+
+    <p>This is the shortest version that is still honest: install the server, call the gate on the intent, and wire the refusal so that a BLOCK cannot reach the signer. Everything below runs against the free tier.</p>
+
+    <h2>Step 1 — run it</h2>
+
+<pre>npx -y verify402-mcp</pre>
+
+    <p>Without <code class="inline">EVM_PRIVATE_KEY</code> the bridge starts in free-only mode. It registers three tools and nothing else:</p>
+
+    <ul>
+      <li><b>preflight_gate</b> — the gate itself, for a payment challenge or an EVM transaction.</li>
+      <li><b>inspect_402</b> — read any public 402 before you pay it.</li>
+      <li><b>directory_402</b> — the watched list of public x402 endpoints.</li>
+    </ul>
+
+    <p>None of the three can spend. The five paid measurement tools only appear when a wallet is configured, which is a separate decision you do not need to make today.</p>
+
+    <h2>Step 2 — add it to the client</h2>
+
+    <p>Claude Desktop reads <code class="inline">claude_desktop_config.json</code>. Cursor reads <code class="inline">.cursor/mcp.json</code>. The block is the same:</p>
+
+<pre>{
+  "mcpServers": {
+    "verify402": {
+      "command": "npx",
+      "args": ["-y", "verify402-mcp"],
+      "env": {
+        "VERIFY402_URL": "https://verify402.onrender.com"
+      }
+    }
+  }
+}</pre>
+
+    <p>Restart the client. The three tools appear in the model's tool list. If you want to run your own instance instead of the public one, point <code class="inline">VERIFY402_URL</code> at it — the receipt is signed by whichever instance answered, so pinning the URL is pinning the trust boundary.</p>
+
+    <h2>Step 3 — call the gate on the intent you are about to sign</h2>
+
+    <p>The gate takes the decoded intent, not a summary of it. For an x402 payment, that means the fields out of the challenge itself:</p>
+
+<pre>preflight_gate({
+  kind: "payment",
+  chainId: 84532,
+  from: "0xYourAgentWallet",
+  payment: {
+    scheme: "exact",
+    network: "eip155:84532",
+    asset: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+    amount: "50000",
+    payTo: "0xAeEF086DD4e436c69d6d0F684b4c9F4332df9cb",
+    resource: "https://verify402.onrender.com/verify",
+    maxTimeoutSeconds: 300
+  },
+  policy: {
+    maxAmountUsd: 0.10,
+    allowedNetworks: ["eip155:84532"],
+    expectedResource: "https://verify402.onrender.com/verify"
+  }
+})</pre>
+
+    <p>It returns a verdict, the reasons behind it, the list of checks that ran, the list that did not, and a receipt. For a transaction intent, send <code class="inline">kind: "transaction"</code> with <code class="inline">to</code>, <code class="inline">data</code> and an optional <code class="inline">value</code> instead of <code class="inline">payment</code>.</p>
+
+    <p>Pass <code class="inline">policy</code> or you get structural checks only. A structural PASS on an intent with no policy says the shape is coherent, not that it matches what you wanted.</p>
+
+    <h2>Step 4 — make the signature depend on it</h2>
+
+    <p>Calling the tool from a prompt is not enforcement. A model can skip a tool call; it cannot skip a function you removed from the path. Two ways to wire it, depending on whether you hold the signer directly.</p>
+
+    <h3>If you call the signer yourself</h3>
+
+    <p>The reference guard is <code class="inline">examples/preflight-guard.mjs</code> in the repository. It is not in the npm tarball — copy it into your project, or read it and write the twenty lines yourself. It runs the gate, verifies the receipt, and returns only after both bindings match. On BLOCK it throws <code class="inline">PreflightBlockedError</code>, so the line after it never runs.</p>
+
+<pre>// copied from examples/preflight-guard.mjs in the repository
+import { guardX402Payment } from "./preflight-guard.mjs";
+
+const { verdict, receipt } = await guardX402Payment({
+  paymentRequired: challenge,
+  policy: { maxAmountUsd: 0.10, allowedNetworks: ["eip155:84532"] },
+  from: wallet.address,
+  acknowledgeCaution: false
+});
+
+// unreachable on BLOCK, on an unverified receipt, or on an expired one
+const signature = await wallet.signTypedData(receipt.intent, domain, types);</pre>
+
+    <h3>If you use the x402 client SDK</h3>
+
+    <p><code class="inline">createX402PreflightHook()</code> returns a hook for <code class="inline">onBeforePaymentCreation</code>. It blocks on BLOCK, refuses CAUTION unless you set <code class="inline">acknowledgeCaution</code>, verifies the receipt, and attaches it to <code class="inline">context.verify402</code> before the SDK can sign.</p>
+
+<pre>// copied from examples/preflight-guard.mjs in the repository
+import { createX402PreflightHook } from "./preflight-guard.mjs";
+
+client.onBeforePaymentCreation(createX402PreflightHook({
+  policy: { maxAmountUsd: 0.10, allowedNetworks: ["eip155:84532"] },
+  from: account.address,
+  onBlocked: (e) => console.error("blocked:", e.message)
+}));</pre>
+
+    <h2>What the guard actually enforces</h2>
+
+    <ul>
+      <li><b>BLOCK</b> — throws. The signer is not called.</li>
+      <li><b>CAUTION</b> — throws unless you passed <code class="inline">acknowledgeCaution: true</code>. A warning that is silently ignored is not a warning.</li>
+      <li><b>No receipt, or an expired one</b> — throws. The default lifetime is 90 seconds.</li>
+      <li><b>Receipt bound to different bytes</b> — throws. The request hash is recomputed locally, so a receipt that names another intent cannot be reused.</li>
+      <li><b>Gate unreachable</b> — throws. It fails closed, not open.</li>
+    </ul>
+
+    <p>There is deliberately no <code class="inline">verify: false</code> switch. A caller-controlled option that can reach the signer without the checks would be the first thing an injected prompt turns off.</p>
+
+    <h2>The mistakes that make it theatre</h2>
+
+    <ul>
+      <li><b>Calling the gate after signing.</b> That is a log line. Useful, not a gate.</li>
+      <li><b>Treating a structural PASS as a policy PASS.</b> No policy, no comparison — only coherence.</li>
+      <li><b>Reusing a receipt across intents.</b> It is bound to one request; a second intent needs a second call.</li>
+      <li><b>Swallowing the error to "keep the agent running".</b> Then the gate is decoration and the next failure is irreversible.</li>
+      <li><b>Reading only the verdict.</b> <code class="inline">notChecked</code> is the part that tells you what the PASS did not cover.</li>
+    </ul>
+
+    <h2>What it costs</h2>
+
+    <p>The gate is free, and it has to be: a check that runs before every signature cannot have a per-call price. The receipt is short-lived by design. The five paid measurements — arbitrage, token safety, route, quote fairness, depth — are separate tools, off unless you configure a wallet, and priced per call in testnet USDC on the public demo.</p>
+
+    <div class="callout good">
+      <h3>Try to break it</h3>
+      <p>Run a payment you expect to pass. Then change <code class="inline">payTo</code>, the asset, or the resource host and run it again. If a swapped version still passes, that is the finding worth reporting — and it is exactly the kind of thing the tester kit exists for.</p>
+    </div>
+
+    <div class="post-cta">
+      <p class="eyebrow">The ask</p>
+      <h2>Wire it, then send three intents.</h2>
+      <p>One you expect to pass, one you are unsure about, one you think should be blocked. I will run all three and reply with the raw verdict and the reason codes.</p>
+      <div class="btn-row">
+        <a class="btn" href="/testers">Open the tester kit</a>
+        <a class="btn ghost" href="/mcp">MCP install page</a>
+      </div>
+    </div>
+
+    <p class="post-foot">Previous: <a class="textlink" href="/blog/check-an-x402-endpoint-before-you-pay">Check an x402 endpoint before you pay it.</a> · <a class="textlink" href="/blog">All notes</a></p>
+  </article>
+</main>
+
+<footer class="site-foot">
+  <div class="foot-mark" aria-hidden="true">verify<span>[402]</span></div>
+  <div class="foot-links">
+    <div>
+      <h2>Product</h2>
+      <a href="/preflight">Preflight gate</a>
+      <a href="/checks">The five checks</a>
+      <a href="/mcp">MCP server</a>
+      <a href="/live">Live findings</a>
+      <a href="/activity">Activity</a>
+      <a href="/testers">Tester kit</a>
+      <a href="/blog">Blog</a>
+      <a href="/start">Quickstart</a>
+    </div>
+    <div>
+      <h2>Project</h2>
+      <a href="/proof">Proof &amp; receipts</a>
+      <a href="/docs">Documentation</a>
+      <a href="/donate">Donate</a>
+      <a href="/sponsor">Sponsor hosting</a>
+      <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">Source code</a>
+      <a href="https://github.com/x402-foundation/x402/issues/3847" rel="noopener">x402 proposal</a>
+    </div>
+    <div>
+      <h2>For machines</h2>
+      <a href="/.well-known/verify402.json">Service manifest</a>
+      <a href="/openapi.json">OpenAPI 3.1</a>
+      <a href="/llms.txt">llms.txt</a>
+      <a href="/findings">/findings</a>
+      <a href="/blog/rss.xml">RSS</a>
+    </div>
+    <div>
+      <h2>For teams</h2>
+      <p class="foot-note">Embedding a pre-signing check in a wallet, agent, or treasury workflow?</p>
+      <a href="mailto:a32116150@gmail.com?subject=verify402%20walkthrough">Talk to the builder</a>
+      <a href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener">npm package</a>
+    </div>
+  </div>
+  <p class="foot-legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data; demo payments are testnet. The only settlements ever recorded are the operator's own testnet transactions. No external buyer yet. Prices are per call, paid in testnet USDC over x402; /preflight and /inspect are free.</p>
+</footer>
+
+<script src="/assets/site.js"></script>
+</body>
+</html>

@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Check an x402 endpoint before you pay it · verify402</title>
+<meta name="description" content="A 402 is a price tag, not a receipt. Here are the six fields that decide what you sign, and a free way to check any x402 endpoint without a wallet or an account.">
+<link rel="canonical" href="https://verify402.onrender.com/blog/check-an-x402-endpoint-before-you-pay">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Check an x402 endpoint before you pay it">
+<meta property="og:description" content="The six fields a 402 actually decides, what each one can get wrong, and how to read them before the signature.">
+<meta property="og:url" content="https://verify402.onrender.com/blog/check-an-x402-endpoint-before-you-pay">
+<meta property="og:image" content="https://verify402.onrender.com/assets/logo-400.png">
+<meta name="twitter:card" content="summary">
+<meta name="google-site-verification" content="iGmI2QL110IkjnW0thU3DRZrdgQe_7mZsPWgkZVte7o">
+<link rel="alternate" type="application/rss+xml" title="verify402 blog" href="/blog/rss.xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/site.css">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "BlogPosting", "headline": "Check an x402 endpoint before you pay it", "description": "A 402 is a price tag, not a receipt. The six fields that decide what you sign, and a free way to check any endpoint without a wallet.", "datePublished": "2026-11-13", "dateModified": "2026-11-13", "author": {"@type": "Organization", "name": "verify402", "url": "https://verify402.onrender.com"}, "publisher": {"@type": "Organization", "name": "verify402", "url": "https://verify402.onrender.com"}, "mainEntityOfPage": "https://verify402.onrender.com/blog/check-an-x402-endpoint-before-you-pay", "image": "https://verify402.onrender.com/assets/logo-400.png"}</script>
+</head>
+<body>
+
+<header class="site-head">
+  <a class="brand" href="/" aria-label="verify402 home">verify<span>[</span>402<span>]</span></a>
+  <nav class="site-nav" aria-label="Primary">
+    <a href="/checks">Checks</a>
+    <a href="/preflight">Preflight</a>
+    <a href="/mcp">MCP</a>
+    <a href="/proof">Proof</a>
+    <a href="/activity">Activity</a>
+    <a href="/blog">Blog</a>
+    <a href="/docs">Docs</a>
+  </nav>
+  <div class="site-actions">
+    <a class="site-status" href="/live"><span class="status-dot"></span><span data-block>snapshot · block —</span></a>
+    <a class="btn sm" href="/inspect">Inspect a 402</a>
+    <details class="site-menu">
+      <summary>Menu</summary>
+      <nav aria-label="Menu">
+        <a href="/checks">Checks</a>
+        <a href="/preflight">Preflight</a>
+        <a href="/inspect">Inspect a 402</a>
+        <a href="/mcp">MCP server</a>
+        <a href="/live">Live findings</a>
+        <a href="/activity">Activity</a>
+        <a href="/proof">Proof &amp; receipts</a>
+        <a href="/blog">Blog</a>
+        <a href="/testers">Test the gate</a>
+        <a href="/docs">Docs</a>
+        <a href="/start">Quickstart</a>
+        <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">GitHub</a>
+      </nav>
+    </details>
+  </div>
+</header>
+
+<main>
+  <div class="wrap page-head">
+    <p class="eyebrow">x402 · 8 min read · Nov 13, 2026</p>
+    <h1>Check an x402 endpoint before you pay it.</h1>
+    <p class="lead">A 402 is a price tag, not a receipt. Six fields decide what you are about to sign, and one of them is usually the one nobody reads.</p>
+  </div>
+
+  <article class="wrap prose">
+    <p>When an agent calls a paid endpoint, the first answer is a <code class="inline">402</code>. The agent reads a price, signs an authorization, and retries. Somewhere between "read a price" and "sign" there is a small set of fields that decide who gets the money, in which token, on which chain, for which URL.</p>
+
+    <p>Most integrations skip them. The client library picks the first acceptable requirement and pays. That works until the first acceptable requirement is not the one you meant.</p>
+
+    <h2>The 402 is structured. Read the structure.</h2>
+
+    <p>An x402 v2 challenge carries an <code class="inline">accepts</code> array. Each entry is an offer, and each offer has the same fields:</p>
+
+    <ul>
+      <li><b>network</b> — CAIP-2, for example <code class="inline">eip155:8453</code> for Base or <code class="inline">eip155:84532</code> for Base Sepolia.</li>
+      <li><b>asset</b> — the token contract or mint that moves.</li>
+      <li><b>amount</b> — raw units as a string. <code class="inline">50000</code> at six decimals is $0.05.</li>
+      <li><b>payTo</b> — the address that receives.</li>
+      <li><b>resource</b> — the URL this payment is bound to.</li>
+      <li><b>maxTimeoutSeconds</b> — how long the authorization stays valid.</li>
+    </ul>
+
+    <p>Two more fields matter operationally: <code class="inline">scheme</code>, normally <code class="inline">exact</code>, and <code class="inline">extra</code>, which carries token hints such as the USDC name and version. Everything a payment can get wrong is inside those eight values.</p>
+
+    <h2>The checks, in the order that matters</h2>
+
+    <h3>1. Is the network one you intended?</h3>
+    <p>A challenge that offers Base Sepolia when you meant Base mainnet is not a discount. It is a different chain, a different token, and a different settlement. If both are offered, the selection rule decides, and many clients select the first entry without asking.</p>
+
+    <h3>2. Is the asset the token you think it is?</h3>
+    <p>USDC has a different contract on every chain, and testnet USDC is a different contract again. An address that looks plausible and is not the canonical one is the cheapest possible swap: the amount is right, the payee is right, and the token is worthless.</p>
+
+    <h3>3. Does the amount match what you were told?</h3>
+    <p>Amounts are raw integers. A missing decimal conversion turns $0.05 into $50,000, and a rounding step in the wrong direction turns it into something else again. Compare the raw value, not the formatted string a model repeated back.</p>
+
+    <h3>4. Is the payee the seller?</h3>
+    <p>This is the one that gets skipped. <code class="inline">payTo</code> is just an address. If it changed since the last call, nothing in the protocol says so. A caller-supplied allowlist is a weak check. A seller-signed manifest fetched from a pinned origin is a stronger one, because it does not come from inside the 402 it is describing.</p>
+
+    <h3>5. Is the resource the URL you called?</h3>
+    <p>The challenge names the resource it is for. A payment signed for one URL and replayed against another is a valid signature on the wrong intent. If the resource is missing or names a different host, that is a finding, not a formatting detail.</p>
+
+    <h3>6. How long does the authorization live?</h3>
+    <p><code class="inline">maxTimeoutSeconds</code> is the window between signing and settlement. A generous window is convenient for the seller and a longer exposure for the payer. It also decides how long a leaked authorization stays usable.</p>
+
+    <h2>Ten seconds, no wallet</h2>
+
+    <p><code class="inline">/inspect</code> is free, needs no account, and never asks for a key. Paste an endpoint URL, or a challenge you already hold:</p>
+
+<pre><span class="c">POST</span> /inspect
+{
+  "url": "https://verify402.onrender.com/verify",
+  "method": "POST"
+}</pre>
+
+    <p>It fetches the 402 once, reads the <code class="inline">PAYMENT-REQUIRED</code> header or the JSON body, and runs the same structural preflight an agent runs before signing. On our own <code class="inline">/verify</code>, the answer starts like this:</p>
+
+<pre>{
+  "verdict": "PASS",
+  "sign_allowed": true,
+  "challenge": {
+    "x402Version": 2,
+    "acceptCount": 2,
+    "accepts": [
+      {
+        "network": "eip155:84532",
+        "token": "USDC",
+        "amount": "50000",
+        "priceUsd": 0.05,
+        "payTo": "0xAeEF086DD4e436c69d6d0F684b4c9F4332df9cb",
+        "resource": "https://verify402.onrender.com/verify",
+        "maxTimeoutSeconds": 300
+      }
+    ]
+  },
+  "checked": ["scheme", "network", "asset", "amount", "payee", "resource_url", "resource", "timeout"]
+}</pre>
+
+    <p>Read the verdict last. Read <code class="inline">checked</code> and <code class="inline">notChecked</code> first — they tell you what the answer is actually about.</p>
+
+    <h2>What a failure looks like</h2>
+
+    <p>The useful output is not "unsafe". It is a named field. Ask the inspector to compare the challenge against what you meant — the payee you expect, the asset you allow, the host you called, a ceiling on the amount — and a mismatch comes back as <b>BLOCK</b> with a reason you can disagree with:</p>
+
+    <ul>
+      <li><code class="inline">payee_not_payout_wallet</code> — the recipient is not on your allowlist.</li>
+      <li><code class="inline">asset_not_in_policy</code> — the token is not one you accept.</li>
+      <li><code class="inline">resource_not_bound</code> — the challenge does not name the URL you called, or names another host.</li>
+      <li><code class="inline">amount_over_max</code> — the raw amount exceeds your cap.</li>
+    </ul>
+
+    <p>A named reason is the difference between a gate and a mascot. You can argue with a named reason, log it, and add a case to a test. You cannot argue with a green check.</p>
+
+    <h2>What it will not tell you</h2>
+
+    <p>On our own endpoint, <code class="inline">notChecked</code> currently has thirteen entries. The ones that matter most:</p>
+
+    <ul>
+      <li>whether the seller is honest, or the recipient is sanctioned;</li>
+      <li>whether the facilitator will actually settle;</li>
+      <li>whether the payee address is owned by the seller;</li>
+      <li>whether this payment was already made under the same idempotency key;</li>
+      <li>whether the tool output you are about to act on contains a prompt injection.</li>
+    </ul>
+
+    <p>A PASS means the structural checks passed at that block. It does not mean the price is fair, and it does not mean the seller is who they claim to be. Those are different questions with different tools.</p>
+
+    <h2>The one rule</h2>
+
+    <p>Do not sign until you have a fresh receipt for the exact intent, and you have read <code class="inline">notChecked</code>. A receipt is not a guarantee. It is a record of what was checked, against which bytes, at which block, expiring at a stated time — which is exactly what you need to tell a false PASS from a bad day.</p>
+
+    <div class="callout good">
+      <h3>Check your own endpoint</h3>
+      <p>If you run a paid x402 endpoint, paste its URL into <a class="textlink" href="/inspect">/inspect</a>. If it returns CAUTION or BLOCK on a field you did not expect, that is worth knowing before a buyer finds it instead. The check is free and the result is not published anywhere.</p>
+    </div>
+
+    <div class="post-cta">
+      <p class="eyebrow">The ask</p>
+      <h2>Bring an endpoint you are unsure about.</h2>
+      <p>Send three: one you expect to pass, one you are unsure about, one you think should be blocked. I will run all three and reply with the raw verdict and the reason codes.</p>
+      <div class="btn-row">
+        <a class="btn" href="/testers">Open the tester kit</a>
+        <a class="btn ghost" href="/inspect">Inspect a 402</a>
+      </div>
+    </div>
+
+    <p class="post-foot">Next: <a class="textlink" href="/blog/pre-signing-gate-in-an-mcp-agent">Put a pre-signing gate in an MCP agent in 15 minutes.</a> · <a class="textlink" href="/blog">All notes</a></p>
+  </article>
+</main>
+
+<footer class="site-foot">
+  <div class="foot-mark" aria-hidden="true">verify<span>[402]</span></div>
+  <div class="foot-links">
+    <div>
+      <h2>Product</h2>
+      <a href="/preflight">Preflight gate</a>
+      <a href="/checks">The five checks</a>
+      <a href="/mcp">MCP server</a>
+      <a href="/live">Live findings</a>
+      <a href="/activity">Activity</a>
+      <a href="/testers">Tester kit</a>
+      <a href="/blog">Blog</a>
+      <a href="/start">Quickstart</a>
+    </div>
+    <div>
+      <h2>Project</h2>
+      <a href="/proof">Proof &amp; receipts</a>
+      <a href="/docs">Documentation</a>
+      <a href="/donate">Donate</a>
+      <a href="/sponsor">Sponsor hosting</a>
+      <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">Source code</a>
+      <a href="https://github.com/x402-foundation/x402/issues/3847" rel="noopener">x402 proposal</a>
+    </div>
+    <div>
+      <h2>For machines</h2>
+      <a href="/.well-known/verify402.json">Service manifest</a>
+      <a href="/openapi.json">OpenAPI 3.1</a>
+      <a href="/llms.txt">llms.txt</a>
+      <a href="/findings">/findings</a>
+      <a href="/blog/rss.xml">RSS</a>
+    </div>
+    <div>
+      <h2>For teams</h2>
+      <p class="foot-note">Embedding a pre-signing check in a wallet, agent, or treasury workflow?</p>
+      <a href="mailto:a32116150@gmail.com?subject=verify402%20walkthrough">Talk to the builder</a>
+      <a href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener">npm package</a>
+    </div>
+  </div>
+  <p class="foot-legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data; demo payments are testnet. The only settlements ever recorded are the operator's own testnet transactions. No external buyer yet. Prices are per call, paid in testnet USDC over x402; /preflight and /inspect are free.</p>
+</footer>
+
+<script src="/assets/site.js"></script>
+</body>
+</html>
