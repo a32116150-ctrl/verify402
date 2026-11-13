@@ -180,14 +180,18 @@ function bodyChallenge(body) {
 }
 
 // Stable shape for comparison: key order must not decide whether two
-// challenges are the same.
+// challenges are the same. Only the accepts (the term sheet a compliant
+// client pays) and the dialect version participate. The wrapper's declared
+// `resource` does not: a body that omits it while naming the same accepts is
+// not a contradiction, and refusing to read it would catch real endpoints
+// (e.g. sellers who echo the header challenge but attach their own error
+// prose beside it) for no security gain.
 function canonicalChallenge(challenge) {
   const accept = (a) => JSON.stringify(
     Object.fromEntries(Object.entries(a ?? {}).sort(([x], [y]) => (x < y ? -1 : x > y ? 1 : 0))),
   );
   return JSON.stringify({
     x402Version: challenge?.x402Version ?? null,
-    resource: resourceUrlOf(challenge),
     accepts: (challenge?.accepts ?? []).map(accept).sort(),
   });
 }

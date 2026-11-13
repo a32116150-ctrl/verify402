@@ -85,6 +85,21 @@ test("extractChallenge refuses a header and body that disagree, and accepts a ma
   // Prose or a stub next to a valid header is normal for HTML 402s: keep the header.
   assert.equal(extractChallenge({ header, body: "Payment required" }).accepts.length, 1);
   assert.equal(extractChallenge({ header, body: '{"error":"Payment required"}' }).accepts.length, 1);
+
+  // Same accepts; the body just omits the wrapper resource (echoes the header
+  // terms next to its own error prose). That is not a contradiction — and it
+  // is what mainstream 402 sellers send.
+  const bodyNoResource = JSON.stringify({
+    x402Version: 2,
+    accepts: same.accepts,
+    error: "Payment Required",
+  });
+  assert.equal(extractChallenge({ header, body: bodyNoResource }).accepts[0].payTo, same.accepts[0].payTo);
+
+  // Same accepts; the wrapper resource differs from the claim side. Still not
+  // a contradiction: accepts are the contract.
+  const bodyOtherResource = JSON.stringify({ x402Version: 2, resource: "https://other.example/x", accepts: same.accepts });
+  assert.equal(extractChallenge({ header, body: bodyOtherResource }).accepts[0].network, "eip155:84532");
 });
 
 test("acceptToPayment maps the accept fields and keeps the resource", () => {

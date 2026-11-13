@@ -20,6 +20,20 @@ No version bump, deploy, or publish is implied by this section.
   `test/inspect.test.mjs` (matching, reordered-but-equal, swapped payee,
   prose, stub).
 
+### Fixed
+
+- `POST /inspect` no longer answers `422 challenge_mismatch` when the header
+  and the JSON body carry the **same accepts** but the body omits the wrapper
+  `resource`. The mismatch check now compares only what a compliant client
+  pays (`accepts` + dialect version), not descriptive wrapper fields. Our own
+  scan of 300 live public x402 endpoints from the CDP Bazaar catalog found
+  31 endpoints — mainstream hosted gateways that echo the header challenge
+  next to their own error prose — being refused by a verdict instead of
+  being read, which is backwards for a tool that exists to read 402s. The
+  swapped-payee case still returns `challenge_mismatch`. Covered in the
+  existing header/body matrix test, extended with the two wrapper-resource
+  shapes.
+
 ### Added
 
 - `GET /blog/check-an-x402-endpoint-before-you-pay`,
