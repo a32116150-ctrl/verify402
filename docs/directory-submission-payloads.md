@@ -5,7 +5,7 @@ This file is a paste sheet, not a record of listings. **As of 2026-11-13:**
 | Directory | State |
 |---|---|
 | PulseMCP | "Showing 0 – 0 of 0 servers". **Submissions and listing changes are paused site-wide** while they rework how listings are ingested — the `/submit` page now redirects to the official MCP Registry docs, and their homepage banner says so. We are already in that registry (1.1.0, active), so nothing to submit today; retry when they reopen. |
-| mcp.so | "No servers match verify402" |
+| mcp.so | No listing ("No servers match verify402"). Submit page exists but shows only a **$39 one-time paid submission** (no free option visible as of 2026-11-13). Decision 2026-11-13: **hold — no spend before a first external user.** Revisit after traction; may need a free path below the fold — none seen. |
 | Smithery | Server page at `smithery.ai/server/@a32116150-ctrl/verify402-mcp` now redirects to www and **404s** — no listing. |
 | Glama | **Listed** (auto-indexed GitHub repo): https://glama.ai/mcp/servers/a32116150-ctrl/verify402 — shows older metadata (1.0.9-era). Nothing to submit; claiming/refreshing is optional. |
 
@@ -66,11 +66,20 @@ redirects to the official MCP Registry docs, and the homepage carries the
 "new server submissions and listing changes are still paused" banner. The
 prerequisite they want is being in the MCP Registry — done (`io.github.a32116150-ctrl/verify402-mcp`, 1.1.0, active). Do not re-submit; do not "upgrade" anything on that page; check back when the banner comes down.
 
-## 2. mcp.so — https://mcp.so/submit
+## 2. mcp.so — https://mcp.so/submit?type=server
 
-Same facts. mcp.so is a directory of open servers and links to the GitHub
-repo. Link the repository, not the hosted demo, unless the form asks for the
-demo URL explicitly.
+Paste the shared facts. **Pricing reality (2026-11-13):** the submit page shows
+only a one-time **$39 paid submission** ("publish immediately, no review,
+verified badge, featured placement, dofollow link"); no free option is visible.
+**Held** — no spend until there is a first external user. The page works; it
+is simply not free. If a free path turns up below the fold, take it and use
+the fields below.
+
+Expected fields:
+
+- **Tab:** MCP Server (selected) — not Remote Server, not MCP Client, not AI Product.
+- **Repository URL:** `https://github.com/a32116150-ctrl/verify402`
+- **Name:** `verify402-mcp`
 
 ## 3. Smithery — https://smithery.ai/
 
