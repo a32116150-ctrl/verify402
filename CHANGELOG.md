@@ -7,6 +7,22 @@ not imply a deploy or an npm publish.
 
 No version bump, deploy, or publish is implied by this section.
 
+### Added
+
+- `src/cdp-auth.mjs` — CDP facilitator auth without the CDP SDK. The Bazaar
+  catalog that agents search is fed by the CDP facilitator only, so a service that
+  settles elsewhere is invisible to discovery. The SDK would do the same in ~104
+  packages and pull a high-severity advisory in a transitive validator into the
+  paid path, so the 120-second JWT (Ed25519 or ES256, `uris` bound to the exact
+  method+host+path, random nonce) is minted with `node:crypto`. Wiring: when
+  `FACILITATOR_URL` points at `api.cdp.coinbase.com`, the server mints those JWTs
+  (`HTTPFacilitatorClient.createAuthHeaders`); in mainnet the keys presence alone
+  still selects CDP. A half-configured environment no longer kills the service —
+  testnet falls back to `x402.org` loudly (`cdp-misconfigured` on `/health`,
+  nothing indexed) while mainnet still refuses to start. `/health` now reports
+  `facilitator` (host) and `discovery` (`cdp-bazaar-eligible` | `none` |
+  `cdp-misconfigured`) so a switch is checkable from outside.
+
 ### Fixed
 
 - `/inspect` reported `challenge` without `extensions`, so it answered "no

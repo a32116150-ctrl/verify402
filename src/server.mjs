@@ -51,6 +51,7 @@ import {
 import { fetchExplorer } from "./explorer.mjs";
 import { inspectUrl, inspectPaymentChallenge, extractChallenge, InspectError } from "./inspect.mjs";
 import { loadBoard, renderBoardPage, renderBadgeSvg, badgeFor, BOARD_SOURCE } from "./board.mjs";
+import { cdpAuthHeaders, isCdpFacilitatorUrl } from "./cdp-auth.mjs";
 import { createDirectory } from "./directory.mjs";
 import {
   preflight, verifyReceipt, PreflightError,
@@ -205,10 +206,34 @@ if (MODE === "mainnet" && !FACILITATOR_URL) {
   logError("REFUSING TO START: mainnet mode needs FACILITATOR_URL (e.g. https://facilitator.payai.network) or a CDP API key.");
   process.exit(1);
 }
-if (MODE === "mainnet" && process.env.FACILITATOR_URL?.includes("api.cdp.coinbase.com") && !process.env.CDP_API_KEY_ID) {
-  logError("REFUSING TO START: pointing at the CDP facilitator needs CDP_API_KEY_ID + CDP_API_KEY_SECRET (or switch FACILITATOR_URL to a keyless mainnet facilitator).");
-  process.exit(1);
+// A CDP facilitator URL without keys would settle nothing (every verify 401s).
+// Rather than take the service down if an environment was left half-configured,
+// fall back to the public testnet facilitator and say so loudly in the logs and
+// in /health — a working service that admits it is not indexed beats an outage.
+// Mainnet keeps the hard guard: no facilitator, no server.
+const CDP_MISSING_KEYS =
+  (isCdpFacilitatorUrl(FACILITATOR_URL) ||
+    (MODE === "mainnet" && Boolean(process.env.CDP_API_KEY_ID))) &&
+  !(process.env.CDP_API_KEY_ID && process.env.CDP_API_KEY_SECRET);
+if (CDP_MISSING_KEYS) {
+  const missing = [
+    process.env.CDP_API_KEY_ID ? null : "CDP_API_KEY_ID",
+    process.env.CDP_API_KEY_SECRET ? null : "CDP_API_KEY_SECRET",
+  ].filter(Boolean).join(" + ");
+  if (MODE === "mainnet") {
+    logError(`REFUSING TO START: the CDP facilitator needs ${missing}.`);
+    process.exit(1);
+  }
+  logError(
+    `CDP facilitator selected without ${missing}; falling back to https://x402.org/facilitator. ` +
+      "Nothing will be indexed into the Bazaar until both keys are set.",
+  );
 }
+const USE_CDP_FACILITATOR = !CDP_MISSING_KEYS &&
+  (isCdpFacilitatorUrl(FACILITATOR_URL) || (MODE === "mainnet" && Boolean(process.env.CDP_API_KEY_ID)));
+const EFFECTIVE_FACILITATOR_URL = CDP_MISSING_KEYS && MODE !== "mainnet"
+  ? "https://x402.org/facilitator"
+  : FACILITATOR_URL;
 
 const PORT = Number(process.env.PORT || 4021);
 const SHUTDOWN_TIMEOUT_MS = (() => {
@@ -301,23 +326,12 @@ const accepts = (price) => [
 // The CDP SDK is loaded on demand and is not a hard dependency: it carries a
 // separate zod 3 tree with an open advisory, and the live testnet deployment
 // never takes this branch. Operators who enable CDP install it explicitly.
-async function cdpFacilitatorClient() {
-  try {
-    const { createCdpFacilitatorClient } = await import("@coinbase/cdp-sdk/x402");
-    return createCdpFacilitatorClient();
-  } catch {
-    logError(
-      "CDP facilitator selected (CDP_API_KEY_ID is set) but @coinbase/cdp-sdk is not installed. " +
-        "Install it with `npm install @coinbase/cdp-sdk`, or set FACILITATOR_URL to a keyless " +
-        "mainnet facilitator such as https://facilitator.payai.network.",
-    );
-    process.exit(1);
-  }
-}
-
-const facilitatorClient = MODE === "mainnet" && process.env.CDP_API_KEY_ID
-  ? await cdpFacilitatorClient()
-  : new HTTPFacilitatorClient({ url: FACILITATOR_URL });
+// CDP auth is minted locally (src/cdp-auth.mjs): the SDK that would do it also
+// pulls a high-severity advisory in a transitive validator, which is not worth
+// carrying for one JWT.
+const facilitatorClient = USE_CDP_FACILITATOR
+  ? new HTTPFacilitatorClient({ url: EFFECTIVE_FACILITATOR_URL, createAuthHeaders: cdpAuthHeaders() })
+  : new HTTPFacilitatorClient({ url: EFFECTIVE_FACILITATOR_URL });
 
 // Local development escape hatch. Loud on purpose: a service that believes it
 // is charging when it is not is worse than one that is plainly down.
@@ -1791,6 +1805,16 @@ app.get("/info", (_req, res) => {
     payment: {
       protocol: "x402",
       scheme: "exact",
+      // Non-secret: which facilitator settles, and whether that facilitator
+      // feeds the Bazaar (the catalog agents search). /health stays liveness-only.
+      facilitator: (() => {
+        try {
+          return new URL(EFFECTIVE_FACILITATOR_URL).host;
+        } catch {
+          return EFFECTIVE_FACILITATOR_URL || "none";
+        }
+      })(),
+      discovery: CDP_MISSING_KEYS ? "cdp-misconfigured" : USE_CDP_FACILITATOR ? "cdp-bazaar-eligible" : "none",
       network: NETWORKS.evm,
       networkLabel: NETWORKS.label,
       acceptsExample: accepts(PRICE)[0],
@@ -2364,7 +2388,7 @@ if (IS_MAIN) {
     logInfo(`  /quotecheck : ${QUOTECHECK_PRICE}   (is someone else's quote honest?)`);
     logInfo(`  pay to EVM  : ${PAY_TO_EVM}`);
     logInfo(`  pay to SVM  : ${PAY_TO_SVM}`);
-    logInfo(`  facilitator : ${FACILITATOR_URL}`);
+    logInfo(`  facilitator : ${EFFECTIVE_FACILITATOR_URL}${CDP_MISSING_KEYS ? "  (CDP requested but keys missing — refused)" : ""}`);
     logInfo(`  free        : GET / , /info , /health , /ready , /findings , /.well-known/*.json\n`);
 
     // Warm the free snapshot as soon as the process is up: a cold Render instance
