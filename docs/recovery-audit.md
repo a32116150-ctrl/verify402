@@ -64,6 +64,27 @@ Invariants asserted in every row:
 live in `src/recovery-store.mjs` behind `VERIFY402_CRASH_AT`; they are inert
 unless the variable names an exact point, and are never set in a deploy.
 
+## Status against extension 0.8 (control 11) — gap, stated plainly
+
+Spec 0.8 added §5.1(7) and control 11: once a settlement attempt is dispatched, the
+record and its response must survive `stageTimeoutSeconds` and be resolved by
+reconciliation to `delivered`, `void`, or an alarmed `stuck`.
+
+This implementation satisfies the ordering half and not the reconciliation half:
+
+- the staging INSERT is committed **before** the facilitator call, which is the
+  write-ahead direction the spec requires;
+- but the record carries no attempt state — it is `staged` whether or not the
+  facilitator was called — so after a crash it cannot be told apart from a record
+  that was never attempted;
+- there is no reconciliation pass, so the "settle landed, reply lost" row above
+  ends as `pending` and the caller's retry is charged again rather than recovering.
+
+Control 11 therefore **does not pass today**. The direction is fail-closed (no free
+verdict without a confirmed settlement) but it is not the guarantee control 10
+asserts, and the spec is ahead of the code on this point. Tracked in the backlog;
+no claim on this page should be read as control 11 passing.
+
 ## What this does not prove
 
 - The facilitator and the chain are simulated. The settlement result is a local

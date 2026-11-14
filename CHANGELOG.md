@@ -7,6 +7,15 @@ not imply a deploy or an npm publish.
 
 No version bump, deploy, or publish is implied by this section.
 
+### Added
+
+- `docs/recovery-audit.md` records the gap against recovery-extension spec 0.8
+  control 11: the store journals the staged record before the facilitator call
+  (the required ordering) but carries no attempt state and has no reconciliation
+  pass, so a settlement that landed with its reply lost is not recovered. The
+  document says control 11 does not pass rather than implying it does. Spec 0.8
+  itself lives in the upstream proposal, not in this repository.
+
 ### Fixed
 
 - `POST /inspect` now refuses a response whose `PAYMENT-REQUIRED` header and
