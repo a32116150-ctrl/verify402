@@ -46,7 +46,8 @@ jobs:
           git config user.email "board-scan@users.noreply.github.com"
 
           blob=$(git hash-object -w data/board.json)
-          tree=$(printf '100644 blob %s\tboard.json\n' "$blob" | git mktree)
+          subtree=$(printf '100644 blob %s\tboard.json\n' "$blob" | git mktree)
+          tree=$(printf '040000 tree %s\tdata\n' "$subtree" | git mktree)
           prev=$(git ls-remote origin refs/heads/board-data | cut -f1 || true)
           msg="board data $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
