@@ -17,9 +17,9 @@ const SITE_DIR = fileURLToPath(new URL("./site", import.meta.url));
 
 import express from "express";
 import { paymentMiddleware, x402ResourceServer } from "@x402/express";
+import { FacilitatorClient } from "./facilitator-client.mjs";
 import { ExactEvmScheme } from "@x402/evm/exact/server";
 import { ExactSvmScheme } from "@x402/svm/exact/server";
-import { HTTPFacilitatorClient } from "@x402/core/server";
 import { declareDiscoveryExtension } from "@x402/extensions/bazaar";
 
 import { measureRoundTrip, clientFor, readinessProbe, readinessClientFor, isHardQuoteFailure } from "./measure.mjs";
@@ -188,8 +188,11 @@ const QUOTECHECK_PRICE = process.env.QUOTECHECK_PRICE || PRICE_DEFAULTS.quoteche
 const DEPTH_PRICE = process.env.DEPTH_PRICE || PRICE_DEFAULTS.depth;
 
 // The public x402.org facilitator is testnet-only. Mainnet needs a real one.
-// Mainnet: Coinbase's CDP facilitator. createCdpFacilitatorClient() reads
-// CDP_API_KEY_ID / CDP_API_KEY_SECRET from the environment itself. It is a
+// Mainnet: Coinbase's CDP facilitator. CDP_API_KEY_ID / CDP_API_KEY_SECRET are
+// read from the environment at boot. The client is ./facilitator-client.mjs —
+// an HTTPFacilitatorClient wired to throw FacilitatorResponseError, so a
+// facilitator failure reaches the caller as 502 with the facilitator's own message
+// instead of an opaque 500. It is a
 // *settlement service*: it never holds the money — signed payments go
 // straight to the payTo addresses.
 // The public x402.org facilitator is testnet-only. Mainnet options:
@@ -330,8 +333,8 @@ const accepts = (price) => [
 // pulls a high-severity advisory in a transitive validator, which is not worth
 // carrying for one JWT.
 const facilitatorClient = USE_CDP_FACILITATOR
-  ? new HTTPFacilitatorClient({ url: EFFECTIVE_FACILITATOR_URL, createAuthHeaders: cdpAuthHeaders() })
-  : new HTTPFacilitatorClient({ url: EFFECTIVE_FACILITATOR_URL });
+  ? new FacilitatorClient({ url: EFFECTIVE_FACILITATOR_URL, createAuthHeaders: cdpAuthHeaders() })
+  : new FacilitatorClient({ url: EFFECTIVE_FACILITATOR_URL });
 
 // Local development escape hatch. Loud on purpose: a service that believes it
 // is charging when it is not is worse than one that is plainly down.
