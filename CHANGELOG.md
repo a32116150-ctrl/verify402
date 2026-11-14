@@ -7,6 +7,17 @@ not imply a deploy or an npm publish.
 
 No version bump, deploy, or publish is implied by this section.
 
+### Fixed
+
+- `/inspect` reported `challenge` without `extensions`, so it answered "no
+  discovery metadata" for endpoints that declare it — including verify402's own
+  paid routes, which do publish a valid `extensions.bazaar` block (CDP's public
+  `/validate` accepts it). The field now survives into the response, and a new
+  `discovery` summary says whether a bazaar block is declared, which method it
+  names, and whether it carries an input schema and an output example. Metadata
+  that is declared but too thin for an agent to construct a call is now a named
+  caution (`discovery_incomplete`) rather than silence.
+
 ### Added
 
 - `GET /board`, `GET /board.json`, `GET /badge` — a public board of the

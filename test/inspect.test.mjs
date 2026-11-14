@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   isPublicIp, resolvePublicUrl, extractChallenge, acceptToPayment,
   summarizeAccept, inspectPaymentChallenge, inspectUrl, InspectError, resourceUrlOf,
+  summarizeDiscovery,
 } from "../src/inspect.mjs";
 
 const USDC_BASE_SEPOLIA = "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
@@ -209,4 +210,72 @@ test("inspectUrl fetches once, reads the header, and flags a non-402 answer", as
   });
   assert.equal(odd.verdict, "CAUTION");
   assert.ok(odd.reasons.some((r) => r.code === "not_402"));
+});
+
+test("discovery: declared metadata is passed through, not dropped", () => {
+  const withMeta = {
+    x402Version: 2,
+    resource: "https://example.com/paid",
+    accepts: [{ scheme: "exact", network: "eip155:84532", asset: USDC_BASE_SEPOLIA, amount: "30000", payTo: "0x1111111111111111111111111111111111111111", maxTimeoutSeconds: 60 }],
+    extensions: {
+      bazaar: {
+        info: {
+          input: { type: "http", method: "POST", bodyType: "json", body: { q: "x" } },
+          output: { type: "json", example: { ok: true } },
+        },
+        schema: { type: "object" },
+      },
+    },
+  };
+  const r = inspectPaymentChallenge({ challenge: withMeta, targetUrl: "https://example.com/paid" });
+  return Promise.resolve(r).then((res) => {
+    assert.ok(res.challenge.extensions, "extensions must survive into the reported challenge");
+    assert.equal(res.discovery.declared, true);
+    assert.equal(res.discovery.bazaar.method, "POST");
+    assert.equal(res.discovery.bazaar.hasInputSchema, true);
+    assert.equal(res.discovery.bazaar.hasOutputExample, true);
+    assert.ok(!res.reasons.some((x) => x.code === "discovery_incomplete"));
+  });
+});
+
+test("discovery: metadata too thin to construct a call is a caution, named", () => {
+  const thin = {
+    x402Version: 2,
+    resource: "https://example.com/paid",
+    accepts: [{ scheme: "exact", network: "eip155:84532", asset: USDC_BASE_SEPOLIA, amount: "30000", payTo: "0x1111111111111111111111111111111111111111", maxTimeoutSeconds: 60 }],
+    extensions: { bazaar: { info: { input: { type: "http", method: "GET" } } } },
+  };
+  return Promise.resolve(inspectPaymentChallenge({ challenge: thin, targetUrl: "https://example.com/paid" })).then((res) => {
+    assert.equal(res.discovery.declared, true);
+    assert.equal(res.discovery.bazaar.hasOutputExample, false);
+    const reason = res.reasons.find((x) => x.code === "discovery_incomplete");
+    assert.ok(reason, "an endpoint that is findable but not callable must be flagged");
+    assert.equal(reason.severity, "caution");
+  });
+});
+
+test("discovery: no extensions means no claim either way", () => {
+  const none = {
+    x402Version: 2,
+    resource: "https://example.com/paid",
+    accepts: [{ scheme: "exact", network: "eip155:84532", asset: USDC_BASE_SEPOLIA, amount: "30000", payTo: "0x1111111111111111111111111111111111111111", maxTimeoutSeconds: 60 }],
+  };
+  return Promise.resolve(inspectPaymentChallenge({ challenge: none, targetUrl: "https://example.com/paid" })).then((res) => {
+    assert.equal(res.discovery.declared, false);
+    assert.equal(res.challenge.extensions, null);
+    assert.ok(!res.reasons.some((x) => x.code === "discovery_incomplete"), "absence of metadata is not a defect");
+  });
+});
+
+test("discovery: summarizer tolerates junk instead of throwing", () => {
+  for (const junk of [undefined, null, "x", [], { bazaar: null }, { bazaar: "nope" }, { bazaar: 7 }]) {
+    const d = summarizeDiscovery(junk);
+    assert.equal(d.declared, false, `absent or malformed metadata must not count as declared: ${JSON.stringify(junk)}`);
+  }
+  // Declared but unusable is reported as declared-and-thin, not as absent: the
+  // endpoint really does publish a bazaar block, and an agent really cannot use it.
+  const thin = summarizeDiscovery({ bazaar: { info: 7 } });
+  assert.equal(thin.declared, true);
+  assert.equal(thin.bazaar.hasInputSchema, false);
+  assert.equal(thin.bazaar.hasOutputExample, false);
 });

@@ -235,6 +235,30 @@ function canonicalAccept(a) {
 // `resource`, the body's prose, its error keys — is not part of the contract
 // and does not participate. `x402Version` is not part of the contract either:
 // a v1 body and a v2 header advertising the same terms say the same thing.
+// What an agent needs to construct a call: a method, an input schema or example,
+// and a declared output. Declaring the bazaar extension without those means the
+// endpoint is findable but not callable, which is worse than not being listed.
+export function summarizeDiscovery(extensions) {
+  const bazaar = extensions && typeof extensions === "object" ? extensions.bazaar : null;
+  if (!bazaar || typeof bazaar !== "object") {
+    return { declared: false, bazaar: null };
+  }
+  const info = bazaar.info && typeof bazaar.info === "object" ? bazaar.info : null;
+  const input = info?.input && typeof info.input === "object" ? info.input : null;
+  const output = info?.output && typeof info.output === "object" ? info.output : null;
+  const schema = bazaar.schema && typeof bazaar.schema === "object" ? bazaar.schema : null;
+  return {
+    declared: true,
+    bazaar: {
+      present: true,
+      method: typeof input?.method === "string" ? input.method.toUpperCase() : null,
+      inputType: typeof input?.type === "string" ? input.type : null,
+      hasInputSchema: Boolean(schema || (input && (input.body !== undefined || input.queryParams !== undefined || input.pathParams !== undefined))),
+      hasOutputExample: Boolean(output && output.example !== undefined),
+    },
+  };
+}
+
 function canonicalChallenge(challenge) {
   return JSON.stringify({
     accepts: (challenge?.accepts ?? []).map(canonicalAccept).sort(),
@@ -381,6 +405,16 @@ export async function inspectPaymentChallenge({ challenge, targetUrl = null, now
     inspectReasons.push(caution("multiple_payees", "two options on the same network pay different addresses; pick one your policy allows"));
   }
 
+  const discovery = summarizeDiscovery(challenge.extensions);
+  if (discovery.declared && (!discovery.bazaar.hasInputSchema || !discovery.bazaar.hasOutputExample)) {
+    inspectReasons.push(
+      caution(
+        "discovery_incomplete",
+        "declares bazaar discovery metadata without an input schema or an output example; an agent can find this endpoint but cannot construct a valid call",
+      ),
+    );
+  }
+
   const verdict = verdictOf([...inspectReasons, ...options[0].reasons]);
 
   return {
@@ -392,7 +426,12 @@ export async function inspectPaymentChallenge({ challenge, targetUrl = null, now
       resource,
       acceptCount: accepts.length,
       accepts: options.map((option) => option.accept),
+      // Discovery metadata is not decoration: it is what lets an agent find the
+      // endpoint and construct a valid call. Dropping it here would make /inspect
+      // answer "no metadata" for every endpoint, including ones that declare it.
+      extensions: challenge.extensions ?? null,
     },
+    discovery,
     verdict,
     sign_allowed: verdict !== "BLOCK",
     requires_ack: verdict === "CAUTION",
