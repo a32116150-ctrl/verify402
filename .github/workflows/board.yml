@@ -48,7 +48,11 @@ jobs:
           blob=$(git hash-object -w data/board.json)
           subtree=$(printf '100644 blob %s\tboard.json\n' "$blob" | git mktree)
           tree=$(printf '040000 tree %s\tdata\n' "$subtree" | git mktree)
-          prev=$(git ls-remote origin refs/heads/board-data | cut -f1 || true)
+
+          # checkout is shallow, so fetch the data branch before parenting to it
+          git fetch --no-tags --depth=1 origin \
+            refs/heads/board-data:refs/remotes/origin/board-data || true
+          prev=$(git rev-parse --verify --quiet refs/remotes/origin/board-data || true)
           msg="board data $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
           if [ -n "$prev" ]; then
