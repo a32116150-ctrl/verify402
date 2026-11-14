@@ -36,6 +36,12 @@
   var copyLabel = copy ? copy.textContent : "Copy JSON";
   var lastJson = "";
 
+  // Prefill from ?url=... so a row on /board can link straight into the panel.
+  try {
+    var prefill = new URLSearchParams(window.location.search).get("url");
+    if (prefill && urlInput && /^https?:\/\//i.test(prefill)) urlInput.value = prefill;
+  } catch (e) { /* older browser: leave the default sample */ }
+
   function setStatus(node, text, busy) {
     if (!node) return;
     node.textContent = text;

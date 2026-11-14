@@ -1,0 +1,60 @@
+name: board-scan
+
+# Daily structural read of the most-called public x402 endpoints.
+#
+# The result is published on the `board-data` branch, NOT master: the service
+# fetches that branch at runtime (see src/board.mjs), so a data refresh never
+# triggers a Render deploy and never restarts the live counters.
+#
+# One read-only request per endpoint, no wallet, no payment. If this job fails,
+# the board keeps serving the last good snapshot and its date says so.
+
+on:
+  schedule:
+    - cron: "23 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: board-scan
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install runtime deps
+        run: npm ci --omit=dev --ignore-scripts
+
+      - name: Scan
+        run: node scripts/board-scan.mjs data/board.json 300
+
+      - name: Publish the data branch
+        run: |
+          set -euo pipefail
+          git config user.name "board-scan"
+          git config user.email "board-scan@users.noreply.github.com"
+
+          blob=$(git hash-object -w data/board.json)
+          tree=$(printf '100644 blob %s\tboard.json\n' "$blob" | git mktree)
+          prev=$(git ls-remote origin refs/heads/board-data | cut -f1 || true)
+          msg="board data $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+          if [ -n "$prev" ]; then
+            commit=$(git commit-tree "$tree" -p "$prev" -m "$msg")
+          else
+            commit=$(git commit-tree "$tree" -m "$msg")
+          fi
+
+          git push origin "$commit:refs/heads/board-data"
+          echo "published $commit"

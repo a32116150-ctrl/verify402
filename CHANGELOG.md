@@ -9,12 +9,25 @@ No version bump, deploy, or publish is implied by this section.
 
 ### Added
 
-- `docs/recovery-audit.md` records the gap against recovery-extension spec 0.8
-  control 11: the store journals the staged record before the facilitator call
-  (the required ordering) but carries no attempt state and has no reconciliation
-  pass, so a settlement that landed with its reply lost is not recovered. The
-  document says control 11 does not pass rather than implying it does. Spec 0.8
-  itself lives in the upstream proposal, not in this repository.
+- `GET /board`, `GET /board.json`, `GET /badge` — a public board of the
+  most-called x402 endpoints in the public catalog, refreshed daily by
+  `.github/workflows/board.yml` (data published on the `board-data` branch, so a
+  refresh never redeploys the service). Each row is one read-only request,
+  timestamped, with the verdict, chain, price, authorization window and 30-day
+  call count; the badge is an embeddable SVG for the endpoint's own page. The
+  page and the JSON carry the same caveats: a structural read is not an audit,
+  not a reputation score, and not an endorsement. `scripts/board-scan.mjs`
+  produces the data; `test/board.test.mjs` pins rendering, escaping and the
+  honesty constraints.
+- `docs/recovery-audit.md` records where the implementation stands against
+  recovery-extension spec 0.8 control 11: the durable store journals before the
+  facilitator call, gates eviction on reconciliation, resolves staged records
+  from EIP-3009 `authorizationState`, and does the same pass at startup
+  (`test/recovery-durable.test.mjs` covers each branch). The remaining gap is
+  observability — no state named `settling`, and the `stuck` case is logged but
+  not counted — plus the fact that the live instance runs `memory-only` and so
+  does not have the guarantee until the durable cutover. Spec 0.8 itself lives
+  in the upstream proposal, not in this repository.
 
 ### Fixed
 

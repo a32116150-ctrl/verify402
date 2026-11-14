@@ -50,6 +50,7 @@ import {
 } from "./site-analytics.mjs";
 import { fetchExplorer } from "./explorer.mjs";
 import { inspectUrl, inspectPaymentChallenge, extractChallenge, InspectError } from "./inspect.mjs";
+import { loadBoard, renderBoardPage, renderBadgeSvg, badgeFor, BOARD_SOURCE } from "./board.mjs";
 import { createDirectory } from "./directory.mjs";
 import {
   preflight, verifyReceipt, PreflightError,
@@ -1002,6 +1003,7 @@ app.get("/sitemap.xml", (_req, res) => {
   <url><loc>https://verify402.onrender.com/mcp</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
   <url><loc>https://verify402.onrender.com/preflight</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://verify402.onrender.com/inspect</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://verify402.onrender.com/board</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
   <url><loc>https://verify402.onrender.com/directory</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://verify402.onrender.com/testers</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
   <url><loc>https://verify402.onrender.com/blog</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
@@ -1595,6 +1597,44 @@ app.post("/inspect", inspectRateLimit, preflightConcurrency, async (req, res) =>
   }
 });
 
+// Public board: a daily structural read of the most-called public x402
+// endpoints. Data comes from the `board-data` branch (see scripts/board-scan.mjs
+// and .github/workflows/board.yml) so a data refresh never redeploys the
+// service; the bundled data/board.json is the fallback.
+app.get(["/board", "/board/"], async (req, res) => {
+  res.set("Cache-Control", "public, max-age=300");
+  try {
+    const board = await loadBoard();
+    res.type("html").send(renderBoardPage(board));
+  } catch (e) {
+    logError("[board] render failed", e);
+    res.status(503).type("text").send("board unavailable; retry shortly");
+  }
+});
+
+app.get("/board.json", async (_req, res) => {
+  res.set("Cache-Control", "public, max-age=300");
+  const board = await loadBoard();
+  res.json({
+    ...board,
+    note:
+      "One structural read per endpoint at generatedAt, by verify402's free /inspect logic. " +
+      "Not an audit, reputation score, endorsement, or promise about settlement. Read `caveats`.",
+    badge: "https://verify402.onrender.com/badge?url=<urlencoded endpoint url>",
+    inspect: "POST https://verify402.onrender.com/inspect { url, method } for a fresh read",
+  });
+});
+
+app.get("/badge", async (req, res) => {
+  const url = String(req.query.url || "").slice(0, 800);
+  const board = await loadBoard();
+  const badge = badgeFor(board, url);
+  res.set("Cache-Control", "public, max-age=300");
+  res.set("X-Robots-Tag", "noindex");
+  res.set("Content-Type", "image/svg+xml; charset=utf-8");
+  res.send(renderBadgeSvg(badge));
+});
+
 // The blog index and its post directory share a prefix: /blog is a page,
 // /blog/<slug> is a static file. Route the index explicitly before static so
 // Express does not redirect to a directory listing that does not exist.
@@ -1633,6 +1673,9 @@ app.get("/", (req, res) => {
       "  POST /preflight/verify free        verify a preflight receipt (HMAC + expiry)",
       "  POST /inspect  free                read an x402 402 challenge and preflight it (no wallet)",
       "  GET  /directory.json free          watched public x402 endpoints + changes",
+      "  GET  /board        free            daily structural read of public x402 endpoints",
+      "  GET  /board.json   free            the same data, with caveats",
+      "  GET  /badge        free            embeddable SVG for a scanned endpoint",
       `  POST /verify   ${PRICE} per call        is this arbitrage opportunity real?`,
       `  POST /safety   ${SAFETY_PRICE} per call        is this token safe to buy? (pre-trade gate)`,
       `  POST /route    ${ROUTE_PRICE} per call        what would the chain actually pay for this swap?`,

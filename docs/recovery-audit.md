@@ -64,26 +64,35 @@ Invariants asserted in every row:
 live in `src/recovery-store.mjs` behind `VERIFY402_CRASH_AT`; they are inert
 unless the variable names an exact point, and are never set in a deploy.
 
-## Status against extension 0.8 (control 11) — gap, stated plainly
+## Status against extension 0.8 (control 11)
 
 Spec 0.8 added §5.1(7) and control 11: once a settlement attempt is dispatched, the
 record and its response must survive `stageTimeoutSeconds` and be resolved by
 reconciliation to `delivered`, `void`, or an alarmed `stuck`.
 
-This implementation satisfies the ordering half and not the reconciliation half:
+**With the durable store, the recovery half of that is what this code already does**
+(and `test/recovery-durable.test.mjs` covers each branch across real process restarts):
 
-- the staging INSERT is committed **before** the facilitator call, which is the
-  write-ahead direction the spec requires;
-- but the record carries no attempt state — it is `staged` whether or not the
-  facilitator was called — so after a crash it cannot be told apart from a record
-  that was never attempted;
-- there is no reconciliation pass, so the "settle landed, reply lost" row above
-  ends as `pending` and the caller's retry is charged again rather than recovering.
+- the staged row is journaled before the facilitator call (`recordSettlement`, write-ahead);
+- the staging sweep is gated on reconciliation: `entryCanExpire` is true only when the
+  record is known **not** to have settled, so the timer cannot delete a paid response;
+- a stale staged retry is not re-charged: it triggers `reconcileStagedEntry`, which reads
+  EIP-3009 `authorizationState` on the token contract and resolves to `settled`
+  (consumed → promoted, replayable), `expired_safe` (past `validBefore`, unconsumed →
+  expired, safe to pay again), `pending` (inside the window → stays pending) or `failed`
+  /`unavailable` (fail closed with `503 recovery_unavailable`, never a second charge);
+- the same pass runs at startup over every staged row (`reconcileStagedOnStartup`).
 
-Control 11 therefore **does not pass today**. The direction is fail-closed (no free
-verdict without a confirmed settlement) but it is not the guarantee control 10
-asserts, and the spec is ahead of the code on this point. Tracked in the backlog;
-no claim on this page should be read as control 11 passing.
+**What is genuinely missing is observability, not recovery.** There is no state literally
+named `settling` — the boundary is `staged` plus the recorded payment reference plus the
+eviction predicate — and the `stuck` case is logged but not counted or surfaced as a
+metric. A record with no checkable payment reference (Solana) stays pending indefinitely,
+which is `stuck` behaviour without the alarm.
+
+**The live instance does not have the guarantee, by construction.** It runs
+`recoveryStore: memory-only`: staged state is process-local, a restart loses it, and a
+staged record ages out on the timer because there is no store to reconcile against.
+Control 11 presumes durable state; the fix is the durable cutover, not more recovery code.
 
 ## What this does not prove
 
