@@ -482,7 +482,8 @@ export function renderBoardPage(board, { origin = "https://verify402.onrender.co
       ${stat("well-formed", wellFormed, "PASS + flagged")}
       ${stat("flagged", c.caution || 0, "worth a look")}
       ${stat("refused", c.refused || 0, "inspector would not guess")}
-      ${stat("no read", (c.unreachable || 0) + (c.block || 0), "unreachable or blocked")}
+      ${stat("blocked", c.block || 0, "terms the gate will not sign")}
+      ${stat("no read", c.unreachable || 0, "no answer, or not x402")}
     </div>
     <div class="callout warn">
       <h3>Read the verdict, then read this</h3>
