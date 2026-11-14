@@ -20,6 +20,9 @@ import {
   formatWindow,
   shortHash,
   verdictOf,
+  loadBoard,
+  boardCacheState,
+  resetBoardCacheForTests,
   BOARD_CAVEATS,
 } from "../src/board.mjs";
 
@@ -165,4 +168,38 @@ test("bundled data: the shipped snapshot parses and has rows", () => {
   assert.ok(local, "data/board.json must be present and valid in the repo");
   assert.ok(local.rows.length > 0);
   assert.ok(local.generatedAt);
+});
+
+test("loader: a refresh replaces the snapshot without blocking the request", async () => {
+  resetBoardCacheForTests();
+  const fresh = {
+    generatedAt: "2026-11-15T00:00:00.000Z",
+    rows: [{ resource: "https://fresh.example/x", verdict: "PASS", chain: "eip155:8453", priceUsd: 1 }],
+  };
+  let calls = 0;
+  const fetchImpl = async () => {
+    calls += 1;
+    return { ok: true, json: async () => fresh };
+  };
+  const first = await loadBoard({ fetchImpl });
+  assert.ok(first.rows.length > 0, "the first read is served from the bundled snapshot");
+  await new Promise((r) => setTimeout(r, 60));
+  const second = await loadBoard({ fetchImpl });
+  assert.equal(second.rows.length, 1);
+  assert.equal(second.rows[0].resource, "https://fresh.example/x");
+  assert.equal(calls, 1, "a fresh cache must not re-fetch on every request");
+});
+
+test("loader: a failed refresh is retried in a minute, not after a full cache window", async () => {
+  resetBoardCacheForTests();
+  const failing = async () => {
+    throw new Error("offline");
+  };
+  const boardNow = await loadBoard({ fetchImpl: failing });
+  assert.ok(boardNow.rows.length > 0, "a failed refresh falls back to the bundled snapshot");
+  await new Promise((r) => setTimeout(r, 60));
+  const state = boardCacheState();
+  assert.match(String(state.lastError), /offline/);
+  assert.ok(state.retryAt > 0, "a retry must be scheduled");
+  assert.ok(state.retryAt - Date.now() <= 61_000, "the retry must be sooner than the 15 minute cache window");
 });

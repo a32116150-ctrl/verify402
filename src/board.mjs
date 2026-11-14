@@ -20,6 +20,10 @@ export const BOARD_SOURCE =
   "https://raw.githubusercontent.com/a32116150-ctrl/verify402/board-data/data/board.json";
 
 const CACHE_MS = 15 * 60 * 1000;
+// A failed refresh must not lock the board out for a full cache window: the
+// first request on a cold instance is exactly when the fetch is most likely to
+// time out, and a 15-minute penalty would serve stale data for that long.
+const RETRY_MS = 60 * 1000;
 const LOCAL_FILE = new URL("../data/board.json", import.meta.url);
 
 export const BOARD_CAVEATS = [
@@ -197,37 +201,47 @@ export function readLocalBoard() {
   }
 }
 
-let cache = { at: 0, data: null, refreshing: null };
+let cache = { at: 0, retryAt: 0, data: null, refreshing: null, lastError: null };
 
 export function boardCacheState() {
-  return { at: cache.at, hasData: Boolean(cache.data), refreshing: Boolean(cache.refreshing) };
+  return {
+    at: cache.at,
+    retryAt: cache.retryAt,
+    hasData: Boolean(cache.data && cache.data.rows && cache.data.rows.length),
+    refreshing: Boolean(cache.refreshing),
+    lastError: cache.lastError,
+  };
+}
+
+export function resetBoardCacheForTests() {
+  cache = { at: 0, retryAt: 0, data: null, refreshing: null, lastError: null };
 }
 
 // Never block a request on the network: serve what we have, refresh behind it.
-export async function loadBoard({ fetchImpl = globalThis.fetch, now = Date.now(), timeoutMs = 6000 } = {}) {
+// A refresh that fails is retried after RETRY_MS, not after the full cache window.
+export async function loadBoard({ fetchImpl = globalThis.fetch, timeoutMs = 10000 } = {}) {
   if (!cache.data) cache.data = readLocalBoard() || emptyBoard();
+  const now = Date.now();
   const stale = now - cache.at > CACHE_MS;
-  if (stale && !cache.refreshing && typeof fetchImpl === "function") {
+  if (stale && !cache.refreshing && now >= cache.retryAt && typeof fetchImpl === "function") {
+    const snapshot = cache.data;
     cache.refreshing = (async () => {
       try {
         const res = await fetchImpl(BOARD_SOURCE, {
           headers: { "user-agent": "verify402-board/1 (+https://verify402.onrender.com/board)" },
           signal: AbortSignal.timeout(timeoutMs),
         });
-        if (res.ok) {
-          const data = normalizeBoard(await res.json());
-          if (data) {
-            cache = { at: Date.now(), data, refreshing: null };
-            return data;
-          }
-        }
-        cache.at = Date.now();
-      } catch {
-        cache.at = Date.now();
+        if (!res.ok) throw new Error(`board source ${res.status}`);
+        const data = normalizeBoard(await res.json());
+        if (!data) throw new Error("board source returned no usable rows");
+        cache = { at: Date.now(), retryAt: 0, data, refreshing: null, lastError: null };
+      } catch (e) {
+        cache.lastError = e?.message ?? String(e);
+        cache.retryAt = Date.now() + RETRY_MS;
       } finally {
         cache.refreshing = null;
       }
-      return null;
+      return snapshot;
     })();
   }
   return cache.data;

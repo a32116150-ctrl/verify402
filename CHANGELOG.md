@@ -18,7 +18,11 @@ No version bump, deploy, or publish is implied by this section.
   page and the JSON carry the same caveats: a structural read is not an audit,
   not a reputation score, and not an endorsement. `scripts/board-scan.mjs`
   produces the data; `test/board.test.mjs` pins rendering, escaping and the
-  honesty constraints.
+  honesty constraints. The loader serves the bundled snapshot immediately and
+  refreshes from the data branch behind the request; a failed refresh retries in
+  60 s rather than after the full 15-minute window, and an empty board answers
+  `503 board_warming` with `no-store` (and an uncached badge) so a cold instance
+  can never cache "not scanned" over a real verdict.
 - `docs/recovery-audit.md` records where the implementation stands against
   recovery-extension spec 0.8 control 11: the durable store journals before the
   facilitator call, gates eviction on reconciliation, resolves staged records

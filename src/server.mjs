@@ -1597,14 +1597,38 @@ app.post("/inspect", inspectRateLimit, preflightConcurrency, async (req, res) =>
   }
 });
 
+// A cold instance has no board yet (local snapshot missing + first refresh in
+// flight). Answer 503 with a short retry instead of caching an empty board.
+function boardWarming(res, kind) {
+  res.set("Cache-Control", "no-store");
+  res.set("Retry-After", "10");
+  if (kind === "json") {
+    return res.status(503).json({
+      error: "board_warming",
+      code: "board_warming",
+      message: "the board is loading its first snapshot; retry in a few seconds",
+    });
+  }
+  return res.status(503).type("html").send(
+    "<!doctype html><meta charset=\"utf-8\"><title>board warming · verify402</title>" +
+    "<body style=\"font:16px/1.6 system-ui;margin:12vh auto;max-width:34rem;padding:0 1.2rem\">" +
+    "<h1 style=\"font-size:1.4rem\">The board is loading its first snapshot.</h1>" +
+    "<p>This instance just started and has not read the daily scan yet. Reload in a few seconds — " +
+    "the data is cached after the first read.</p>" +
+    "<p><a href=\"/inspect\">Inspect any 402 directly</a> while you wait.</p></body>",
+  );
+}
+
 // Public board: a daily structural read of the most-called public x402
 // endpoints. Data comes from the `board-data` branch (see scripts/board-scan.mjs
 // and .github/workflows/board.yml) so a data refresh never redeploys the
 // service; the bundled data/board.json is the fallback.
 app.get(["/board", "/board/"], async (req, res) => {
-  res.set("Cache-Control", "public, max-age=300");
   try {
     const board = await loadBoard();
+    // Never let a cold instance's empty cache be served — or cached — as the board.
+    if (!board.rows.length) return boardWarming(res, "html");
+    res.set("Cache-Control", "public, max-age=300");
     res.type("html").send(renderBoardPage(board));
   } catch (e) {
     logError("[board] render failed", e);
@@ -1613,8 +1637,9 @@ app.get(["/board", "/board/"], async (req, res) => {
 });
 
 app.get("/board.json", async (_req, res) => {
-  res.set("Cache-Control", "public, max-age=300");
   const board = await loadBoard();
+  if (!board.rows.length) return boardWarming(res, "json");
+  res.set("Cache-Control", "public, max-age=300");
   res.json({
     ...board,
     note:
@@ -1629,7 +1654,9 @@ app.get("/badge", async (req, res) => {
   const url = String(req.query.url || "").slice(0, 800);
   const board = await loadBoard();
   const badge = badgeFor(board, url);
-  res.set("Cache-Control", "public, max-age=300");
+  // An empty board would turn every badge into "not scanned", which is a wrong
+  // claim for an endpoint that was scanned. Serve it, but do not cache it.
+  res.set("Cache-Control", board.rows.length ? "public, max-age=300" : "no-store");
   res.set("X-Robots-Tag", "noindex");
   res.set("Content-Type", "image/svg+xml; charset=utf-8");
   res.send(renderBadgeSvg(badge));
@@ -2322,6 +2349,9 @@ if (IS_MAIN) {
     } catch (e) {
       logWarn(`recovery startup reconciliation errored: ${e?.message ?? e}`);
     }
+    // Warm the public board before the first visitor: the loader serves the
+    // bundled snapshot immediately and refreshes from the data branch behind it.
+    void loadBoard().catch(() => {});
     const server = app.listen(PORT, () => {
     const address = server.address();
     const listeningPort = address && typeof address === "object" ? address.port : PORT;
