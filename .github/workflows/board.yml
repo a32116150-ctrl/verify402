@@ -56,5 +56,5 @@ jobs:
             commit=$(git commit-tree "$tree" -m "$msg")
           fi
 
-          git push origin "$commit:refs/heads/board-data"
+          git push origin "${commit}:refs/heads/board-data"
           echo "published $commit"
