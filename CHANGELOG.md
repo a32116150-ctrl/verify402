@@ -8,9 +8,13 @@ not imply a deploy or an npm publish.
 A fix release for the service. The MCP bridge has no runtime change — the only
 source diff from 1.1.0 is one corrected comment — and `verify402-mcp@1.1.1` is a
 marker release so that the version a caller installs matches the version the
-service reports (see `PUBLISH_STEPS_FOR_ME.md`). This entry records repository
-changes; it does not by itself mean the artifact is on npm or the service is
-deployed.
+service reports (see `PUBLISH_STEPS_FOR_ME.md`).
+
+**Published 2026-11-16.** npm `latest` is `1.1.1`: tarball shasum
+`f9d0f0c40f8aa9806b067848fa2cb67a4e5b3e1a`, `gitHead`
+`7c43cbf5406d73d9ae396ed1363170414a2cc74e`, registry timestamp
+`2026-11-16T15:36:48.514Z`. The MCP Registry entry and the Render deployment remain
+separate, pending steps.
 
 ### Fixed
 

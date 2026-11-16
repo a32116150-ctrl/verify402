@@ -1,14 +1,21 @@
 # Release verify402-mcp 1.1.1 — for me
 
-Status: **prepared, not published.** `1.1.1` is a **marker release**: no bridge
-runtime change. The only bridge source diff from `1.1.0` is one comment line that
-named `verify402.com` (a parked domain) instead of the live host. It exists only so that the version a caller
-installs matches the version the service reports after the fix set in
-`CHANGELOG.md` — the service fixes are real, but they do not touch the bridge, and
-shipping a service that says `1.1.1` next to an npm package that only offers
-`1.1.0` would make the manifest's install command a lie.
+Status: **published 2026-11-16, not yet deployed, registry entry not yet updated.**
+`1.1.1` is a **marker release**: no bridge runtime change. The only bridge source
+diff from `1.1.0` is one comment line that named `verify402.com` (a parked domain)
+instead of the live host. It exists only so that the version a caller installs
+matches the version the service reports after the fix set in `CHANGELOG.md` — the
+service fixes are real, but they do not touch the bridge, and shipping a service
+that says `1.1.1` next to an npm package that only offered `1.1.0` would make the
+manifest's install command a lie.
 
-Nothing below has run yet, so nothing may be claimed as published.
+Steps 1–7 (validation, artifact, `gitHead`-resolvable branch, publish, registry
+`npm view` confirmation, metadata transition recorded in `src/version.mjs` and
+`CHANGELOG.md`) are **done**. Registry timestamp `2026-11-16T15:36:48.514Z`, shasum
+`f9d0f0c40f8aa9806b067848fa2cb67a4e5b3e1a`. Steps 8–10 — MCP Registry entry at
+1.1.1, the `mcp-v1.1.1` GitHub release, and the `master` push that deploys — are
+**not done** and are separate approvals. Nothing may be claimed as deployed until
+`/info` on the live host reports `1.1.1`.
 
 What `1.1.1` contains:
 
