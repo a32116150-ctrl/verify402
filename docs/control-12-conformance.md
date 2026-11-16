@@ -2,7 +2,9 @@
 
 Source: Hitek-cel's crash-vector set (Detent `conformance/x402-recovery-control12.json`, commit `a50dfc0`, 29 vectors, in the format proposed on x402-foundation/x402#3848). Vendored at `test/fixtures/x402-recovery-control12.json`; methodology in `test/fixtures/control12-scenario.mjs`; runner `test/control-12-vectors.test.mjs`.
 
-The service was exercised with **its own** durable journal (SQLite), its own crash handling, its own restart, its own reconciliation and its own 409/503/200 mapping. Fields compared per vector: `handlerRuns`, `settleCalls`, `charges` (only where the rail is readable), `retryStatus`, `retryReplaysStoredResponse`, `retryAfter`, `state`, `keyBlocked`.
+The service was exercised with **its own** durable journal (SQLite), its own crash handling, its own restart, its own reconciliation and its own 409/503/200 mapping. Fields compared per vector: `handlerRuns`, `settleCalls`, `charges`, `retryStatus`, `retryReplaysStoredResponse`, `retryAfter`, `state`, `keyBlocked`.
+
+`charges` is compared on **every** readable row, including `unreachable`. In this harness `unreachable` is a fault injected into the *server* rail read, not into the rail itself — the rail's nonce ledger records whether an authorisation was consumed either way (that is what Detent's own harness counts too). Asserting nothing here would fake the only check separating a paid-and-never-delivered operation from one that was never charged.
 
 Invariant held everywhere measured: at most one charge per authorization.
 
@@ -11,13 +13,13 @@ Invariant held everywhere measured: at most one charge per authorization.
 | 0 | claim | before | not_landed | conform | — |
 | 1 | claim | before | unreachable | conform | — |
 | 2 | claim | after | not_landed | diverge | handlerRuns: ours=1 vector=0<br>settleCalls: ours=1 vector=0<br>charges: ours=1 vector=0<br>retryStatus: ours=200 vector=402<br>state: ours="delivered" vector="void"<br>keyBlocked: ours=true vector=false |
-| 3 | claim | after | unreachable | diverge | handlerRuns: ours=1 vector=0<br>settleCalls: ours=1 vector=0<br>retryStatus: ours=200 vector=402<br>state: ours="delivered" vector="void"<br>keyBlocked: ours=true vector=false |
+| 3 | claim | after | unreachable | diverge | handlerRuns: ours=1 vector=0<br>settleCalls: ours=1 vector=0<br>charges: ours=1 vector=0<br>retryStatus: ours=200 vector=402<br>state: ours="delivered" vector="void"<br>keyBlocked: ours=true vector=false |
 | 4 | staged | before | not_landed | diverge | handlerRuns: ours=1 vector=0<br>settleCalls: ours=1 vector=0<br>charges: ours=1 vector=0<br>retryStatus: ours=200 vector=402<br>state: ours="delivered" vector="void"<br>keyBlocked: ours=true vector=false |
-| 5 | staged | before | unreachable | diverge | handlerRuns: ours=1 vector=0<br>settleCalls: ours=1 vector=0<br>retryStatus: ours=200 vector=402<br>state: ours="delivered" vector="void"<br>keyBlocked: ours=true vector=false |
+| 5 | staged | before | unreachable | diverge | handlerRuns: ours=1 vector=0<br>settleCalls: ours=1 vector=0<br>charges: ours=1 vector=0<br>retryStatus: ours=200 vector=402<br>state: ours="delivered" vector="void"<br>keyBlocked: ours=true vector=false |
 | 6 | staged | after | not_landed | diverge | handlerRuns: ours=1 vector=0<br>retryStatus: ours=409 vector=402<br>retryAfter: ours="present" vector="absent" |
 | 7 | staged | after | unreachable | diverge | handlerRuns: ours=1 vector=0<br>retryStatus: ours=409 vector=402<br>retryAfter: ours="present" vector="absent"<br>state: ours="stuck" vector="void"<br>keyBlocked: ours=true vector=false |
 | 8 | response_saved | before | not_landed | diverge | settleCalls: ours=1 vector=0<br>charges: ours=1 vector=0<br>retryStatus: ours=200 vector=402<br>state: ours="delivered" vector="void"<br>keyBlocked: ours=true vector=false |
-| 9 | response_saved | before | unreachable | diverge | settleCalls: ours=1 vector=0<br>retryStatus: ours=200 vector=402<br>state: ours="delivered" vector="void"<br>keyBlocked: ours=true vector=false |
+| 9 | response_saved | before | unreachable | diverge | settleCalls: ours=1 vector=0<br>charges: ours=1 vector=0<br>retryStatus: ours=200 vector=402<br>state: ours="delivered" vector="void"<br>keyBlocked: ours=true vector=false |
 | 10 | response_saved | after | not_landed | diverge | retryStatus: ours=409 vector=402<br>retryAfter: ours="present" vector="absent" |
 | 11 | response_saved | after | unreachable | diverge | retryStatus: ours=409 vector=402<br>retryAfter: ours="present" vector="absent"<br>state: ours="stuck" vector="void"<br>keyBlocked: ours=true vector=false |
 | 12 | settling | before | not_landed | diverge | retryStatus: ours=409 vector=402<br>retryAfter: ours="present" vector="absent" |

@@ -126,13 +126,16 @@ async function run() {
       out({ skipped: true, railMode });
       return;
     }
-    // Charge bookkeeping: if the rail reports used at crash, consume the nonce.
-    if (plan.settleSent && railMode === "landed") writeRail({ usedNonces: [nonceFor(index)] });
+    // Charge bookkeeping (the test rail is authoritative for charges, even when
+    // the server's rail-read path is down — `unreachable` means the server
+    // cannot read the rail, not that the rail itself went away):
+    // `landed` — the settle consumed the authorization before the crash;
+    // `not_landed` — the settle was rejected at verification time on-chain;
+    // `unreachable` — the settle went out, outcome unknown to a non-reading
+    // server; the rail sidecar records it as used (that is what the settle
+    // step calls for: an authorisation settle consumes the nonce).
+    if (plan.settleSent && railMode !== "not_landed") writeRail({ usedNonces: [nonceFor(index)] });
     else writeRail({ usedNonces: [] });
-    if (plan.settleSent && plan.settled) {
-      // settle landed at crash time; rail records it regardless of railOnRestart
-      writeRail({ usedNonces: [nonceFor(index)] });
-    }
     stage(key, index, validBefore, plan);
     out({ skipped: false, railMode, nonce: nonceFor(index) });
     return;
@@ -154,7 +157,7 @@ async function run() {
     let retryAfter = "absent";
     let handlerRun = 0;
     let settleCall = plan.settleSent ? 1 : 0;
-    let charges = railMode === "unreachable" ? null : readRail().usedNonces.length;
+    let charges = readRail().usedNonces.length;
 
     if (lookup?.hit) {
       retryStatus = 200; replayStored = true;
@@ -180,8 +183,8 @@ async function run() {
         },
       });
       retryStatus = 200; replayStored = false; handlerRun = 1; settleCall += 1;
-      charges = railMode === "unreachable" ? null : 1;
-      if (railMode !== "unreachable") writeRail({ usedNonces: [nonceFor(index)] });
+      charges = 1; // the vector's rail records it regardless of read access
+      writeRail({ usedNonces: [nonceFor(index)] });
     }
 
     // Final state: move past the authorization deadline and settle the
@@ -199,7 +202,7 @@ async function run() {
       handlerRuns: (plan.handlerRun ? 1 : 0) + handlerRun,
       settleCalls: settleCall,
       charges,
-      chargesVerifiable: railMode !== "unreachable",
+      chargesVerifiable: true,
       retryStatus,
       retryReplaysStoredResponse: replayStored,
       retryAfter,

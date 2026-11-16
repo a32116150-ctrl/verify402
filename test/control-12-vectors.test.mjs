@@ -91,7 +91,7 @@ for (let i = 0; i < VECTORS.length; i++) {
       fatal = `one authorization charged ${got.charges} times`;
     }
     for (const k of EXPECT_KEYS) {
-      if (k === "charges" && got.chargesVerifiable === false) continue; // unreachable rail: cannot be read, on purpose
+      if (k === "charges" && got.chargesVerifiable === false) continue; // cannot verify if the rail genuinely went away (not the "read failed" fault injection of the vectors)
       const same = got[k] === exp[k];
       if (!same) {
         verdict = "diverge";
@@ -121,7 +121,9 @@ const md = [
   "",
   "Source: Hitek-cel's crash-vector set (Detent `conformance/x402-recovery-control12.json`, commit `a50dfc0`, 29 vectors, in the format proposed on x402-foundation/x402#3848). Vendored at `test/fixtures/x402-recovery-control12.json`; methodology in `test/fixtures/control12-scenario.mjs`; runner `test/control-12-vectors.test.mjs`.",
   "",
-  "The service was exercised with **its own** durable journal (SQLite), its own crash handling, its own restart, its own reconciliation and its own 409/503/200 mapping. Fields compared per vector: `handlerRuns`, `settleCalls`, `charges` (only where the rail is readable), `retryStatus`, `retryReplaysStoredResponse`, `retryAfter`, `state`, `keyBlocked`.",
+  "The service was exercised with **its own** durable journal (SQLite), its own crash handling, its own restart, its own reconciliation and its own 409/503/200 mapping. Fields compared per vector: `handlerRuns`, `settleCalls`, `charges`, `retryStatus`, `retryReplaysStoredResponse`, `retryAfter`, `state`, `keyBlocked`.",
+  "",
+  "`charges` is compared on **every** readable row, including `unreachable`. In this harness `unreachable` is a fault injected into the *server* rail read, not into the rail itself — the rail's nonce ledger records whether an authorisation was consumed either way (that is what Detent's own harness counts too). Asserting nothing here would fake the only check separating a paid-and-never-delivered operation from one that was never charged.",
   "",
   "Invariant held everywhere measured: at most one charge per authorization.",
   "",
