@@ -48,6 +48,11 @@ let byClient = Object.create(null);
 let byClientSource = Object.create(null);
 let byStatus = Object.create(null);
 let byInspectHost = Object.create(null);
+// A 402 whose body is not a JSON challenge and that carries no PAYMENT-REQUIRED
+// header: the endpoint asks for payment but gives an agent nothing to pay
+// against. Counted separately because it is the most common real defect the
+// inspector finds, and it is not a verdict about the seller.
+let bodyNoChallenge = 0;
 let filePath = null;
 let saveTimer = null;
 let dirty = false;
@@ -75,6 +80,8 @@ function restore(payload) {
   byClient = snapshotNumbers(payload.byClient);
   byClientSource = snapshotNumbers(payload.byClientSource);
   byStatus = snapshotNumbers(payload.byStatus);
+  byInspectHost = snapshotNumbers(payload.byInspectHost);
+  bodyNoChallenge = Math.max(0, Math.floor(Number(payload.body_no_challenge) || 0));
   return true;
 }
 
@@ -92,6 +99,7 @@ function serialize() {
     byClientSource,
     byStatus,
     byInspectHost,
+    body_no_challenge: bodyNoChallenge,
     updatedAt: new Date().toISOString(),
   });
 }
@@ -261,6 +269,16 @@ export function recordInspectHost(rawUrl, now = Date.now()) {
   return { host };
 }
 
+// Count an inspector outcome that is not a verdict. Today only
+// `body_no_challenge` (a 402 with no usable challenge in header or body).
+export function recordInspectOutcome(outcome, now = Date.now()) {
+  if (outcome !== "body_no_challenge") return null;
+  bodyNoChallenge += 1;
+  lastAt = new Date(now).toISOString();
+  scheduleSave();
+  return { outcome };
+}
+
 export function usageSnapshot() {
   return {
     spec: "verify402/usage@1",
@@ -277,13 +295,15 @@ export function usageSnapshot() {
     byClientSource: { ...byClientSource },
     byStatus: { ...byStatus },
     byInspectHost: { ...byInspectHost },
+    body_no_challenge: bodyNoChallenge,
     ...(filePath ? { file: filePath, saveFailed } : { file: null }),
     note:
       "Anonymous call counter. Client labels are self-declared via X-Verify402-Client or inferred from User-Agent; " +
       "they are not identities and can be spoofed. A call is not a unique agent: the free gate has no account or wallet. " +
       "The only identity-backed usage signal is a paid settlement and its payer address. " +
       "MCP-bridge pings are counted in byTool and byKind as mcp:<tool>; they carry no arguments, no intent, no result. " +
-      "Inspect host counts are host-level totals only; no path, no identity, no outcome pairing.",
+      "Inspect host counts are host-level totals only; no path, no identity, no outcome pairing. " +
+      "body_no_challenge counts 402s that carried no challenge in the PAYMENT-REQUIRED header or the body: an endpoint that demands payment without telling an agent how to pay.",
   };
 }
 

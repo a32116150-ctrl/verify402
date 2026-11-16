@@ -66,6 +66,13 @@ test("release metadata uses one version across package, lockfile, registry, mani
   const openapi = buildOpenapi(PRICE_DEFAULTS);
 
   assert.equal(PUBLISHED_VERSION, RELEASE_VERSION, "the published npm version must match the release identity");
+
+  // The repository's own package.json and lockfile were left at 1.0.9 while
+  // everything else said 1.1.0 — the same metadata drift this test exists to
+  // catch, one level up. They carry the release identity too now.
+  assert.equal(json("package.json").version, RELEASE_VERSION, "root package.json must carry the release identity");
+  assert.equal(json("package-lock.json").version, RELEASE_VERSION);
+  assert.equal(json("package-lock.json").packages[""].version, RELEASE_VERSION);
   assert.equal(pkg.version, RELEASE_VERSION);
   assert.equal(lock.version, RELEASE_VERSION);
   assert.equal(lock.packages[""].version, RELEASE_VERSION);

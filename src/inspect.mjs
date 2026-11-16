@@ -452,14 +452,25 @@ export async function inspectUrl(rawUrl, { now = Date.now(), fetchImpl = safeFet
   // A 402 challenge is normally issued before the handler runs, so an empty
   // POST body is enough to read a paywalled POST route.
   const response = await fetchImpl(rawUrl, { method });
-  const challenge = extractChallenge({
-    // v2 uses PAYMENT-REQUIRED; v1 used X-PAYMENT. Accept both, but only the
-    // v2 header is advertised as supported.
-    header: response.headers?.["payment-required"]
-      ?? response.headers?.["x-payment-required"]
-      ?? response.headers?.["x-payment"],
-    body: response.body,
-  });
+  let challenge;
+  try {
+    challenge = extractChallenge({
+      // v2 uses PAYMENT-REQUIRED; v1 used X-PAYMENT. Accept both, but only the
+      // v2 header is advertised as supported.
+      header: response.headers?.["payment-required"]
+        ?? response.headers?.["x-payment-required"]
+        ?? response.headers?.["x-payment"],
+      body: response.body,
+    });
+  } catch (e) {
+    // A 402 with no challenge in either place is a distinct, countable
+    // finding: the endpoint demands payment but tells an agent nothing it can
+    // pay against. Tagged so /usage can count it.
+    if (e instanceof InspectError && e.code === "invalid_challenge" && response.status === 402) {
+      e.outcome = "body_no_challenge";
+    }
+    throw e;
+  }
   const result = await inspectPaymentChallenge({ challenge, targetUrl: rawUrl, now });
   const reasons = [...result.reasons];
   if (response.status !== 402) {

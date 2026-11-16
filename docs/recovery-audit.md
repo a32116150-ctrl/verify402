@@ -79,15 +79,29 @@ reconciliation to `delivered`, `void`, or an alarmed `stuck`.
 - a stale staged retry is not re-charged: it triggers `reconcileStagedEntry`, which reads
   EIP-3009 `authorizationState` on the token contract and resolves to `settled`
   (consumed → promoted, replayable), `expired_safe` (past `validBefore`, unconsumed →
-  expired, safe to pay again), `pending` (inside the window → stays pending) or `failed`
-  /`unavailable` (fail closed with `503 recovery_unavailable`, never a second charge);
+  expired, safe to pay again), `pending` (inside the window → stays pending), or
+  `stuck` (neither provable → record retained, key blocked, operator alarmed);
 - the same pass runs at startup over every staged row (`reconcileStagedOnStartup`).
 
-**What is genuinely missing is observability, not recovery.** There is no state literally
-named `settling` — the boundary is `staged` plus the recorded payment reference plus the
-eviction predicate — and the `stuck` case is logged but not counted or surfaced as a
-metric. A record with no checkable payment reference (Solana) stays pending indefinitely,
-which is `stuck` behaviour without the alarm.
+Spec 0.9 split the two "do not pay again yet" answers, and the implementation now matches
+it literally:
+
+- the x402 `onBeforeSettle` hook records `settling` on the operation **before** the
+  facilitator call (`markSettling`); in durable mode a write that does not land aborts the
+  settlement, and the caller's retry is answered 409 rather than charged twice;
+- while the outcome is still resolvable the retry gets `409 operation_in_flight` with a
+  short `Retry-After` and `retry: same_payment`;
+- once the outcome can be proven on neither side the record becomes `stuck`, an
+  operator-visible alarm is logged, and retries get `503 payment_unresolved` with **no**
+  `Retry-After`, a named `reason`, and `retry: same_payment`;
+- `stuck` and `settling` are counted, and surfaced on `/info.recovery.observability`
+  (`unresolved`, `settling`, `stuck`, `stuckTotal`, `unattributedSettles`,
+  `reconcilerFailures`). `entryCanExpire` refuses to age out a `settling` or `stuck`
+  record in any mode, including the memory-only demo.
+
+A *transient* reconciliation failure is not `stuck`: it stays 409 while a retry can still
+resolve, and is escalated only after three failed attempts at least five minutes apart
+past the staging window.
 
 **The live instance does not have the guarantee, by construction.** It runs
 `recoveryStore: memory-only`: staged state is process-local, a restart loses it, and a

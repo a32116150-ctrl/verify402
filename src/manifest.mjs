@@ -119,8 +119,8 @@ export function buildServiceManifest({
         transport: "stdio",
         packageIdentifier: "verify402-mcp",
         npmUrl: "https://www.npmjs.com/package/verify402-mcp",
-        // npm 1.0.9 is published from the approved source commit; these fields
-        // describe the artifact a user can install today. The MCP Registry entry
+        // The published version comes from src/version.mjs; these fields describe
+        // the artifact a user can install today. The MCP Registry entry
         // is a separate release step and is not claimed here.
         releaseStatus: RELEASE_STATUS,
         publishedVersion: PUBLISHED_VERSION,
@@ -199,7 +199,7 @@ export function buildServiceManifest({
             isRequired: false,
             isSecret: false,
             default: DEMO_NETWORK,
-            // The published 1.0.9 package defaults to Base Sepolia testnet.
+            // The published package defaults to Base Sepolia testnet.
             // Base mainnet remains an explicit opt-in, not the demo default.
             publishedPackageDefault: DEMO_NETWORK,
             demoValue: mode === "mainnet" ? MAINNET_NETWORK : DEMO_NETWORK,

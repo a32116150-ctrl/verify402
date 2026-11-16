@@ -25,6 +25,7 @@ process.env.TEST_OFFLINE_RPC_URL = "http://127.0.0.1:1/FAKE_RPC_SECRET_DO_NOT_LE
 const {
   PRICE_DEFAULTS,
   PREFLIGHT_RATE_PER_MIN,
+  FINDINGS_RATE_PER_MIN,
   PREFLIGHT_MAX_IN_FLIGHT,
   HEALTH_OK_KEYS,
   READY_OK_KEYS,
@@ -33,9 +34,10 @@ const {
 } = await import("../src/contract.mjs");
 const {
   recordSettlement, requestHash, lookupRecovery, reserveRecovery, releaseRecovery,
-  IDEMPOTENCY_TTL_MS, IDEMPOTENCY_MAX_REPLAYS,
+  IDEMPOTENCY_TTL_MS, IDEMPOTENCY_MAX_REPLAYS, IDEMPOTENCY_STAGE_TTL_MS,
+  reconcileStagedEntry, _setNow,
 } = await import("../src/recovery.mjs");
-const { app } = await import("../src/server.mjs");
+const { app, paymentRefFromRequest } = await import("../src/server.mjs");
 
 const server = await new Promise((resolve) => {
   const s = app.listen(0, "127.0.0.1", () => resolve(s));
@@ -353,6 +355,23 @@ await check("429: preflight rate limit is typed and carries a request id", async
   assert.equal(last.body.error, "rate_limited");
   assert.equal(typeof last.body.requestId, "string");
   assert.equal(last.headers.get("retry-after"), "60");
+});
+
+await check("429: /findings has its own per-IP budget", async () => {
+  // Audit L-3: /findings was the one free JSON surface with no budget, so it
+  // could be driven at whatever rate the caller liked. Its bucket is separate
+  // from /preflight's, so the test above is unaffected in either direction.
+  let refused = null;
+  for (let i = 0; i < FINDINGS_RATE_PER_MIN + 2; i++) {
+    const r = await fetch(`${base}/findings`);
+    if (r.status === 429) { refused = r; break; }
+  }
+  assert.ok(refused, `the ${FINDINGS_RATE_PER_MIN + 1}th call in a minute must be refused`);
+  assert.equal(refused.status, 429);
+  const body = await refused.json();
+  assert.equal(body.error, "rate_limited");
+  assert.match(body.message, /findings/);
+  assert.equal(refused.headers.get("retry-after"), "60");
 });
 
 await check("503: RPC transport failure is rpc_unavailable, no verdict, no provider detail", async () => {
@@ -868,6 +887,78 @@ await check("POST /inspect counts the target host without leaking path or identi
   const n = (after.byInspectHost || {})[host] || 0;
   const n0 = (before.byInspectHost || {})[host] || 0;
   assert.ok(n > n0, "target host count must increase");
+});
+
+await check("settlement reference: the documented v2 PAYMENT-SIGNATURE header yields a ref", async () => {
+  const nonce = "0x" + "11".repeat(32);
+  const from = "0x" + "22".repeat(20);
+  const env = { x402Version: 2, payload: { authorization: { from, nonce, validBefore: "9999999999" }, signature: "0xdead" } };
+  const raw = Buffer.from(JSON.stringify(env)).toString("base64");
+
+  const v2 = paymentRefFromRequest({ get: (h) => (String(h).toLowerCase() === "payment-signature" ? raw : undefined) }, { chainId: 8453 });
+  assert.ok(v2, "PAYMENT-SIGNATURE must produce a reconciliation reference");
+  assert.equal(v2.nonce, nonce);
+  assert.match(v2.proofHash, /^[0-9a-f]{64}$/);
+
+  const legacy = paymentRefFromRequest({ get: (h) => (String(h).toLowerCase() === "x-payment" ? raw : undefined) }, { chainId: 8453 });
+  assert.equal(legacy?.nonce, nonce, "legacy x-payment stays accepted");
+
+  const solEnv = { x402Version: 2, payload: { transaction: "c29sYW5hLXR4" } };
+  const solRaw = Buffer.from(JSON.stringify(solEnv)).toString("base64");
+  const sol = paymentRefFromRequest({ get: (h) => (String(h).toLowerCase() === "payment-signature" ? solRaw : undefined) }, { chainId: 8453 });
+  assert.ok(sol && sol.txHash && sol.nonce === null, "the Solana rail gets a transaction identity");
+});
+
+await check("503: a stuck operation answers payment_unresolved with no Retry-After", async () => {
+  const key = "6f1c2f7e-3b5a-4c9d-8e21-2a7b4c6d8e10";
+  const staged = recordSettlement(key, { ok: true, verdict: "PASS", stuckProbe: true }, null, { settledNow: false });
+  const realNow = Date.now();
+  _setNow(() => realNow + IDEMPOTENCY_STAGE_TTL_MS + 1);
+  let outcome;
+  try {
+    outcome = await reconcileStagedEntry(staged.operationId);
+  } finally {
+    _setNow(() => Date.now());
+  }
+  assert.equal(outcome, "stuck");
+  const r = await post("/verify", { chainId: 8453 }, { "x-idempotency-key": key });
+  assert.equal(r.status, 503);
+  assert.equal(r.body.code, "payment_unresolved");
+  assert.equal(r.body.retry, "same_payment");
+  assert.equal(r.headers.get("retry-after"), null, "the block is not time-based");
+  assert.equal(typeof r.body.requestId, "string");
+});
+
+await check("info: recovery observability surfaces the stuck counter", async () => {
+  const r = await fetch(`${base}/info`);
+  const body = await r.json();
+  const obs = body.recovery?.observability;
+  assert.ok(obs, "recovery.observability present");
+  assert.equal(typeof obs.stuck, "number");
+  assert.equal(typeof obs.settling, "number");
+  assert.ok(obs.stuckTotal >= 1, "the stuck operation above is counted");
+});
+
+await check("400: a malformed JSON body answers JSON, never an HTML stack trace", async () => {
+  const r = await postRaw("/preflight", "{bad");
+  assert.equal(r.status, 400);
+  assert.match(r.headers.get("content-type") || "", /application\/json/);
+  assert.equal(r.body.error, "invalid_json");
+  assert.equal(r.body.code, "invalid_json");
+  assert.equal(typeof r.body.requestId, "string");
+  assert.ok(r.body.requestId.length > 0);
+  assert.equal(r.headers.get("x-request-id"), r.body.requestId);
+  const text = JSON.stringify(r.body);
+  assert.doesNotMatch(text, /node_modules|SyntaxError|body-parser|at JSON\.parse/);
+});
+
+await check("413: a body over the 64KB cap answers JSON with payload_too_large", async () => {
+  const r = await postRaw("/preflight", JSON.stringify({ kind: "payment", pad: "a".repeat(70_000) }));
+  assert.equal(r.status, 413);
+  assert.match(r.headers.get("content-type") || "", /application\/json/);
+  assert.equal(r.body.code, "payload_too_large");
+  assert.equal(typeof r.body.requestId, "string");
+  assert.equal(r.headers.get("x-request-id"), r.body.requestId);
 });
 
 server.close();

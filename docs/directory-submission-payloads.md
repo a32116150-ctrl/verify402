@@ -4,7 +4,7 @@ This file is a paste sheet, not a record of listings. **As of 2026-11-13:**
 
 | Directory | State |
 |---|---|
-| PulseMCP | "Showing 0 – 0 of 0 servers". **Submissions and listing changes are paused site-wide** while they rework how listings are ingested — the `/submit` page now redirects to the official MCP Registry docs, and their homepage banner says so. We are already in that registry (1.1.0, active), so nothing to submit today; retry when they reopen. |
+| PulseMCP | "Showing 0 – 0 of 0 servers". **Submissions and listing changes are paused site-wide** while they rework how listings are ingested — the `/submit` page now redirects to the official MCP Registry docs, and their homepage banner says so. We are already in that registry (1.1.1, active), so nothing to submit today; retry when they reopen. |
 | mcp.so | No listing ("No servers match verify402"). Submit page exists but shows only a **$39 one-time paid submission** (no free option visible as of 2026-11-13). Decision 2026-11-13: **hold — no spend before a first external user.** Revisit after traction; may need a free path below the fold — none seen. |
 | Smithery | Server page at `smithery.ai/server/@a32116150-ctrl/verify402-mcp` now redirects to www and **404s** — no listing. |
 | Glama | **Listed** (auto-indexed GitHub repo): https://glama.ai/mcp/servers/a32116150-ctrl/verify402 — shows older metadata (1.0.9-era). Nothing to submit; claiming/refreshing is optional. |
@@ -12,7 +12,7 @@ This file is a paste sheet, not a record of listings. **As of 2026-11-13:**
 Re-check Glama before any public claim about what version it shows.
 
 All four were marked `PREPARED` in `docs/distribution-directory-checklist.md`;
-only Glama resolved that way. Everything else here is true of the live 1.1.0
+only Glama resolved that way. Everything else here is true of the live 1.1.1
 release; nothing is claimed that the repo or the running service does not
 show.
 
@@ -26,7 +26,7 @@ file that you cannot see is true on screen.
 
 - **Name:** verify402
 - **Identifier / handle:** verify402-mcp
-- **npm:** https://www.npmjs.com/package/verify402-mcp (latest `1.1.0`)
+- **npm:** https://www.npmjs.com/package/verify402-mcp (latest `1.1.1`)
 - **Install:** `npx -y verify402-mcp`
 - **Repository:** https://github.com/a32116150-ctrl/verify402
 - **Homepage:** https://verify402.onrender.com/
@@ -37,7 +37,7 @@ file that you cannot see is true on screen.
 - **One-line description:** Free, fail-closed pre-signing gate for agent payments, plus five paid on-chain checks (testnet).
 - **Long description:** verify402 puts a check before the signature instead of after the loss. An agent calls `preflight_gate` on a payment challenge or an EVM transaction intent; the gate returns PASS, CAUTION, or BLOCK with typed reason codes, a short-lived HMAC receipt, and an explicit list of what was not checked. `inspect_402` reads any public 402 before you pay it; `directory_402` exposes a watched public list of x402 endpoints. The five paid checks (arbitrage, token safety, route, quote fairness, depth) are priced per call in testnet USDC over x402 and are off unless the operator configures a wallet. Free mode (no key) registers three tools and can never spend. Demo payments settle on Base Sepolia / Solana devnet; analysis reads mainnet chain data.
 
-## Tools (all 8, 1.1.0)
+## Tools (all 8, 1.1.1)
 
 Free (always registered, no key, no spend):
 
@@ -64,7 +64,7 @@ Paid (only when a wallet is configured; testnet USDC per call):
 Submissions are **paused site-wide**: `/submit` no longer shows a form; it
 redirects to the official MCP Registry docs, and the homepage carries the
 "new server submissions and listing changes are still paused" banner. The
-prerequisite they want is being in the MCP Registry — done (`io.github.a32116150-ctrl/verify402-mcp`, 1.1.0, active). Do not re-submit; do not "upgrade" anything on that page; check back when the banner comes down.
+prerequisite they want is being in the MCP Registry — done (`io.github.a32116150-ctrl/verify402-mcp`, 1.1.1, active). Do not re-submit; do not "upgrade" anything on that page; check back when the banner comes down.
 
 ## 2. mcp.so — https://mcp.so/submit?type=server
 

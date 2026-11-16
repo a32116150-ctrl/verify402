@@ -178,6 +178,12 @@ export function recoveryStoreHealth() {
 // reconciliation ("not settled") may expire a staged record — anything else
 // stays pending (fail closed) rather than risking a second payment.
 function entryCanExpire(e) {
+  // A settlement attempt that was dispatched, and an operation whose outcome
+  // cannot be proven, are never aged out on a timer: the record may be the
+  // only copy of a paid response. This applies in every mode, including the
+  // memory-only demo, where it is the one protection against "expire into
+  // charge again".
+  if (e.state === "settling" || e.state === "stuck") return false;
   if (!storeReady) return true;
   return e.reconciled === "not_settled";
 }
@@ -201,10 +207,19 @@ const inFlight = new Map();   // key -> { token, requestHash, at }
 export const IDEMPOTENCY_STAGE_TTL_MS = 5 * 60 * 1000;
 const PROJECTED_KEYS = ["evidence_bundle", "recovery", "elapsedMs", "cache", "operationId"];
 
-function projectionHash(payload) {
+// ONE projection. Every hash verify402 advertises or stores comes from this
+// function: the evidence bundle a receiver recomputes, the record used for
+// promotion, and the published replayResponseHash. Two projections that drift
+// apart by a single key make every advertised hash unverifiable, so there is
+// exactly one place that decides what the hash covers.
+export function projectionCore(payload) {
   const core = { ...payload };
   for (const k of PROJECTED_KEYS) delete core[k];
-  return sha256Hex(canonicalStable(core));
+  return core;
+}
+
+function projectionHash(payload) {
+  return sha256Hex(canonicalStable(projectionCore(payload)));
 }
 
 // Injectable clock for tests.
@@ -271,6 +286,10 @@ export function recordSettlement(key, payload, _companionKey = null, {
     verified_payer: null,
     settlement: null,
     settled: settledNow ? true : false,
+    // Lifecycle: "staged" -> "settling" -> "settled", or "stuck".
+    // `settling` is written by the onBeforeSettle hook, before the facilitator
+    // call; `stuck` means the outcome can be proven on neither side.
+    state: settledNow ? "settled" : "staged",
     stagedAt: t,
     settledAt: settledNow ? t : null,
     replays: 0,
@@ -357,6 +376,7 @@ export function promoteSettlement(body, settlement) {
 
   const t = nowFn();
   e.settled = true;
+  e.state = "settled";
   e.settledAt = t;
   e.verified_payer = payer;
   e.identity = payer ? "settlement_payer" : "settlement_only";
@@ -453,6 +473,16 @@ export function lookupRecovery({
     return { conflict: "request_mismatch" };
   }
   if (!entry.settled) {
+    if (entry.state === "stuck") {
+      // Neither side provable: retain the record, keep the key blocked, and
+      // answer 503 payment_unresolved (no Retry-After: the block is not time
+      // based). The operator has been alarmed by markStuck().
+      return {
+        pending: "payment_unresolved",
+        operationId: entry.operationId,
+        reason: entry.stuckReason || "settlement outcome could not be proven",
+      };
+    }
     // A staged entry means the handler ran and its settlement is still
     // unresolved (or failed without an explicit failure hook). Do not let a
     // retry do the work again while that outcome is unknown.
@@ -551,13 +581,139 @@ export function setRecoveryPaymentChecker(fn) {
 
 const reconciling = new Set();     // operationIds with an attempt in flight
 const reconcileFailures = new Map(); // operationId -> last failure reason
+const reconcileAttempts = new Map(); // operationId -> number of failed attempts
+const reconcileFirstFailure = new Map(); // operationId -> timestamp of first failure
+
+// Operator-visible counters. `stuck` is the one state in which neither side of
+// the control-10 invariant can be proven, so it must be counted and surfaced,
+// never silently aged out (spec 0.9, §5.1(7)).
+let stuckTotal = 0;
+let settlingTotal = 0;
+let unattributedSettles = 0;
+
+function uniqueEntries() {
+  return [...new Set(settled.values())];
+}
+
+export function recoveryObservability() {
+  let unresolved = 0;
+  let settling = 0;
+  let stuck = 0;
+  for (const e of uniqueEntries()) {
+    if (e.settled) continue;
+    unresolved += 1;
+    if (e.state === "settling") settling += 1;
+    if (e.state === "stuck") stuck += 1;
+  }
+  return {
+    durable: storeReady,
+    unresolved,
+    settling,
+    stuck,
+    stuckTotal,
+    settlingTotal,
+    unattributedSettles,
+    reconcilerFailures: reconcileFailures.size,
+  };
+}
+
+// The identity of a settlement proof, used ONLY to match a dispatched attempt
+// to the record it belongs to. Never an authorization credential.
+//
+// Four independent handles, because a wrong match is a double charge and a
+// missed match is a permanently blocked key:
+//   rawHash  sha256 of the exact PAYMENT-SIGNATURE header bytes (exact)
+//   envHash  sha256 of the decoded proof envelope (survives re-serialization)
+//   nonce    the EIP-3009 authorization nonce (EVM exact)
+//   txHash   sha256 of the signed transaction (Solana exact)
+function paymentIdentityOf(input) {
+  const ctxLike = input && (input.paymentPayload || input.transportContext) ? input : { paymentPayload: input };
+  const p = ctxLike.paymentPayload || {};
+  const auth = p?.payload?.authorization ?? p?.authorization ?? null;
+  const rawHeader = ctxLike?.transportContext?.request?.paymentHeader;
+  return {
+    rawHash: typeof rawHeader === "string" && rawHeader ? sha256Hex(rawHeader) : null,
+    envHash: sha256Hex(canonicalStable(p)),
+    nonce: typeof auth?.nonce === "string" ? auth.nonce.toLowerCase() : null,
+    txHash: typeof p?.payload?.transaction === "string" ? sha256Hex(p.payload.transaction) : null,
+  };
+}
+
+/**
+ * Record that a settlement attempt is about to be dispatched (the `settling`
+ * state). Called from the x402 `onBeforeSettle` hook — i.e. BEFORE the
+ * facilitator call — because a crash between the call and the recording must
+ * not leave a record that reads as never-attempted.
+ *
+ * Returns `{ matched, operationId? }`. `matched: 0` means no staged record
+ * carries this payment (usually a call without an idempotency key: there is
+ * nothing to protect). More than one match is ambiguous and throws.
+ *
+ * In durable mode the write is strict: if it does not land, this throws, and
+ * the caller MUST abort the settlement (the staged record already exists, so
+ * the caller's retry is answered 409 rather than charged twice).
+ */
+export function markSettling(input) {
+  const id = paymentIdentityOf(input);
+  const matches = [];
+  for (const e of uniqueEntries()) {
+    if (e.settled || !e.paymentRef) continue;
+    const ref = e.paymentRef;
+    if (id.nonce && ref.nonce && String(ref.nonce).toLowerCase() === id.nonce) { matches.push(e); continue; }
+    if (id.txHash && ref.txHash && ref.txHash === id.txHash) { matches.push(e); continue; }
+    if (id.rawHash && ref.proofHash && ref.proofHash === id.rawHash) { matches.push(e); continue; }
+    if (ref.envHash && ref.envHash === id.envHash) { matches.push(e); continue; }
+  }
+  if (matches.length === 0) {
+    // Counted only when there was something to protect. Most paid calls carry
+    // no idempotency key, so counting those would make the alarm meaningless:
+    // the signal is "a settlement happened while unresolved records existed,
+    // and it could not be attributed to one of them".
+    const hadUnresolved = uniqueEntries().some((e) => !e.settled);
+    if (hadUnresolved) unattributedSettles += 1;
+    return { matched: 0, hadUnresolved };
+  }
+  if (matches.length > 1) {
+    throw new Error("a settlement attempt matched more than one staged operation; refusing to guess");
+  }
+  const entry = matches[0];
+  if (entry.state !== "settling" && entry.state !== "stuck") {
+    entry.state = "settling";
+    entry.settlingAt = nowFn();
+    settlingTotal += 1;
+  }
+  if (storeReady && updateEntry(entry.operationId, entry) === false) {
+    throw new Error("the settlement attempt could not be recorded before dispatch");
+  }
+  return { matched: 1, operationId: entry.operationId };
+}
+
+// Neither side provable: retain the record, keep the key blocked, alarm.
+function markStuck(entry, reason) {
+  if (entry.state === "stuck") return entry;
+  entry.state = "stuck";
+  entry.stuckAt = nowFn();
+  entry.stuckReason = reason;
+  stuckTotal += 1;
+  updateEntry(entry.operationId, entry);
+  logError(
+    `ALARM recovery stuck: operation ${entry.operationId} (${reason}). ` +
+    "The record is retained, the key stays blocked, and retries answer 503 payment_unresolved. " +
+    "Resolve it by hand: check the payment rail for this operation's authorization.",
+  );
+  return entry;
+}
 
 // Typed reconciliation status for the paid routes:
 //   "ok"        the record resolved (settled or definitively expired)
-//   "inflight"  an attempt is running — answer pending
-//   "failed"    the last attempt errored — answer recovery_unavailable (503)
+//   "inflight"  an attempt is running — answer 409 operation_in_flight
+//   "failed"    the last attempt errored — still 409 (it can still resolve);
+//               only a persistent failure escalates to "stuck"
+//   "stuck"     neither side provable — 503 payment_unresolved, no Retry-After
 //   "unknown"   no attempt recorded — kick one off
 export function reconciliationState(operationId) {
+  const entry = findStagedEntry(operationId);
+  if (entry?.state === "stuck") return "stuck";
   if (reconciling.has(operationId)) return "inflight";
   return reconcileFailures.has(operationId) ? "failed" : "unknown";
 }
@@ -576,6 +732,7 @@ function findStagedEntry(operationId) {
 function promoteReconciled(entry, ref) {
   const t = nowFn();
   entry.settled = true;
+  entry.state = "settled";
   entry.settledAt = t;
   entry.verified_payer = typeof ref.payer === "string" ? ref.payer.toLowerCase() : null;
   entry.identity = entry.verified_payer ? "settlement_payer" : "settlement_only";
@@ -600,8 +757,14 @@ export async function reconcileStagedEntry(operationId) {
   const entry = findStagedEntry(operationId);
   if (!entry) return "settled_or_gone";
   const ref = entry.paymentRef;
+  const pastTtl = nowFn() - entry.stagedAt > IDEMPOTENCY_STAGE_TTL_MS;
   if (!ref || !paymentChecker) {
-    reconcileFailures.set(operationId, "no payment reference or no checker configured");
+    const reason = "this rail's payment cannot be re-checked (no reconciliable reference for the operation)";
+    reconcileFailures.set(operationId, reason);
+    if (pastTtl) {
+      markStuck(entry, reason);
+      return "stuck";
+    }
     return "unavailable";
   }
   if (reconciling.has(operationId)) return "inflight";
@@ -616,11 +779,25 @@ export async function reconcileStagedEntry(operationId) {
     try {
       consumed = Boolean(await paymentChecker(ref));
     } catch (e) {
-      reconcileFailures.set(operationId, e?.message ?? String(e));
-      logWarn(`recovery reconciliation failed for ${operationId}: ${e?.message ?? e}`);
+      const reason = e?.message ?? String(e);
+      reconcileFailures.set(operationId, reason);
+      reconcileAttempts.set(operationId, (reconcileAttempts.get(operationId) || 0) + 1);
+      if (!reconcileFirstFailure.has(operationId)) reconcileFirstFailure.set(operationId, t);
+      logWarn(`recovery reconciliation failed for ${operationId}: ${reason}`);
+      // A transient provider failure can still resolve, so it stays 409. Only
+      // a persistent failure past the point where the outcome was knowable is
+      // escalated to `stuck` (neither side provable, record retained, alarmed).
+      const attempts = reconcileAttempts.get(operationId) || 0;
+      const sinceFirst = t - (reconcileFirstFailure.get(operationId) || t);
+      if (pastTtl && attempts >= 3 && sinceFirst >= 5 * 60 * 1000) {
+        markStuck(entry, `on-chain reconciliation failed ${attempts} times: ${reason}`);
+        return "stuck";
+      }
       return "failed";
     }
     reconcileFailures.delete(operationId);
+    reconcileAttempts.delete(operationId);
+    reconcileFirstFailure.delete(operationId);
     if (consumed) {
       promoteReconciled(entry, ref);
       return "settled";
@@ -662,20 +839,17 @@ export async function reconcileStagedOnStartup() {
 // replayed response and every response in between. (SameDayDesk: the two
 // projections previously disagreed and the advertised hash was ambiguous.)
 export function evidenceBundle({ route, body, pinnedBlock, payload }) {
-  const core = { ...payload };
-  delete core.evidence_bundle;
-  delete core.recovery;
-  delete core.elapsedMs;
-  delete core.cache;
   return {
     spec: "verify402/evidence-bundle@1",
     route,
     requestHash: requestHash(route, body),
-    responseHash: sha256Hex(canonicalStable(core)),
+    // Same projection as recordSettlement, by construction: a receiver that
+    // re-runs the documented recipe on the body it received gets this number.
+    responseHash: projectionHash(payload),
     pinnedBlock: pinnedBlock ?? null,
     mode: process.env.X402_MODE === "mainnet" ? "mainnet" : "testnet",
     createdAt: new Date().toISOString(),
     payment: { protocol: "x402", scheme: "exact", answerIn: "settlement response body" },
-    recompute: "sha256 of sha256-canonical JSON (keys sorted, no whitespace) of the response body excluding evidence_bundle, recovery, cache, elapsedMs; requestHash covers { route, body }",
+    recompute: "sha256 of sha256-canonical JSON (keys sorted, no whitespace) of the response body excluding evidence_bundle, recovery, cache, elapsedMs, and operationId; requestHash covers { route, body }",
   };
 }

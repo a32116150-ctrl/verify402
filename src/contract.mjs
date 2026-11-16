@@ -16,6 +16,10 @@ export const PREFLIGHT_RATE_PER_MIN = 60;
 // The inspector performs one outbound fetch per call, so its default budget is
 // smaller than the purely local preflight gate.
 export const INSPECT_RATE_PER_MIN = 20;
+// /findings is a free chain read. It is cached for 30s, but without a per-IP
+// budget a single caller can keep the cache permanently cold and turn a free
+// endpoint into a public RPC proxy (AUDIT L-3).
+export const FINDINGS_RATE_PER_MIN = 30;
 export const PREFLIGHT_MAX_IN_FLIGHT = 8;
 export const SHUTDOWN_TIMEOUT_MS_DEFAULT = 10000;
 
@@ -73,6 +77,9 @@ export const BANNED_PUBLIC_CLAIMS = Object.freeze([
   new RegExp(sm + "_" + mm, "i"),
   new RegExp(sh + " key", "i"),
   new RegExp(dp, "i"),
+  // The board samples the first page of the catalog; the old copy claimed a
+  // ranking the scan never computed.
+  new RegExp("most" + "-" + "called", "i"),
 ]);
 
 export function bannedClaimHits(text) {

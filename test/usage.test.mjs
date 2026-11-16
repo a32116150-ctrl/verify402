@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { recordPreflight, recordToolPing, usageSnapshot, resetUsage, initUsage, flushUsage, clientLabel, clientInfo } from "../src/usage.mjs";
+import { recordPreflight, recordToolPing, recordInspectOutcome, recordInspectHost, usageSnapshot, resetUsage, initUsage, flushUsage, clientLabel, clientInfo } from "../src/usage.mjs";
 
 const req = (headers = {}) => ({
   get(name) {
@@ -139,6 +139,19 @@ try {
     assert.equal(snapped.byClientSource["mcp-ping"], 1);
     assert.equal(snapped.byStatus[200], 1);
     assert.equal(recordToolPing({ tool: "not a tool!!", ok: true }), null);
+
+    // body_no_challenge is a persistent counter, and inspect host counts
+    // survive a restart too (restore used to drop them).
+    recordInspectOutcome("body_no_challenge", 11000);
+    recordInspectHost("https://seller.example/paid", 11000);
+    assert.equal(usageSnapshot().body_no_challenge, 1);
+    flushUsage();
+
+    resetUsage();
+    initUsage({ path: file });
+    const restored = usageSnapshot();
+    assert.equal(restored.body_no_challenge, 1, "body_no_challenge survives restart");
+    assert.equal(restored.byInspectHost["seller.example"], 1, "inspect host counts survive restart");
 
     flushUsage();
     assert.equal(JSON.parse(readFileSync(file, "utf8")).byTool.preflight_gate, 1);

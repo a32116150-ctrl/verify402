@@ -4,6 +4,7 @@ import { spawn } from "node:child_process";
 import { createServer } from "node:http";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import { RELEASE_VERSION } from "../src/version.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DEFAULT_PAY_TO = "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb";
@@ -57,7 +58,7 @@ async function readJson(req) {
 }
 
 function createMock({
-  version = "1.1.0",
+  version = RELEASE_VERSION,
   mode = "testnet",
   challengeNetwork = "eip155:84532",
   challengeAsset = TESTNET_USDC,
@@ -188,16 +189,20 @@ test("post-deploy prints wake result and passes against a current mock", async (
   const { code, output } = await runPostDeploy();
   assert.equal(code, 0, output);
   assert.match(output, /^wake: (ready|FAILED), \d+ms, \d+ attempt\(s\)$/m, output);
-  assert.match(output, /release version is 1\.1\.0 \.\.\. PASS/, output);
+  // Assert against the release identity, not a literal: a version bump must
+  // not turn a green post-deploy test red for the wrong reason.
+  const v = RELEASE_VERSION.replaceAll(".", "\\.");
+  assert.match(output, new RegExp(`release version is ${v} \\.\\.\\. PASS`), output);
   assert.match(output, /\/health reports mode testnet \.\.\. PASS/, output);
   assert.match(output, /402 challenge offers Base Sepolia testnet USDC \.\.\. PASS/, output);
 });
 
-test("post-deploy fails when the service is 1.0.4 but 1.1.0 is expected", async () => {
+test("post-deploy fails when the service reports a stale release version", async () => {
   const { code, output } = await runPostDeploy({ version: "1.0.4" });
   assert.equal(code, 1, output);
-  assert.match(output, /release version is 1\.1\.0 \.\.\. FAIL/, output);
-  assert.match(output, /1\.0\.4 !== 1\.1\.0/, output);
+  const v = RELEASE_VERSION.replaceAll(".", "\\.");
+  assert.match(output, new RegExp(`release version is ${v} \\.\\.\\. FAIL`), output);
+  assert.match(output, /1\.0\.4 !== 1\.1\.1/, output);
   assert.match(output, /post-deploy: FAIL/, output);
 });
 

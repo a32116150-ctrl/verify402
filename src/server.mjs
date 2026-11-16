@@ -31,6 +31,7 @@ import {
   PRICE_DEFAULTS,
   PREFLIGHT_RATE_PER_MIN,
   INSPECT_RATE_PER_MIN,
+  FINDINGS_RATE_PER_MIN,
   PREFLIGHT_MAX_IN_FLIGHT,
   SHUTDOWN_TIMEOUT_MS_DEFAULT,
 } from "./contract.mjs";
@@ -42,6 +43,7 @@ import {
   validateIdempotencyKey,
   reconciliationState, reconcileStagedEntry, reconcileStagedOnStartup,
   setRecoveryPaymentChecker, recoveryStoreHealth,
+  sha256Hex, canonicalStable, recoveryObservability,
 } from "./recovery.mjs";
 import { RecoveryStoreError, closeRecoveryStore } from "./recovery-store.mjs";
 import { setDurableRecovery, statePersistence, recoveryDoesNotGuarantee, persistenceLine } from "./recovery-persistence.mjs";
@@ -72,12 +74,13 @@ import {
   paymentRail,
 } from "./payment-mode.mjs";
 import { parseAgentUrl, parseTrustedHosts, resolvePublicBaseUrl } from "./public-url.mjs";
-import { recordPreflight, recordInspectHost, recordToolPing, usageSnapshot, initUsage, flushUsage, PINGABLE_TOOLS } from "./usage.mjs";
+import { recordPreflight, recordInspectHost, recordInspectOutcome, recordToolPing, usageSnapshot, initUsage, flushUsage, PINGABLE_TOOLS } from "./usage.mjs";
 import {
   HttpError, requestIdMiddleware, sendPublicError, sendClassifiedError, classifyError,
 } from "./errors.mjs";
 import { paidHonesty, honestFailure, unconfiguredVenues } from "./honesty.mjs";
 import { installConsoleRedaction, logInfo, logWarn, logError } from "./log.mjs";
+import { randomUUID } from "node:crypto";
 
 // Install before any startup/config log can run. This also wraps direct
 // console.* calls made by dependencies or future code.
@@ -308,8 +311,10 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.json({ limit: "64kb" }));
+// The request id is assigned before the body is parsed: a malformed body is
+// still a request, and its error needs the same id every other reply carries.
 app.use(requestIdMiddleware);
+app.use(express.json({ limit: "64kb" }));
 // Count HTML page views (never paid calls, assets, or JSON discovery). The
 // middleware only listens for response completion, so it cannot delay a reply.
 app.use(siteAnalyticsMiddleware);
@@ -408,24 +413,44 @@ app.use((req, res, next) => {
         },
       });
     }
+    if (found?.pending === "payment_unresolved") {
+      // The record resolved to `stuck`: the outcome can be proven on neither
+      // side. 503 is deliberate and does NOT carry Retry-After — the block is
+      // per-operation, not time-based, and must not be read as service health.
+      const h = honestFailure(req.path, null);
+      res.set("Cache-Control", "no-store");
+      return res.status(503).json({
+        error: "payment_unresolved",
+        code: "payment_unresolved",
+        conflict: "payment_unresolved",
+        retry: "same_payment",
+        reason: found.reason || "settlement outcome could not be proven",
+        message: "this operation's settlement outcome cannot be proven; the record is retained and this key stays blocked. Do not pay again with a new key: this is one stuck operation, not an unhealthy service.",
+        requestId: req.requestId,
+        ...h,
+      });
+    }
     if (found?.pending) {
       if (found.pending === "reconciliation_required") {
         // Past the stage TTL with the settle outcome unknown: the payment may
         // already have settled. Never expire into "charge again" without an
         // on-chain check — reconcile (EIP-3009 authorizationState), and until
-        // it resolves answer pending; if the check itself failed, fail closed
-        // with 503 recovery_unavailable.
+        // it resolves answer 409 (still resolvable); once it is unprovable the
+        // entry becomes `stuck` and the next request gets 503 payment_unresolved.
         const state = reconciliationState(found.operationId);
         if (state === "unknown") {
           void reconcileStagedEntry(found.operationId).catch(() => {});
         }
         const h = honestFailure(req.path, null);
-        if (state === "failed") {
+        if (state === "stuck") {
           res.set("Cache-Control", "no-store");
           return res.status(503).json({
-            error: "recovery_unavailable",
-            code: "recovery_unavailable",
-            message: "the payment for this idempotency key could not be reconciled on-chain; refusing to accept a second payment for it — retry later, or use a new key to start a fresh operation",
+            error: "payment_unresolved",
+            code: "payment_unresolved",
+            conflict: "payment_unresolved",
+            retry: "same_payment",
+            reason: "settlement outcome could not be proven",
+            message: "this operation's settlement outcome cannot be proven; the record is retained and this key stays blocked. Do not pay again with a new key: this is one stuck operation, not an unhealthy service.",
             requestId: req.requestId,
             ...h,
           });
@@ -436,7 +461,9 @@ app.use((req, res, next) => {
           error: "recovery_conflict",
           code: "settlement_pending",
           conflict: "operation_in_flight",
-          message: "a staged payment for this idempotency key has an unresolved settle outcome; it is being reconciled on-chain and will resolve to a replay or a fresh payment — do not pay again until it resolves",
+          retry: "same_payment",
+          reason: state === "failed" ? "reconciliation_failed" : "payment_in_progress",
+          message: "a staged payment for this idempotency key has an unresolved settle outcome; it is being reconciled on-chain and will resolve to a replay or a fresh payment — retry the SAME payment after it resolves, do not pay again",
           requestId: req.requestId,
           ...h,
         });
@@ -448,7 +475,9 @@ app.use((req, res, next) => {
         error: "recovery_conflict",
         code: "settlement_pending",
         conflict: "operation_in_flight",
-        message: "this idempotency key is still being processed; retry after the settlement resolves",
+        retry: "same_payment",
+        reason: "payment_in_progress",
+        message: "this idempotency key is still being processed; retry the SAME payment after the settlement resolves",
         requestId: req.requestId,
         ...h,
       });
@@ -504,20 +533,56 @@ app.use((req, res, next) => {
 // `validBefore` settle deadline. Nothing here is trusted for AUTHORIZATION
 // (C-1 stands: the key is the only credential); the payer/nonce are used only
 // as arguments to a token-contract view call whose answer is ground truth.
-// Returns null when the header is absent (bypass mode), undecodable, or not
-// an EVM exact authorization (e.g. Solana) — those records fail closed on
-// reconciliation instead.
-function paymentRefFromRequest(req, core) {
+// Returns null when the header is absent (bypass mode) or undecodable; those
+// records fail closed on reconciliation instead. Both rails we accept are
+// covered: EVM by the EIP-3009 authorization, Solana by the signed transaction.
+//
+// The header name matters: x402 v2 clients (including verify402's own bridge)
+// send PAYMENT-SIGNATURE, and the SDK's express adapter reads that first. An
+// earlier version read only the legacy x-payment header, so every v2 caller
+// staged a record with no payment reference — permanently unreconcilable after
+// a lost settle outcome.
+// Exported for the boundary test: this is the only place the settlement rail's
+// identity is read, and a wrong header name here silently disables durable
+// recovery for every real client.
+export function paymentRefFromRequest(req, core) {
   try {
     const chainId = Number(core?.chainId);
-    const token = CHAINS[chainId]?.tokens?.USDC?.address;
-    const raw = req.get("x-payment");
-    if (!token || !raw) return null;
+    const token = CHAINS[chainId]?.tokens?.USDC?.address ?? null;
+    const raw = req.get("payment-signature") || req.get("x-payment");
+    if (!raw) return null;
     const env = JSON.parse(Buffer.from(raw, "base64").toString("utf8"));
-    const auth = env?.payload?.authorization ?? env?.authorization;
+    const auth = env?.payload?.authorization ?? env?.authorization ?? null;
+    const network = env?.x402?.network ?? env?.network ?? (Number.isFinite(chainId) ? `eip155:${chainId}` : null);
+    // Identity for the settlement-attempt boundary. `proofHash` is the hash
+    // of the exact header bytes (what the onBeforeSettle hook can see without
+    // re-serializing), `envHash` of the decoded envelope. Used only to match a
+    // settlement attempt to the record it belongs to.
+    const proofHash = sha256Hex(raw);
+    const envHash = sha256Hex(canonicalStable(env));
+
+    // Solana exact: the signed transaction is this operation's unique identity.
+    // Detected by payload shape (no EIP-3009 authorization, a signed
+    // transaction), not by `network` — clients are not required to echo the
+    // network inside the proof envelope.
+    const tx = env?.payload?.transaction;
+    if (typeof tx === "string" && tx && typeof auth?.nonce !== "string") {
+      return {
+        chainId: Number.isFinite(chainId) ? chainId : null,
+        token: null,
+        payer: typeof env?.payload?.from === "string" ? env.payload.from : null,
+        nonce: null,
+        validBefore: null,
+        network,
+        txHash: sha256Hex(tx),
+        proofHash,
+        envHash,
+      };
+    }
+
     const nonce = auth?.nonce;
     const payer = auth?.from;
-    if (typeof payer !== "string" || !/^0x[0-9a-fA-F]{40}$/.test(payer)) return null;
+    if (!token || typeof payer !== "string" || !/^0x[0-9a-fA-F]{40}$/.test(payer)) return null;
     if (typeof nonce !== "string" || !/^0x[0-9a-fA-F]{64}$/.test(nonce)) return null;
     const validBefore = Number(auth?.validBefore);
     return {
@@ -526,7 +591,9 @@ function paymentRefFromRequest(req, core) {
       payer,
       nonce,
       validBefore: Number.isFinite(validBefore) ? validBefore : null,
-      network: env?.x402?.network ?? env?.network ?? `eip155:${chainId}`,
+      network,
+      proofHash,
+      envHash,
     };
   } catch {
     return null;
@@ -573,13 +640,18 @@ function emitPaid(req, res, core) {
     checked: Array.isArray(clean.checked) ? clean.checked : [],
     notChecked: Array.isArray(clean.notChecked) ? clean.notChecked : [],
   });
+  // The bundle is computed over the body as it will be sent, honesty arrays
+  // included. Computing it over `clean` first (the old order) made the
+  // advertised responseHash disagree with the documented recompute recipe for
+  // every handler that did not already return checked/notChecked.
+  const withHonesty = { ...clean, ...honesty };
   const bundle = evidenceBundle({
     route: req.path,
     body,
     pinnedBlock: clean?.blockNumber ?? clean?.cache?.pinnedBlock ?? null,
-    payload: clean,
+    payload: withHonesty,
   });
-  const full = { ...clean, ...honesty, evidence_bundle: bundle };
+  const full = { ...withHonesty, evidence_bundle: bundle };
   if (req.expiredRecovery) {
     // Typed signal (prismdeadlines): the caller can branch on this instead of
     // guessing whether it paid twice for one answer. The paywall re-armed for
@@ -1392,7 +1464,7 @@ app.get("/explorer", async (_req, res) => {
   }
 });
 
-app.get("/findings", async (req, res) => {
+app.get("/findings", perIpRateLimit({ max: FINDINGS_RATE_PER_MIN, label: "findings calls" }), async (req, res) => {
   if (findingsSnap && Date.now() - findingsSnap.at < FINDINGS_TTL_MS) {
     res.set("Cache-Control", "public, max-age=30");
     return res.json({ ...findingsSnap.payload, ageSeconds: findingsAge() });
@@ -1597,6 +1669,7 @@ app.post("/inspect", inspectRateLimit, preflightConcurrency, async (req, res) =>
     return res.json({ ...result, requestId: req.requestId });
   } catch (e) {
     if (e instanceof InspectError) {
+      if (e.outcome === "body_no_challenge") recordInspectOutcome("body_no_challenge");
       return res.status(e.status).json({
         error: e.code,
         code: e.code,
@@ -1636,7 +1709,7 @@ function boardWarming(res, kind) {
   );
 }
 
-// Public board: a daily structural read of the most-called public x402
+// Public board: a daily structural read of the first page of the public x402
 // endpoints. Data comes from the `board-data` branch (see scripts/board-scan.mjs
 // and .github/workflows/board.yml) so a data refresh never redeploys the
 // service; the bundled data/board.json is the fallback.
@@ -1943,6 +2016,8 @@ app.get("/info", (_req, res) => {
       internal_error: "500; no provider detail is returned",
       requestId: "Every error carries requestId and the same value in the x-request-id header; server logs use it.",
       settlement: "x402 settlement is cancelled for any response >=400 (the installed @x402/express middleware checks res.statusCode). A 503 means no charge.",
+      payment_unresolved: "503; this ONE operation's settlement outcome cannot be proven. No Retry-After, `retry: same_payment`, reason named. It is not a service-health signal: do not fail over or open a circuit breaker.",
+      operation_in_flight: "409; the same idempotency key is still resolving. Retry the SAME payment after Retry-After.",
     },
     readiness: {
       path: "/ready",
@@ -2017,12 +2092,15 @@ app.get("/info", (_req, res) => {
       delegatedSpend: "the caps here are client-side for the signer that constructs the payment; spend through wallets delegated to OTHER agents is outside this contract and governed by the delegating owner's own controls",
       warn: "The key is the caller's secret: whoever presents it can replay the verdict for free until the TTL/replay cap. Do not log it publicly. A leaked key cannot be revoked; use a new key for the next operation.",
       doesNotGuarantee: recoveryDoesNotGuarantee(),
+      // Control 11: `stuck` must be counted and surfaced, never silently aged
+      // out. These are process-local counters, same scope as the records.
+      observability: recoveryObservability(),
     },
     evidence_bundle: {
       spec: "verify402/evidence-bundle@1",
       included: "evidence_bundle: { requestHash, responseHash, pinnedBlock, mode, createdAt, payment.in }",
       requestHash: "sha256 of the canonical JSON { route, body } (keys sorted recursively, no whitespace)",
-      responseHash: "sha256 of the canonical JSON of the response body excluding evidence_bundle, recovery, cache, elapsedMs",
+      responseHash: "sha256 of the canonical JSON of the response body excluding evidence_bundle, recovery, cache, elapsedMs, and operationId",
       verifier: "use src/recovery.mjs canonicalStable() as reference, or key-sort and stringify with no whitespace, then sha256",
     },
     honesty: [
@@ -2360,6 +2438,38 @@ app.post("/depth", async (req, res) => {
   } catch (e) {
     return paidCatch(req, res, e);
   }
+});
+
+// Errors raised before a route runs — a malformed JSON body, a body over the
+// 64KB cap — used to fall through to Express's default handler, which answers
+// an HTML page with a stack trace and the server's file paths. Every endpoint
+// here speaks JSON, so those failures answer in the same envelope as the rest:
+// a stable code plus the request id, and nothing about the process.
+app.use((err, req, res, next) => {
+  if (res.headersSent) return next(err);
+  const requestId = req.requestId || randomUUID();
+  const tooLarge = err?.type === "entity.too.large" || err?.status === 413 || err?.statusCode === 413;
+  const badJson = err?.type === "entity.parse.failed" || (err instanceof SyntaxError && "body" in err);
+  if (badJson || tooLarge) {
+    const code = tooLarge ? "payload_too_large" : "invalid_json";
+    res.set("Cache-Control", "no-store");
+    return res.status(tooLarge ? 413 : 400).json({
+      error: code,
+      code,
+      message: tooLarge
+        ? "request body exceeds the 64KB limit"
+        : "request body is not valid JSON",
+      requestId,
+    });
+  }
+  logError(`[unhandled] ${req.method} ${req.path}`, err);
+  res.set("Cache-Control", "no-store");
+  res.status(500).json({
+    error: "internal_error",
+    code: "internal_error",
+    message: "the request failed; retry with the requestId if it repeats",
+    requestId,
+  });
 });
 
 export { app };

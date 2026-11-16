@@ -162,7 +162,7 @@ export function buildLlmsText({
     "- POST /inspect — fetch an x402 402 challenge (or accept one pasted) and",
     "  run the structural payment preflight on every option. Free, no wallet.",
     "- GET /board and GET /board.json — a daily structural read of the",
-    "  most-called public x402 endpoints (verdict, chain, price, timestamp).",
+    "  first 300 entries of the public x402 catalog, one read each (verdict, chain, price, timestamp).",
     "  Measurement, not endorsement; the JSON carries the caveats.",
     "- GET /findings — free published verdicts.",
     "- GET /explorer — on-chain payments and published verdicts, with explorer links.",

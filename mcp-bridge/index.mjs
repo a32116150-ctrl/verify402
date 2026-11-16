@@ -8,7 +8,7 @@
 //
 // ARCHITECTURE (per docs.x402.org/guides/mcp-server-with-x402):
 //
-//   MCP client ──▶ this bridge (MCP server + x402 payer) ──▶ verify402.com
+//   MCP client ──▶ this bridge (MCP server + x402 payer) ──▶ verify402.onrender.com
 //
 //   1. tool call            3. 402 + PAYMENT-REQUIRED
 //   2. paid GET/POST        4. sign payment (wallet in env)

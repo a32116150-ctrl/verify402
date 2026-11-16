@@ -16,6 +16,8 @@ import {
   evidenceBundle, expiredRecoveryInfo, validateIdempotencyKey,
   IDEMPOTENCY_TTL_MS, IDEMPOTENCY_MAX_REPLAYS, IDEMPOTENCY_STAGE_TTL_MS,
   sha256Hex, _setNow,
+  projectionCore, markSettling, reconciliationState, recoveryObservability,
+  reconcileStagedEntry,
 } from "../src/recovery.mjs";
 
 let passed = 0;
@@ -25,6 +27,10 @@ const check = (name, fn) => {
   catch (e) { failed++; console.log(`  ${name} ... FAIL\n      ${e.message}`); }
 };
 const assert = (cond, msg) => { if (!cond) throw new Error(msg); };
+const checkAsync = async (name, fn) => {
+  try { await fn(); passed++; console.log(`  ${name} ... PASS`); }
+  catch (e) { failed++; console.log(`  ${name} ... FAIL\n      ${e.message}`); }
+};
 
 const SCOPE_A = "0xaaeef086dd4e436c69d6d0f684b4c9f43392df9cb";
 const SCOPE_B = "0xbb00000000000000000000000000000000000001";
@@ -455,6 +461,147 @@ check("evidenceBundle has the promised fields and hashes tie out", () => {
   assert(typeof bundle.responseHash === "string" && bundle.responseHash.length === 64, "responseHash present");
   assert(typeof bundle.createdAt === "string" && bundle.createdAt.includes("T"), "timestamp present");
   assert(bundle.payment.protocol === "x402", "payment info present");
+
+});
+
+// --- evidence bundle: one projection, verifiable by the receiver ----------
+
+check("the advertised responseHash equals the documented recompute on the body sent", () => {
+
+  // This is the shape emitPaid builds: honesty arrays are merged in BEFORE the
+  // bundle is hashed. The old order hashed `clean`, so any handler that did not
+  // already return checked/notChecked advertised a hash the receiver could not
+  // reproduce.
+  const clean = { ok: true, chainId: 8453, verdict: "PROFITABLE", blockNumber: 7 };
+  const withHonesty = { ...clean, checked: ["best buy quote"], notChecked: ["execution"] };
+  const bundle = evidenceBundle({ route: "/route", body: {}, pinnedBlock: 7, payload: withHonesty });
+  const full = { ...withHonesty, evidence_bundle: bundle };
+  const recomputed = sha256Hex(canonicalStable(projectionCore(full)));
+  assert(bundle.responseHash === recomputed, "receiver recompute must equal the advertised hash");
+
+});
+
+check("the advertised recompute recipe names every key the projection excludes", () => {
+  // A receiver follows the prose, not our source. If the recipe omits a key the
+  // projection strips, a body that carries that key hashes differently for the
+  // receiver than for us — the exact failure this release is fixing, one level
+  // up. Both the behaviour and the wording are asserted here.
+  const payload = { ok: true, verdict: "PROFITABLE", net: { bps: 2.1 } };
+  const bundle = evidenceBundle({ route: "/verify", body: {}, pinnedBlock: 1, payload });
+  const excluded = ["evidence_bundle", "recovery", "cache", "elapsedMs", "operationId"];
+  for (const k of excluded) {
+    assert(bundle.recompute.includes(k), `the advertised recipe must name ${k}`);
+    const value = k === "elapsedMs" ? 12 : k === "operationId" ? "op-1" : { [k]: true };
+    const withKey = { ...payload, [k]: value };
+    const h = evidenceBundle({ route: "/verify", body: {}, pinnedBlock: 1, payload: withKey }).responseHash;
+    assert(h === bundle.responseHash, `${k} must not change responseHash`);
+  }
+});
+
+check("recordSettlement stores the same hash the evidence bundle advertises", () => {
+
+  _setNow(() => 40_000_000);
+  const clean = { ok: true, verdict: "PROFITABLE" };
+  const withHonesty = { ...clean, checked: ["q"], notChecked: ["x"] };
+  const bundle = evidenceBundle({ route: "/verify", body: {}, pinnedBlock: 1, payload: withHonesty });
+  const full = { ...withHonesty, evidence_bundle: bundle };
+  const staged = recordSettlement("hash-tie-key", full, null, { settledNow: false });
+  assert(staged.responseHash === bundle.responseHash, "staging uses the advertised projection");
+  _setNow(() => Date.now());
+
+});
+
+// --- settling boundary + stuck (spec 0.9 §5.1(7), control 11) --------------
+
+check("markSettling records the attempt before the facilitator call", () => {
+
+  _setNow(() => 41_000_000);
+  const payload = { ok: true, verdict: "PASS" };
+  recordSettlement("settling-key", payload, null, {
+    settledNow: false,
+    paymentRef: { nonce: "0x" + "ab".repeat(32), network: "eip155:8453", validBefore: null },
+  });
+  const r = markSettling({ payload: { authorization: { nonce: "0x" + "ab".repeat(32) } } });
+  assert(r.matched === 1, "the attempt matched exactly one operation");
+  const obs = recoveryObservability();
+  assert(obs.settling >= 1, "the operation is in the settling state");
+  _setNow(() => Date.now());
+
+});
+
+check("a settling operation is never aged out on a timer", () => {
+
+  _setNow(() => 42_000_000);
+  const payload = { ok: true, verdict: "PASS", n: 2 };
+  recordSettlement("settling-stale-key", payload, null, {
+    settledNow: false,
+    paymentRef: { nonce: "0x" + "cd".repeat(32), network: "eip155:8453", validBefore: null },
+  });
+  markSettling({ payload: { authorization: { nonce: "0x" + "cd".repeat(32) } } });
+  _setNow(() => 42_000_000 + IDEMPOTENCY_STAGE_TTL_MS + 1);
+  const found = lookupRecovery({ key: "settling-stale-key" });
+  assert(found && found.pending === "reconciliation_required", "still blocked, not expired into charge-again");
+  _setNow(() => Date.now());
+
+});
+
+check("markSettling matches the exact PAYMENT-SIGNATURE header bytes", () => {
+
+  _setNow(() => 44_000_000);
+  // The realistic path: the hook sees transportContext.request.paymentHeader
+  // (raw base64) and the decoded payload. Matching on the raw bytes is exact
+  // even if the decoded envelope is re-serialized with different key order.
+  const raw = Buffer.from(JSON.stringify({
+    x402Version: 2,
+    payload: { authorization: { from: "0x" + "11".repeat(20), nonce: "0x" + "ff".repeat(32), validBefore: "9" } },
+  })).toString("base64");
+  recordSettlement("raw-header-key", { ok: true, n: 4 }, null, {
+    settledNow: false,
+    paymentRef: { nonce: "0x" + "ff".repeat(32), network: "eip155:8453", proofHash: sha256Hex(raw) },
+  });
+  const r = markSettling({ transportContext: { request: { paymentHeader: raw } }, paymentPayload: {} });
+  assert(r.matched === 1, "matched by header bytes alone");
+  assert(recoveryObservability().settling >= 1, "marked settling");
+  _setNow(() => Date.now());
+
+});
+
+check("an unattributable settlement is counted, not guessed", () => {
+
+  _setNow(() => 45_000_000);
+  // Something to protect exists, and the proof does not match it.
+  recordSettlement("unattributable-key", { ok: true, n: 5 }, null, {
+    settledNow: false,
+    paymentRef: { nonce: "0x" + "77".repeat(32), network: "eip155:8453" },
+  });
+  const before = recoveryObservability().unattributedSettles;
+  const r = markSettling({ payload: { authorization: { nonce: "0x" + "ee".repeat(32) } } });
+  assert(r.matched === 0, "no staged record carries this proof");
+  assert(r.hadUnresolved === true, "and there was an unresolved record it could have belonged to");
+  assert(recoveryObservability().unattributedSettles === before + 1, "counted for the operator");
+  _setNow(() => Date.now());
+
+});
+
+await checkAsync("a stuck operation answers payment_unresolved and stays counted", async () => {
+
+  _setNow(() => 43_000_000);
+  const payload = { ok: true, verdict: "PASS", n: 3 };
+  // No paymentRef: this rail's outcome can never be re-checked, so once the
+  // stage TTL has passed the record is `stuck`, not expirable.
+  const staged = recordSettlement("stuck-key", payload, null, { settledNow: false });
+  _setNow(() => 43_000_000 + IDEMPOTENCY_STAGE_TTL_MS + 1);
+  const outcome = await reconcileStagedEntry(staged.operationId);
+  assert(outcome === "stuck", `reconciliation escalates to stuck (got ${outcome})`);
+  assert(reconciliationState(staged.operationId) === "stuck", "typed state");
+  assert(recoveryObservability().stuck >= 1, "surfaced, not silently aged out");
+  const found = lookupRecovery({ key: "stuck-key" });
+  assert(found && found.pending === "payment_unresolved", "retries get the stuck answer");
+  // Still retained after another full stage TTL: no timer may evict it.
+  _setNow(() => 43_000_000 + (3 * IDEMPOTENCY_STAGE_TTL_MS));
+  const again = lookupRecovery({ key: "stuck-key" });
+  assert(again && again.pending === "payment_unresolved", "record retained, key still blocked");
+  _setNow(() => Date.now());
 
 });
 

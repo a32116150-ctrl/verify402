@@ -279,3 +279,32 @@ test("discovery: summarizer tolerates junk instead of throwing", () => {
   assert.equal(thin.bazaar.hasInputSchema, false);
   assert.equal(thin.bazaar.hasOutputExample, false);
 });
+
+test("a 402 with no challenge in header or body is tagged body_no_challenge", async () => {
+  // This is the countable finding: the endpoint demands payment but gives an
+  // agent nothing to pay against. It stays a 422 invalid_challenge for the
+  // caller, and carries the tag the /usage counter reads.
+  await assert.rejects(
+    () => inspectUrl("https://example.com/paid", {
+      fetchImpl: async () => ({ status: 402, headers: {}, body: "<html>pay me</html>" }),
+    }),
+    (e) => {
+      assert.ok(e instanceof InspectError);
+      assert.equal(e.code, "invalid_challenge");
+      assert.equal(e.outcome, "body_no_challenge");
+      return true;
+    },
+  );
+
+  // A 200 with a broken body is not the same finding and must not be counted.
+  await assert.rejects(
+    () => inspectUrl("https://example.com/free", {
+      fetchImpl: async () => ({ status: 200, headers: {}, body: "not json" }),
+    }),
+    (e) => {
+      assert.equal(e.code, "invalid_challenge");
+      assert.equal(e.outcome, undefined);
+      return true;
+    },
+  );
+});

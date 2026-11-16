@@ -1,26 +1,26 @@
-# Release verify402-mcp 1.1.0 — for me
+# Release verify402-mcp 1.1.1 — for me
 
-Status: **prepared, not published.** The `1.1.0` release adds two free MCP
-tools to the bridge (`inspect_402` and `directory_402`) and is the first
-change to the published package since `1.0.9`. The release metadata is
-bumped on the `release/1.1.0` branch; `master` still says `1.0.9`, which is
-what the live service actually serves today. Nothing below has run yet, so
-nothing may be claimed as published.
+Status: **prepared, not published.** `1.1.1` is a **marker release**: no bridge
+runtime change. The only bridge source diff from `1.1.0` is one comment line that
+named `verify402.com` (a parked domain) instead of the live host. It exists only so that the version a caller
+installs matches the version the service reports after the fix set in
+`CHANGELOG.md` — the service fixes are real, but they do not touch the bridge, and
+shipping a service that says `1.1.1` next to an npm package that only offers
+`1.1.0` would make the manifest's install command a lie.
 
-What `1.1.0` contains:
+Nothing below has run yet, so nothing may be claimed as published.
 
-- `inspect_402` — read an x402 402 challenge before paying it (endpoint URL
-  or a challenge you already have): price, token, network, payee, the bound
-  resource, a PASS / CAUTION / BLOCK verdict, typed reasons, and a receipt.
-- `directory_402` — the watched list of public x402 endpoints with protocol
-  and sign verdicts and recorded changes.
-- Both are free, registered without a wallet, and are not bound to a paid
-  route.
-- The service behind them already serves `POST /inspect` and
-  `GET /directory.json` on `master`.
+What `1.1.1` contains:
 
-The previous release, `1.0.9`, remains immutable on npm and in the MCP
-Registry. Do not overwrite or unpublish it.
+- No bridge runtime change. `git diff mcp-v1.1.0..HEAD -- mcp-bridge/` must show
+  only version fields, install text, and that one comment; no function, export,
+  or dependency may differ.
+- The service fixes listed under `1.1.1` in `CHANGELOG.md` (recovery correctness,
+  spec 0.9 `settling`/`stuck`, evidence-hash projection, `/findings` budget,
+  `/usage` counters, JSON error envelope).
+
+`1.1.0` remains immutable on npm and in the MCP Registry. Do not overwrite or
+unpublish it.
 
 ## 0. Known blocker to check first
 
@@ -38,17 +38,18 @@ If `npm whoami` fails, stop and complete the login (or have the owner supply a
 granular publish token) before step 6. Nothing else in this runbook depends on
 it, and no step before step 6 should be attempted first.
 
-## 1. Account for the immutable npm 1.0.9, 1.0.8, and 1.0.7 packages
+## 1. Account for the immutable npm 1.1.0, 1.0.9, 1.0.8, and 1.0.7 packages
 
 ```bash
 npm view verify402-mcp version dist.tarball gitHead
+npm view verify402-mcp@1.1.0 version
 npm view verify402-mcp@1.0.9 version
 npm view verify402-mcp@1.0.8 version
 npm view verify402-mcp@1.0.7 version
 ```
 
-Expected before publication: `1.0.9` as current `latest`, plus resolvable
-`1.0.9`, `1.0.8`, and `1.0.7` artifacts. npm versions are immutable: do
+Expected before publication: `1.1.0` as current `latest`, plus resolvable
+`1.1.0`, `1.0.9`, `1.0.8`, and `1.0.7` artifacts. npm versions are immutable: do
 **not** republish, overwrite, or unpublish any of them.
 
 ## 2. Validate and inspect the release
@@ -63,16 +64,16 @@ node scripts/check-discovery.mjs
 node -e "console.log(require('./server.json').version, require('./mcp-bridge/package.json').version)"
 ```
 
-Expected: the release identity is `1.1.0` in the source metadata, every
+Expected: the release identity is `1.1.1` in the source metadata, every
 offline test passes, and discovery validation passes. Stop on any failure.
 
 Review the public release surfaces before continuing. They must describe
-`1.1.0` as the published npm package; registry and Render claims are added
+`1.1.1` as the published npm package; registry and Render claims are added
 only after steps 8–10 verify them:
 
 - `src/site/mcp.html` (the public `/mcp` page)
 - the service manifest served at `/.well-known/verify402.json`
-- `server.json` (the registry entry for the published 1.1.0 release)
+- `server.json` (the registry entry for the published 1.1.1 release)
 - `README.md`, `examples/ONBOARDING.md`, `mcp-bridge/llms-install.md`
 - `CHANGELOG.md` and `mcp-bridge/README.md`
 
@@ -85,7 +86,7 @@ git status --short
 git diff
 ```
 
-Commit the reviewed files, including the `1.1.0` release metadata and the two
+Commit the reviewed files, including the `1.1.1` release metadata and the two
 new free MCP tools. Do not include `.env` files, secrets, generated tarballs,
 or `VERIFY402_HANDOFF.md` unless you intend to publish that review.
 
@@ -113,13 +114,13 @@ commit to a dedicated non-deploying branch and verify the GitHub commit page
 resolves:
 
 ```bash
-git push origin HEAD:refs/heads/release-1.1.0
+git push origin HEAD:refs/heads/release-1.1.1
 ```
 
 If no branch can be confirmed non-deploying, stop: do not push and do not
 publish npm. Never push `master` in this step; it is reserved for step 10.
 
-## 5. Create and verify the npm 1.1.0 artifact
+## 5. Create and verify the npm 1.1.1 artifact
 
 Do **not** publish in this step. Build the artifact locally and inspect it.
 
@@ -129,12 +130,12 @@ npm ci
 npm test
 npm pack --dry-run
 npm pack
-tar -tzf verify402-mcp-1.1.0.tgz
+tar -tzf verify402-mcp-1.1.1.tgz
 ```
 
 Then verify, from the tarball contents:
 
-- `package/package.json` says `1.1.0`;
+- `package/package.json` says `1.1.1`;
 - `index.mjs`, `x402-client.mjs`, `client-id.mjs`, `payment-policy.mjs`,
   `paid-call.mjs`, `budget.mjs`, `log.mjs`, `README.md`, `.env.example`,
   `LICENSE`, and `NOTICE` are present;
@@ -151,7 +152,7 @@ Install the packed tarball into a fresh directory and prove the audit claim:
 ```bash
 mkdir -p /tmp/verify402-audit && cd /tmp/verify402-audit
 npm init -y >/dev/null
-npm i /path/to/verify402-mcp-1.1.0.tgz
+npm i /path/to/verify402-mcp-1.1.1.tgz
 npm audit
 npm ls @x402
 ```
@@ -159,7 +160,7 @@ npm ls @x402
 Expected: `npm audit` reports **0 vulnerabilities**, and `npm ls @x402` shows
 nothing. Delete the local tarball and audit directory after inspection.
 
-## 6. Publish npm 1.1.0
+## 6. Publish npm 1.1.1
 
 Step 4 must have made the exact commit being published publicly traceable, and
 step 5 must have verified the artifact. Confirm the commit first:
@@ -176,35 +177,35 @@ clean. Then:
 cd mcp-bridge
 npm publish
 npm view verify402-mcp version dist.tarball gitHead
-npm view verify402-mcp@1.1.0 version
+npm view verify402-mcp@1.1.1 version
 ```
 
-Expected: `1.1.0`, a resolvable tarball, and a `gitHead` equal to the SHA above
+Expected: `1.1.1`, a resolvable tarball, and a `gitHead` equal to the SHA above
 that resolves on GitHub. Do not publish from an unpushed commit.
 
 If `npm publish` asks for a one-time password, get it from the account's
 authenticator app. Do not work around 2FA.
 
-## 7. Transition the release metadata to published 1.1.0
+## 7. Transition the release metadata to published 1.1.1
 
-After step 6 prints `1.1.0` for both the latest version and the pinned
+After step 6 prints `1.1.1` for both the latest version and the pinned
 version, record the artifact facts in the repository:
 
-- `src/version.mjs` — `PUBLISHED_VERSION = "1.1.0"`, `RELEASE_VERSION =
-  "1.1.0"`, `RELEASE_STATUS = "published"`.
+- `src/version.mjs` — `PUBLISHED_VERSION = "1.1.1"`, `RELEASE_VERSION =
+  "1.1.1"`, `RELEASE_STATUS = "published"`.
 - `src/manifest.mjs` — published release status, version, tarball URL,
   quick-install command, and the published-package default.
 - `src/payment-mode.mjs` — the generated `/llms.txt` install line (it reads the
   published version; do not hardcode a second copy).
 - `src/site/mcp.html` — hero, lead, registry callout, and install snippets.
 - `README.md`, `examples/ONBOARDING.md`, `mcp-bridge/llms-install.md` — install
-  pins point at `1.1.0`; keep `1.0.9`/`1.0.8`/`1.0.7` described only as
+  pins point at `1.1.1`; keep `1.0.9`/`1.0.8`/`1.0.7` described only as
   immutable history.
-- `server.json` — published-`1.1.0` wording in both version fields.
-- `CHANGELOG.md` — the `1.1.0` entry records npm `gitHead`, shasum, registry
+- `server.json` — published-`1.1.1` wording in both version fields.
+- `CHANGELOG.md` — the `1.1.1` entry records npm `gitHead`, shasum, registry
   timestamp, GitHub release time, and the post-deploy result once known.
 - `test/release-consistency.test.mjs` — re-point the published-version
-  assertions and messages at `1.1.0`.
+  assertions and messages at `1.1.1`.
 
 Re-run the offline gates, inspect the diff, and commit with explicit paths:
 
@@ -219,16 +220,16 @@ git diff
 Do not merge this commit into `master` yet; step 10 covers deployment.
 
 Known limitation: the already-published npm tarball is immutable, so the
-README and install text embedded in `1.1.0` reflect the state at publication.
+README and install text embedded in `1.1.1` reflect the state at publication.
 The repository copies updated here are what the registry metadata, the public
 site, and the deployment use.
 
 ## 8. Publish the MCP Registry entry
 
 Step 6 has succeeded and the checked-in `server.json` describes a **published**
-`1.1.0`: `VERIFY402_NETWORKS` defaults to Base Sepolia testnet
+`1.1.1`: `VERIFY402_NETWORKS` defaults to Base Sepolia testnet
 (`eip155:84532`), it is optional, and Base mainnet (`eip155:8453`) is an
-explicit opt-in. This step runs only when the npm 1.1.0 artifact exists and is
+explicit opt-in. This step runs only when the npm 1.1.1 artifact exists and is
 verified.
 
 ```bash
@@ -241,13 +242,13 @@ If `mcp-publisher validate` rejects the metadata, **stop** and correct the
 metadata. Do not fabricate fields to satisfy the validator, and do not publish
 the entry against an earlier version.
 
-## 9. Verify the actual 1.1.0 registry version
+## 9. Verify the actual 1.1.1 registry version
 
 ```bash
-curl -s "https://registry.modelcontextprotocol.io/v0.1/servers/io.github.a32116150-ctrl%2Fverify402-mcp/versions/1.1.0"
+curl -s "https://registry.modelcontextprotocol.io/v0.1/servers/io.github.a32116150-ctrl%2Fverify402-mcp/versions/1.1.1"
 ```
 
-Expect a `server` object with `version: "1.1.0"`, the Base Sepolia default in
+Expect a `server` object with `version: "1.1.1"`, the Base Sepolia default in
 its environment-variable metadata, `status: active`, and `isLatest: true`.
 Record the returned `publishedAt`.
 
@@ -265,19 +266,19 @@ cannot still be verified, do not merge into `master`.
 - **Auto-deploy on:** the merge itself deploys; watch the dashboard and record
   the deployed SHA.
 
-Deploy only the approved, traceable SHA. It must contain the published-1.1.0
+Deploy only the approved, traceable SHA. It must contain the published-1.1.1
 metadata.
 
 Then run the free-only post-deploy check:
 
 ```bash
 SMOKE_BASE_URL=https://verify402.onrender.com \
-  EXPECTED_VERSION=1.1.0 EXPECTED_MODE=testnet \
+  EXPECTED_VERSION=1.1.1 EXPECTED_MODE=testnet \
   npm run post-deploy
 ```
 
 Expected: all checks pass, `/health` says `testnet`, `/info` shows
-`mcp.version: "1.1.0"`, `/openapi.json` shows `info.version: "1.1.0"`, the
+`mcp.version: "1.1.1"`, `/openapi.json` shows `info.version: "1.1.1"`, the
 landing page does not advertise a mainnet demo, and `/llms.txt` describes the
 testnet payment rail and the published-package install. The dashboard's
 deployed commit must equal the metadata commit, or the recorded merge commit
@@ -292,15 +293,21 @@ After steps 6, 9, and 10 are verified, publish the GitHub release so the
 artifact is linkable:
 
 ```bash
-git tag -a mcp-v1.1.0 -m "verify402-mcp 1.1.0"
-git push origin mcp-v1.1.0
+git tag -a mcp-v1.1.1 -m "verify402-mcp 1.1.1"
+git push origin mcp-v1.1.1
 ```
 
 Then create the release from that tag, with notes that lead with the two new
 free tools and state the npm `gitHead`, the registry `publishedAt`, and the
 post-deploy result.
 
-## Previous release
+## Previous releases
+
+`1.1.0` — published 2026-11-13, the last release with a bridge source change:
+two free tools (`inspect_402`, `directory_402`), seller-signed terms binding, the
+payment-token registry, durable `/usage` counters, and opt-in anonymous pings. npm
+`gitHead` `f5d5d9a`; MCP Registry active/latest; GitHub release `mcp-v1.1.0`;
+Render serving `1.1.0`.
 
 `1.0.9` — published 2026-10-26. npm `gitHead`
 `60c7b6fcffb1c1d47561577b752d9c68b8ecba16`; MCP Registry active/latest at
@@ -310,7 +317,7 @@ check passed 29/29.
 
 ## If something is wrong
 
-- **npm already has 1.1.0:** do not overwrite or unpublish it. Fix forward with
+- **npm already has 1.1.1:** do not overwrite or unpublish it. Fix forward with
   a new patch version after approval.
 - **The published runtime differs from local:** stop and treat the difference as
   a new code change requiring a new package version and a new release.
@@ -324,6 +331,6 @@ check passed 29/29.
 - **A push from step 4 started a deploy:** the branch was not actually
   non-deploying. Stop, verify the live version with `/info`, and record the
   early deployment instead of announcing the release.
-- **A public page claims 1.1.0 is published:** true for npm after step 6. It must
+- **A public page claims 1.1.1 is published:** true for npm after step 6. It must
   not also claim the MCP Registry entry or the Render deployment is complete
   until steps 9 and 10 are verified.

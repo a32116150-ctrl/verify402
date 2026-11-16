@@ -3,9 +3,64 @@
 All notable changes to verify402. This file records repository changes; it does
 not imply a deploy or an npm publish.
 
-## Unreleased
+## 1.1.1 — 2026-11-16
 
-No version bump, deploy, or publish is implied by this section.
+A fix release for the service. The MCP bridge has no runtime change — the only
+source diff from 1.1.0 is one corrected comment — and `verify402-mcp@1.1.1` is a
+marker release so that the version a caller installs matches the version the
+service reports (see `PUBLISH_STEPS_FOR_ME.md`). This entry records repository
+changes; it does not by itself mean the artifact is on npm or the service is
+deployed.
+
+### Fixed
+
+- **Durable recovery could never work for a real client.** The settlement
+  reference was decoded from the legacy `x-payment` header only, while x402 v2
+  clients — including `verify402-mcp` — send `PAYMENT-SIGNATURE`, which the
+  SDK's Express adapter reads first. Every v2 caller therefore staged a record
+  with no payment reference, so after a lost settle outcome the record could
+  never be checked on-chain and the caller's key stayed blocked with no path to
+  their paid result. Both headers are read now, and the Solana rail (no EIP-3009
+  nonce) is identified by its signed transaction instead of being written off as
+  unreconcilable.
+- **The advertised evidence hash did not reproduce.** `evidence_bundle.responseHash`
+  was computed before the honesty arrays were merged into the body, so a
+  receiver following the documented recompute recipe got a different number on
+  every response from a handler that did not already return `checked` /
+  `notChecked` — i.e. on essentially all of them. One projection
+  (`projectionCore`) now feeds both the advertised hash and the stored record,
+  and the bundle is built over the body as sent.
+- **Spec 0.9 conformance: `settling` and `stuck`.** The write-ahead boundary is
+  now real: an `onBeforeSettle` hook records `settling` on the operation before
+  the facilitator call, keyed by the exact `PAYMENT-SIGNATURE` bytes, the decoded
+  envelope, the EIP-3009 nonce or the Solana transaction. In durable mode a write
+  that does not land aborts the settlement (nothing was charged; the staged
+  record still blocks a duplicate charge). Retries answer `409
+  operation_in_flight` while the outcome can still resolve, and `503
+  payment_unresolved` — no `Retry-After`, named reason, `retry: same_payment` —
+  once it cannot be proven on either side. `stuck` and `settling` records are
+  never aged out by the TTL, in any mode, and both are counted on
+  `/info.recovery.observability`. A transient reconciliation failure stays 409
+  and is escalated only after three failures at least five minutes apart past
+  the staging window.
+- `/findings` had no per-IP budget (AUDIT L-3): a free chain read with a 30s
+  cache could be kept permanently cold, turning the endpoint into a public RPC
+  proxy. It now shares the standard limiter at 30 requests/minute per IP.
+- `/usage` lost `byInspectHost` on restart (serialized but not restored), and the
+  promised `body_no_challenge` counter — a 402 that carries no challenge in the
+  `PAYMENT-REQUIRED` header or the body — was never emitted. Both are fixed and
+  covered by tests.
+- Malformed JSON and oversized bodies answered with Express's HTML stack trace
+  (including `/app/node_modules/...` paths) instead of the documented JSON error
+  shape. A terminal error handler answers `invalid_json` / `payload_too_large` /
+  `internal_error` with a `requestId`; `requestIdMiddleware` now runs before the
+  body parser so every error carries one.
+- The board copy, the blog post and the workflow said "most-called"; the catalog
+  has no server-side ordering and ignores the parameters that would request one,
+  so the sample is simply the first 300 entries returned. Reworded everywhere,
+  and `BANNED_PUBLIC_CLAIMS` now blocks the phrase from coming back.
+- Settlement and payment-mode comments still named `verify402.com` (a parked
+  domain) and `npm 1.0.9` (superseded by 1.1.0).
 
 ### Added
 
@@ -37,7 +92,7 @@ No version bump, deploy, or publish is implied by this section.
 ### Added
 
 - `GET /board`, `GET /board.json`, `GET /badge` — a public board of the
-  most-called x402 endpoints in the public catalog, refreshed daily by
+  first 300 x402 endpoints the public catalog returns, refreshed daily by
   `.github/workflows/board.yml` (data published on the `board-data` branch, so a
   refresh never redeploys the service). Each row is one read-only request,
   timestamped, with the verdict, chain, price, authorization window and 30-day
@@ -97,7 +152,7 @@ No version bump, deploy, or publish is implied by this section.
 ### Added
 
 - `GET /blog/what-public-402s-look-like` — a field note from the 300 top
-  most-called public x402 Bazaar endpoints, one read-only probe each: Base,
+  the first public x402 Bazaar endpoints the catalog returns, one read-only probe each: Base,
   canonical USDC, five-minute authorizations in the majority and 57 asking
   for one hour, 222 well-formed plus 60 well-formed-with-flags, the
   inspector checks we refused, and the defects the scan surfaced in our own

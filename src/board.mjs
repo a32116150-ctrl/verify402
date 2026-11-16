@@ -1,4 +1,4 @@
-// Public board: what the most-called public x402 endpoints return when a
+// Public board: what the first page of the public x402 catalog returns when a
 // caller reads their payment demand.
 //
 // The data is produced by scripts/board-scan.mjs (one read-only request per
@@ -390,7 +390,7 @@ export function renderBoardPage(board, { origin = "https://verify402.onrender.co
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Public x402 endpoint board · verify402</title>
-<meta name="description" content="A daily structural read of the most-called public x402 endpoints: which return a well-formed payment demand, which need a look, and which refused to be read. One read-only request each, raw JSON included.">
+<meta name="description" content="A daily structural read of 300 public x402 endpoints (the first 300 entries the public catalog returns): which return a well-formed payment demand, which need a look, and which refused to be read. One read-only request each, raw JSON included.">
 <link rel="canonical" href="${esc(origin)}/board">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Public x402 endpoint board">

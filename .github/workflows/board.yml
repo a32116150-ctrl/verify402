@@ -1,6 +1,6 @@
 name: board-scan
 
-# Daily structural read of the most-called public x402 endpoints.
+# Daily structural read of the first page of the public x402 catalog.
 #
 # The result is published on the `board-data` branch, NOT master: the service
 # fetches that branch at runtime (see src/board.mjs), so a data refresh never
@@ -10,8 +10,15 @@ name: board-scan
 # the board keeps serving the last good snapshot and its date says so.
 
 on:
+  # Two daily attempts, not one. GitHub's scheduler is best-effort: the first
+  # scheduled run on 2026-11-15 fired at 12:50 UTC for a 05:23 cron, and no run
+  # appeared on 2026-11-16. A second window costs one extra branch commit and
+  # means a missed slot self-heals the same day instead of the board silently
+  # ageing. The loader serves the newest data branch, so a duplicate scan is
+  # harmless.
   schedule:
     - cron: "23 5 * * *"
+    - cron: "23 17 * * *"
   workflow_dispatch:
 
 permissions:

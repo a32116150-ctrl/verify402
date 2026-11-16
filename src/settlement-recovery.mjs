@@ -11,7 +11,7 @@
 // so the real @x402/express middleware can exercise the exact registration path
 // in tests.
 
-import { promoteSettlement, abandonSettlement } from "./recovery.mjs";
+import { promoteSettlement, abandonSettlement, markSettling } from "./recovery.mjs";
 
 const NON_DEFINITIVE_REASONS = new Set([
   "settlement_pending",
@@ -68,7 +68,45 @@ export function recoverySettleFailure(ctx) {
   abandonSettlement(responseBody);
 }
 
+/**
+ * Write-ahead settlement boundary (spec 0.9, §5.1(7) / control 11).
+ *
+ * Runs immediately BEFORE the facilitator call. Records `settling` on the
+ * operation so a crash between here and `onAfterSettle` cannot leave a record
+ * that reads as never-attempted — that record is the only copy of the paid
+ * response and must never be evictable on a timer.
+ *
+ * Returns `{ abort, reason, message }` when the record cannot be written or the
+ * attempt is ambiguous. Aborting keeps the caller from paying for an
+ * unrecorded settlement; the staged record still exists, so the caller's retry
+ * is answered `409 operation_in_flight` rather than charged again.
+ */
+export function recoveryBeforeSettle(ctx, { logWarn = console.warn } = {}) {
+  if (ctx?.phase !== "after-handler") return null;
+  try {
+    const result = markSettling(ctx);
+    if (result?.matched === 0 && result.hadUnresolved) {
+      // An unresolved record existed and this settlement did not match it:
+      // the payload shape is one we cannot attribute. Counted and logged.
+      logWarn("[recovery] a settlement could not be attributed to any unresolved operation");
+    }
+    return null;
+  } catch (e) {
+    logWarn(`[recovery] refusing to settle without a recorded attempt: ${e?.message ?? e}`);
+    return {
+      abort: true,
+      reason: "settling_write_failed",
+      message: "the settlement attempt could not be durably recorded; retry the same payment with the same idempotency key",
+    };
+  }
+}
+
 export function registerRecoveryHooks(resourceServer, { logError = console.error } = {}) {
+  resourceServer.onBeforeSettle(async (ctx) => {
+    // No try/catch: an abort here is the point. An exception inside the hook
+    // is the SDK's business; this function returns a typed abort instead.
+    return recoveryBeforeSettle(ctx);
+  });
   resourceServer.onAfterSettle(async (ctx) => {
     try {
       recoveryAfterSettle(ctx);
