@@ -1,18 +1,18 @@
 {
  "spec": "verify402/board@1",
- "generatedAt": "2026-11-15T12:50:40.525Z",
- "scanStartedAt": "2026-11-15T12:50:35.491Z",
- "scanSeconds": 85,
+ "generatedAt": "2026-11-16T13:48:27.168Z",
+ "scanStartedAt": "2026-11-16T13:48:21.916Z",
+ "scanSeconds": 82,
  "source": "https://api.cdp.coinbase.com/platform/v2/x402/discovery/resources",
- "catalogTotal": 34380,
+ "catalogTotal": 33456,
  "scanned": 300,
  "method": "first 300 catalog entries in the API's own order, one read-only request each (3 in flight, 400 ms apart, 6 s timeout, no wallet, no payment, no credentials forwarded)",
  "counts": {
-  "pass": 227,
-  "caution": 62,
-  "refused": 9,
+  "pass": 225,
+  "caution": 61,
+  "refused": 10,
   "block": 1,
-  "unreachable": 1
+  "unreachable": 3
  },
  "caveats": [
   "One read-only request per endpoint at the time shown. A 402 may differ by method, path, payload, or day.",
@@ -25,8 +25,21 @@
   {
    "resource": "https://keyring-agent.blockchhub.link/api/send-native",
    "method": "GET",
-   "calls30d": 13680,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 13686,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "CAUTION",
+   "reasons": [
+    "long_timeout"
+   ],
+   "chain": "eip155:8453",
+   "priceUsd": 0.05,
+   "maxTimeoutSeconds": 3600
+  },
+  {
+   "resource": "https://keyring-agent.blockchhub.link/api/send-token",
+   "method": "GET",
+   "calls30d": 13706,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "CAUTION",
    "reasons": [
     "long_timeout"
@@ -39,7 +52,7 @@
    "resource": "https://x402.tbs-digital.com/weather/current",
    "method": "GET",
    "calls30d": 985,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -47,56 +60,10 @@
    "maxTimeoutSeconds": 300
   },
   {
-   "resource": "https://keyring-agent.blockchhub.link/api/send-token",
-   "method": "GET",
-   "calls30d": 13647,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "CAUTION",
-   "reasons": [
-    "long_timeout"
-   ],
-   "chain": "eip155:8453",
-   "priceUsd": 0.05,
-   "maxTimeoutSeconds": 3600
-  },
-  {
    "resource": "https://www.api-xpay.com/x402/quote",
    "method": "GET",
-   "calls30d": 6723,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.005,
-   "maxTimeoutSeconds": 60
-  },
-  {
-   "resource": "https://www.api-xpay.com/x402/ping",
-   "method": "GET",
-   "calls30d": 6762,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.005,
-   "maxTimeoutSeconds": 60
-  },
-  {
-   "resource": "https://www.api-xpay.com/x402/network",
-   "method": "GET",
-   "calls30d": 6588,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.005,
-   "maxTimeoutSeconds": 60
-  },
-  {
-   "resource": "https://www.api-xpay.com/x402/time",
-   "method": "GET",
-   "calls30d": 6678,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 6991,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -106,8 +73,8 @@
   {
    "resource": "https://api.agents-trust.com/recommend",
    "method": "GET",
-   "calls30d": 15232,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 15114,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -115,10 +82,43 @@
    "maxTimeoutSeconds": 300
   },
   {
+   "resource": "https://www.api-xpay.com/x402/ping",
+   "method": "GET",
+   "calls30d": 7060,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.005,
+   "maxTimeoutSeconds": 60
+  },
+  {
+   "resource": "https://www.api-xpay.com/x402/network",
+   "method": "GET",
+   "calls30d": 6865,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.005,
+   "maxTimeoutSeconds": 60
+  },
+  {
+   "resource": "https://www.api-xpay.com/x402/time",
+   "method": "GET",
+   "calls30d": 6946,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.005,
+   "maxTimeoutSeconds": 60
+  },
+  {
    "resource": "https://api.exa.ai/search",
    "method": "POST",
-   "calls30d": 13189,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 13314,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "CAUTION",
    "reasons": [
     "multiple_payees"
@@ -130,8 +130,8 @@
   {
    "resource": "https://www.api-xpay.com/x402/uuid",
    "method": "GET",
-   "calls30d": 6648,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 6922,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -141,8 +141,8 @@
   {
    "resource": "https://www.api-xpay.com/x402/payment",
    "method": "GET",
-   "calls30d": 6729,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 6999,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -152,8 +152,8 @@
   {
    "resource": "https://www.api-xpay.com/x402/random",
    "method": "GET",
-   "calls30d": 6610,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 6887,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -163,8 +163,8 @@
   {
    "resource": "https://www.api-xpay.com/x402/ip",
    "method": "GET",
-   "calls30d": 6586,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 6864,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -174,8 +174,8 @@
   {
    "resource": "https://www.api-xpay.com/x402/status",
    "method": "GET",
-   "calls30d": 6681,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 6948,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -185,8 +185,8 @@
   {
    "resource": "https://blockrun.ai/api/v1/chat/completions",
    "method": "POST",
-   "calls30d": 77814,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 77004,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -196,8 +196,8 @@
   {
    "resource": "https://api.onesource.io/api/chain/erc20-balance",
    "method": "GET",
-   "calls30d": 791,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 794,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "CAUTION",
    "reasons": [
     "long_timeout"
@@ -209,8 +209,8 @@
   {
    "resource": "https://crypto.apitoll.cloud/v1/crypto/price",
    "method": "GET",
-   "calls30d": 276,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 290,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -220,8 +220,8 @@
   {
    "resource": "https://api.onesource.io/api/chain/block-number",
    "method": "GET",
-   "calls30d": 776,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 778,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "CAUTION",
    "reasons": [
     "long_timeout"
@@ -231,21 +231,21 @@
    "maxTimeoutSeconds": 3600
   },
   {
-   "resource": "https://www.api-xpay.com/x402/rewrite",
+   "resource": "https://glim.sh/api/v1/twitter/search",
    "method": "POST",
-   "calls30d": 206,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 8105,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 10,
-   "maxTimeoutSeconds": 60
+   "chain": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
+   "priceUsd": 0.005,
+   "maxTimeoutSeconds": 300
   },
   {
    "resource": "https://api.onesource.io/api/chain/live-balance",
    "method": "GET",
-   "calls30d": 646,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 647,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "CAUTION",
    "reasons": [
     "long_timeout"
@@ -255,21 +255,21 @@
    "maxTimeoutSeconds": 3600
   },
   {
-   "resource": "https://glim.sh/api/v1/twitter/search",
+   "resource": "https://www.api-xpay.com/x402/rewrite",
    "method": "POST",
-   "calls30d": 7265,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 191,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
-   "chain": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
-   "priceUsd": 0.005,
-   "maxTimeoutSeconds": 300
+   "chain": "eip155:8453",
+   "priceUsd": 10,
+   "maxTimeoutSeconds": 60
   },
   {
    "resource": "https://api.onesource.io/api/chain/erc20-transfers",
    "method": "GET",
-   "calls30d": 571,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 572,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "CAUTION",
    "reasons": [
     "long_timeout"
@@ -282,31 +282,7 @@
    "resource": "https://api.onesource.io/api/chain/contract/:address",
    "method": "GET",
    "calls30d": 570,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "CAUTION",
-   "reasons": [
-    "long_timeout"
-   ],
-   "chain": "eip155:8453",
-   "priceUsd": 0.005,
-   "maxTimeoutSeconds": 3600
-  },
-  {
-   "resource": "https://www.api-xpay.com/x402/sentiment",
-   "method": "POST",
-   "calls30d": 130,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 10,
-   "maxTimeoutSeconds": 60
-  },
-  {
-   "resource": "https://api.onesource.io/api/chain/ens/:input",
-   "method": "GET",
-   "calls30d": 533,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "CAUTION",
    "reasons": [
     "long_timeout"
@@ -318,8 +294,8 @@
   {
    "resource": "https://agi.apify.com/protocols/x402/prepaid-tokens",
    "method": "GET",
-   "calls30d": 212,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 219,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -327,10 +303,56 @@
    "maxTimeoutSeconds": 60
   },
   {
+   "resource": "https://api.bitrefill.com/x402/gift-cards/search",
+   "method": "GET",
+   "calls30d": 144,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.002,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://skycast.clawca.sh/weather",
+   "method": "GET",
+   "calls30d": 267,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.001,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://laso.finance/auth",
+   "method": "GET",
+   "calls30d": 379,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.001,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://api.onesource.io/api/chain/ens/:input",
+   "method": "GET",
+   "calls30d": 534,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "CAUTION",
+   "reasons": [
+    "long_timeout"
+   ],
+   "chain": "eip155:8453",
+   "priceUsd": 0.005,
+   "maxTimeoutSeconds": 3600
+  },
+  {
    "resource": "https://api.onesource.io/api/chain/total-supply",
    "method": "GET",
    "calls30d": 530,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "CAUTION",
    "reasons": [
     "long_timeout"
@@ -340,21 +362,21 @@
    "maxTimeoutSeconds": 3600
   },
   {
-   "resource": "https://api.bitrefill.com/x402/gift-cards/search",
-   "method": "GET",
-   "calls30d": 147,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "resource": "https://www.api-xpay.com/x402/sentiment",
+   "method": "POST",
+   "calls30d": 120,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
-   "priceUsd": 0.002,
-   "maxTimeoutSeconds": 300
+   "priceUsd": 10,
+   "maxTimeoutSeconds": 60
   },
   {
-   "resource": "https://laso.finance/auth",
-   "method": "GET",
-   "calls30d": 365,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "resource": "https://api.clawfetch.ai/fetch",
+   "method": "POST",
+   "calls30d": 3100,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -365,42 +387,7 @@
    "resource": "https://api.onesource.io/api/chain/nonce/:address",
    "method": "GET",
    "calls30d": 501,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "CAUTION",
-   "reasons": [
-    "long_timeout"
-   ],
-   "chain": "eip155:8453",
-   "priceUsd": 0.003,
-   "maxTimeoutSeconds": 3600
-  },
-  {
-   "resource": "https://api.clawfetch.ai/fetch",
-   "method": "POST",
-   "calls30d": 3097,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.001,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://skycast.clawca.sh/weather",
-   "method": "GET",
-   "calls30d": 177,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.001,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://api.onesource.io/api/chain/block/:number",
-   "method": "GET",
-   "calls30d": 472,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "CAUTION",
    "reasons": [
     "long_timeout"
@@ -412,8 +399,8 @@
   {
    "resource": "https://stableenrich.dev/api/fullenrich/people-search",
    "method": "POST",
-   "calls30d": 650,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 631,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -421,23 +408,10 @@
    "maxTimeoutSeconds": 300
   },
   {
-   "resource": "https://api.onesource.io/deepstate/v1/book/:book",
-   "method": "GET",
-   "calls30d": 731,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "CAUTION",
-   "reasons": [
-    "long_timeout"
-   ],
-   "chain": "eip155:8453",
-   "priceUsd": 0.005,
-   "maxTimeoutSeconds": 3600
-  },
-  {
    "resource": "https://www.blockchainiq.co/api/x402/v1/brief",
    "method": "GET",
-   "calls30d": 91,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 98,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -445,10 +419,23 @@
    "maxTimeoutSeconds": 300
   },
   {
-   "resource": "https://api.onesource.io/deepstate/v1/candles/:book",
+   "resource": "https://api.onesource.io/api/chain/block/:number",
    "method": "GET",
-   "calls30d": 681,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 472,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "CAUTION",
+   "reasons": [
+    "long_timeout"
+   ],
+   "chain": "eip155:8453",
+   "priceUsd": 0.003,
+   "maxTimeoutSeconds": 3600
+  },
+  {
+   "resource": "https://api.onesource.io/deepstate/v1/book/:book",
+   "method": "GET",
+   "calls30d": 731,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "CAUTION",
    "reasons": [
     "long_timeout"
@@ -458,10 +445,56 @@
    "maxTimeoutSeconds": 3600
   },
   {
+   "resource": "https://x402.telnyx.com/v1/chat/completions/_t/deepseek-v4.1-flash",
+   "method": "POST",
+   "calls30d": 97,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.013389,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://api.onesource.io/deepstate/v1/candles/:book",
+   "method": "GET",
+   "calls30d": 681,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "CAUTION",
+   "reasons": [
+    "long_timeout"
+   ],
+   "chain": "eip155:8453",
+   "priceUsd": 0.005,
+   "maxTimeoutSeconds": 3600
+  },
+  {
+   "resource": "https://api.gondola-ai.com/v1/chat/completions",
+   "method": "POST",
+   "calls30d": 2179,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.01,
+   "maxTimeoutSeconds": 120
+  },
+  {
+   "resource": "https://x402tap.com/api/weather",
+   "method": "GET",
+   "calls30d": 52,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.01,
+   "maxTimeoutSeconds": 300
+  },
+  {
    "resource": "https://api.onesource.io/api/chain/tx/:hash",
    "method": "GET",
    "calls30d": 438,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "CAUTION",
    "reasons": [
     "long_timeout"
@@ -473,8 +506,8 @@
   {
    "resource": "https://api.onesource.io/api/chain/network-info",
    "method": "GET",
-   "calls30d": 452,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 454,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "CAUTION",
    "reasons": [
     "long_timeout"
@@ -487,7 +520,7 @@
    "resource": "https://api.onesource.io/deepstate/v1/stats/:book",
    "method": "GET",
    "calls30d": 674,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "CAUTION",
    "reasons": [
     "long_timeout"
@@ -497,32 +530,10 @@
    "maxTimeoutSeconds": 3600
   },
   {
-   "resource": "https://api.gondola-ai.com/v1/chat/completions",
-   "method": "POST",
-   "calls30d": 2528,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.01,
-   "maxTimeoutSeconds": 120
-  },
-  {
-   "resource": "https://x402tap.com/api/weather",
-   "method": "GET",
-   "calls30d": 51,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.01,
-   "maxTimeoutSeconds": 300
-  },
-  {
    "resource": "https://web.cyberwarex.com/fetch",
    "method": "GET",
-   "calls30d": 447,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 449,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -530,21 +541,10 @@
    "maxTimeoutSeconds": 300
   },
   {
-   "resource": "https://x402.telnyx.com/v1/chat/completions/_t/deepseek-v4.1-flash",
-   "method": "POST",
-   "calls30d": 93,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.013389,
-   "maxTimeoutSeconds": 300
-  },
-  {
    "resource": "https://stableupload.dev/api/upload",
    "method": "POST",
-   "calls30d": 473,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 472,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -552,10 +552,52 @@
    "maxTimeoutSeconds": 300
   },
   {
+   "resource": "https://pro-api.coingecko.com/api/v3/x402/onchain/search/pools",
+   "method": "GET",
+   "calls30d": 107,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.005,
+   "maxTimeoutSeconds": 60
+  },
+  {
+   "resource": "https://edgar.apitoll.cloud/v1/edgar/filings",
+   "method": "GET",
+   "calls30d": 105,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.003,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://cheaptokens.ai/api/buy",
+   "method": "POST",
+   "calls30d": 630,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": null,
+   "error": "no_challenge",
+   "reasons": []
+  },
+  {
+   "resource": "https://twitter.use.x402atlas.com/search",
+   "method": "GET",
+   "calls30d": 613,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.005,
+   "maxTimeoutSeconds": 300
+  },
+  {
    "resource": "https://api.onesource.io/api/chain/events",
    "method": "GET",
    "calls30d": 401,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "CAUTION",
    "reasons": [
     "long_timeout"
@@ -568,7 +610,7 @@
    "resource": "https://api.onesource.io/deepstate/v1/markets",
    "method": "GET",
    "calls30d": 387,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "CAUTION",
    "reasons": [
     "long_timeout"
@@ -576,23 +618,12 @@
    "chain": "eip155:8453",
    "priceUsd": 0.005,
    "maxTimeoutSeconds": 3600
-  },
-  {
-   "resource": "https://edgar.apitoll.cloud/v1/edgar/filings",
-   "method": "GET",
-   "calls30d": 102,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.003,
-   "maxTimeoutSeconds": 300
   },
   {
    "resource": "https://api.onesource.io/deepstate/v1/trades/:book",
    "method": "GET",
    "calls30d": 383,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "CAUTION",
    "reasons": [
     "long_timeout"
@@ -600,54 +631,23 @@
    "chain": "eip155:8453",
    "priceUsd": 0.005,
    "maxTimeoutSeconds": 3600
-  },
-  {
-   "resource": "https://twitter.use.x402atlas.com/search",
-   "method": "GET",
-   "calls30d": 610,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.005,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://pro-api.coingecko.com/api/v3/x402/onchain/search/pools",
-   "method": "GET",
-   "calls30d": 100,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.005,
-   "maxTimeoutSeconds": 60
   },
   {
    "resource": "https://api.402rates.com/v1/ping",
    "method": "GET",
-   "calls30d": 57,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 60,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
    "priceUsd": 0.001,
    "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://cheaptokens.ai/api/buy",
-   "method": "POST",
-   "calls30d": 619,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": null,
-   "error": "no_challenge",
-   "reasons": []
   },
   {
    "resource": "https://x402.clashofcoins.com/x402/cheap-health",
    "method": "GET",
-   "calls30d": 379,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 388,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -655,23 +655,10 @@
    "maxTimeoutSeconds": 300
   },
   {
-   "resource": "https://api.onesource.io/api/chain/receipt/:hash",
-   "method": "GET",
-   "calls30d": 330,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "CAUTION",
-   "reasons": [
-    "long_timeout"
-   ],
-   "chain": "eip155:8453",
-   "priceUsd": 0.005,
-   "maxTimeoutSeconds": 3600
-  },
-  {
    "resource": "https://vibesprings.net/api/price/btc-usd",
    "method": "GET",
-   "calls30d": 122,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 126,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -679,23 +666,10 @@
    "maxTimeoutSeconds": 300
   },
   {
-   "resource": "https://api.onesource.io/api/chain/nft-metadata",
-   "method": "GET",
-   "calls30d": 324,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "CAUTION",
-   "reasons": [
-    "long_timeout"
-   ],
-   "chain": "eip155:8453",
-   "priceUsd": 0.008,
-   "maxTimeoutSeconds": 3600
-  },
-  {
    "resource": "https://minifetch.com/api/v1/x402/preflight/url-check",
    "method": "GET",
-   "calls30d": 114,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 118,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -703,23 +677,10 @@
    "maxTimeoutSeconds": 300
   },
   {
-   "resource": "https://api.onesource.io/api/chain/erc721-tokens",
-   "method": "GET",
-   "calls30d": 323,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "CAUTION",
-   "reasons": [
-    "long_timeout"
-   ],
-   "chain": "eip155:8453",
-   "priceUsd": 0.008,
-   "maxTimeoutSeconds": 3600
-  },
-  {
    "resource": "https://api.gondola-ai.com/v1/images/generations",
    "method": "POST",
    "calls30d": 183,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -727,36 +688,10 @@
    "maxTimeoutSeconds": 120
   },
   {
-   "resource": "https://api.onesource.io/api/chain/chain-id",
+   "resource": "https://api.onesource.io/api/chain/receipt/:hash",
    "method": "GET",
-   "calls30d": 328,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "CAUTION",
-   "reasons": [
-    "long_timeout"
-   ],
-   "chain": "eip155:8453",
-   "priceUsd": 0.001,
-   "maxTimeoutSeconds": 3600
-  },
-  {
-   "resource": "https://api.onesource.io/api/chain/code/:address",
-   "method": "GET",
-   "calls30d": 312,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "CAUTION",
-   "reasons": [
-    "long_timeout"
-   ],
-   "chain": "eip155:8453",
-   "priceUsd": 0.003,
-   "maxTimeoutSeconds": 3600
-  },
-  {
-   "resource": "https://api.onesource.io/api/chain/call",
-   "method": "POST",
-   "calls30d": 312,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 330,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "CAUTION",
    "reasons": [
     "long_timeout"
@@ -768,8 +703,8 @@
   {
    "resource": "https://api.hyperextend.xyz/v1/candles/BTC/1m/latest",
    "method": "GET",
-   "calls30d": 51,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 52,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -777,10 +712,23 @@
    "maxTimeoutSeconds": 60
   },
   {
+   "resource": "https://api.onesource.io/api/chain/nft-metadata",
+   "method": "GET",
+   "calls30d": 324,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "CAUTION",
+   "reasons": [
+    "long_timeout"
+   ],
+   "chain": "eip155:8453",
+   "priceUsd": 0.008,
+   "maxTimeoutSeconds": 3600
+  },
+  {
    "resource": "https://api.bitrefill.com/x402/checkout/info",
    "method": "GET",
-   "calls30d": 125,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 128,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -788,21 +736,36 @@
    "maxTimeoutSeconds": 300
   },
   {
-   "resource": "https://www.api-xpay.com/x402/keywords",
-   "method": "POST",
-   "calls30d": 75,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
+   "resource": "https://api.onesource.io/api/chain/erc721-tokens",
+   "method": "GET",
+   "calls30d": 323,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "CAUTION",
+   "reasons": [
+    "long_timeout"
+   ],
    "chain": "eip155:8453",
-   "priceUsd": 10,
-   "maxTimeoutSeconds": 60
+   "priceUsd": 0.008,
+   "maxTimeoutSeconds": 3600
+  },
+  {
+   "resource": "https://api.onesource.io/api/chain/chain-id",
+   "method": "GET",
+   "calls30d": 328,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "CAUTION",
+   "reasons": [
+    "long_timeout"
+   ],
+   "chain": "eip155:8453",
+   "priceUsd": 0.001,
+   "maxTimeoutSeconds": 3600
   },
   {
    "resource": "https://api.exa.ai/contents",
    "method": "POST",
-   "calls30d": 1495,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 1502,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "BLOCK",
    "reasons": [
     "multiple_payees",
@@ -813,10 +776,10 @@
    "maxTimeoutSeconds": 60
   },
   {
-   "resource": "https://api.onesource.io/api/chain/allowance",
+   "resource": "https://api.onesource.io/api/chain/code/:address",
    "method": "GET",
-   "calls30d": 304,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 312,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "CAUTION",
    "reasons": [
     "long_timeout"
@@ -826,36 +789,23 @@
    "maxTimeoutSeconds": 3600
   },
   {
-   "resource": "https://api.onesource.io/deepstate/v1/analytics/makers",
-   "method": "GET",
-   "calls30d": 295,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "CAUTION",
-   "reasons": [
-    "long_timeout"
-   ],
-   "chain": "eip155:8453",
-   "priceUsd": 0.02,
-   "maxTimeoutSeconds": 3600
-  },
-  {
-   "resource": "https://api.onesource.io/api/chain/estimate-gas",
+   "resource": "https://api.onesource.io/api/chain/call",
    "method": "POST",
-   "calls30d": 292,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 313,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "CAUTION",
    "reasons": [
     "long_timeout"
    ],
    "chain": "eip155:8453",
-   "priceUsd": 0.004,
+   "priceUsd": 0.005,
    "maxTimeoutSeconds": 3600
   },
   {
    "resource": "https://theartillerist.com/api/v1/x402-trial",
    "method": "GET",
-   "calls30d": 58,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 61,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -863,10 +813,45 @@
    "maxTimeoutSeconds": 60
   },
   {
+   "resource": "https://api.onesource.io/api/chain/allowance",
+   "method": "GET",
+   "calls30d": 304,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "CAUTION",
+   "reasons": [
+    "long_timeout"
+   ],
+   "chain": "eip155:8453",
+   "priceUsd": 0.003,
+   "maxTimeoutSeconds": 3600
+  },
+  {
+   "resource": "https://websearch.use.x402atlas.com/search",
+   "method": "GET",
+   "calls30d": 56,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.01,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://wiki.use.x402atlas.com/summary",
+   "method": "GET",
+   "calls30d": 97,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.005,
+   "maxTimeoutSeconds": 300
+  },
+  {
    "resource": "https://stableenrich.dev/api/exa/search",
    "method": "POST",
-   "calls30d": 34951,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 38725,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "CAUTION",
    "reasons": [
     "discovery_incomplete"
@@ -876,43 +861,10 @@
    "maxTimeoutSeconds": 300
   },
   {
-   "resource": "https://wiki.use.x402atlas.com/summary",
+   "resource": "https://api.onesource.io/deepstate/v1/analytics/makers",
    "method": "GET",
-   "calls30d": 95,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.005,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://headers.use.x402atlas.com/",
-   "method": "GET",
-   "calls30d": 289,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.01,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://websearch.use.x402atlas.com/search",
-   "method": "GET",
-   "calls30d": 52,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.01,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://api.onesource.io/deepstate/v1/analytics/depth-history",
-   "method": "GET",
-   "calls30d": 273,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 295,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "CAUTION",
    "reasons": [
     "long_timeout"
@@ -922,10 +874,21 @@
    "maxTimeoutSeconds": 3600
   },
   {
+   "resource": "https://headers.use.x402atlas.com/",
+   "method": "GET",
+   "calls30d": 292,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.01,
+   "maxTimeoutSeconds": 300
+  },
+  {
    "resource": "https://rubric-protocol.com/v1/x402/hedera-facts/exchange-rate",
    "method": "GET",
-   "calls30d": 45,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 47,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -933,10 +896,45 @@
    "maxTimeoutSeconds": 120
   },
   {
-   "resource": "https://api.onesource.io/deepstate/v1/analytics/cost-to-quote",
+   "resource": "https://api.onesource.io/api/chain/estimate-gas",
+   "method": "POST",
+   "calls30d": 292,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "CAUTION",
+   "reasons": [
+    "long_timeout"
+   ],
+   "chain": "eip155:8453",
+   "priceUsd": 0.004,
+   "maxTimeoutSeconds": 3600
+  },
+  {
+   "resource": "https://www.api-xpay.com/x402/keywords",
+   "method": "POST",
+   "calls30d": 70,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 10,
+   "maxTimeoutSeconds": 60
+  },
+  {
+   "resource": "https://agent.pocket.network/v1/agentsearch-web-search-v1",
+   "method": "POST",
+   "calls30d": 7258,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.005,
+   "maxTimeoutSeconds": 60
+  },
+  {
+   "resource": "https://api.onesource.io/deepstate/v1/analytics/depth-history",
    "method": "GET",
-   "calls30d": 266,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 273,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "CAUTION",
    "reasons": [
     "long_timeout"
@@ -946,21 +944,10 @@
    "maxTimeoutSeconds": 3600
   },
   {
-   "resource": "https://agent.pocket.network/v1/agentsearch-web-search-v1",
-   "method": "POST",
-   "calls30d": 7270,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.005,
-   "maxTimeoutSeconds": 60
-  },
-  {
    "resource": "https://search.cyberwarex.com/search",
    "method": "GET",
-   "calls30d": 83,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 88,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -968,21 +955,10 @@
    "maxTimeoutSeconds": 300
   },
   {
-   "resource": "https://scvd.store/api/buy/spot_check",
-   "method": "GET",
-   "calls30d": 107,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.001,
-   "maxTimeoutSeconds": 300
-  },
-  {
    "resource": "https://api.arkm.com/x402/intelligence/address",
    "method": "POST",
-   "calls30d": 980,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 974,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -990,21 +966,23 @@
    "maxTimeoutSeconds": 300
   },
   {
-   "resource": "https://www.api-xpay.com/x402/classify",
-   "method": "POST",
-   "calls30d": 57,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
+   "resource": "https://api.onesource.io/deepstate/v1/analytics/cost-to-quote",
+   "method": "GET",
+   "calls30d": 266,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "CAUTION",
+   "reasons": [
+    "long_timeout"
+   ],
    "chain": "eip155:8453",
-   "priceUsd": 20,
-   "maxTimeoutSeconds": 60
+   "priceUsd": 0.02,
+   "maxTimeoutSeconds": 3600
   },
   {
-   "resource": "https://search.cyberwarex.com/news",
+   "resource": "https://scvd.store/api/buy/spot_check",
    "method": "GET",
-   "calls30d": 61,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 108,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -1014,8 +992,8 @@
   {
    "resource": "https://vibesprings.net/api/price/base-gas",
    "method": "GET",
-   "calls30d": 29,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 30,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -1023,21 +1001,10 @@
    "maxTimeoutSeconds": 300
   },
   {
-   "resource": "https://agent.pocket.network/v1/meadow",
-   "method": "POST",
-   "calls30d": 14955,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.005,
-   "maxTimeoutSeconds": 60
-  },
-  {
    "resource": "https://rubric-protocol.com/v1/x402/hedera-facts/supply",
    "method": "GET",
-   "calls30d": 34,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 35,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -1045,10 +1012,21 @@
    "maxTimeoutSeconds": 120
   },
   {
+   "resource": "https://agent.pocket.network/v1/meadow",
+   "method": "POST",
+   "calls30d": 14583,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.005,
+   "maxTimeoutSeconds": 60
+  },
+  {
    "resource": "https://hyperliquid-predict.use.x402atlas.com/outcomes",
    "method": "GET",
-   "calls30d": 30,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 31,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -1058,8 +1036,8 @@
   {
    "resource": "https://hypernatt.com/api/m2m/liq-radar",
    "method": "GET",
-   "calls30d": 38,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 39,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -1067,10 +1045,21 @@
    "maxTimeoutSeconds": 60
   },
   {
+   "resource": "https://search.cyberwarex.com/news",
+   "method": "GET",
+   "calls30d": 60,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.001,
+   "maxTimeoutSeconds": 300
+  },
+  {
    "resource": "https://api.bitrefill.com/x402/invoice/pay",
    "method": "POST",
-   "calls30d": 44,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 39,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "CAUTION",
    "reasons": [
     "non_exact_scheme",
@@ -1081,21 +1070,10 @@
    "maxTimeoutSeconds": 1800
   },
   {
-   "resource": "https://blockrun.ai/api/v1/pm/polymarket/markets",
-   "method": "GET",
-   "calls30d": 405,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.0085,
-   "maxTimeoutSeconds": 300
-  },
-  {
    "resource": "https://api.nansen.ai/api/v1/profiler/address/current-balance",
    "method": "POST",
-   "calls30d": 1052,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 1019,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -1103,23 +1081,32 @@
    "maxTimeoutSeconds": 300
   },
   {
-   "resource": "https://api.onesource.io/api/chain/nft-owner",
-   "method": "GET",
-   "calls30d": 203,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "CAUTION",
-   "reasons": [
-    "long_timeout"
-   ],
+   "resource": "https://www.api-xpay.com/x402/classify",
+   "method": "POST",
+   "calls30d": 52,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
    "chain": "eip155:8453",
-   "priceUsd": 0.003,
-   "maxTimeoutSeconds": 3600
+   "priceUsd": 20,
+   "maxTimeoutSeconds": 60
+  },
+  {
+   "resource": "https://blockrun.ai/api/v1/pm/polymarket/markets",
+   "method": "GET",
+   "calls30d": 430,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.0085,
+   "maxTimeoutSeconds": 300
   },
   {
    "resource": "https://quartermaster.surewhynot.app/v1/gas",
    "method": "GET",
-   "calls30d": 35,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 38,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -1127,21 +1114,10 @@
    "maxTimeoutSeconds": 300
   },
   {
-   "resource": "https://agent.pocket.network/v1/federal-register",
-   "method": "POST",
-   "calls30d": 4065,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.005,
-   "maxTimeoutSeconds": 60
-  },
-  {
    "resource": "https://agent.pocket.network/v1/dns-whois-rdap",
    "method": "POST",
-   "calls30d": 3815,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 3623,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -1149,10 +1125,21 @@
    "maxTimeoutSeconds": 60
   },
   {
-   "resource": "https://api.onesource.io/api/chain/erc1155-balance",
+   "resource": "https://agent.pocket.network/v1/federal-register",
+   "method": "POST",
+   "calls30d": 4068,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.005,
+   "maxTimeoutSeconds": 60
+  },
+  {
+   "resource": "https://api.onesource.io/api/chain/nft-owner",
    "method": "GET",
-   "calls30d": 196,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 203,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "CAUTION",
    "reasons": [
     "long_timeout"
@@ -1164,8 +1151,8 @@
   {
    "resource": "https://x402.ottoai.services/crypto-news",
    "method": "GET",
-   "calls30d": 431,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 414,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -1173,23 +1160,23 @@
    "maxTimeoutSeconds": 300
   },
   {
-   "resource": "https://api.onesource.io/api/chain/storage",
+   "resource": "https://api.onesource.io/api/chain/erc1155-balance",
    "method": "GET",
-   "calls30d": 186,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 196,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "CAUTION",
    "reasons": [
     "long_timeout"
    ],
    "chain": "eip155:8453",
-   "priceUsd": 0.005,
+   "priceUsd": 0.003,
    "maxTimeoutSeconds": 3600
   },
   {
    "resource": "https://nbu.navistri.com/v1/rates",
    "method": "GET",
-   "calls30d": 28,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 29,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -1199,8 +1186,8 @@
   {
    "resource": "https://x402.telnyx.com/v1/chat/completions/_t/llama-3.3-70b",
    "method": "POST",
-   "calls30d": 170,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 171,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -1208,30 +1195,23 @@
    "maxTimeoutSeconds": 300
   },
   {
-   "resource": "https://api.chit402.com/v1/chat/completions",
-   "method": "POST",
-   "calls30d": 55,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.002,
-   "maxTimeoutSeconds": 120
-  },
-  {
-   "resource": "https://coil.trade/api/crypto/gate",
+   "resource": "https://api.onesource.io/api/chain/storage",
    "method": "GET",
-   "calls30d": 173,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": null,
-   "error": "challenge_mismatch",
-   "reasons": []
+   "calls30d": 186,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "CAUTION",
+   "reasons": [
+    "long_timeout"
+   ],
+   "chain": "eip155:8453",
+   "priceUsd": 0.005,
+   "maxTimeoutSeconds": 3600
   },
   {
    "resource": "https://news.apitoll.cloud/v1/cointelegraph/news",
    "method": "GET",
-   "calls30d": 94,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 97,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -1239,10 +1219,41 @@
    "maxTimeoutSeconds": 300
   },
   {
+   "resource": "https://coil.trade/api/crypto/gate",
+   "method": "GET",
+   "calls30d": 169,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": null,
+   "error": "challenge_mismatch",
+   "reasons": []
+  },
+  {
+   "resource": "https://coingecko.use.x402atlas.com/price",
+   "method": "GET",
+   "calls30d": 92,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.005,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://stablestudio.dev/api/upload",
+   "method": "POST",
+   "calls30d": 91,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.01,
+   "maxTimeoutSeconds": 300
+  },
+  {
    "resource": "https://tenjin.sh/api/x402-router/route",
    "method": "POST",
-   "calls30d": 87,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 84,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "CAUTION",
    "reasons": [
     "non_exact_scheme"
@@ -1252,10 +1263,21 @@
    "maxTimeoutSeconds": 15
   },
   {
+   "resource": "https://api.kadec0.xyz/v1/weather",
+   "method": "GET",
+   "calls30d": 1493,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.01,
+   "maxTimeoutSeconds": 300
+  },
+  {
    "resource": "https://data.tollkit.dev/sec/company",
    "method": "POST",
-   "calls30d": 21,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 22,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -1263,43 +1285,21 @@
    "maxTimeoutSeconds": 300
   },
   {
-   "resource": "https://api.nansen.ai/api/v1/tgm/who-bought-sold",
+   "resource": "https://api.chit402.com/v1/chat/completions",
    "method": "POST",
-   "calls30d": 344,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 56,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
-   "priceUsd": 0.01,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://api.kadec0.xyz/v1/weather",
-   "method": "GET",
-   "calls30d": 1448,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.01,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://coingecko.use.x402atlas.com/price",
-   "method": "GET",
-   "calls30d": 76,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.005,
-   "maxTimeoutSeconds": 300
+   "priceUsd": 0.002,
+   "maxTimeoutSeconds": 120
   },
   {
    "resource": "https://x402.telnyx.com/v1/chat/completions/_t/llama-3.1-8b",
    "method": "POST",
-   "calls30d": 109,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 110,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -1309,8 +1309,8 @@
   {
    "resource": "https://7mavs5vu7ggbhtxvbavdgs26qa0cbawg.lambda-url.us-east-1.on.aws/paid/interest-rates",
    "method": "GET",
-   "calls30d": 74,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 75,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -1318,10 +1318,21 @@
    "maxTimeoutSeconds": 300
   },
   {
+   "resource": "https://api.nansen.ai/api/v1/tgm/who-bought-sold",
+   "method": "POST",
+   "calls30d": 341,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.01,
+   "maxTimeoutSeconds": 300
+  },
+  {
    "resource": "https://gas.apitoll.cloud/v1/base/gas",
    "method": "GET",
-   "calls30d": 49,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 51,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -1331,8 +1342,8 @@
   {
    "resource": "https://x402.telnyx.com/v1/chat/completions/_t/glm-5.3-flash",
    "method": "POST",
-   "calls30d": 69,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 70,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -1342,8 +1353,8 @@
   {
    "resource": "https://api.gondola-ai.com/v1/messages",
    "method": "POST",
-   "calls30d": 98,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 101,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -1351,21 +1362,32 @@
    "maxTimeoutSeconds": 120
   },
   {
-   "resource": "https://stablestudio.dev/api/upload",
-   "method": "POST",
-   "calls30d": 92,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "resource": "https://crypto.apitoll.cloud/v1/crypto/sentiment",
+   "method": "GET",
+   "calls30d": 32,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
-   "priceUsd": 0.01,
+   "priceUsd": 0.001,
    "maxTimeoutSeconds": 300
   },
   {
-   "resource": "https://crypto.apitoll.cloud/v1/crypto/sentiment",
+   "resource": "https://agent.pocket.network/v1/package-advisories",
+   "method": "POST",
+   "calls30d": 3140,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.005,
+   "maxTimeoutSeconds": 60
+  },
+  {
+   "resource": "https://lionx402.com/api/x402/wallet-screen-json",
    "method": "GET",
-   "calls30d": 31,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 30,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -1375,8 +1397,8 @@
   {
    "resource": "https://crypto.apitoll.cloud/v1/crypto/global",
    "method": "GET",
-   "calls30d": 28,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 29,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -1384,21 +1406,10 @@
    "maxTimeoutSeconds": 300
   },
   {
-   "resource": "https://blockrun.ai/api/v1/exa/contents",
-   "method": "POST",
-   "calls30d": 1404,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.003,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://lionx402.com/api/x402/wallet-screen-json",
+   "resource": "https://crypto.apitoll.cloud/v1/crypto/perps",
    "method": "GET",
    "calls30d": 27,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -1406,71 +1417,21 @@
    "maxTimeoutSeconds": 300
   },
   {
-   "resource": "https://api.onesource.io/api/chain/proxy/:address",
+   "resource": "https://agent.massive.com/v2/snapshot/locale/us/markets/stocks/tickers",
    "method": "GET",
-   "calls30d": 159,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "CAUTION",
-   "reasons": [
-    "long_timeout"
-   ],
-   "chain": "eip155:8453",
-   "priceUsd": 0.005,
-   "maxTimeoutSeconds": 3600
-  },
-  {
-   "resource": "https://x402.twit.sh/tweets/search",
-   "method": "GET",
-   "calls30d": 4487,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 433,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
-   "priceUsd": 0.006,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://api.onesource.io/standard/v1/pool",
-   "method": "GET",
-   "calls30d": 157,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "CAUTION",
-   "reasons": [
-    "long_timeout"
-   ],
-   "chain": "eip155:8453",
-   "priceUsd": 0.02,
-   "maxTimeoutSeconds": 3600
-  },
-  {
-   "resource": "https://blockrun.ai/api/v1/exa/search",
-   "method": "POST",
-   "calls30d": 1500,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.011,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://api.onesource.io/standard/v1/exit-pressure/current",
-   "method": "GET",
-   "calls30d": 156,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "CAUTION",
-   "reasons": [
-    "long_timeout"
-   ],
-   "chain": "eip155:8453",
-   "priceUsd": 0.02,
-   "maxTimeoutSeconds": 3600
+   "priceUsd": 0.01,
+   "maxTimeoutSeconds": 60
   },
   {
    "resource": "https://glim.sh/api/v1/twitter/tweets/search",
    "method": "POST",
-   "calls30d": 712,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 718,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
@@ -1478,10 +1439,21 @@
    "maxTimeoutSeconds": 300
   },
   {
+   "resource": "https://x402.twit.sh/tweets/search",
+   "method": "GET",
+   "calls30d": 4376,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.006,
+   "maxTimeoutSeconds": 300
+  },
+  {
    "resource": "https://search.cyberwarex.com/contents",
    "method": "GET",
-   "calls30d": 62,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 63,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -1489,10 +1461,115 @@
    "maxTimeoutSeconds": 300
   },
   {
+   "resource": "https://api.onesource.io/api/chain/proxy/:address",
+   "method": "GET",
+   "calls30d": 159,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "CAUTION",
+   "reasons": [
+    "long_timeout"
+   ],
+   "chain": "eip155:8453",
+   "priceUsd": 0.005,
+   "maxTimeoutSeconds": 3600
+  },
+  {
+   "resource": "https://blockrun.ai/api/v1/exa/contents",
+   "method": "POST",
+   "calls30d": 1399,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.003,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://api.kadec0.xyz/v1/token-price",
+   "method": "GET",
+   "calls30d": 6980,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.02,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://api.clawfetch.ai/extractors",
+   "method": "GET",
+   "calls30d": 84,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.001,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://api.onesource.io/standard/v1/pool",
+   "method": "GET",
+   "calls30d": 157,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "CAUTION",
+   "reasons": [
+    "long_timeout"
+   ],
+   "chain": "eip155:8453",
+   "priceUsd": 0.02,
+   "maxTimeoutSeconds": 3600
+  },
+  {
+   "resource": "https://x402.aispace.bot/api/v1/image/generate",
+   "method": "POST",
+   "calls30d": 80,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.01,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://agent.massive.com/v2/reference/news",
+   "method": "GET",
+   "calls30d": 53,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.01,
+   "maxTimeoutSeconds": 60
+  },
+  {
+   "resource": "https://api.onesource.io/standard/v1/exit-pressure/current",
+   "method": "GET",
+   "calls30d": 156,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "CAUTION",
+   "reasons": [
+    "long_timeout"
+   ],
+   "chain": "eip155:8453",
+   "priceUsd": 0.02,
+   "maxTimeoutSeconds": 3600
+  },
+  {
+   "resource": "https://agent-web-tools.agent-web-tools.workers.dev/v1/check",
+   "method": "GET",
+   "calls30d": 77,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.001,
+   "maxTimeoutSeconds": 60
+  },
+  {
    "resource": "https://api.onesource.io/standard/v1/supply/current",
    "method": "GET",
    "calls30d": 153,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "CAUTION",
    "reasons": [
     "long_timeout"
@@ -1505,7 +1582,7 @@
    "resource": "https://api.onesource.io/standard/v1/branches/summary",
    "method": "GET",
    "calls30d": 153,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "CAUTION",
    "reasons": [
     "long_timeout"
@@ -1518,7 +1595,7 @@
    "resource": "https://api.onesource.io/standard/v1/vaults/current",
    "method": "GET",
    "calls30d": 153,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "CAUTION",
    "reasons": [
     "long_timeout"
@@ -1528,10 +1605,10 @@
    "maxTimeoutSeconds": 3600
   },
   {
-   "resource": "https://api.clawfetch.ai/extractors",
+   "resource": "https://api.aestheticdata.io/x402/brands",
    "method": "GET",
-   "calls30d": 83,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 46,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -1539,21 +1616,32 @@
    "maxTimeoutSeconds": 300
   },
   {
-   "resource": "https://agent.pocket.network/v1/package-advisories",
-   "method": "POST",
-   "calls30d": 3138,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "resource": "https://bob.assimilatethis.com/search",
+   "method": "GET",
+   "calls30d": 29,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
    "priceUsd": 0.005,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://x402.botsmith.dev/x/search",
+   "method": "GET",
+   "calls30d": 771,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.02,
    "maxTimeoutSeconds": 60
   },
   {
-   "resource": "https://crypto.apitoll.cloud/v1/crypto/perps",
+   "resource": "https://x402.klimalabs.com/api/catalog",
    "method": "GET",
-   "calls30d": 25,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 143,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -1561,43 +1649,10 @@
    "maxTimeoutSeconds": 300
   },
   {
-   "resource": "https://agent.massive.com/v2/reference/news",
+   "resource": "https://kronossignals.com/api/v1/funding-extremes",
    "method": "GET",
-   "calls30d": 53,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.01,
-   "maxTimeoutSeconds": 60
-  },
-  {
-   "resource": "https://x402.aispace.bot/api/v1/image/generate",
-   "method": "POST",
-   "calls30d": 79,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.01,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://agent-web-tools.agent-web-tools.workers.dev/v1/check",
-   "method": "GET",
-   "calls30d": 76,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.001,
-   "maxTimeoutSeconds": 60
-  },
-  {
-   "resource": "https://api.kadec0.xyz/v1/token-price",
-   "method": "GET",
-   "calls30d": 6685,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 58,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -1605,21 +1660,76 @@
    "maxTimeoutSeconds": 300
   },
   {
-   "resource": "https://api.aestheticdata.io/x402/brands",
-   "method": "GET",
-   "calls30d": 45,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "resource": "https://blockrun.ai/api/v1/exa/search",
+   "method": "POST",
+   "calls30d": 1439,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
-   "priceUsd": 0.001,
+   "priceUsd": 0.011,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://google-trends.use.x402atlas.com/trend",
+   "method": "GET",
+   "calls30d": 122,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.05,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://agent-reader.agent-reader.workers.dev/dns",
+   "method": "GET",
+   "calls30d": 49,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.003,
+   "maxTimeoutSeconds": 60
+  },
+  {
+   "resource": "https://api.geoprimitives.dev/v1/marine/depth",
+   "method": "GET",
+   "calls30d": 332,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.005,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://offercheck.offercheck.workers.dev/v1/check/url",
+   "method": "GET",
+   "calls30d": 330,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.002,
+   "maxTimeoutSeconds": 120
+  },
+  {
+   "resource": "https://brasil-dados-api.onrender.com/cambio",
+   "method": "GET",
+   "calls30d": 72,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.002,
    "maxTimeoutSeconds": 300
   },
   {
    "resource": "https://api.onesource.io/standard/v1/auctions/current",
    "method": "GET",
    "calls30d": 143,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "CAUTION",
    "reasons": [
     "long_timeout"
@@ -1632,7 +1742,7 @@
    "resource": "https://api.onesource.io/standard/v1/policy/current",
    "method": "GET",
    "calls30d": 143,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "CAUTION",
    "reasons": [
     "long_timeout"
@@ -1642,10 +1752,10 @@
    "maxTimeoutSeconds": 3600
   },
   {
-   "resource": "https://agent.massive.com/v2/snapshot/locale/us/markets/stocks/tickers",
+   "resource": "https://api.oblique.markets/api/v1/paid/time",
    "method": "GET",
-   "calls30d": 432,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 58,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -1653,100 +1763,21 @@
    "maxTimeoutSeconds": 60
   },
   {
-   "resource": "https://google-trends.use.x402atlas.com/trend",
+   "resource": "https://api.bitrefill.com/x402/topups/search",
    "method": "GET",
-   "calls30d": 145,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.05,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://api.onesource.io/standard/v1/backing/current",
-   "method": "GET",
-   "calls30d": 141,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "CAUTION",
-   "reasons": [
-    "long_timeout"
-   ],
-   "chain": "eip155:8453",
-   "priceUsd": 0.02,
-   "maxTimeoutSeconds": 3600
-  },
-  {
-   "resource": "https://x402.botsmith.dev/x/search",
-   "method": "GET",
-   "calls30d": 728,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.02,
-   "maxTimeoutSeconds": 60
-  },
-  {
-   "resource": "https://minifetch.com/api/v1/x402/extract/url-metadata",
-   "method": "POST",
-   "calls30d": 219,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 68,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
    "priceUsd": 0.002,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://agent-reader.agent-reader.workers.dev/dns",
-   "method": "GET",
-   "calls30d": 48,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.003,
-   "maxTimeoutSeconds": 60
-  },
-  {
-   "resource": "https://offercheck.offercheck.workers.dev/v1/check/url",
-   "method": "GET",
-   "calls30d": 329,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.002,
-   "maxTimeoutSeconds": 120
-  },
-  {
-   "resource": "https://brasil-dados-api.onrender.com/cambio",
-   "method": "GET",
-   "calls30d": 69,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.002,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://api.geoprimitives.dev/v1/marine/depth",
-   "method": "GET",
-   "calls30d": 321,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.005,
    "maxTimeoutSeconds": 300
   },
   {
    "resource": "https://api.zkrobotics.fr/x402/crypto/price",
    "method": "GET",
-   "calls30d": 43,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 44,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -1754,43 +1785,19 @@
    "maxTimeoutSeconds": 300
   },
   {
-   "resource": "https://api.bitrefill.com/x402/topups/search",
+   "resource": "https://tariffmonkee.com/paid/ping",
    "method": "GET",
-   "calls30d": 66,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.002,
-   "maxTimeoutSeconds": 300
+   "calls30d": 29,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": null,
+   "error": "challenge_mismatch",
+   "reasons": []
   },
   {
-   "resource": "https://api.oblique.markets/api/v1/paid/time",
+   "resource": "https://quartermaster.surewhynot.app/v1/http-check",
    "method": "GET",
-   "calls30d": 55,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.01,
-   "maxTimeoutSeconds": 60
-  },
-  {
-   "resource": "https://bob.assimilatethis.com/search",
-   "method": "GET",
-   "calls30d": 27,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.005,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://api.aidress.ai/pay/agent_ottoai_crypto_news",
-   "method": "GET",
-   "calls30d": 60,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 295,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -1798,10 +1805,23 @@
    "maxTimeoutSeconds": 300
   },
   {
+   "resource": "https://api.onesource.io/standard/v1/backing/current",
+   "method": "GET",
+   "calls30d": 141,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "CAUTION",
+   "reasons": [
+    "long_timeout"
+   ],
+   "chain": "eip155:8453",
+   "priceUsd": 0.02,
+   "maxTimeoutSeconds": 3600
+  },
+  {
    "resource": "https://api.bitrefill.com/x402/esims/search",
    "method": "GET",
-   "calls30d": 60,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 63,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -1811,8 +1831,8 @@
   {
    "resource": "https://ssl.use.x402atlas.com/check",
    "method": "GET",
-   "calls30d": 276,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 279,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -1820,10 +1840,41 @@
    "maxTimeoutSeconds": 300
   },
   {
+   "resource": "https://agent-guild-5d5r.onrender.com/flags",
+   "method": "GET",
+   "calls30d": 26,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": null,
+   "error": "response_too_large",
+   "reasons": []
+  },
+  {
+   "resource": "https://api.aidress.ai/pay/agent_ottoai_crypto_news",
+   "method": "GET",
+   "calls30d": 60,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.001,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://x402-data-api.sigrunner.workers.dev/defi/yields",
+   "method": "GET",
+   "calls30d": 25,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.001,
+   "maxTimeoutSeconds": 300
+  },
+  {
    "resource": "https://www.u2a.com.au/api/mcp/recommend-depin",
    "method": "POST",
    "calls30d": 37,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -1831,43 +1882,10 @@
    "maxTimeoutSeconds": 600
   },
   {
-   "resource": "https://x402-data-api.sigrunner.workers.dev/defi/yields",
-   "method": "GET",
-   "calls30d": 24,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.001,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://agent-guild-5d5r.onrender.com/flags",
-   "method": "GET",
-   "calls30d": 24,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.005,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://offercheck.offercheck.workers.dev/v1/read",
-   "method": "GET",
-   "calls30d": 35,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.001,
-   "maxTimeoutSeconds": 120
-  },
-  {
-   "resource": "https://x402.telnyx.com/v1/chat/completions/_t/gemma-2b",
+   "resource": "https://convert.guru/api/x402/v1/detect-file-type",
    "method": "POST",
-   "calls30d": 22,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 24,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -1875,10 +1893,21 @@
    "maxTimeoutSeconds": 300
   },
   {
+   "resource": "https://offercheck.offercheck.workers.dev/v1/read",
+   "method": "GET",
+   "calls30d": 36,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.001,
+   "maxTimeoutSeconds": 120
+  },
+  {
    "resource": "https://ip402.xyz/v1/geo",
    "method": "GET",
-   "calls30d": 82,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 85,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -1886,10 +1915,10 @@
    "maxTimeoutSeconds": 30
   },
   {
-   "resource": "https://convert.guru/api/x402/v1/detect-file-type",
+   "resource": "https://x402.telnyx.com/v1/chat/completions/_t/gemma-2b",
    "method": "POST",
-   "calls30d": 21,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 23,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -1897,43 +1926,21 @@
    "maxTimeoutSeconds": 300
   },
   {
-   "resource": "https://api.nansen.ai/api/v1/profiler/address/related-wallets",
+   "resource": "https://rpc.nodeflare.app/base/x402",
    "method": "POST",
-   "calls30d": 105,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 44,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
-   "priceUsd": 0.01,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://api.onesource.io/standard/v1/branches/auction/live",
-   "method": "GET",
-   "calls30d": 127,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "CAUTION",
-   "reasons": [
-    "long_timeout"
-   ],
-   "chain": "eip155:8453",
-   "priceUsd": 0.02,
-   "maxTimeoutSeconds": 3600
-  },
-  {
-   "resource": "https://tariffmonkee.com/paid/ping",
-   "method": "GET",
-   "calls30d": 27,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": null,
-   "error": "challenge_mismatch",
-   "reasons": []
+   "priceUsd": 0.001,
+   "maxTimeoutSeconds": 120
   },
   {
    "resource": "https://api.hyperextend.xyz/v1/liquidations/coverage",
    "method": "GET",
-   "calls30d": 27,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 28,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -1941,43 +1948,10 @@
    "maxTimeoutSeconds": 60
   },
   {
-   "resource": "https://rpc.nodeflare.app/base/x402",
+   "resource": "https://api.nansen.ai/api/v1/profiler/address/related-wallets",
    "method": "POST",
-   "calls30d": 41,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.001,
-   "maxTimeoutSeconds": 120
-  },
-  {
-   "resource": "https://x402.klimalabs.com/api/catalog",
-   "method": "GET",
-   "calls30d": 102,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.001,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://x402-data-api.onrender.com/api/geo",
-   "method": "GET",
-   "calls30d": 302,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.001,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://api.nansen.ai/api/v1/tgm/token-information",
-   "method": "POST",
-   "calls30d": 98,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 106,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -1985,10 +1959,10 @@
    "maxTimeoutSeconds": 300
   },
   {
-   "resource": "https://quartermaster.surewhynot.app/v1/http-check",
+   "resource": "https://x402-data-api.onrender.com/api/geo",
    "method": "GET",
-   "calls30d": 284,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 303,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -1996,10 +1970,32 @@
    "maxTimeoutSeconds": 300
   },
   {
-   "resource": "https://api.onesource.io/standard/v1/buybacks/readiness",
+   "resource": "https://x402-data-api.sigrunner.workers.dev/crypto/prices",
    "method": "GET",
-   "calls30d": 121,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 58,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.001,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://weather.cyberwarex.com/forecast",
+   "method": "GET",
+   "calls30d": 34,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.002,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://api.onesource.io/standard/v1/branches/auction/live",
+   "method": "GET",
+   "calls30d": 127,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "CAUTION",
    "reasons": [
     "long_timeout"
@@ -2007,69 +2003,23 @@
    "chain": "eip155:8453",
    "priceUsd": 0.02,
    "maxTimeoutSeconds": 3600
-  },
-  {
-   "resource": "https://cdp-agent-0-01.onrender.com/",
-   "method": "GET",
-   "calls30d": 20,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.001,
-   "maxTimeoutSeconds": 300
   },
   {
    "resource": "https://x402tap.com/api/ping",
    "method": "GET",
-   "calls30d": 31,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 32,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
    "priceUsd": 0.001,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://cloud.trycorpus.ai/v1/spot/export/history",
-   "method": "GET",
-   "calls30d": 54,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 3,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://api.onesource.io/standard/v1/flow/hourly",
-   "method": "GET",
-   "calls30d": 119,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "CAUTION",
-   "reasons": [
-    "long_timeout"
-   ],
-   "chain": "eip155:8453",
-   "priceUsd": 0.02,
-   "maxTimeoutSeconds": 3600
-  },
-  {
-   "resource": "https://kronossignals.com/api/v1/funding-extremes",
-   "method": "GET",
-   "calls30d": 46,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.02,
    "maxTimeoutSeconds": 300
   },
   {
    "resource": "https://nbu.navistri.com/v1/key-rate",
    "method": "GET",
-   "calls30d": 18,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 19,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -2077,19 +2027,41 @@
    "maxTimeoutSeconds": 120
   },
   {
+   "resource": "https://api.nansen.ai/api/v1/tgm/token-information",
+   "method": "POST",
+   "calls30d": 99,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.01,
+   "maxTimeoutSeconds": 300
+  },
+  {
    "resource": "https://gate402.app/v1/proxy",
    "method": "POST",
-   "calls30d": 43,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 44,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": null,
    "error": "challenge_mismatch",
    "reasons": []
   },
   {
+   "resource": "https://api.kadec0.xyz/v1/trending-coins",
+   "method": "GET",
+   "calls30d": 2612,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.02,
+   "maxTimeoutSeconds": 300
+  },
+  {
    "resource": "https://deskfeed.dev/v1/events",
    "method": "GET",
-   "calls30d": 26,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 27,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -2099,8 +2071,8 @@
   {
    "resource": "https://quartermaster.surewhynot.app/v1/dns",
    "method": "GET",
-   "calls30d": 70,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 71,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -2108,21 +2080,45 @@
    "maxTimeoutSeconds": 300
   },
   {
-   "resource": "https://api.kadec0.xyz/v1/trending-coins",
-   "method": "GET",
-   "calls30d": 2542,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "resource": "https://api.coregroupimmo.com/v1/json/validate",
+   "method": "POST",
+   "calls30d": 41,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
-   "priceUsd": 0.02,
-   "maxTimeoutSeconds": 300
+   "priceUsd": 0.002,
+   "maxTimeoutSeconds": 120
   },
   {
-   "resource": "https://x402-data-api.sigrunner.workers.dev/crypto/prices",
+   "resource": "https://wallets-demo-seller-server.calebgcarithers.workers.dev/weather",
    "method": "GET",
    "calls30d": 40,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:84532",
+   "priceUsd": 0.001,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://api.onesource.io/standard/v1/buybacks/readiness",
+   "method": "GET",
+   "calls30d": 121,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "CAUTION",
+   "reasons": [
+    "long_timeout"
+   ],
+   "chain": "eip155:8453",
+   "priceUsd": 0.02,
+   "maxTimeoutSeconds": 3600
+  },
+  {
+   "resource": "https://api.anchor-x402.com/v1/price/token",
+   "method": "POST",
+   "calls30d": 39,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -2130,36 +2126,21 @@
    "maxTimeoutSeconds": 300
   },
   {
-   "resource": "https://api.onesource.io/standard/v1/tax/schedule",
-   "method": "GET",
-   "calls30d": 116,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "CAUTION",
-   "reasons": [
-    "long_timeout"
-   ],
+   "resource": "https://keywords.duoleads.com/v1/keyword-ideas",
+   "method": "POST",
+   "calls30d": 855,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
    "chain": "eip155:8453",
-   "priceUsd": 0.02,
-   "maxTimeoutSeconds": 3600
-  },
-  {
-   "resource": "https://api.onesource.io/standard/v1/candles",
-   "method": "GET",
-   "calls30d": 116,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "CAUTION",
-   "reasons": [
-    "long_timeout"
-   ],
-   "chain": "eip155:8453",
-   "priceUsd": 0.02,
-   "maxTimeoutSeconds": 3600
+   "priceUsd": 0.04,
+   "maxTimeoutSeconds": 120
   },
   {
    "resource": "https://api.aarn.space/v1/web/read",
    "method": "POST",
-   "calls30d": 37,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 38,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -2167,21 +2148,34 @@
    "maxTimeoutSeconds": 60
   },
   {
-   "resource": "https://api.nansen.ai/api/v1/profiler/address/pnl-summary",
-   "method": "POST",
-   "calls30d": 67,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "resource": "https://api.zkrobotics.fr/x402/weather/forecast",
+   "method": "GET",
+   "calls30d": 59,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
-   "priceUsd": 0.01,
+   "priceUsd": 0.002,
    "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://api.onesource.io/standard/v1/flow/hourly",
+   "method": "GET",
+   "calls30d": 119,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "CAUTION",
+   "reasons": [
+    "long_timeout"
+   ],
+   "chain": "eip155:8453",
+   "priceUsd": 0.02,
+   "maxTimeoutSeconds": 3600
   },
   {
    "resource": "https://stableenrich.dev/api/pdl/people-enrich",
    "method": "POST",
-   "calls30d": 782,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 813,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "CAUTION",
    "reasons": [
     "discovery_incomplete"
@@ -2194,16 +2188,38 @@
    "resource": "https://store.agentexchange.work/weather/forecast",
    "method": "GET",
    "calls30d": 34,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": null,
    "error": "challenge_mismatch",
    "reasons": []
   },
   {
-   "resource": "https://minifetch.com/api/v1/x402/extract/url-content",
-   "method": "POST",
+   "resource": "https://energy.halowerk.com/demo/paid-sample",
+   "method": "GET",
    "calls30d": 33,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.001,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://mcp.newstex.com/x402/trending",
+   "method": "GET",
+   "calls30d": 20,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.01,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://cdp-agent-0-01.onrender.com/",
+   "method": "GET",
+   "calls30d": 20,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -2213,8 +2229,8 @@
   {
    "resource": "https://www.amnt.io/api/agent/amnt/bitcoin-price",
    "method": "POST",
-   "calls30d": 55,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 53,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "CAUTION",
    "reasons": [
     "resource_host_mismatch"
@@ -2224,10 +2240,69 @@
    "maxTimeoutSeconds": 180
   },
   {
-   "resource": "https://api.polyform.org/v1/threat/scanners",
+   "resource": "https://crypto.apitoll.cloud/v1/crypto/chart",
    "method": "GET",
-   "calls30d": 20,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 19,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.001,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://dns.use.x402atlas.com/dnssec",
+   "method": "GET",
+   "calls30d": 314,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.005,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://api.onesource.io/standard/v1/tax/schedule",
+   "method": "GET",
+   "calls30d": 116,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "CAUTION",
+   "reasons": [
+    "long_timeout"
+   ],
+   "chain": "eip155:8453",
+   "priceUsd": 0.02,
+   "maxTimeoutSeconds": 3600
+  },
+  {
+   "resource": "https://api.onesource.io/standard/v1/candles",
+   "method": "GET",
+   "calls30d": 116,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "CAUTION",
+   "reasons": [
+    "long_timeout"
+   ],
+   "chain": "eip155:8453",
+   "priceUsd": 0.02,
+   "maxTimeoutSeconds": 3600
+  },
+  {
+   "resource": "https://cloud.trycorpus.ai/v1/spot/export/history",
+   "method": "GET",
+   "calls30d": 52,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 3,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://api.nansen.ai/api/v1/profiler/address/pnl-summary",
+   "method": "POST",
+   "calls30d": 69,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -2235,10 +2310,107 @@
    "maxTimeoutSeconds": 300
   },
   {
-   "resource": "https://energy.halowerk.com/demo/paid-sample",
+   "resource": "https://api.justaname.id/ens/v2/reverse",
    "method": "GET",
-   "calls30d": 32,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 28,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.005,
+   "maxTimeoutSeconds": 60
+  },
+  {
+   "resource": "https://nbu.navistri.com/v1/ovdp/auctions",
+   "method": "GET",
+   "calls30d": 17,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.002,
+   "maxTimeoutSeconds": 120
+  },
+  {
+   "resource": "https://opendata402.com/v1/inflation/eu",
+   "method": "GET",
+   "calls30d": 27,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.001,
+   "maxTimeoutSeconds": 30
+  },
+  {
+   "resource": "https://api.bitrefill.com/x402/invoice/create",
+   "method": "POST",
+   "calls30d": 78,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.002,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://app.fortiblox.com/api/tokens",
+   "method": "GET",
+   "calls30d": 77,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": null,
+   "error": "challenge_mismatch",
+   "reasons": []
+  },
+  {
+   "resource": "https://base-gas-x402-production.up.railway.app/gas",
+   "method": "GET",
+   "calls30d": 448,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.002,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://bimi-checker.underscoredone.com/check",
+   "method": "POST",
+   "calls30d": 273,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.01,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://agent.massive.com/v3/reference/tickers",
+   "method": "GET",
+   "calls30d": 71,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.01,
+   "maxTimeoutSeconds": 60
+  },
+  {
+   "resource": "https://x402-seller.onrender.com/geo/lookup",
+   "method": "GET",
+   "calls30d": 15,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.001,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://modelmarket.dev/x402/histor-check",
+   "method": "POST",
+   "calls30d": 15,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -2249,7 +2421,7 @@
    "resource": "https://api.onesource.io/standard/v1/exit/fee-forecast",
    "method": "GET",
    "calls30d": 112,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "CAUTION",
    "reasons": [
     "long_timeout"
@@ -2262,7 +2434,7 @@
    "resource": "https://api.onesource.io/standard/v1/charters",
    "method": "GET",
    "calls30d": 112,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "CAUTION",
    "reasons": [
     "long_timeout"
@@ -2272,10 +2444,19 @@
    "maxTimeoutSeconds": 3600
   },
   {
-   "resource": "https://mcp.newstex.com/x402/trending",
+   "resource": "https://whaletape.xyz/coverage",
    "method": "GET",
-   "calls30d": 19,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 24,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": null,
+   "error": "challenge_mismatch",
+   "reasons": []
+  },
+  {
+   "resource": "https://readx.sh/api/search/tweets",
+   "method": "GET",
+   "calls30d": 39,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -2283,118 +2464,140 @@
    "maxTimeoutSeconds": 300
   },
   {
-   "resource": "https://api.bitrefill.com/x402/invoice/create",
+   "resource": "https://kino402.com/v1/audio/tts",
    "method": "POST",
-   "calls30d": 91,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.002,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://api.anchor-x402.com/v1/price/token",
-   "method": "POST",
-   "calls30d": 30,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.001,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://weather.cyberwarex.com/forecast",
-   "method": "GET",
-   "calls30d": 30,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.002,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://base-gas-x402-production.up.railway.app/gas",
-   "method": "GET",
-   "calls30d": 461,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.002,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://crypto.apitoll.cloud/v1/crypto/chart",
-   "method": "GET",
-   "calls30d": 18,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.001,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://api.coregroupimmo.com/v1/json/validate",
-   "method": "POST",
-   "calls30d": 29,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.002,
-   "maxTimeoutSeconds": 120
-  },
-  {
-   "resource": "https://api.justaname.id/ens/v2/reverse",
-   "method": "GET",
-   "calls30d": 29,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.005,
-   "maxTimeoutSeconds": 60
-  },
-  {
-   "resource": "https://dns.use.x402atlas.com/dnssec",
-   "method": "GET",
-   "calls30d": 313,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.005,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://nbu.navistri.com/v1/ovdp/auctions",
-   "method": "GET",
-   "calls30d": 16,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.002,
-   "maxTimeoutSeconds": 120
-  },
-  {
-   "resource": "https://app.fortiblox.com/api/tokens",
-   "method": "GET",
-   "calls30d": 76,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 37,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": null,
    "error": "challenge_mismatch",
    "reasons": []
+  },
+  {
+   "resource": "https://lionx402.com/api/x402/composite-bundle-json",
+   "method": "GET",
+   "calls30d": 22,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.001,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://blockrun.ai/api/v1/messages",
+   "method": "POST",
+   "calls30d": 2447,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.011,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://toolsmith-api.dassad10.workers.dev/t/crypto/gas",
+   "method": "GET",
+   "calls30d": 36,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.002,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://veridictum.legal/api/v1/agent/verify",
+   "method": "POST",
+   "calls30d": 35,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.01,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://rpc.nodeflare.app/op/x402",
+   "method": "POST",
+   "calls30d": 35,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.001,
+   "maxTimeoutSeconds": 120
+  },
+  {
+   "resource": "https://agent-data-api.agentdata.workers.dev/v1/contracts/opportunities",
+   "method": "GET",
+   "calls30d": 35,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.01,
+   "maxTimeoutSeconds": 120
+  },
+  {
+   "resource": "https://material.halowerk.com/awg-metric",
+   "method": "POST",
+   "calls30d": 20,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.001,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://api.polyform.org/v1/threat/scanners",
+   "method": "GET",
+   "calls30d": 20,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.01,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://crypto.apitoll.cloud/v1/crypto/yields",
+   "method": "GET",
+   "calls30d": 20,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.001,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://reddit.apitoll.cloud/v1/reddit/search",
+   "method": "GET",
+   "calls30d": 20,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.03,
+   "maxTimeoutSeconds": 150
+  },
+  {
+   "resource": "https://stableupload.dev/api/site",
+   "method": "POST",
+   "calls30d": 33,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 2,
+   "maxTimeoutSeconds": 300
   },
   {
    "resource": "https://api.onesource.io/standard/v1/exit/fee-curve",
    "method": "GET",
    "calls30d": 108,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "CAUTION",
    "reasons": [
     "long_timeout"
@@ -2404,98 +2607,54 @@
    "maxTimeoutSeconds": 3600
   },
   {
-   "resource": "https://bimi-checker.underscoredone.com/check",
-   "method": "POST",
-   "calls30d": 272,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.01,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://aizamon.com/x402/v1/ping",
+   "resource": "https://tariffmonkee.com/paid/content",
    "method": "GET",
-   "calls30d": 41,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.01,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://api.onesource.io/standard/v1/branches/license-cost",
-   "method": "GET",
-   "calls30d": 107,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "CAUTION",
-   "reasons": [
-    "long_timeout"
-   ],
-   "chain": "eip155:8453",
-   "priceUsd": 0.02,
-   "maxTimeoutSeconds": 3600
-  },
-  {
-   "resource": "https://agent.massive.com/v3/reference/tickers",
-   "method": "GET",
-   "calls30d": 70,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.01,
-   "maxTimeoutSeconds": 60
-  },
-  {
-   "resource": "https://wallets-demo-seller-server.calebgcarithers.workers.dev/weather",
-   "method": "GET",
-   "calls30d": 39,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:84532",
-   "priceUsd": 0.001,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://whaletape.xyz/coverage",
-   "method": "GET",
-   "calls30d": 23,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 18,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": null,
    "error": "challenge_mismatch",
    "reasons": []
   },
   {
-   "resource": "https://x402-seller.onrender.com/geo/lookup",
+   "resource": "https://api.onesource.io/standard/v1/branches/license-cost",
    "method": "GET",
-   "calls30d": 14,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 107,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "CAUTION",
+   "reasons": [
+    "long_timeout"
+   ],
+   "chain": "eip155:8453",
+   "priceUsd": 0.02,
+   "maxTimeoutSeconds": 3600
+  },
+  {
+   "resource": "https://blockrun.ai/api/v1/exa/answer",
+   "method": "POST",
+   "calls30d": 3131,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
-   "priceUsd": 0.001,
+   "priceUsd": 0.011,
    "maxTimeoutSeconds": 300
   },
   {
-   "resource": "https://modelmarket.dev/x402/histor-check",
-   "method": "POST",
-   "calls30d": 14,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "resource": "https://x402.twit.sh/tweets/user",
+   "method": "GET",
+   "calls30d": 1220,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
-   "priceUsd": 0.001,
+   "priceUsd": 0.01,
    "maxTimeoutSeconds": 300
   },
   {
    "resource": "https://api.oblique.markets/api/v1/paid/base-block-number",
    "method": "GET",
-   "calls30d": 39,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 40,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -2503,21 +2662,32 @@
    "maxTimeoutSeconds": 60
   },
   {
-   "resource": "https://readx.sh/api/search/tweets",
+   "resource": "https://rubric-protocol.com/v1/x402/hedera-facts/usdc-supply",
    "method": "GET",
-   "calls30d": 38,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 17,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
-   "priceUsd": 0.01,
+   "priceUsd": 0.001,
+   "maxTimeoutSeconds": 120
+  },
+  {
+   "resource": "https://crypto.openverbs.com/v1/price",
+   "method": "POST",
+   "calls30d": 49,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.001,
    "maxTimeoutSeconds": 300
   },
   {
-   "resource": "https://lionx402.com/api/x402/composite-bundle-json",
+   "resource": "https://chain.cyberwarex.com/block",
    "method": "GET",
-   "calls30d": 21,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 27,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -2528,7 +2698,7 @@
    "resource": "https://api.onesource.io/standard/v1/issuance/runway",
    "method": "GET",
    "calls30d": 105,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "CAUTION",
    "reasons": [
     "long_timeout"
@@ -2541,7 +2711,7 @@
    "resource": "https://api.onesource.io/api/chain/pending",
    "method": "GET",
    "calls30d": 105,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "CAUTION",
    "reasons": [
     "long_timeout"
@@ -2551,74 +2721,32 @@
    "maxTimeoutSeconds": 3600
   },
   {
-   "resource": "https://blockrun.ai/api/v1/messages",
-   "method": "POST",
-   "calls30d": 2362,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "resource": "https://www.x402pulse.dev/v1/wallstreet/yield-curve",
+   "method": "GET",
+   "calls30d": 26,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
-   "priceUsd": 0.011,
+   "priceUsd": 0.0014,
    "maxTimeoutSeconds": 300
   },
   {
-   "resource": "https://x402.twit.sh/tweets/user",
-   "method": "GET",
-   "calls30d": 1220,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "resource": "https://api.oldcolonyweb.com/v1/email/verify",
+   "method": "POST",
+   "calls30d": 26,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
-   "priceUsd": 0.01,
+   "priceUsd": 0.002,
    "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://kino402.com/v1/audio/tts",
-   "method": "POST",
-   "calls30d": 34,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": null,
-   "error": "challenge_mismatch",
-   "reasons": []
-  },
-  {
-   "resource": "https://rpc.nodeflare.app/op/x402",
-   "method": "POST",
-   "calls30d": 34,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.001,
-   "maxTimeoutSeconds": 120
-  },
-  {
-   "resource": "https://agent-data-api.agentdata.workers.dev/v1/contracts/opportunities",
-   "method": "GET",
-   "calls30d": 34,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.01,
-   "maxTimeoutSeconds": 120
-  },
-  {
-   "resource": "https://reddit.apitoll.cloud/v1/reddit/search",
-   "method": "GET",
-   "calls30d": 20,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.03,
-   "maxTimeoutSeconds": 150
   },
   {
    "resource": "https://api.onesource.io/standard/v1/policy/outlook",
    "method": "GET",
    "calls30d": 104,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "CAUTION",
    "reasons": [
     "long_timeout"
@@ -2628,21 +2756,197 @@
    "maxTimeoutSeconds": 3600
   },
   {
-   "resource": "https://stableupload.dev/api/site",
-   "method": "POST",
-   "calls30d": 33,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "resource": "https://appstore.use.x402atlas.com/search",
+   "method": "GET",
+   "calls30d": 25,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
-   "priceUsd": 2,
+   "priceUsd": 0.02,
    "maxTimeoutSeconds": 300
   },
   {
-   "resource": "https://crypto.apitoll.cloud/v1/crypto/yields",
+   "resource": "https://appstore.use.x402atlas.com/reviews",
+   "method": "GET",
+   "calls30d": 25,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.02,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://x402-apis.pages.dev/v1/inflation",
+   "method": "GET",
+   "calls30d": 24,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.002,
+   "maxTimeoutSeconds": 60
+  },
+  {
+   "resource": "https://rooms.aurmada.com/x402/v1/rooms/search",
+   "method": "GET",
+   "calls30d": 14,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.001,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://fileshareforagents.online/v1/items",
+   "method": "POST",
+   "calls30d": 147,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.01,
+   "maxTimeoutSeconds": 600
+  },
+  {
+   "resource": "https://x402.ottoai.services/tweet-search",
+   "method": "GET",
+   "calls30d": 2967,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.005,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://aizamon.com/x402/v1/ping",
+   "method": "GET",
+   "calls30d": 37,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.01,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://onchainpulse.theaslangroupllc.com/api/facet/honeypot",
+   "method": "GET",
+   "calls30d": 68,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.005,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://api.fetchx402.com/v1/tools/dns",
+   "method": "GET",
+   "calls30d": 12,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.005,
+   "maxTimeoutSeconds": 60
+  },
+  {
+   "resource": "https://nanoparse.app/fetch",
+   "method": "POST",
+   "calls30d": 130,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.002,
+   "maxTimeoutSeconds": 60
+  },
+  {
+   "resource": "https://lionx402.com/api/x402/keyless-base-rpc-json",
+   "method": "GET",
+   "calls30d": 20,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.001,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://brasil-dados-api.onrender.com/economy/ipca",
+   "method": "GET",
+   "calls30d": 20,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.005,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://coingecko.use.x402atlas.com/coin",
+   "method": "GET",
+   "calls30d": 20,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.005,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://api.anchor-x402.com/v1/roll",
+   "method": "POST",
+   "calls30d": 20,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.001,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://x402-seller-pmlm.onrender.com/price",
+   "method": "GET",
+   "calls30d": 34,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.001,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://data.lagoontechsystems.com/api/sugar/price",
+   "method": "GET",
+   "calls30d": 34,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.01,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://api.isitdownapi.com/v1/status",
+   "method": "GET",
+   "calls30d": 34,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.01,
+   "maxTimeoutSeconds": 120
+  },
+  {
+   "resource": "https://crypto.apitoll.cloud/v1/crypto/protocol",
    "method": "GET",
    "calls30d": 19,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -2650,10 +2954,21 @@
    "maxTimeoutSeconds": 300
   },
   {
-   "resource": "https://material.halowerk.com/awg-metric",
+   "resource": "https://api.telemost.io/v1/data/entities",
+   "method": "GET",
+   "calls30d": 61,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.0165,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://win.oneshotagent.com/v1/tools/search",
    "method": "POST",
-   "calls30d": 19,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 3376,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -2661,10 +2976,41 @@
    "maxTimeoutSeconds": 300
   },
   {
-   "resource": "https://minifetch.com/api/v1/x402/extract/url-preview",
+   "resource": "https://store.agentexchange.work/chain/block-number",
+   "method": "GET",
+   "calls30d": 18,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": null,
+   "error": "challenge_mismatch",
+   "reasons": []
+  },
+  {
+   "resource": "https://router.mudko.com/api/x402/route",
+   "method": "GET",
+   "calls30d": 18,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.005,
+   "maxTimeoutSeconds": 120
+  },
+  {
+   "resource": "https://x402.telnyx.com/v1/chat/completions/_t/gemma-4-26b",
    "method": "POST",
-   "calls30d": 31,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 18,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.00319,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://quartermaster.surewhynot.app/v1/random",
+   "method": "GET",
+   "calls30d": 18,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -2675,7 +3021,7 @@
    "resource": "https://crypto.apitoll.cloud/v1/crypto/stablecoins",
    "method": "GET",
    "calls30d": 18,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -2683,283 +3029,21 @@
    "maxTimeoutSeconds": 300
   },
   {
-   "resource": "https://tariffmonkee.com/paid/content",
-   "method": "GET",
-   "calls30d": 17,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": null,
-   "error": "challenge_mismatch",
-   "reasons": []
-  },
-  {
-   "resource": "https://chain.cyberwarex.com/block",
-   "method": "GET",
-   "calls30d": 26,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.001,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://api.oldcolonyweb.com/v1/email/verify",
+   "resource": "https://glim.sh/api/v1/amazon/search",
    "method": "POST",
-   "calls30d": 25,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 244,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.002,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://www.x402pulse.dev/v1/wallstreet/yield-curve",
-   "method": "GET",
-   "calls30d": 25,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.0014,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://opendata402.com/v1/inflation/eu",
-   "method": "GET",
-   "calls30d": 25,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.001,
-   "maxTimeoutSeconds": 30
-  },
-  {
-   "resource": "https://appstore.use.x402atlas.com/reviews",
-   "method": "GET",
-   "calls30d": 24,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.02,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://rooms.aurmada.com/x402/v1/rooms/search",
-   "method": "GET",
-   "calls30d": 13,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.001,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://appstore.use.x402atlas.com/search",
-   "method": "GET",
-   "calls30d": 22,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.02,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://fileshareforagents.online/v1/items",
-   "method": "POST",
-   "calls30d": 147,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.01,
-   "maxTimeoutSeconds": 600
-  },
-  {
-   "resource": "https://keywords.duoleads.com/v1/keyword-ideas",
-   "method": "POST",
-   "calls30d": 772,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.04,
-   "maxTimeoutSeconds": 120
-  },
-  {
-   "resource": "https://tolca.tonbot.ca/v1/qc-licence",
-   "method": "POST",
-   "calls30d": 37,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.01,
-   "maxTimeoutSeconds": 120
-  },
-  {
-   "resource": "https://onchainpulse.theaslangroupllc.com/api/facet/honeypot",
-   "method": "GET",
-   "calls30d": 68,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
+   "chain": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
    "priceUsd": 0.005,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://toolsmith-api.dassad10.workers.dev/t/crypto/gas",
-   "method": "GET",
-   "calls30d": 35,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.002,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://brasil-dados-api.onrender.com/economy/ipca",
-   "method": "GET",
-   "calls30d": 19,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.005,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://coingecko.use.x402atlas.com/coin",
-   "method": "GET",
-   "calls30d": 19,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.005,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://lionx402.com/api/x402/keyless-base-rpc-json",
-   "method": "GET",
-   "calls30d": 19,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.001,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://veridictum.legal/api/v1/agent/verify",
-   "method": "POST",
-   "calls30d": 33,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.01,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://crypto.apitoll.cloud/v1/crypto/protocol",
-   "method": "GET",
-   "calls30d": 18,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.001,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://api.anchor-x402.com/v1/roll",
-   "method": "POST",
-   "calls30d": 18,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.001,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://blockrun.ai/api/v1/pm/kalshi/markets",
-   "method": "GET",
-   "calls30d": 157,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.0085,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://api.isitdownapi.com/v1/status",
-   "method": "GET",
-   "calls30d": 32,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.01,
-   "maxTimeoutSeconds": 120
-  },
-  {
-   "resource": "https://win.oneshotagent.com/v1/tools/search",
-   "method": "POST",
-   "calls30d": 3289,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.001,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://x402.telnyx.com/v1/chat/completions/_t/gemma-4-26b",
-   "method": "POST",
-   "calls30d": 17,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.00319,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://router.mudko.com/api/x402/route",
-   "method": "GET",
-   "calls30d": 17,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.005,
-   "maxTimeoutSeconds": 120
-  },
-  {
-   "resource": "https://quartermaster.surewhynot.app/v1/random",
-   "method": "GET",
-   "calls30d": 17,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.001,
    "maxTimeoutSeconds": 300
   },
   {
    "resource": "https://br-intelligence.brverify-api.workers.dev/v1/bank",
    "method": "GET",
-   "calls30d": 16,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 17,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -2967,32 +3051,21 @@
    "maxTimeoutSeconds": 300
   },
   {
-   "resource": "https://rubric-protocol.com/v1/x402/hedera-facts/topic-state",
+   "resource": "https://simulate.cyberwarex.com/decode",
    "method": "GET",
-   "calls30d": 16,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 29,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
-   "priceUsd": 0.001,
-   "maxTimeoutSeconds": 120
-  },
-  {
-   "resource": "https://api.nansen.ai/api/v1/profiler/address/pnl",
-   "method": "POST",
-   "calls30d": 47,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.01,
+   "priceUsd": 0.002,
    "maxTimeoutSeconds": 300
   },
   {
    "resource": "https://x402-btc-radar.jinli-x402.workers.dev/v1/btc/radar/latest",
    "method": "GET",
-   "calls30d": 27,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 28,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -3000,10 +3073,96 @@
    "maxTimeoutSeconds": 45
   },
   {
-   "resource": "https://rubric-protocol.com/v1/x402/hedera-facts/usdc-supply",
+   "resource": "https://bob.assimilatethis.com/summarize",
+   "method": "GET",
+   "calls30d": 27,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.005,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://vibesprings.net/api/gas",
    "method": "GET",
    "calls30d": 15,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.001,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://draconic21-x402-api.onrender.com/v1/crypto_news",
+   "method": "GET",
+   "calls30d": 15,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": null,
+   "error": "challenge_mismatch",
+   "reasons": []
+  },
+  {
+   "resource": "https://blockrun.ai/api/v1/pm/kalshi/markets",
+   "method": "GET",
+   "calls30d": 169,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.0085,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://dokimo.augaster.com/paid/verify",
+   "method": "GET",
+   "calls30d": 26,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.01,
+   "maxTimeoutSeconds": 120
+  },
+  {
+   "resource": "https://search.openverbs.com/v1/wikipedia",
+   "method": "POST",
+   "calls30d": 48,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.002,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://twitter.use.x402atlas.com/user-details",
+   "method": "GET",
+   "calls30d": 48,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.005,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://x402.cloudless.sh/v1/lambda-runtimes",
+   "method": "GET",
+   "calls30d": 47,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.001,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://x402-factory.com/v1/ping",
+   "method": "GET",
+   "calls30d": 230,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -3011,74 +3170,10 @@
    "maxTimeoutSeconds": 120
   },
   {
-   "resource": "https://api.nansen.ai/api/v1/profiler/address/historical-balances",
-   "method": "POST",
-   "calls30d": 79,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.01,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://blockrun.ai/api/v1/exa/answer",
-   "method": "POST",
-   "calls30d": 3312,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.011,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://simulate.cyberwarex.com/decode",
-   "method": "GET",
-   "calls30d": 26,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.002,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://api.run402.com/tiers/v1/prototype",
-   "method": "POST",
-   "calls30d": 42,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.1,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://draconic21-x402-api.onrender.com/v1/crypto_news",
-   "method": "GET",
-   "calls30d": 14,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": null,
-   "error": "challenge_mismatch",
-   "reasons": []
-  },
-  {
-   "resource": "https://vibesprings.net/api/gas",
-   "method": "GET",
-   "calls30d": 14,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.001,
-   "maxTimeoutSeconds": 300
-  },
-  {
    "resource": "https://api.clawfetch.ai/domains/suggest",
    "method": "POST",
-   "calls30d": 47,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 46,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -3086,78 +3181,10 @@
    "maxTimeoutSeconds": 300
   },
   {
-   "resource": "https://twitter.use.x402atlas.com/user-details",
-   "method": "GET",
-   "calls30d": 47,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.005,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://stableenrich.dev/api/exa/contents",
-   "method": "POST",
-   "calls30d": 8328,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "CAUTION",
-   "reasons": [
-    "discovery_incomplete"
-   ],
-   "chain": "eip155:8453",
-   "priceUsd": 0.002,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://bob.assimilatethis.com/summarize",
-   "method": "GET",
-   "calls30d": 24,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.005,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://x402.tbs-digital.com/crypto/bundle",
-   "method": "GET",
-   "calls30d": 13,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.001,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://search.openverbs.com/v1/wikipedia",
-   "method": "POST",
-   "calls30d": 44,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.002,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://data.lagoontechsystems.com/api/sugar/price",
-   "method": "GET",
-   "calls30d": 23,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.01,
-   "maxTimeoutSeconds": 300
-  },
-  {
    "resource": "https://kushbitx.com/api/agentproof-quick-check",
    "method": "GET",
-   "calls30d": 23,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 24,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -3165,32 +3192,10 @@
    "maxTimeoutSeconds": 300
   },
   {
-   "resource": "https://api.nansen.ai/api/v1/profiler/address/transactions",
+   "resource": "https://glim.sh/api/v1/reddit/search",
    "method": "POST",
-   "calls30d": 43,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.01,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://api.printmoneylab.com/api/v1/kr-prices",
-   "method": "GET",
-   "calls30d": 49,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.002,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://glim.sh/api/v1/youtube/get",
-   "method": "POST",
-   "calls30d": 42,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 191,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
@@ -3198,10 +3203,54 @@
    "maxTimeoutSeconds": 300
   },
   {
-   "resource": "https://x402-apis.pages.dev/v1/inflation",
+   "resource": "https://api.nansen.ai/api/v1/profiler/address/pnl",
+   "method": "POST",
+   "calls30d": 48,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.01,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://glim.sh/api/v1/youtube/get",
+   "method": "POST",
+   "calls30d": 43,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
+   "priceUsd": 0.01,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://vennatta-core.onrender.com/api/v1/extract-document",
+   "method": "POST",
+   "calls30d": 13,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.01,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://x402.tbs-digital.com/crypto/bundle",
    "method": "GET",
-   "calls30d": 22,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 13,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.001,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://handelskalender-api.pages.dev/v1/trading-day",
+   "method": "GET",
+   "calls30d": 23,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -3211,8 +3260,8 @@
   {
    "resource": "https://alest-x402.alest.workers.dev/v1/alst",
    "method": "GET",
-   "calls30d": 22,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 23,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -3220,10 +3269,32 @@
    "maxTimeoutSeconds": 300
   },
   {
-   "resource": "https://dokimo.augaster.com/paid/verify",
+   "resource": "https://api.printmoneylab.com/api/v1/kr-prices",
+   "method": "GET",
+   "calls30d": 53,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.002,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://api.nansen.ai/api/v1/profiler/address/historical-balances",
+   "method": "POST",
+   "calls30d": 80,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:8453",
+   "priceUsd": 0.01,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://pulsewatch-status-api.dario-9fa.workers.dev/v1/status",
    "method": "GET",
    "calls30d": 22,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -3231,32 +3302,43 @@
    "maxTimeoutSeconds": 120
   },
   {
-   "resource": "https://handelskalender-api.pages.dev/v1/trading-day",
-   "method": "GET",
-   "calls30d": 22,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.002,
-   "maxTimeoutSeconds": 60
-  },
-  {
-   "resource": "https://vennatta-core.onrender.com/api/v1/extract-document",
+   "resource": "https://x402check.xyz/v1/risk-check",
    "method": "POST",
-   "calls30d": 12,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 21,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
-   "priceUsd": 0.01,
+   "priceUsd": 0.0035,
    "maxTimeoutSeconds": 300
   },
   {
-   "resource": "https://api.asi.xynatec.com/v1/x402/search",
-   "method": "GET",
-   "calls30d": 21,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "resource": "https://stableenrich.dev/api/exa/contents",
+   "method": "POST",
+   "calls30d": 9052,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "CAUTION",
+   "reasons": [
+    "discovery_incomplete"
+   ],
+   "chain": "eip155:8453",
+   "priceUsd": 0.002,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://oracle.futureus.win/api/assess-token-risk",
+   "method": "POST",
+   "calls30d": 39,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": null,
+   "error": "no_challenge",
+   "reasons": []
+  },
+  {
+   "resource": "https://agent.pocket.network/v1/table-extraction",
+   "method": "POST",
+   "calls30d": 2992,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -3264,21 +3346,32 @@
    "maxTimeoutSeconds": 60
   },
   {
-   "resource": "https://api.agentweather.io/v1/pulse/storm",
-   "method": "GET",
-   "calls30d": 60,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "resource": "https://tolca.tonbot.ca/v1/qc-licence",
+   "method": "POST",
+   "calls30d": 37,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
-   "priceUsd": 0.003,
+   "priceUsd": 0.01,
    "maxTimeoutSeconds": 120
   },
   {
-   "resource": "https://x402-factory.com/v1/ping",
+   "resource": "https://omniterminal.app/api/x402/v1/news",
    "method": "GET",
-   "calls30d": 214,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 19,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
+   "verdict": "PASS",
+   "reasons": [],
+   "chain": "eip155:84532",
+   "priceUsd": 0.01,
+   "maxTimeoutSeconds": 300
+  },
+  {
+   "resource": "https://rubric-protocol.com/v1/x402/hedera-facts/anchor-cost",
+   "method": "GET",
+   "calls30d": 19,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -3286,21 +3379,10 @@
    "maxTimeoutSeconds": 120
   },
   {
-   "resource": "https://www.trezalabs.com/api/x402/video",
+   "resource": "https://api.nansen.ai/api/v1/profiler/address/transactions",
    "method": "POST",
-   "calls30d": 18,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.42,
-   "maxTimeoutSeconds": 120
-  },
-  {
-   "resource": "https://4yearcycle.com/x402/web-search",
-   "method": "GET",
-   "calls30d": 34,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 43,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
@@ -3308,126 +3390,36 @@
    "maxTimeoutSeconds": 300
   },
   {
-   "resource": "https://api.bitrefill.com/x402/products/detail",
+   "resource": "https://api.agentweather.io/v1/pulse/storm",
    "method": "GET",
-   "calls30d": 34,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 60,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
-   "priceUsd": 0.001,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://rpc.nodeflare.app/eth/x402",
-   "method": "POST",
-   "calls30d": 33,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.001,
+   "priceUsd": 0.003,
    "maxTimeoutSeconds": 120
   },
   {
-   "resource": "https://rpc.nodeflare.app/arb/x402",
-   "method": "POST",
-   "calls30d": 33,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "resource": "https://4yearcycle.com/x402/web-search",
+   "method": "GET",
+   "calls30d": 35,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
    "chain": "eip155:8453",
-   "priceUsd": 0.001,
-   "maxTimeoutSeconds": 120
-  },
-  {
-   "resource": "https://modelmarket.dev/x402/warden-scan",
-   "method": "POST",
-   "calls30d": 17,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.001,
+   "priceUsd": 0.01,
    "maxTimeoutSeconds": 300
   },
   {
-   "resource": "https://crypto.apitoll.cloud/v1/crypto/fees",
-   "method": "GET",
-   "calls30d": 17,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.001,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://chain.tollkit.dev/chain/balance",
+   "resource": "https://api.solenrich.com/entrypoints/stonk-gems/invoke",
    "method": "POST",
-   "calls30d": 17,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
+   "calls30d": 951,
+   "checkedAt": "2026-11-16T13:48:27.168Z",
    "verdict": "PASS",
    "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.002,
-   "maxTimeoutSeconds": 300
-  },
-  {
-   "resource": "https://rpc.nodeflare.app/hl/x402",
-   "method": "POST",
-   "calls30d": 32,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.001,
-   "maxTimeoutSeconds": 120
-  },
-  {
-   "resource": "https://rpc.nodeflare.app/bnb/x402",
-   "method": "POST",
-   "calls30d": 32,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.001,
-   "maxTimeoutSeconds": 120
-  },
-  {
-   "resource": "https://api.onesource.io/standard/v1/supply/history",
-   "method": "GET",
-   "calls30d": 88,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "CAUTION",
-   "reasons": [
-    "long_timeout"
-   ],
-   "chain": "eip155:8453",
-   "priceUsd": 0.02,
-   "maxTimeoutSeconds": 3600
-  },
-  {
-   "resource": "https://x402.problocks.io/paid/ping",
-   "method": "GET",
-   "calls30d": 16,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.001,
-   "maxTimeoutSeconds": 60
-  },
-  {
-   "resource": "https://api.anchor-x402.com/v1/parse/datetime",
-   "method": "POST",
-   "calls30d": 16,
-   "checkedAt": "2026-11-15T12:50:40.525Z",
-   "verdict": "PASS",
-   "reasons": [],
-   "chain": "eip155:8453",
-   "priceUsd": 0.001,
+   "chain": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
+   "priceUsd": 0.03,
    "maxTimeoutSeconds": 300
   }
  ]
