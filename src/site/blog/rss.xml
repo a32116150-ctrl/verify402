@@ -6,7 +6,14 @@
     <atom:link href="https://verify402.onrender.com/blog/rss.xml" rel="self" type="application/rss+xml" />
     <description>Scope, receipts, and field notes from building a pre-signing gate for agent payments.</description>
     <language>en</language>
-    <lastBuildDate>Mon, 16 Nov 2026 16:45:00 GMT</lastBuildDate>
+    <lastBuildDate>Mon, 16 Nov 2026 21:55:00 GMT</lastBuildDate>
+    <item>
+      <title>verify402 settles through the Coinbase CDP facilitator (testnet)</title>
+      <link>https://verify402.onrender.com/blog/verify402-cdp-facilitator-testnet</link>
+      <guid isPermaLink="true">https://verify402.onrender.com/blog/verify402-cdp-facilitator-testnet</guid>
+      <pubDate>Mon, 16 Nov 2026 21:55:00 GMT</pubDate>
+      <description>One testnet USDC payment settled end-to-end through CDP — the only path the Bazaar indexes. What settled, what did not; chain-verified.</description>
+    </item>
     <item>
       <title>What verify402-mcp 1.1.1 ships</title>
       <link>https://verify402.onrender.com/blog/verify402-mcp-1-1-1</link>
