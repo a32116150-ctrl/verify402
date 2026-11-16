@@ -1,0 +1,466 @@
+[
+  {
+    "journalWrite": "claim",
+    "boundary": "before",
+    "railOnRestart": "not_landed",
+    "restartAfterSeconds": 180,
+    "expect": {
+      "handlerRuns": 1,
+      "settleCalls": 1,
+      "charges": 1,
+      "retryStatus": 200,
+      "retryReplaysStoredResponse": false,
+      "retryAfter": "absent",
+      "state": "delivered",
+      "keyBlocked": true
+    }
+  },
+  {
+    "journalWrite": "claim",
+    "boundary": "before",
+    "railOnRestart": "unreachable",
+    "restartAfterSeconds": 180,
+    "expect": {
+      "handlerRuns": 1,
+      "settleCalls": 1,
+      "charges": 1,
+      "retryStatus": 200,
+      "retryReplaysStoredResponse": false,
+      "retryAfter": "absent",
+      "state": "delivered",
+      "keyBlocked": true
+    }
+  },
+  {
+    "journalWrite": "claim",
+    "boundary": "after",
+    "railOnRestart": "not_landed",
+    "restartAfterSeconds": 180,
+    "expect": {
+      "handlerRuns": 0,
+      "settleCalls": 0,
+      "charges": 0,
+      "retryStatus": 402,
+      "retryReplaysStoredResponse": false,
+      "retryAfter": "absent",
+      "state": "void",
+      "keyBlocked": false
+    }
+  },
+  {
+    "journalWrite": "claim",
+    "boundary": "after",
+    "railOnRestart": "unreachable",
+    "restartAfterSeconds": 180,
+    "expect": {
+      "handlerRuns": 0,
+      "settleCalls": 0,
+      "charges": 0,
+      "retryStatus": 402,
+      "retryReplaysStoredResponse": false,
+      "retryAfter": "absent",
+      "state": "void",
+      "keyBlocked": false
+    }
+  },
+  {
+    "journalWrite": "staged",
+    "boundary": "before",
+    "railOnRestart": "not_landed",
+    "restartAfterSeconds": 180,
+    "expect": {
+      "handlerRuns": 0,
+      "settleCalls": 0,
+      "charges": 0,
+      "retryStatus": 402,
+      "retryReplaysStoredResponse": false,
+      "retryAfter": "absent",
+      "state": "void",
+      "keyBlocked": false
+    }
+  },
+  {
+    "journalWrite": "staged",
+    "boundary": "before",
+    "railOnRestart": "unreachable",
+    "restartAfterSeconds": 180,
+    "expect": {
+      "handlerRuns": 0,
+      "settleCalls": 0,
+      "charges": 0,
+      "retryStatus": 402,
+      "retryReplaysStoredResponse": false,
+      "retryAfter": "absent",
+      "state": "void",
+      "keyBlocked": false
+    }
+  },
+  {
+    "journalWrite": "staged",
+    "boundary": "after",
+    "railOnRestart": "not_landed",
+    "restartAfterSeconds": 180,
+    "expect": {
+      "handlerRuns": 0,
+      "settleCalls": 0,
+      "charges": 0,
+      "retryStatus": 402,
+      "retryReplaysStoredResponse": false,
+      "retryAfter": "absent",
+      "state": "void",
+      "keyBlocked": false
+    }
+  },
+  {
+    "journalWrite": "staged",
+    "boundary": "after",
+    "railOnRestart": "unreachable",
+    "restartAfterSeconds": 180,
+    "expect": {
+      "handlerRuns": 0,
+      "settleCalls": 0,
+      "charges": 0,
+      "retryStatus": 402,
+      "retryReplaysStoredResponse": false,
+      "retryAfter": "absent",
+      "state": "void",
+      "keyBlocked": false
+    }
+  },
+  {
+    "journalWrite": "response_saved",
+    "boundary": "before",
+    "railOnRestart": "not_landed",
+    "restartAfterSeconds": 180,
+    "expect": {
+      "handlerRuns": 1,
+      "settleCalls": 0,
+      "charges": 0,
+      "retryStatus": 402,
+      "retryReplaysStoredResponse": false,
+      "retryAfter": "absent",
+      "state": "void",
+      "keyBlocked": false
+    }
+  },
+  {
+    "journalWrite": "response_saved",
+    "boundary": "before",
+    "railOnRestart": "unreachable",
+    "restartAfterSeconds": 180,
+    "expect": {
+      "handlerRuns": 1,
+      "settleCalls": 0,
+      "charges": 0,
+      "retryStatus": 402,
+      "retryReplaysStoredResponse": false,
+      "retryAfter": "absent",
+      "state": "void",
+      "keyBlocked": false
+    }
+  },
+  {
+    "journalWrite": "response_saved",
+    "boundary": "after",
+    "railOnRestart": "not_landed",
+    "restartAfterSeconds": 180,
+    "expect": {
+      "handlerRuns": 1,
+      "settleCalls": 0,
+      "charges": 0,
+      "retryStatus": 402,
+      "retryReplaysStoredResponse": false,
+      "retryAfter": "absent",
+      "state": "void",
+      "keyBlocked": false
+    }
+  },
+  {
+    "journalWrite": "response_saved",
+    "boundary": "after",
+    "railOnRestart": "unreachable",
+    "restartAfterSeconds": 180,
+    "expect": {
+      "handlerRuns": 1,
+      "settleCalls": 0,
+      "charges": 0,
+      "retryStatus": 402,
+      "retryReplaysStoredResponse": false,
+      "retryAfter": "absent",
+      "state": "void",
+      "keyBlocked": false
+    }
+  },
+  {
+    "journalWrite": "settling",
+    "boundary": "before",
+    "railOnRestart": "not_landed",
+    "restartAfterSeconds": 180,
+    "expect": {
+      "handlerRuns": 1,
+      "settleCalls": 0,
+      "charges": 0,
+      "retryStatus": 402,
+      "retryReplaysStoredResponse": false,
+      "retryAfter": "absent",
+      "state": "void",
+      "keyBlocked": false
+    }
+  },
+  {
+    "journalWrite": "settling",
+    "boundary": "before",
+    "railOnRestart": "unreachable",
+    "restartAfterSeconds": 180,
+    "expect": {
+      "handlerRuns": 1,
+      "settleCalls": 0,
+      "charges": 0,
+      "retryStatus": 402,
+      "retryReplaysStoredResponse": false,
+      "retryAfter": "absent",
+      "state": "void",
+      "keyBlocked": false
+    }
+  },
+  {
+    "journalWrite": "settling",
+    "boundary": "after",
+    "railOnRestart": "not_landed",
+    "restartAfterSeconds": 180,
+    "expect": {
+      "handlerRuns": 1,
+      "settleCalls": 1,
+      "charges": 1,
+      "retryStatus": 200,
+      "retryReplaysStoredResponse": true,
+      "retryAfter": "absent",
+      "state": "delivered",
+      "keyBlocked": true
+    }
+  },
+  {
+    "journalWrite": "settling",
+    "boundary": "after",
+    "railOnRestart": "unreachable",
+    "restartAfterSeconds": 180,
+    "expect": {
+      "handlerRuns": 1,
+      "settleCalls": 1,
+      "charges": 1,
+      "retryStatus": 200,
+      "retryReplaysStoredResponse": true,
+      "retryAfter": "absent",
+      "state": "delivered",
+      "keyBlocked": true
+    }
+  },
+  {
+    "journalWrite": "settle_result",
+    "boundary": "before",
+    "railOnRestart": "landed",
+    "restartAfterSeconds": 180,
+    "expect": {
+      "handlerRuns": 1,
+      "settleCalls": 1,
+      "charges": 1,
+      "retryStatus": 200,
+      "retryReplaysStoredResponse": true,
+      "retryAfter": "absent",
+      "state": "delivered",
+      "keyBlocked": true
+    }
+  },
+  {
+    "journalWrite": "settle_result",
+    "boundary": "before",
+    "railOnRestart": "unreachable",
+    "restartAfterSeconds": 180,
+    "expect": {
+      "handlerRuns": 1,
+      "settleCalls": 1,
+      "charges": 1,
+      "retryStatus": 409,
+      "retryReplaysStoredResponse": false,
+      "retryAfter": "present",
+      "state": "stuck",
+      "keyBlocked": true
+    }
+  },
+  {
+    "journalWrite": "settle_result",
+    "boundary": "after",
+    "railOnRestart": "landed",
+    "restartAfterSeconds": 180,
+    "expect": {
+      "handlerRuns": 1,
+      "settleCalls": 1,
+      "charges": 1,
+      "retryStatus": 200,
+      "retryReplaysStoredResponse": true,
+      "retryAfter": "absent",
+      "state": "delivered",
+      "keyBlocked": true
+    }
+  },
+  {
+    "journalWrite": "settle_result",
+    "boundary": "after",
+    "railOnRestart": "unreachable",
+    "restartAfterSeconds": 180,
+    "expect": {
+      "handlerRuns": 1,
+      "settleCalls": 1,
+      "charges": 1,
+      "retryStatus": 200,
+      "retryReplaysStoredResponse": true,
+      "retryAfter": "absent",
+      "state": "delivered",
+      "keyBlocked": true
+    }
+  },
+  {
+    "journalWrite": "delivered",
+    "boundary": "before",
+    "railOnRestart": "landed",
+    "restartAfterSeconds": 180,
+    "expect": {
+      "handlerRuns": 1,
+      "settleCalls": 1,
+      "charges": 1,
+      "retryStatus": 200,
+      "retryReplaysStoredResponse": true,
+      "retryAfter": "absent",
+      "state": "delivered",
+      "keyBlocked": true
+    }
+  },
+  {
+    "journalWrite": "delivered",
+    "boundary": "before",
+    "railOnRestart": "unreachable",
+    "restartAfterSeconds": 180,
+    "expect": {
+      "handlerRuns": 1,
+      "settleCalls": 1,
+      "charges": 1,
+      "retryStatus": 200,
+      "retryReplaysStoredResponse": true,
+      "retryAfter": "absent",
+      "state": "delivered",
+      "keyBlocked": true
+    }
+  },
+  {
+    "journalWrite": "delivered",
+    "boundary": "after",
+    "railOnRestart": "landed",
+    "restartAfterSeconds": 180,
+    "expect": {
+      "handlerRuns": 1,
+      "settleCalls": 1,
+      "charges": 1,
+      "retryStatus": 200,
+      "retryReplaysStoredResponse": true,
+      "retryAfter": "absent",
+      "state": "delivered",
+      "keyBlocked": true
+    }
+  },
+  {
+    "journalWrite": "delivered",
+    "boundary": "after",
+    "railOnRestart": "unreachable",
+    "restartAfterSeconds": 180,
+    "expect": {
+      "handlerRuns": 1,
+      "settleCalls": 1,
+      "charges": 1,
+      "retryStatus": 200,
+      "retryReplaysStoredResponse": true,
+      "retryAfter": "absent",
+      "state": "delivered",
+      "keyBlocked": true
+    }
+  },
+  {
+    "journalWrite": "receipt",
+    "boundary": "before",
+    "railOnRestart": "landed",
+    "restartAfterSeconds": 180,
+    "expect": {
+      "handlerRuns": 1,
+      "settleCalls": 1,
+      "charges": 1,
+      "retryStatus": 200,
+      "retryReplaysStoredResponse": true,
+      "retryAfter": "absent",
+      "state": "delivered",
+      "keyBlocked": true
+    }
+  },
+  {
+    "journalWrite": "receipt",
+    "boundary": "before",
+    "railOnRestart": "unreachable",
+    "restartAfterSeconds": 180,
+    "expect": {
+      "handlerRuns": 1,
+      "settleCalls": 1,
+      "charges": 1,
+      "retryStatus": 200,
+      "retryReplaysStoredResponse": true,
+      "retryAfter": "absent",
+      "state": "delivered",
+      "keyBlocked": true
+    }
+  },
+  {
+    "journalWrite": "receipt",
+    "boundary": "after",
+    "railOnRestart": "landed",
+    "restartAfterSeconds": 180,
+    "expect": {
+      "handlerRuns": 1,
+      "settleCalls": 1,
+      "charges": 1,
+      "retryStatus": 200,
+      "retryReplaysStoredResponse": true,
+      "retryAfter": "absent",
+      "state": "delivered",
+      "keyBlocked": true
+    }
+  },
+  {
+    "journalWrite": "receipt",
+    "boundary": "after",
+    "railOnRestart": "unreachable",
+    "restartAfterSeconds": 180,
+    "expect": {
+      "handlerRuns": 1,
+      "settleCalls": 1,
+      "charges": 1,
+      "retryStatus": 200,
+      "retryReplaysStoredResponse": true,
+      "retryAfter": "absent",
+      "state": "delivered",
+      "keyBlocked": true
+    }
+  },
+  {
+    "journalWrite": "settle_result",
+    "boundary": "before",
+    "railOnRestart": "not_landed",
+    "restartAfterSeconds": 180,
+    "expect": {
+      "handlerRuns": 1,
+      "settleCalls": 2,
+      "charges": 1,
+      "retryStatus": 200,
+      "retryReplaysStoredResponse": true,
+      "retryAfter": "absent",
+      "state": "delivered",
+      "keyBlocked": true
+    }
+  }
+]
