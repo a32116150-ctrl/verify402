@@ -16,6 +16,12 @@ service's own buyer (a separate script) could. No protocol, price, schema or
 tool change. The default public origin also moved from `verify402.onrender.com`
 to `https://vex402.online`; the old host still works.
 
+Published 2026-11-17T14:13:26.566Z to npm as `verify402-mcp@1.1.2`, gitHead
+`39c7f56c5d393ffa5e9b210ded8b61e5ba5f27fe`, shasum
+`802f1d36a1f7686c1adc14a134fc739663434055` (identical to the inspected dry-run
+pack). The MCP Registry entry, the GitHub release, and the `master` push that
+deploys are separate approval gates.
+
 ## 1.1.1 — 2026-11-16
 
 A fix release for the service. The MCP bridge has no runtime change — the only

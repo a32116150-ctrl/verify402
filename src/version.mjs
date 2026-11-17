@@ -13,6 +13,10 @@ export const RELEASE_VERSION = "1.1.2";
 export const PUBLISHED_VERSION = "1.1.2";
 
 // Machine-readable statement of where this source tree sits in the release
-// process. "published" means the npm artifact exists and was verified with
-// `npm view verify402-mcp@1.1.2 version` and RELEASE_STATUS is only flipped then.
-export const RELEASE_STATUS = "prepared";
+// process. "published" means the npm artifact exists and was verified:
+// `npm view verify402-mcp@1.1.2 version` answers 1.1.2, published
+// 2026-11-17T14:13:26.566Z, shasum 802f1d36a1f7686c1adc14a134fc739663434055
+// (identical to the inspected dry-run pack), gitHead
+// 39c7f56c5d393ffa5e9b210ded8b61e5ba5f27fe. The MCP Registry entry and the
+// Render deployment remain separate approval gates in PUBLISH_STEPS_FOR_ME.md.
+export const RELEASE_STATUS = "published";
