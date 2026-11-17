@@ -2,71 +2,71 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>verify402 — notes from before the signature</title>
-    <link>https://verify402.onrender.com/blog</link>
-    <atom:link href="https://verify402.onrender.com/blog/rss.xml" rel="self" type="application/rss+xml" />
+    <link>https://vex402.online/blog</link>
+    <atom:link href="https://vex402.online/blog/rss.xml" rel="self" type="application/rss+xml" />
     <description>Scope, receipts, and field notes from building a pre-signing gate for agent payments.</description>
     <language>en</language>
     <lastBuildDate>Mon, 16 Nov 2026 21:55:00 GMT</lastBuildDate>
     <item>
       <title>verify402 settles through the Coinbase CDP facilitator (testnet)</title>
-      <link>https://verify402.onrender.com/blog/verify402-cdp-facilitator-testnet</link>
-      <guid isPermaLink="true">https://verify402.onrender.com/blog/verify402-cdp-facilitator-testnet</guid>
+      <link>https://vex402.online/blog/verify402-cdp-facilitator-testnet</link>
+      <guid isPermaLink="true">https://vex402.online/blog/verify402-cdp-facilitator-testnet</guid>
       <pubDate>Mon, 16 Nov 2026 21:55:00 GMT</pubDate>
       <description>One testnet USDC payment settled end-to-end through CDP — the only path the Bazaar indexes. What settled, what did not; chain-verified.</description>
     </item>
     <item>
       <title>What verify402-mcp 1.1.1 ships</title>
-      <link>https://verify402.onrender.com/blog/verify402-mcp-1-1-1</link>
-      <guid isPermaLink="true">https://verify402.onrender.com/blog/verify402-mcp-1-1-1</guid>
+      <link>https://vex402.online/blog/verify402-mcp-1-1-1</link>
+      <guid isPermaLink="true">https://vex402.online/blog/verify402-mcp-1-1-1</guid>
       <pubDate>Mon, 16 Nov 2026 16:45:00 GMT</pubDate>
       <description>The recovery release: durable recovery works for every real v2 caller, the evidence hash is reproducible, and settling / stuck are implemented and observable. No runtime change to the bridge.</description>
     </item>
     <item>
       <title>What x402's 402s actually look like</title>
-      <link>https://verify402.onrender.com/blog/what-public-402s-look-like</link>
-      <guid isPermaLink="true">https://verify402.onrender.com/blog/what-public-402s-look-like</guid>
+      <link>https://vex402.online/blog/what-public-402s-look-like</link>
+      <guid isPermaLink="true">https://vex402.online/blog/what-public-402s-look-like</guid>
       <pubDate>Fri, 13 Nov 2026 18:20:00 GMT</pubDate>
       <description>300 public x402 endpoints from the catalog's first page, one read-only probe each: Base, canonical USDC, five-minute authorizations — and the 57 that ask for an hour.</description>
     </item>
     <item>
       <title>What verify402-mcp 1.1.0 ships</title>
-      <link>https://verify402.onrender.com/blog/verify402-mcp-1-1-0</link>
-      <guid isPermaLink="true">https://verify402.onrender.com/blog/verify402-mcp-1-1-0</guid>
+      <link>https://vex402.online/blog/verify402-mcp-1-1-0</link>
+      <guid isPermaLink="true">https://vex402.online/blog/verify402-mcp-1-1-0</guid>
       <pubDate>Fri, 13 Nov 2026 13:30:00 GMT</pubDate>
       <description>Two free tools, seller-signed terms binding, a payment-token registry, durable /usage counters — and the things that did not change.</description>
     </item>
     <item>
       <title>Check an x402 endpoint before you pay it</title>
-      <link>https://verify402.onrender.com/blog/check-an-x402-endpoint-before-you-pay</link>
-      <guid isPermaLink="true">https://verify402.onrender.com/blog/check-an-x402-endpoint-before-you-pay</guid>
+      <link>https://vex402.online/blog/check-an-x402-endpoint-before-you-pay</link>
+      <guid isPermaLink="true">https://vex402.online/blog/check-an-x402-endpoint-before-you-pay</guid>
       <pubDate>Fri, 13 Nov 2026 12:00:00 GMT</pubDate>
       <description>A 402 is a price tag, not a receipt. The six fields that decide what you sign, and a free way to check any endpoint without a wallet.</description>
     </item>
     <item>
       <title>Put a pre-signing gate in an MCP agent in 15 minutes</title>
-      <link>https://verify402.onrender.com/blog/pre-signing-gate-in-an-mcp-agent</link>
-      <guid isPermaLink="true">https://verify402.onrender.com/blog/pre-signing-gate-in-an-mcp-agent</guid>
+      <link>https://vex402.online/blog/pre-signing-gate-in-an-mcp-agent</link>
+      <guid isPermaLink="true">https://vex402.online/blog/pre-signing-gate-in-an-mcp-agent</guid>
       <pubDate>Fri, 13 Nov 2026 12:00:00 GMT</pubDate>
       <description>Three free tools, one config block, and one hook that makes the signature unreachable until the receipt verifies.</description>
     </item>
     <item>
       <title>What a pre-signing gate can check — and what it can't</title>
-      <link>https://verify402.onrender.com/blog/what-a-pre-signing-gate-can-check</link>
-      <guid isPermaLink="true">https://verify402.onrender.com/blog/what-a-pre-signing-gate-can-check</guid>
+      <link>https://vex402.online/blog/what-a-pre-signing-gate-can-check</link>
+      <guid isPermaLink="true">https://vex402.online/blog/what-a-pre-signing-gate-can-check</guid>
       <pubDate>Sun, 25 Oct 2026 12:00:00 GMT</pubDate>
       <description>The checklist a gate can run on an agent payment or approval, and the things it must say it does not know.</description>
     </item>
     <item>
       <title>A receipt is not a guarantee. It's a falsifiable record.</title>
-      <link>https://verify402.onrender.com/blog/a-receipt-is-a-falsifiable-record</link>
-      <guid isPermaLink="true">https://verify402.onrender.com/blog/a-receipt-is-a-falsifiable-record</guid>
+      <link>https://vex402.online/blog/a-receipt-is-a-falsifiable-record</link>
+      <guid isPermaLink="true">https://vex402.online/blog/a-receipt-is-a-falsifiable-record</guid>
       <pubDate>Sun, 25 Oct 2026 12:00:00 GMT</pubDate>
       <description>What a preflight receipt proves, what it does not, and why intent binding matters more than a green icon.</description>
     </item>
     <item>
       <title>Three payment intents your agent should never sign unchecked</title>
-      <link>https://verify402.onrender.com/blog/three-intents-never-sign-unchecked</link>
-      <guid isPermaLink="true">https://verify402.onrender.com/blog/three-intents-never-sign-unchecked</guid>
+      <link>https://vex402.online/blog/three-intents-never-sign-unchecked</link>
+      <guid isPermaLink="true">https://vex402.online/blog/three-intents-never-sign-unchecked</guid>
       <pubDate>Sun, 25 Oct 2026 12:00:00 GMT</pubDate>
       <description>An unlimited approval, an x402 offer that does not match the resource, and a swap with no floor. The signature is valid; the intent is not.</description>
     </item>

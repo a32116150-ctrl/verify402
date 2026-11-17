@@ -73,7 +73,7 @@
         <p class="lead" style="margin-top:14px">First call without payment. The service answers <b>402 Payment Required</b> with everything your agent needs: scheme, network, asset, amount, recipient, and the per-call cap.</p>
         <div style="margin-top:24px">
           <p class="code-cap">1 · Ask without paying</p>
-<pre data-ui><span class="c">curl -X POST</span> https://verify402.onrender.com/verify \
+<pre data-ui><span class="c">curl -X POST</span> https://vex402.online/verify \
   -H <span class="g">"Content-Type: application/json"</span> \
   -H <span class="g">"x-idempotency-key: 3f2c7a1e-5b8d-4c6f-9a4e-7b2d9c1f6a3e"</span> \
   -d <span class="y">'{"pair":"USDC/WETH","dex":"uniswap-v3","sizeUsd":100000}'</span>
@@ -131,7 +131,7 @@
         <p class="small muted" style="margin-top:16px">Optional caller-supplied checks: <code class="inline">payment.idempotencyKey</code> + <code class="inline">policy.obligation.settledKeys</code> rejects an already-settled key; <code class="inline">policy.obligation.spentUsd</code> + <code class="inline">grantUsd</code> rejects cumulative spend over the grant. <code class="inline">policy.sellerPayoutWallets</code> is only a payout allowlist; <code class="inline">policy.sellerPayoutManifest</code> fetches a seller-signed manifest from a caller-pinned HTTPS origin and is the only source of <code class="inline">payee_payout_binding</code>. The gate does not persist this state, and neither form independently proves the seller controls the wallet.</p>
         <div style="margin-top:24px">
           <p class="code-cap">Payment request · abbreviated</p>
-<pre data-ui><span class="c">curl -X POST</span> https://verify402.onrender.com/preflight \
+<pre data-ui><span class="c">curl -X POST</span> https://vex402.online/preflight \
   -H <span class="g">"Content-Type: application/json"</span> \
   -d <span class="y">'{
     "kind": "payment",
@@ -142,9 +142,9 @@
       "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
       "amount": "10000",
       "payTo": "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb",
-      "resource": "https://verify402.onrender.com/verify"
+      "resource": "https://vex402.online/verify"
     },
-    "policy": { "maxAmountUsd": 0.25, "allowedResourceHosts": ["verify402.onrender.com"] }
+    "policy": { "maxAmountUsd": 0.25, "allowedResourceHosts": ["vex402.online"] }
   }'</span></pre>
         </div>
         <div style="margin-top:24px">

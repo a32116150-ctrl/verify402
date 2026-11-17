@@ -13,7 +13,7 @@ import { fileURLToPath } from "node:url";
 import { encodePaymentRequiredHeader } from "../x402-client.mjs";
 
 process.env.EVM_PRIVATE_KEY = "0x" + "11".repeat(32);
-process.env.VERIFY402_URL = "https://verify402.onrender.com";
+process.env.VERIFY402_URL = "https://vex402.online";
 process.env.VERIFY402_NETWORKS = "eip155:84532";
 process.env.MAX_PAYMENT_USD = "0.25";
 
@@ -29,7 +29,7 @@ const {
   DEFAULT_PAY_TO,
 } = await import("../payment-policy.mjs");
 
-const SERVER_URL = "https://verify402.onrender.com";
+const SERVER_URL = "https://vex402.online";
 const RESOURCE = `${SERVER_URL}/route`;
 const PAY_TO = "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb";
 

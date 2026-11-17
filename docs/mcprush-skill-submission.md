@@ -107,7 +107,7 @@ default.
 
 ### What it asks for
 
-- Network access to `https://verify402.onrender.com` for the free HTTP
+- Network access to `https://vex402.online` for the free HTTP
   fallback.
 - Optional: the `verify402-mcp` server for native `preflight_gate` and paid
   tools.

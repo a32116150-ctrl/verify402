@@ -49,7 +49,7 @@ be changed after the gate ran, without reimplementing normalization.
 const frozenIntent = structuredClone(intent); // the exact intent you will sign
 const body = { ...frozenIntent, policy }; // same object and same JSON bytes sent to /preflight
 
-const check = await fetch("https://verify402.onrender.com/preflight/verify", {
+const check = await fetch("https://vex402.online/preflight/verify", {
   method: "POST",
   headers: { "content-type": "application/json" },
   body: JSON.stringify({
@@ -123,7 +123,7 @@ send both `request` and `intent` and require both to be true.
 
 ```js
 async function signOnlyWithVerifiedReceipt({ intent, policy, signer, operatorAcknowledged = false }) {
-  const base = "https://verify402.onrender.com";
+  const base = "https://vex402.online";
   const frozenIntent = structuredClone(intent);
   const body = { ...frozenIntent, policy };
 

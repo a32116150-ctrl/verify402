@@ -38,7 +38,7 @@ restart loses both.
 | `X402_MODE` | yes | `testnet` |
 | `FACILITATOR_URL` | yes | `https://x402.org/facilitator` for testnet |
 | `AGENT_URL` | recommended | Canonical public origin, e.g. `https://verify402-testnet.example`; it wins over `Host` |
-| `TRUSTED_HOSTS` | optional | Comma-separated hostnames allowed when `AGENT_URL` is unset; defaults include `verify402.onrender.com`, `localhost`, `127.0.0.1`, `::1` |
+| `TRUSTED_HOSTS` | optional | Comma-separated hostnames allowed when `AGENT_URL` is unset; defaults include `vex402.online`, `localhost`, `127.0.0.1`, `::1` |
 | `PREFLIGHT_SECRET` | strongly recommended | 32-byte hex, e.g. `openssl rand -hex 32`; without it receipts use a per-process key |
 | `PAY_TO_EVM`, `PAY_TO_SVM` | yes | Testnet receiving wallets |
 | `ETH_RPC_URL`, `ARB_RPC_URL`, `BASE_RPC_URL` | recommended | Dedicated provider endpoints; public defaults throttle |

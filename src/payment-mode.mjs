@@ -7,7 +7,7 @@
 
 import { PUBLISHED_VERSION } from "./version.mjs";
 
-export const DEMO_BASE_URL = "https://verify402.onrender.com";
+export const DEMO_BASE_URL = "https://vex402.online";
 export const DEMO_NETWORK = "eip155:84532";
 export const MAINNET_NETWORK = "eip155:8453";
 export const TESTNET_USDC = "0x036CbD53842c5426634e7929541eC2318f3dCF7e";

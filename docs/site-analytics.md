@@ -59,7 +59,7 @@ report a durable number from a memory-only instance.
 ## Reading the funnel
 
 ```bash
-curl -sS https://verify402.onrender.com/usage/site | jq
+curl -sS https://vex402.online/usage/site | jq
 ```
 
 Look at, in order:

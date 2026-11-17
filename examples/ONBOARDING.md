@@ -8,7 +8,7 @@ request or chain transaction your agent is about to sign. It answers
 (`checked`), the checks that did not (`notChecked`), and a short-lived HMAC
 receipt bound to that exact intent, the request body, and a fresh pinned block.
 
-Live: **https://verify402.onrender.com**
+Live: **https://vex402.online**
 
 > Free hosting: the first call after a sleep can take ~30 s. Run the curl once
 > to warm it; later calls are fast.
@@ -22,7 +22,7 @@ Live: **https://verify402.onrender.com**
 ## 1. One free call — a normal x402 payment
 
 ```bash
-curl -sS -X POST https://verify402.onrender.com/preflight \
+curl -sS -X POST https://vex402.online/preflight \
   -H 'content-type: application/json' \
   -d '{
     "kind": "payment",
@@ -32,10 +32,10 @@ curl -sS -X POST https://verify402.onrender.com/preflight \
       "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
       "amount": "10000",
       "payTo": "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb",
-      "resource": "https://verify402.onrender.com/verify",
+      "resource": "https://vex402.online/verify",
       "maxTimeoutSeconds": 60
     },
-    "policy": { "maxAmountUsd": 0.25, "allowedResourceHosts": ["verify402.onrender.com"] }
+    "policy": { "maxAmountUsd": 0.25, "allowedResourceHosts": ["vex402.online"] }
   }'
 ```
 
@@ -80,7 +80,7 @@ not persist the ledger, and neither form proves the seller controls the wallet.
 ## 2. The same gate says no to an unlimited approval
 
 ```bash
-curl -sS -X POST https://verify402.onrender.com/preflight \
+curl -sS -X POST https://vex402.online/preflight \
   -H 'content-type: application/json' \
   -d '{
     "kind": "transaction",
@@ -113,13 +113,13 @@ Every verdict includes a receipt. `POST /preflight/verify` recomputes the HMAC
 and checks expiry, so an executor can refuse anything it cannot verify.
 
 ```js
-const gate = await fetch("https://verify402.onrender.com/preflight", {
+const gate = await fetch("https://vex402.online/preflight", {
   method: "POST",
   headers: { "content-type": "application/json" },
   body: JSON.stringify(intent),
 }).then((r) => r.json());
 
-const check = await fetch("https://verify402.onrender.com/preflight/verify", {
+const check = await fetch("https://vex402.online/preflight/verify", {
   method: "POST",
   headers: { "content-type": "application/json" },
   // `request` is the exact body sent to /preflight. The verifier re-hashes it,
@@ -160,7 +160,7 @@ Then add it to Claude Desktop / Cursor (`.cursor/mcp.json`):
     "verify402": {
       "command": "npx",
       "args": ["-y", "verify402-mcp@1.1.1"],
-      "env": { "VERIFY402_URL": "https://verify402.onrender.com" }
+      "env": { "VERIFY402_URL": "https://vex402.online" }
     }
   }
 }
@@ -216,8 +216,8 @@ and not needed for this test.
 
 ---
 
-- Home: https://verify402.onrender.com
-- Preflight page: https://verify402.onrender.com/preflight
-- Machine docs: https://verify402.onrender.com/docs
-- MCP page: https://verify402.onrender.com/mcp
+- Home: https://vex402.online
+- Preflight page: https://vex402.online/preflight
+- Machine docs: https://vex402.online/docs
+- MCP page: https://vex402.online/mcp
 - Source / issues: https://github.com/a32116150-ctrl/verify402

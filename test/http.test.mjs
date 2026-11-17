@@ -377,7 +377,7 @@ await check("free findings are shareable pages with the evidence on them", async
   assert.equal(r.status, 200);
   assert.match(r.headers.get("content-type") || "", /text\/html/);
   const html = await r.text();
-  assert.match(html, /<link rel="canonical" href="https:\/\/verify402\.onrender\.com\/finding\/WETH">/);
+  assert.match(html, /<link rel="canonical" href="https:\/\/vex402\.online\/finding\/WETH">/);
   assert.match(html, /<meta property="og:title"/);
   assert.match(html, /round trip/);
   // Offline the measurement cannot run; the page must say so and print no number.
@@ -391,7 +391,7 @@ await check("free findings are shareable pages with the evidence on them", async
   for (const row of json.results) {
     assert.equal(
       row.permalink,
-      `https://verify402.onrender.com/finding/${encodeURIComponent(row.target)}`,
+      `https://vex402.online/finding/${encodeURIComponent(row.target)}`,
       "every row must carry the page that shows it",
     );
   }

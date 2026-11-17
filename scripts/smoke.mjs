@@ -22,7 +22,7 @@ import {
 } from "../mcp-bridge/payment-policy.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const DEFAULT_BASE_URL = "https://verify402.onrender.com";
+const DEFAULT_BASE_URL = "https://vex402.online";
 const PAID_SMOKE_PATH = "/route";
 const DEFAULT_PAID_MAX_USD = 0.03;
 

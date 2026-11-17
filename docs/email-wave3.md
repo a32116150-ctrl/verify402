@@ -44,7 +44,7 @@ I am the solo developer behind verify402, a free pre-signing gate for EVM transa
 
 Safe is where a transaction becomes a multisig approval, so the nested call is the interesting part: a gate can look at the outer execTransaction and miss what the Safe actually does. Would a falsification test be useful? Run 3-5 Safe intents you would otherwise sign and tell me where verify402 returns a false PASS, especially on nested calldata.
 
-Browser demo: https://verify402.onrender.com/preflight#try
+Browser demo: https://vex402.online/preflight#try
 Demo payments are Base Sepolia; analysis reads mainnet; no paid test. It checks the transaction, not the Safe's signer policy or the token's sellability; those are named in notChecked.
 
 If this is the wrong team or not useful, reply "no" and I will not follow up.
@@ -65,7 +65,7 @@ I am the solo developer behind verify402, a free pre-signing gate for EVM transa
 
 Rabby already previews what a transaction will do, so I am not asking you to replace that. I am asking for a falsification test: run 3-5 intents you would otherwise sign and tell me where verify402 returns PASS on something Rabby would flag, or CAUTION/BLOCK on something benign. A false PASS is the finding I care about.
 
-Browser demo: https://verify402.onrender.com/preflight#try
+Browser demo: https://vex402.online/preflight#try
 Demo payments are Base Sepolia; analysis reads mainnet; no paid test. It checks transaction structure, not token reputation or counterparty history; those are in notChecked.
 
 If this is the wrong team or not useful, reply "no" and I will not follow up.
@@ -86,7 +86,7 @@ verify402 is a free pre-signing gate for EVM transaction intents. It returns PAS
 
 Rainbow is the last screen before a user signs, so a second, independent check is only useful if it catches something the wallet does not. Would you run 3-5 intents (an approval, a swap, a payment) and tell me where the gate returns a false PASS?
 
-Browser demo: https://verify402.onrender.com/preflight#try
+Browser demo: https://vex402.online/preflight#try
 Demo payments are Base Sepolia; analysis reads mainnet; no paid test. It checks the transaction, not the token's sellability or the counterparty's reputation; those are named in notChecked.
 
 If this is the wrong team or not useful, reply "no" and I will not follow up.
@@ -107,7 +107,7 @@ verify402 is a free pre-signing gate for EVM transaction intents. It returns PAS
 
 Embedded wallets sign on behalf of users, often without a wallet UI to catch a bad approval. You already enforce policy at signing; I am not asking you to replace that. I am asking for a falsification test: run 3-5 intents and tell me where verify402 returns a false PASS, or where it adds nothing over your policy engine.
 
-Browser demo: https://verify402.onrender.com/preflight#try
+Browser demo: https://vex402.online/preflight#try
 Demo payments are Base Sepolia; analysis reads mainnet; no paid test.
 
 If this is the wrong team or not useful, reply "no" and I will not follow up.
@@ -128,7 +128,7 @@ I am the solo developer behind verify402, a free pre-signing gate for EVM transa
 
 Wallet Guard already blocks malicious sites and transactions, so I am not claiming to replace that. I am asking for a falsification test: run 3-5 intents you would otherwise sign and try to make verify402 return a false PASS. The interesting cases are unlimited approvals, odd spenders, and calldata that looks benign at the top level.
 
-Browser demo: https://verify402.onrender.com/preflight#try
+Browser demo: https://vex402.online/preflight#try
 Demo payments are Base Sepolia; analysis reads mainnet; no paid test. It checks transaction structure, not threat intelligence or counterparty reputation; those are in notChecked.
 
 If this is the wrong team or not useful, reply "no" and I will not follow up.

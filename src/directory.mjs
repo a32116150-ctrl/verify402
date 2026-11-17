@@ -35,7 +35,7 @@ export const SEED_ENTRIES = [
   {
     id: "verify402-verify",
     name: "verify402 · /verify",
-    url: "https://verify402.onrender.com/verify",
+    url: "https://vex402.online/verify",
     method: "POST",
     note: "This service's own paid arbitrage check.",
   },

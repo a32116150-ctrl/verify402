@@ -76,13 +76,13 @@ test("buildVerdictRows turns findings into explorer rows", () => {
       { target: "WETH", verdict: "no_edge", grossBps: 3.1, netBps: -1.2, blockNumber: 123, blockHash: "0xabc" },
       { target: "WBTC", verdict: "real", grossBps: 12, netBps: 4.5, blockNumber: 123 },
     ],
-    { baseUrl: "https://verify402.onrender.com", measuredAt: "2026-11-12T00:00:00.000Z" },
+    { baseUrl: "https://vex402.online", measuredAt: "2026-11-12T00:00:00.000Z" },
   );
   assert.equal(rows.length, 2);
   assert.equal(rows[0].pair, "WBTC/USDC");
   assert.equal(rows[0].verdict, "real");
   assert.equal(rows[1].verdict, "no_edge");
-  assert.equal(rows[0].url, "https://verify402.onrender.com/findings");
+  assert.equal(rows[0].url, "https://vex402.online/findings");
 });
 
 test("buildExplorerPayload carries verdicts next to payments", () => {
@@ -91,7 +91,7 @@ test("buildExplorerPayload carries verdicts next to payments", () => {
     payTo: "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb",
     transfers: [transfer("30000")],
     results: [{ target: "WETH", verdict: "no_edge", grossBps: 2, netBps: -1, blockNumber: 9 }],
-    baseUrl: "https://verify402.onrender.com",
+    baseUrl: "https://vex402.online",
   });
   assert.equal(payload.settlements.length, 1);
   assert.equal(payload.verdicts.length, 1);

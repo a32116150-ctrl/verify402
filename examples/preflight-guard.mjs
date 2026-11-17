@@ -154,7 +154,7 @@ export async function guardAndSign(options = {}) {
     intent,
     policy,
     sign,
-    baseUrl = "https://verify402.onrender.com",
+    baseUrl = "https://vex402.online",
     acknowledgeCaution = false,
     fetchImpl = globalThis.fetch,
     timeoutMs = 70_000,
@@ -283,7 +283,7 @@ export async function guardX402Payment(options = {}) {
     requirements,
     policy,
     from,
-    baseUrl = "https://verify402.onrender.com",
+    baseUrl = "https://vex402.online",
     acknowledgeCaution = false,
     fetchImpl = globalThis.fetch,
     timeoutMs = 70_000,
@@ -324,7 +324,7 @@ export async function guardX402Payment(options = {}) {
 export function createX402PreflightHook(options = {}) {
   const {
     policy,
-    baseUrl = "https://verify402.onrender.com",
+    baseUrl = "https://vex402.online",
     from,
     acknowledgeCaution = false,
     fetchImpl = globalThis.fetch,

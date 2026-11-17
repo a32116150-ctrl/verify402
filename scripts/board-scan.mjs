@@ -28,7 +28,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 async function getJson(url, attempt = 0) {
   try {
     const res = await fetch(url, {
-      headers: { "user-agent": "verify402-board/1 (+https://verify402.onrender.com/board)" },
+      headers: { "user-agent": "verify402-board/1 (+https://vex402.online/board)" },
       signal: AbortSignal.timeout(20000),
     });
     if (!res.ok) throw new Error(`catalog ${res.status}`);

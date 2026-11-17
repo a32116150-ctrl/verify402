@@ -12,7 +12,7 @@
 //   * nothing here accepts arbitrary tokens — the set is the free showcase
 //     pairs, so this page can never become a free /verify.
 
-export const FINDING_ORIGIN = "https://verify402.onrender.com";
+export const FINDING_ORIGIN = "https://vex402.online";
 
 const esc = (v) =>
   String(v ?? "")

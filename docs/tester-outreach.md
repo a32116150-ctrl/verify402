@@ -1,7 +1,7 @@
 # Three outreach drafts for tester recruitment
 
-> **Live tester kit:** https://verify402.onrender.com/testers — three intents,
-> raw verdicts, no wallet. **Field notes:** https://verify402.onrender.com/blog.
+> **Live tester kit:** https://vex402.online/testers — three intents,
+> raw verdicts, no wallet. **Field notes:** https://vex402.online/blog.
 >
 > **Email:** the capped email campaign lives in **`docs/email-campaign.md`**.
 > 15 sends went out Oct 23; AgentMail's new-recipient cap is exhausted until
@@ -77,9 +77,9 @@ The owner explicitly overrode the no-standalone-post rule for this one:
 
 Before sending:
 
-1. Warm the service: `curl -sS https://verify402.onrender.com/health`
-2. Record the baseline: `curl -sS https://verify402.onrender.com/usage`
-3. Use the browser panel as the primary link: `https://verify402.onrender.com/preflight#try`. The stable MCP fallback is `https://verify402.onrender.com/mcp`.
+1. Warm the service: `curl -sS https://vex402.online/health`
+2. Record the baseline: `curl -sS https://vex402.online/usage`
+3. Use the browser panel as the primary link: `https://vex402.online/preflight#try`. The stable MCP fallback is `https://vex402.online/mcp`.
 4. Send 3–5 messages, not 50. Personalize the first line.
 
 ## 1. Moltbook / MoltJobs reply
@@ -87,7 +87,7 @@ Before sending:
 Use this in a relevant thread about MCP tools, x402, agent payments, or testing. Do not create a standalone Moltbook post without an explicit override.
 
 ```text
-I’m testing a free preflight gate for agents before they sign or pay. Demo payments are Base Sepolia testnet only; analysis reads mainnet chain data. No wallet or paid test. It returns PASS/CAUTION/BLOCK plus what it didn’t check. I’m looking for 3 builders to run 3–5 real intents and report false PASSes. Try it in the browser (paste a token address, or run the raw intent): https://verify402.onrender.com/preflight#try — MCP: https://verify402.onrender.com/mcp
+I’m testing a free preflight gate for agents before they sign or pay. Demo payments are Base Sepolia testnet only; analysis reads mainnet chain data. No wallet or paid test. It returns PASS/CAUTION/BLOCK plus what it didn’t check. I’m looking for 3 builders to run 3–5 real intents and report false PASSes. Try it in the browser (paste a token address, or run the raw intent): https://vex402.online/preflight#try — MCP: https://vex402.online/mcp
 ```
 
 ## 2. GitHub issue
@@ -111,7 +111,7 @@ Scope: Base Sepolia testnet USDC (`eip155:84532`). The analysis reads mainnet ch
 
 Ask: run 3–5 real intents, then report the verdict/reasons and anything that looks like a false PASS. Redact addresses and amounts if needed.
 
-- Try it in the browser: https://verify402.onrender.com/preflight#try (simple token-approval check, plus raw JSON samples)
+- Try it in the browser: https://vex402.online/preflight#try (simple token-approval check, plus raw JSON samples)
 - 5-minute guide: https://github.com/a32116150-ctrl/verify402/blob/master/TESTING.md
 - Feedback form: https://github.com/a32116150-ctrl/verify402/issues/new?template=tester-feedback.yml
 
@@ -125,7 +125,7 @@ Hi [name] — you mentioned [specific MCP/x402/agent-payment problem] in [thread
 
 I’m looking for 3 builders to run 3–5 real intents (a payment, an approval, a swap) on the testnet demo and tell me what breaks, especially false PASSes. No wallet, account, or paid test is required; the analysis reads mainnet chain data.
 
-Try it in the browser: https://verify402.onrender.com/preflight#try
+Try it in the browser: https://vex402.online/preflight#try
 
 If it’s not useful for your workflow, that’s useful feedback too. No pitch or call needed.
 ```

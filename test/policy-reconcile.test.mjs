@@ -19,7 +19,7 @@ import { EventEmitter } from "node:events";
 
 import { encodePaymentRequiredHeader } from "@x402/core/http";
 
-const BASE = "https://verify402.onrender.com";
+const BASE = "https://vex402.online";
 const FAKE_KEY = "0x" + "11".repeat(32);
 const PAID_ROUTE = "/route";
 

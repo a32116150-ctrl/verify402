@@ -52,8 +52,8 @@ or swaps you would otherwise sign in the browser and tell me where the gate
 returns a false PASS. Demo payments are Base Sepolia; analysis reads mainnet; no
 paid test.
 
-Browser: https://verify402.onrender.com/preflight#try
-MCP: https://verify402.onrender.com/mcp
+Browser: https://vex402.online/preflight#try
+MCP: https://vex402.online/mcp
 
 It checks the transaction, not the token's sellability or the counterparty's
 reputation; those are named in notChecked.
@@ -81,8 +81,8 @@ becomes a signature. Would a falsification test be useful? Run 3-5 intents you
 would otherwise sign and tell me where it returns a false PASS. Demo payments are
 Base Sepolia; analysis reads mainnet; no paid test.
 
-Browser: https://verify402.onrender.com/preflight#try
-MCP: https://verify402.onrender.com/mcp
+Browser: https://vex402.online/preflight#try
+MCP: https://vex402.online/mcp
 
 If this is the wrong team or not useful, reply "no" and I will not follow up.
 
@@ -107,8 +107,8 @@ I am looking for three builders to run 3-5 real intents and report false PASSes.
 Since Circle owns the asset and the developer surface, an intro to the right
 developer-relations or x402 contact would help. No grant ask.
 
-Browser: https://verify402.onrender.com/preflight#try
-MCP: https://verify402.onrender.com/mcp
+Browser: https://vex402.online/preflight#try
+MCP: https://vex402.online/mcp
 
 If this is not useful, reply "no" and I will not follow up.
 
@@ -133,8 +133,8 @@ for a falsification test rather than a review: run 3-5 intents (an unlimited
 approval, a swap, a payment) and try to make the gate return a false PASS. No
 wallet, no paid test; demo payments are Base Sepolia, analysis reads mainnet.
 
-Browser: https://verify402.onrender.com/preflight#try
-MCP: https://verify402.onrender.com/mcp
+Browser: https://vex402.online/preflight#try
+MCP: https://vex402.online/mcp
 
 If this is the wrong team or not useful, reply "no" and I will not follow up.
 
@@ -159,8 +159,8 @@ Would the team run 3-5 Arbitrum intents you would otherwise sign and report any
 false PASS? Demo payments are Base Sepolia; analysis reads Arbitrum mainnet; no
 paid test.
 
-Browser: https://verify402.onrender.com/preflight#try
-MCP: https://verify402.onrender.com/mcp
+Browser: https://vex402.online/preflight#try
+MCP: https://vex402.online/mcp
 
 If this is the wrong team or not useful, reply "no" and I will not follow up.
 
@@ -185,8 +185,8 @@ approval. Would a falsification test be useful? Run 3-5 intents you would
 otherwise sign and tell me where the gate returns a false PASS. No paid test; demo
 payments are Base Sepolia, analysis reads mainnet.
 
-Browser: https://verify402.onrender.com/preflight#try
-MCP: https://verify402.onrender.com/mcp
+Browser: https://vex402.online/preflight#try
+MCP: https://vex402.online/mcp
 
 If this is the wrong team or not useful, reply "no" and I will not follow up.
 

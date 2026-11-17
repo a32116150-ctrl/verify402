@@ -46,10 +46,10 @@
         asset: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
         amount: "10000",
         payTo: "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb",
-        resource: "https://verify402.onrender.com/verify",
+        resource: "https://vex402.online/verify",
         maxTimeoutSeconds: 60
       },
-      policy: { maxAmountUsd: 0.25, allowedResourceHosts: ["verify402.onrender.com"] }
+      policy: { maxAmountUsd: 0.25, allowedResourceHosts: ["vex402.online"] }
     }, null, 2),
     block: JSON.stringify({
       kind: "transaction",

@@ -4,15 +4,15 @@
 
 **Looking for:** 3 developers building AI agents, MCP tools, or x402 payment integrations.
 
-**Tester kit:** https://verify402.onrender.com/testers — the three-intent format
+**Tester kit:** https://vex402.online/testers — the three-intent format
 (one expected pass, one uncertain, one expected block).
 
-**Field notes:** https://verify402.onrender.com/blog — scope, receipts, and the
+**Field notes:** https://vex402.online/blog — scope, receipts, and the
 failure modes the gate is meant to catch.
 
 verify402 is a preflight gate for agents before they sign or pay. Send it the payment request or transaction intent your agent is about to sign. It returns `PASS` / `CAUTION` / `BLOCK`, the checks that ran, the checks that did not, and a short-lived HMAC receipt.
 
-**Fastest path:** open the [live try-it panel](https://verify402.onrender.com/preflight#try), click **Use Base USDC sample**, then **Check approval**. No terminal, wallet, or account. For the payment PASS example, expand **Advanced: paste the raw JSON**. The curl steps below are optional.
+**Fastest path:** open the [live try-it panel](https://vex402.online/preflight#try), click **Use Base USDC sample**, then **Check approval**. No terminal, wallet, or account. For the payment PASS example, expand **Advanced: paste the raw JSON**. The curl steps below are optional.
 
 ## Scope and safety
 
@@ -26,7 +26,7 @@ verify402 is a preflight gate for agents before they sign or pay. Send it the pa
 ## 1. Run one free payment intent
 
 ```bash
-curl -sS -X POST https://verify402.onrender.com/preflight \
+curl -sS -X POST https://vex402.online/preflight \
   -H 'content-type: application/json' \
   -d '{
     "kind": "payment",
@@ -36,7 +36,7 @@ curl -sS -X POST https://verify402.onrender.com/preflight \
       "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
       "amount": "10000",
       "payTo": "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb",
-      "resource": "https://verify402.onrender.com/verify"
+      "resource": "https://vex402.online/verify"
     },
     "policy": { "maxAmountUsd": 0.25 }
   }'
@@ -58,7 +58,7 @@ Run 3–5 of these, not just the sample:
 The unlimited-approval check is a useful negative test:
 
 ```bash
-curl -sS -X POST https://verify402.onrender.com/preflight \
+curl -sS -X POST https://vex402.online/preflight \
   -H 'content-type: application/json' \
   -d '{
     "kind": "transaction",
@@ -82,7 +82,7 @@ Free-only mode needs no wallet. Add this to your MCP client:
     "verify402": {
       "command": "npx",
       "args": ["-y", "verify402-mcp@latest"],
-      "env": { "VERIFY402_URL": "https://verify402.onrender.com" }
+      "env": { "VERIFY402_URL": "https://vex402.online" }
     }
   }
 }
@@ -117,7 +117,7 @@ If you prefer, reply in the thread where you found this.
 
 I’m the solo developer. I’ll fix reproducible bugs, reply with what changed, and publish an anonymized summary if enough testers run the gate. Tell me if you want credit by handle or to stay anonymous.
 
-- Live preflight page: https://verify402.onrender.com/preflight
-- MCP page: https://verify402.onrender.com/mcp
+- Live preflight page: https://vex402.online/preflight
+- MCP page: https://vex402.online/mcp
 - Source: https://github.com/a32116150-ctrl/verify402
 - Full onboarding: [examples/ONBOARDING.md](examples/ONBOARDING.md)

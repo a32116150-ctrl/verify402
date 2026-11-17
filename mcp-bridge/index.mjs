@@ -8,7 +8,7 @@
 //
 // ARCHITECTURE (per docs.x402.org/guides/mcp-server-with-x402):
 //
-//   MCP client ──▶ this bridge (MCP server + x402 payer) ──▶ verify402.onrender.com
+//   MCP client ──▶ this bridge (MCP server + x402 payer) ──▶ vex402.online
 //
 //   1. tool call            3. 402 + PAYMENT-REQUIRED
 //   2. paid GET/POST        4. sign payment (wallet in env)
@@ -48,7 +48,7 @@ if (IS_MAIN) config();
 const EVM_PRIVATE_KEY = process.env.EVM_PRIVATE_KEY;
 // Normalise once so the axios base URL, the payment policy prefix, and the
 // per-tool expected resource are all the same string (no trailing slash).
-const SERVER_URL = (process.env.VERIFY402_URL || "https://verify402.onrender.com")
+const SERVER_URL = (process.env.VERIFY402_URL || "https://vex402.online")
   .trim()
   .replace(/\/+$/, "");
 // CLIENT_HEADERS is a label, not an identity: it helps /usage separate MCP
@@ -127,7 +127,7 @@ Usage:
   verify402-mcp --version       print the version
 
 Environment:
-  VERIFY402_URL     verify402 base URL (default https://verify402.onrender.com)
+  VERIFY402_URL     verify402 base URL (default https://vex402.online)
   EVM_PRIVATE_KEY   optional; omit for the free preflight_gate only
   MAX_PAYMENT_USD   cap on one x402 payment (default 0.25)
   MAX_DAILY_USD     optional cap for the UTC day, persisted in a small ledger

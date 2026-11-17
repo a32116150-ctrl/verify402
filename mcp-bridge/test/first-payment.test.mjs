@@ -17,7 +17,7 @@ import {
   MAINNET_USDC,
 } from "../payment-policy.mjs";
 
-const RESOURCE = "https://verify402.onrender.com/route";
+const RESOURCE = "https://vex402.online/route";
 const TESTNET = {
   scheme: "exact",
   network: DEMO_NETWORK,
@@ -46,7 +46,7 @@ function guardFor({
   const policy = createPaymentPolicy({
     networks,
     payTo,
-    resourcePrefix: "https://verify402.onrender.com",
+    resourcePrefix: "https://vex402.online",
     paidRoutes: [FIRST_PAYMENT_ROUTE],
   });
   return createPayerGuard({ policy, expectedResource: RESOURCE, maxAmountUsd });
@@ -100,7 +100,7 @@ test("payer rejects an unexpected payee", () => {
 
 test("payer rejects an unexpected resource", () => {
   const guard = guardFor();
-  const result = guard(context(TESTNET, TESTNET, "https://verify402.onrender.com/verify"));
+  const result = guard(context(TESTNET, TESTNET, "https://vex402.online/verify"));
   assert.equal(result.abort, true);
   assert.match(result.reason, /not the expected/);
 });
@@ -149,7 +149,7 @@ test("payer config defaults to Base Sepolia and the verify402 payee", () => {
   const config = resolvePayerConfig({ EVM_PRIVATE_KEY: "0x" + "11".repeat(32) });
   assert.deepEqual(config.policy.allowedNetworks, [DEMO_NETWORK]);
   assert.equal(config.policy.allowedPayTo, DEFAULT_PAY_TO.toLowerCase());
-  assert.equal(config.expectedResource, `https://verify402.onrender.com${FIRST_PAYMENT_ROUTE}`);
+  assert.equal(config.expectedResource, `https://vex402.online${FIRST_PAYMENT_ROUTE}`);
   assert.equal(config.maxAmountUsd, 0.03);
 });
 

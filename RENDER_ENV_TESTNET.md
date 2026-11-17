@@ -1,6 +1,6 @@
 # Render Environment: Testnet Service
 
-Current live service: `https://verify402.onrender.com/`
+Current live service: `https://vex402.online/`
 
 ## Variable table
 
@@ -14,8 +14,8 @@ Current live service: `https://verify402.onrender.com/`
 | `PAY_TO_SVM` | testnet receiving wallet address | No | Your testnet Solana wallet | Defaults to the repo's testnet payee address | Keep if it is your wallet; otherwise change |
 | `PREFLIGHT_SECRET` | at least 32 random characters | Yes | Password manager or `openssl rand -hex 32` | Receipts use an ephemeral per-process secret; receipts are not stable across restarts | Keep |
 | `X402_MODE` | `testnet` | No | Deployment mode | Defaults to `testnet` | Keep, exact value |
-| `AGENT_URL` | `https://verify402.onrender.com` | No | Canonical public origin | Agent card falls back to trusted Host handling; mainnet requires it | Change: remove trailing slash |
-| `TRUSTED_HOSTS` | `verify402.onrender.com,localhost,127.0.0.1` | No | Host allowlist when `AGENT_URL` is unset | Defaults include `verify402.onrender.com`, `localhost`, `127.0.0.1`, `::1` | Change: remove scheme and trailing slash |
+| `AGENT_URL` | `https://vex402.online` | No | Canonical public origin | Agent card falls back to trusted Host handling; mainnet requires it | Change: remove trailing slash |
+| `TRUSTED_HOSTS` | `vex402.online,localhost,127.0.0.1` | No | Host allowlist when `AGENT_URL` is unset | Defaults include `vex402.online`, `localhost`, `127.0.0.1`, `::1` | Change: remove scheme and trailing slash |
 | `READY_CHAIN_ID` | `84532` for Base Sepolia readiness, or `1`, `42161`, `8453` | No | Chain used by `/ready` | Defaults to `1` | Set `84532` only for readiness; paid routes still require 1/42161/8453 |
 | `READY_RPC_URL` | private readiness endpoint (never paste the value here) | Yes if it embeds an API key | RPC provider dashboard | Falls back to the chain-specific variable, then the public default | Optional; use a dedicated endpoint for a stable `/ready` |
 | `BASE_SEPOLIA_RPC_URL` | private Base Sepolia endpoint (never paste the value here) | Yes if it embeds an API key | RPC provider dashboard | Uses `https://sepolia.base.org` | Only used by readiness on `READY_CHAIN_ID=84532` |
@@ -30,12 +30,12 @@ The row whose key is the literal text `ETH_RPC_URL, ARB_RPC_URL, BASE_RPC_URL` w
 ## AGENT_URL and TRUSTED_HOSTS parsing
 
 Code:
-- `src/public-url.mjs`, `parseAgentUrl()` lines 14-33: a trailing slash is accepted and stripped, so `https://verify402.onrender.com/` becomes `https://verify402.onrender.com`. Credentials, query strings, and fragments are rejected.
-- `src/public-url.mjs`, `parseTrustedHosts()` lines 46-63 and `normalizeHost()` lines 35-45: `https://verify402.onrender.com/` is accepted as a hostname, but the correct value is a bare hostname list.
+- `src/public-url.mjs`, `parseAgentUrl()` lines 14-33: a trailing slash is accepted and stripped, so `https://vex402.online/` becomes `https://vex402.online`. Credentials, query strings, and fragments are rejected.
+- `src/public-url.mjs`, `parseTrustedHosts()` lines 46-63 and `normalizeHost()` lines 35-45: `https://vex402.online/` is accepted as a hostname, but the correct value is a bare hostname list.
 
 Exact correct values:
-- `AGENT_URL` = `https://verify402.onrender.com`
-- `TRUSTED_HOSTS` = `verify402.onrender.com,localhost,127.0.0.1`
+- `AGENT_URL` = `https://vex402.online`
+- `TRUSTED_HOSTS` = `vex402.online,localhost,127.0.0.1`
 
 ## CDP variables on testnet
 

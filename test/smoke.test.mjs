@@ -145,7 +145,7 @@ const calledRoute = (calls) => calls.some((call) => call.url.endsWith("/route"))
 test("normalizeBaseUrl strips trailing slashes and defaults", () => {
   assert.equal(normalizeBaseUrl("http://example.com/"), "http://example.com");
   assert.equal(normalizeBaseUrl("http://example.com///"), "http://example.com");
-  assert.equal(normalizeBaseUrl(""), "https://verify402.onrender.com");
+  assert.equal(normalizeBaseUrl(""), "https://vex402.online");
 });
 
 test("runSmoke returns ok:false when a check fails", async () => {

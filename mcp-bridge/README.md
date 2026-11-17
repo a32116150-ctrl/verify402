@@ -116,7 +116,7 @@ To give your AI agent the free **`preflight_gate`** (checks transaction calldata
       "command": "npx",
       "args": ["-y", "verify402-mcp"],
       "env": {
-        "VERIFY402_URL": "https://verify402.onrender.com"
+        "VERIFY402_URL": "https://vex402.online"
       }
     }
   }
@@ -145,7 +145,7 @@ To enable the 5 deep on-chain truth checks (`verify_arbitrage`, `check_token_saf
       "command": "npx",
       "args": ["-y", "verify402-mcp"],
       "env": {
-        "VERIFY402_URL": "https://verify402.onrender.com",
+        "VERIFY402_URL": "https://vex402.online",
         "EVM_PRIVATE_KEY": "0xYOUR_HOT_WALLET_PRIVATE_KEY",
         "MAX_PAYMENT_USD": "0.25",
         "MAX_DAILY_USD": "1.00",
@@ -168,7 +168,7 @@ In `opencode.jsonc` (or `~/.config/opencode/opencode.jsonc`):
         "type": "local",
         "command": ["npx", "-y", "verify402-mcp"],
         "environment": {
-          "VERIFY402_URL": "https://verify402.onrender.com",
+          "VERIFY402_URL": "https://vex402.online",
           "EVM_PRIVATE_KEY": "{env:EVM_PRIVATE_KEY}",
           "VERIFY402_NETWORKS": "eip155:84532",
           "MAX_PAYMENT_USD": "0.25",

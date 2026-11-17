@@ -29,7 +29,7 @@ file that you cannot see is true on screen.
 - **npm:** https://www.npmjs.com/package/verify402-mcp (latest `1.1.1`)
 - **Install:** `npx -y verify402-mcp`
 - **Repository:** https://github.com/a32116150-ctrl/verify402
-- **Homepage:** https://verify402.onrender.com/
+- **Homepage:** https://vex402.online/
 - **License:** Apache-2.0
 - **Registry entry:** `io.github.a32116150-ctrl/verify402-mcp` (MCP Registry, active/latest)
 - **Category hints:** finance, crypto, security, payments, agent-tools

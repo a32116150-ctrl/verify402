@@ -3,7 +3,7 @@
 **Document Version:** 1.0.0
 **Updated:** 2026-10-19
 **Repository:** [https://github.com/a32116150-ctrl/verify402](https://github.com/a32116150-ctrl/verify402)
-**Production URL:** [https://verify402.onrender.com](https://verify402.onrender.com)
+**Production URL:** [https://vex402.online](https://vex402.online)
 
 This checklist tracks official and third-party registry listings for Verify402. Every entry is backed by verified repository evidence and explicit status codes:
 
@@ -72,7 +72,7 @@ This checklist tracks official and third-party registry listings for Verify402. 
 - **Mechanism:** Any unpaid HTTP request receives `402 Payment Required` with an `extensions.bazaar` object containing `method`, `bodyType`, `input`, `inputSchema`, and `output` examples.
 - **Verification Command:**
   ```bash
-  curl -s -X POST https://verify402.onrender.com/verify -H "content-type: application/json" -d '{"target":"WETH"}' | jq .extensions.bazaar
+  curl -s -X POST https://vex402.online/verify -H "content-type: application/json" -d '{"target":"WETH"}' | jq .extensions.bazaar
   ```
 - **Documentation:** Detailed guide in [`docs/x402-discovery.md`](x402-discovery.md).
 
@@ -138,7 +138,7 @@ This checklist tracks official and third-party registry listings for Verify402. 
         "command": "npx",
         "args": ["-y", "verify402-mcp@latest"],
         "env": {
-          "VERIFY402_URL": "https://verify402.onrender.com"
+          "VERIFY402_URL": "https://vex402.online"
         }
       }
     }

@@ -36,7 +36,7 @@ test("discovery: server.json complies with MCP Registry specification", () => {
   assert.equal(server.name, "io.github.a32116150-ctrl/verify402-mcp");
   assert.equal(server.version, RELEASE_VERSION);
   assert.ok(server.description.length <= 100, `description length ${server.description.length} must be <= 100 chars`);
-  assert.equal(server.websiteUrl, "https://verify402.onrender.com");
+  assert.equal(server.websiteUrl, "https://vex402.online");
   assert.ok(Array.isArray(server.packages) && server.packages.length > 0);
   assert.equal(server.packages[0].transport.type, "stdio");
 
@@ -65,7 +65,7 @@ test("discovery: canonical service manifest matches implemented tools and runtim
   assert.equal(manifest.name, "verify402");
   assert.equal(manifest.schemaVersion, "1.0.0");
   assert.equal(manifest.version, RELEASE_VERSION);
-  assert.equal(manifest.canonicalUrl, "https://verify402.onrender.com");
+  assert.equal(manifest.canonicalUrl, "https://vex402.online");
 
   const tools = manifest.integrations.mcp.tools;
   assert.equal(tools.length, 8, "Must advertise exactly 8 MCP tools");

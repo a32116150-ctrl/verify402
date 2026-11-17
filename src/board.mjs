@@ -228,7 +228,7 @@ export async function loadBoard({ fetchImpl = globalThis.fetch, timeoutMs = 1000
     cache.refreshing = (async () => {
       try {
         const res = await fetchImpl(BOARD_SOURCE, {
-          headers: { "user-agent": "verify402-board/1 (+https://verify402.onrender.com/board)" },
+          headers: { "user-agent": "verify402-board/1 (+https://vex402.online/board)" },
           signal: AbortSignal.timeout(timeoutMs),
         });
         if (!res.ok) throw new Error(`board source ${res.status}`);
@@ -370,7 +370,7 @@ function rowHtml(row) {
 </tr>`;
 }
 
-export function renderBoardPage(board, { origin = "https://verify402.onrender.com" } = {}) {
+export function renderBoardPage(board, { origin = "https://vex402.online" } = {}) {
   const b = board || emptyBoard();
   const c = b.counts || {};
   const rows = b.rows || [];

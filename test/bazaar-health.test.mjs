@@ -17,7 +17,7 @@ import {
   MAX_DESCRIPTION,
 } from "../scripts/bazaar-health.mjs";
 
-const ORIGIN = "https://verify402.onrender.com";
+const ORIGIN = "https://vex402.online";
 
 function challengeFor(path, overrides = {}) {
   return {

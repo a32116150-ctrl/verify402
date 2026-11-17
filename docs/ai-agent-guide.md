@@ -41,7 +41,7 @@ Edit your `claude_desktop_config.json`:
       "command": "npx",
       "args": ["-y", "verify402-mcp@latest"],
       "env": {
-        "VERIFY402_URL": "https://verify402.onrender.com"
+        "VERIFY402_URL": "https://vex402.online"
       }
     }
   }
@@ -63,7 +63,7 @@ Edit `~/.codeium/windsurf/mcp_config.json`:
       "command": "npx",
       "args": ["-y", "verify402-mcp@latest"],
       "env": {
-        "VERIFY402_URL": "https://verify402.onrender.com"
+        "VERIFY402_URL": "https://vex402.online"
       }
     }
   }
@@ -79,7 +79,7 @@ Open `cline_mcp_settings.json`:
       "command": "npx",
       "args": ["-y", "verify402-mcp@latest"],
       "env": {
-        "VERIFY402_URL": "https://verify402.onrender.com"
+        "VERIFY402_URL": "https://vex402.online"
       }
     }
   }

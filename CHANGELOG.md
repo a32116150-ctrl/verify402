@@ -333,7 +333,7 @@ records the source change. Release runbook: `PUBLISH_STEPS_FOR_ME.md`.
 - GitHub: release `mcp-v1.1.0` published `2026-11-13T12:30:31Z`; the tag points
   at `f5d5d9a`, the commit npm built from, not the later docs-only commits.
 - Render: `/info` reports `1.1.0`; free-only post-deploy check passed 29/29
-  against `https://verify402.onrender.com`.
+  against `https://vex402.online`.
 - Clean install from the public registry: 12 files, 33.2 kB, `npm audit` →
   0 vulnerabilities.
 - Not part of this release: durable settlement recovery is still the dashboard

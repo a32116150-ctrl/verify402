@@ -6,8 +6,8 @@
 2. Click "Environment" or "Environment Variables".
 3. Find the row whose key is the literal text `ETH_RPC_URL, ARB_RPC_URL, BASE_RPC_URL`.
 4. Delete that broken row. It does nothing.
-5. Edit `AGENT_URL` to `https://verify402.onrender.com` with no trailing slash.
-6. Edit `TRUSTED_HOSTS` to `verify402.onrender.com,localhost,127.0.0.1`.
+5. Edit `AGENT_URL` to `https://vex402.online` with no trailing slash.
+6. Edit `TRUSTED_HOSTS` to `vex402.online,localhost,127.0.0.1`.
 7. Edit `FACILITATOR_URL` to `https://x402.org/facilitator`.
 8. Edit `X402_MODE` to `testnet`.
 9. Leave `CDP_API_KEY_ID` and `CDP_API_KEY_SECRET` only if you plan to use CDP later; otherwise delete them.

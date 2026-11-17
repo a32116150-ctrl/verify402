@@ -33,7 +33,7 @@ Free gate only — no wallet, nothing can be charged:
         "verify402-mcp@1.1.1"
       ],
       "env": {
-        "VERIFY402_URL": "https://verify402.onrender.com"
+        "VERIFY402_URL": "https://vex402.online"
       }
     }
   }
@@ -55,7 +55,7 @@ Ask the agent to call `preflight_gate` with an ordinary 0.01 testnet USDC paymen
     "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
     "amount": "10000",
     "payTo": "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb",
-    "resource": "https://verify402.onrender.com/verify",
+    "resource": "https://vex402.online/verify",
     "maxTimeoutSeconds": 60
   },
   "policy": { "maxAmountUsd": 0.25 }

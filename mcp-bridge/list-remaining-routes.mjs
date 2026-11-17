@@ -61,7 +61,7 @@ export const ROUTES = [
 
 function config(env = process.env) {
   if (!env.EVM_PRIVATE_KEY) throw new Error("EVM_PRIVATE_KEY required in .env — the BUYER's wallet");
-  const serverUrl = String(env.VERIFY402_URL || "https://verify402.onrender.com").trim().replace(/\/+$/, "");
+  const serverUrl = String(env.VERIFY402_URL || "https://vex402.online").trim().replace(/\/+$/, "");
   const maxAmountUsd = Number(env.MAX_PAYMENT_USD || 0.25);
   const networks = env.VERIFY402_NETWORKS === undefined ? DEMO_NETWORK : env.VERIFY402_NETWORKS;
   const payTo = env.VERIFY402_PAY_TO === undefined ? DEFAULT_PAY_TO : env.VERIFY402_PAY_TO;

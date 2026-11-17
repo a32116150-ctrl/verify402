@@ -13,7 +13,7 @@ Used by the public demo. Do not substitute these for mainnet values.
 | Chain id | `84532` |
 | Testnet USDC | `0x036CbD53842c5426634e7929541eC2318f3dCF7e` |
 | Demo payee | `0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb` |
-| Demo host | `verify402.onrender.com` |
+| Demo host | `vex402.online` |
 
 The public demo settles payments in testnet USDC. The analysis routes read
 mainnet chain data. A testnet payment is not mainnet revenue.
@@ -31,7 +31,7 @@ mainnet chain data. A testnet payment is not mainnet revenue.
     "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
     "amount": "10000",
     "payTo": "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb",
-    "resource": "https://verify402.onrender.com/verify",
+    "resource": "https://vex402.online/verify",
     "idempotencyKey": "order-123-payment-1",
     "maxTimeoutSeconds": 60,
     "extra": {
@@ -45,8 +45,8 @@ mainnet chain data. A testnet payment is not mainnet revenue.
     "allowedNetworks": ["eip155:84532"],
     "allowedPayTo": ["0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb"],
     "allowedAssets": ["0x036CbD53842c5426634e7929541eC2318f3dCF7e"],
-    "expectedResource": "https://verify402.onrender.com/verify",
-    "allowedResourceHosts": ["verify402.onrender.com"],
+    "expectedResource": "https://vex402.online/verify",
+    "allowedResourceHosts": ["vex402.online"],
     "maxTimeoutSeconds": 60
   }
 }
@@ -108,8 +108,8 @@ Notes:
   "allowedNetworks": ["eip155:84532"],
   "allowedPayTo": ["0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb"],
   "allowedAssets": ["0x036CbD53842c5426634e7929541eC2318f3dCF7e"],
-  "expectedResource": "https://verify402.onrender.com/verify",
-  "allowedResourceHosts": ["verify402.onrender.com"],
+  "expectedResource": "https://vex402.online/verify",
+  "allowedResourceHosts": ["vex402.online"],
   "maxTimeoutSeconds": 60
 }
 ```
@@ -288,7 +288,7 @@ other.
 ## cURL
 
 ```bash
-curl -sS -X POST https://verify402.onrender.com/preflight \
+curl -sS -X POST https://vex402.online/preflight \
   -H 'content-type: application/json' \
   --data-binary @intent.json
 ```
@@ -296,7 +296,7 @@ curl -sS -X POST https://verify402.onrender.com/preflight \
 For a receipt check:
 
 ```bash
-curl -sS -X POST https://verify402.onrender.com/preflight/verify \
+curl -sS -X POST https://vex402.online/preflight/verify \
   -H 'content-type: application/json' \
   --data-binary @verify.json
 ```

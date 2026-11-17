@@ -1,7 +1,7 @@
 // Durable-recovery cutover check.
 //
 //   node scripts/durability-cutover.mjs
-//   VERIFY402_URL=https://verify402.onrender.com node scripts/durability-cutover.mjs
+//   VERIFY402_URL=https://vex402.online node scripts/durability-cutover.mjs
 //
 // Answers one question, from the outside: is the deployed process journaling
 // paid settlements to a durable store, or is it still memory-only?
@@ -13,7 +13,7 @@
 // never touches a wallet. The cutover itself is a dashboard action because it
 // needs a paid instance and a disk (see DEPLOY.md 3.1/3.2).
 
-const BASE = (process.env.VERIFY402_URL || process.env.SMOKE_BASE_URL || "https://verify402.onrender.com").replace(/\/+$/, "");
+const BASE = (process.env.VERIFY402_URL || process.env.SMOKE_BASE_URL || "https://vex402.online").replace(/\/+$/, "");
 const TIMEOUT_MS = 20_000;
 
 async function getJson(path) {

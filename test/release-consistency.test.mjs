@@ -94,7 +94,7 @@ test("release metadata uses one version across package, lockfile, registry, mani
 
   const testnetLlms = buildLlmsText({
     mode: "testnet",
-    baseUrl: "https://verify402.onrender.com",
+    baseUrl: "https://vex402.online",
   });
   assert.match(
     testnetLlms,
@@ -383,7 +383,7 @@ test("bridge demo default is testnet, accepts the live testnet challenge, and fa
   // Exercise the same policy builder the paid client uses, with no env
   // override. This is the runtime default, not a paragraph in a README.
   const demoPolicy = createPaymentPolicyFromEnv({
-    resourcePrefix: "https://verify402.onrender.com",
+    resourcePrefix: "https://vex402.online",
     env: {},
   });
 
@@ -400,7 +400,7 @@ test("bridge demo default is testnet, accepts the live testnet challenge, and fa
   // If a future change made mainnet the runtime default, this is the exact
   // regression: the demo's Base Sepolia challenge would be refused.
   const simulatedMainnetDefault = createPaymentPolicyFromEnv({
-    resourcePrefix: "https://verify402.onrender.com",
+    resourcePrefix: "https://vex402.online",
     env: { VERIFY402_NETWORKS: MAINNET_NETWORK },
   });
   assert.throws(
@@ -410,7 +410,7 @@ test("bridge demo default is testnet, accepts the live testnet challenge, and fa
   );
 
   const explicitMainnet = createPaymentPolicyFromEnv({
-    resourcePrefix: "https://verify402.onrender.com",
+    resourcePrefix: "https://vex402.online",
     env: { VERIFY402_NETWORKS: MAINNET_NETWORK },
   });
   assert.deepEqual(explicitMainnet.allowedNetworks, [MAINNET_NETWORK]);
@@ -418,14 +418,14 @@ test("bridge demo default is testnet, accepts the live testnet challenge, and fa
 
   assert.equal(
     demoPolicy.checkBeforeSign({
-      paymentRequired: { resource: { url: "https://verify402.onrender.com/verify" } },
+      paymentRequired: { resource: { url: "https://vex402.online/verify" } },
       selectedRequirements: TESTNET_REQUIREMENT,
     }),
     undefined,
   );
   assert.equal(
     demoPolicy.checkBeforeSign({
-      paymentRequired: { resource: { url: "https://verify402.onrender.com/preflight" } },
+      paymentRequired: { resource: { url: "https://vex402.online/preflight" } },
       selectedRequirements: TESTNET_REQUIREMENT,
     })?.abort,
     true,
@@ -603,8 +603,8 @@ test("post-deploy smoke environment is forced free-only and strips payment crede
     SMOKE_PAID: "1",
     EVM_PRIVATE_KEY: "0x" + "11".repeat(32),
     CDP_API_KEY_SECRET: "not-a-real-secret",
-    SMOKE_BASE_URL: "https://verify402.onrender.com",
-    AGENT_URL: "https://verify402.onrender.com",
+    SMOKE_BASE_URL: "https://vex402.online",
+    AGENT_URL: "https://vex402.online",
   };
 
   const free = buildFreeSmokeEnv(parent);

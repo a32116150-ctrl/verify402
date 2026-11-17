@@ -779,7 +779,7 @@ if (!BYPASS_PAYMENT) app.use(
     {
       "POST /verify": {
         accepts: accepts(PRICE),
-        iconUrl: "https://verify402.onrender.com/logo-400.png",
+        iconUrl: "https://vex402.online/logo-400.png",
         description:
           "Measure whether a cross-venue arbitrage round trip is profitable right now, using Uniswap's canonical QuoterV2 and the venues' own V2 routers, at one pinned block. Returns a verdict with full evidence.",
         mimeType: "application/json",
@@ -822,7 +822,7 @@ if (!BYPASS_PAYMENT) app.use(
       },
       "POST /safety": {
         accepts: accepts(SAFETY_PRICE),
-        iconUrl: "https://verify402.onrender.com/logo-400.png",
+        iconUrl: "https://vex402.online/logo-400.png",
         description:
           "Pre-trade gate for an agent about to buy a token. Returns TRUST / CAUTION / AVOID with evidence: contract facts from the live chain, liquidity and scam signals, a quote-based sellability check through the configured venues' own routers (direct and WETH-routed), a full round-trip cost at your intended size, and an offered-price sanity check. It does not execute a transfer; transfer restrictions and unconfigured venues are named in notChecked.",
         mimeType: "application/json",
@@ -857,7 +857,7 @@ if (!BYPASS_PAYMENT) app.use(
       },
       "POST /route": {
         accepts: accepts(ROUTE_PRICE),
-        iconUrl: "https://verify402.onrender.com/logo-400.png",
+        iconUrl: "https://vex402.online/logo-400.png",
         description:
           "The full execution book right now: every configured venue (direct and WETH-routed) quoting tokenIn -> tokenOut at one pinned block, best first. Verdict-free evidence; pair it with /quotecheck to audit someone else's number.",
         mimeType: "application/json",
@@ -896,7 +896,7 @@ if (!BYPASS_PAYMENT) app.use(
       },
       "POST /depth": {
         accepts: accepts(DEPTH_PRICE),
-        iconUrl: "https://verify402.onrender.com/logo-400.png",
+        iconUrl: "https://vex402.online/logo-400.png",
         description:
           "Position sizing as a service. For a ladder of USD sizes, measure what the chain ACTUALLY pays: entry via the best route, immediate exit of the exact position, per-size impact %, round-trip cost %, and the largest size that stays under your cost tolerance. This is what pool-reserve-dollar figures cannot tell you: what a real block gives you for YOUR size.",
         mimeType: "application/json",
@@ -936,7 +936,7 @@ if (!BYPASS_PAYMENT) app.use(
       },
       "POST /quotecheck": {
         accepts: accepts(QUOTECHECK_PRICE),
-        iconUrl: "https://verify402.onrender.com/logo-400.png",
+        iconUrl: "https://vex402.online/logo-400.png",
         description:
           "Fairness audit of a quote someone else gave you. Returns fair / overpaying / too_good_to_be_true / unknown, with the full venue book at one pinned block as evidence. Ask this BEFORE signing any swap whose number you did not produce yourself.",
         mimeType: "application/json",
@@ -1079,7 +1079,7 @@ app.get("/robots.txt", (_req, res) => {
       "User-agent: PerplexityBot",
       "Allow: /",
       "",
-      "Sitemap: https://verify402.onrender.com/sitemap.xml",
+      "Sitemap: https://vex402.online/sitemap.xml",
       "# Machine-readable discovery contracts:",
       "# Canonical service manifest: /.well-known/verify402.json",
       "# Plain-text contract: /llms.txt",
@@ -1096,33 +1096,33 @@ app.get("/sitemap.xml", (_req, res) => {
   res.type("application/xml").send(
     `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://verify402.onrender.com/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
-  <url><loc>https://verify402.onrender.com/start</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
-  <url><loc>https://verify402.onrender.com/docs</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
-  <url><loc>https://verify402.onrender.com/mcp</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
-  <url><loc>https://verify402.onrender.com/preflight</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://verify402.onrender.com/inspect</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
-  <url><loc>https://verify402.onrender.com/board</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
-  <url><loc>https://verify402.onrender.com/directory</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://verify402.onrender.com/testers</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
-  <url><loc>https://verify402.onrender.com/blog</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://verify402.onrender.com/blog/what-a-pre-signing-gate-can-check</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://verify402.onrender.com/blog/a-receipt-is-a-falsifiable-record</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://verify402.onrender.com/blog/three-intents-never-sign-unchecked</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://verify402.onrender.com/blog/check-an-x402-endpoint-before-you-pay</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://verify402.onrender.com/blog/pre-signing-gate-in-an-mcp-agent</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://verify402.onrender.com/blog/verify402-mcp-1-1-0</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://verify402.onrender.com/blog/what-public-402s-look-like</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://verify402.onrender.com/checks</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://verify402.onrender.com/proof</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://verify402.onrender.com/live</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://vex402.online/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://vex402.online/start</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://vex402.online/docs</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://vex402.online/mcp</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://vex402.online/preflight</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://vex402.online/inspect</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://vex402.online/board</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
+  <url><loc>https://vex402.online/directory</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://vex402.online/testers</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://vex402.online/blog</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://vex402.online/blog/what-a-pre-signing-gate-can-check</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://vex402.online/blog/a-receipt-is-a-falsifiable-record</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://vex402.online/blog/three-intents-never-sign-unchecked</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://vex402.online/blog/check-an-x402-endpoint-before-you-pay</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://vex402.online/blog/pre-signing-gate-in-an-mcp-agent</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://vex402.online/blog/verify402-mcp-1-1-0</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://vex402.online/blog/what-public-402s-look-like</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://vex402.online/checks</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://vex402.online/proof</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://vex402.online/live</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
 ${Object.keys(CHAINS[1].tokens)
   .filter((t) => t !== "USDC")
-  .map((t) => `  <url><loc>https://verify402.onrender.com/finding/${t}</loc><changefreq>daily</changefreq><priority>0.6</priority></url>`)
+  .map((t) => `  <url><loc>https://vex402.online/finding/${t}</loc><changefreq>daily</changefreq><priority>0.6</priority></url>`)
   .join("\n")}
-  <url><loc>https://verify402.onrender.com/activity</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
-  <url><loc>https://verify402.onrender.com/donate</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
-  <url><loc>https://verify402.onrender.com/sponsor</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://vex402.online/activity</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://vex402.online/donate</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://vex402.online/sponsor</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
 </urlset>`
   );
 });
@@ -1751,7 +1751,7 @@ app.get("/finding/:target", perIpRateLimit({ max: FINDINGS_RATE_PER_MIN, label: 
     const row = await measureFindingPair(target);
     res.set("Cache-Control", "public, max-age=60");
     res.type("html").send(
-      renderFindingPage(row, { origin: "https://verify402.onrender.com", measuredAt: findingsSnap?.payload?.measuredAt ?? null }),
+      renderFindingPage(row, { origin: "https://vex402.online", measuredAt: findingsSnap?.payload?.measuredAt ?? null }),
     );
   } catch (e) {
     logError("[finding] render failed", e);
@@ -1785,8 +1785,8 @@ app.get("/board.json", async (_req, res) => {
     note:
       "One structural read per endpoint at generatedAt, by verify402's free /inspect logic. " +
       "Not an audit, reputation score, endorsement, or promise about settlement. Read `caveats`.",
-    badge: "https://verify402.onrender.com/badge?url=<urlencoded endpoint url>",
-    inspect: "POST https://verify402.onrender.com/inspect { url, method } for a fresh read",
+    badge: "https://vex402.online/badge?url=<urlencoded endpoint url>",
+    inspect: "POST https://vex402.online/inspect { url, method } for a fresh read",
   });
 });
 

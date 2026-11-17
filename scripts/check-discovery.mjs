@@ -9,7 +9,7 @@
 //
 // Usage:
 //   node scripts/check-discovery.mjs --local             # test against local server or pure static
-//   node scripts/check-discovery.mjs --production        # test against https://verify402.onrender.com (read-only)
+//   node scripts/check-discovery.mjs --production        # test against https://vex402.online (read-only)
 //   node scripts/check-discovery.mjs --url http://...    # test against custom URL
 
 import fs from "fs";
@@ -111,7 +111,7 @@ const isProduction = process.argv.includes("--production");
 const customUrlArg = process.argv.find((a) => a.startsWith("--url="));
 const customUrl = customUrlArg ? customUrlArg.split("=")[1] : null;
 
-const targetBaseUrl = isProduction ? "https://verify402.onrender.com" : customUrl;
+const targetBaseUrl = isProduction ? "https://vex402.online" : customUrl;
 
 if (targetBaseUrl) {
   console.log(`\n[4/4] Validating Live HTTP Endpoints against ${targetBaseUrl}...`);

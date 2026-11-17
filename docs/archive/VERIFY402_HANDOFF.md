@@ -3,7 +3,7 @@
 **Review date:** 2026-10-21, 18:00–18:30 UTC  
 **Repository:** `/Users/mac/Desktop/verify402`  
 **Reviewed commit:** `248923f` (`docs(deploy): add mainnet switch checklist and wallet safety`)  
-**Live service:** <https://verify402.onrender.com>  
+**Live service:** <https://vex402.online>  
 **MCP package:** `verify402-mcp@1.0.4` on npm  
 **Review type:** read-only security, correctness, release, and commercial-readiness review  
 **Changes made for this review:** this file only. No source, tests, package metadata, environment, deployment, Git history, npm publication, or on-chain transaction was changed.
@@ -588,7 +588,7 @@ The engine is credible for “what configured venues quoted at this block.” It
 
 ### Live post-deploy
 
-`SMOKE_BASE_URL=https://verify402.onrender.com npm run post-deploy` passed **22/22** checks:
+`SMOKE_BASE_URL=https://vex402.online npm run post-deploy` passed **22/22** checks:
 
 - wake service;
 - 10 smoke checks (including known-bad preflight BLOCK, missing chain 400, weak idempotency key 400, paid route 402, no CORS wildcard, agent card canonical host);

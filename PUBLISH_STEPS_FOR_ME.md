@@ -279,7 +279,7 @@ metadata.
 Then run the free-only post-deploy check:
 
 ```bash
-SMOKE_BASE_URL=https://verify402.onrender.com \
+SMOKE_BASE_URL=https://vex402.online \
   EXPECTED_VERSION=1.1.1 EXPECTED_MODE=testnet \
   npm run post-deploy
 ```

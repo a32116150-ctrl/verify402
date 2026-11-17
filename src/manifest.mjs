@@ -28,7 +28,7 @@ import {
 const IDEMPOTENCY_TTL_SECONDS = IDEMPOTENCY_TTL_MS / 1000;
 
 export function buildServiceManifest({
-  baseUrl = "https://verify402.onrender.com",
+  baseUrl = "https://vex402.online",
   mode = "testnet",
   prices = {
     verify: PRICE_DEFAULTS.verify,

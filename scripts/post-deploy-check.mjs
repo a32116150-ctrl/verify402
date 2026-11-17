@@ -1,6 +1,6 @@
 // Post-deploy checker for the public testnet demo.
 //
-//   SMOKE_BASE_URL=https://verify402.onrender.com \
+//   SMOKE_BASE_URL=https://vex402.online \
 //   EXPECTED_VERSION=1.0.4 \
 //   EXPECTED_MODE=testnet \
 //   node scripts/post-deploy-check.mjs

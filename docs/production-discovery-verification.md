@@ -8,7 +8,7 @@ while still reading mainnet chain data for analysis. npm is at
 `1.0.3` until the manual release steps in `PUBLISH_STEPS_FOR_ME.md` are done.
 Do not use the version or mainnet-payment status below as current.
 **Repository:** [https://github.com/a32116150-ctrl/verify402](https://github.com/a32116150-ctrl/verify402)
-**Production URL:** [https://verify402.onrender.com](https://verify402.onrender.com)
+**Production URL:** [https://vex402.online](https://vex402.online)
 **Active Production Mode at audit time:** `mainnet` (Base mainnet `eip155:8453` + Solana mainnet `solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp`)
 
 ---
@@ -48,55 +48,55 @@ Only allowed statuses are used: **PASS**, **FAIL**, **BLOCKED**, **NOT RUN**, an
 
 ### Exact Commands Executed & Observed Responses
 
-#### 1. `GET https://verify402.onrender.com/health`
-- **Command:** `curl -s -i https://verify402.onrender.com/health`
+#### 1. `GET https://vex402.online/health`
+- **Command:** `curl -s -i https://vex402.online/health`
 - **HTTP Status:** `200 OK`
 - **Content-Type:** `application/json; charset=utf-8`
 - **Payload:** `{"ok":true,"mode":"mainnet","price":"$0.05","preflight":"free","networks":"Base mainnet / Solana mainnet"}`
 - **Evaluation:** **PASS**. Confirmed live production server in mainnet mode.
 
-#### 2. `GET https://verify402.onrender.com/info`
-- **Command:** `curl -s -i https://verify402.onrender.com/info`
+#### 2. `GET https://vex402.online/info`
+- **Command:** `curl -s -i https://vex402.online/info`
 - **HTTP Status:** `200 OK`
 - **Content-Type:** `application/json; charset=utf-8`
 - **Payload:** Valid JSON containing `name: "verify402"`, price table matching `$0.05`, `$0.10`, `$0.03`, `$0.05`, `$0.05`.
 - **Evaluation:** **PASS**.
 
-#### 3. `GET https://verify402.onrender.com/openapi.json`
-- **Command:** `curl -s -i https://verify402.onrender.com/openapi.json`
+#### 3. `GET https://vex402.online/openapi.json`
+- **Command:** `curl -s -i https://vex402.online/openapi.json`
 - **HTTP Status:** `200 OK`
 - **Content-Type:** `application/json; charset=utf-8`
 - **Payload:** Valid OpenAPI 3.1.0 document declaring `/preflight`, `/preflight/verify`, `/verify`, `/safety`, `/route`, `/quotecheck`, `/depth`.
 - **Evaluation:** **PASS** (Live deployed contract is valid; local codebase expands it to 14 routes with 400/409/429/503 responses upon next deployment).
 
-#### 4. `GET https://verify402.onrender.com/llms.txt`
-- **Command:** `curl -s -i https://verify402.onrender.com/llms.txt`
+#### 4. `GET https://vex402.online/llms.txt`
+- **Command:** `curl -s -i https://vex402.online/llms.txt`
 - **HTTP Status:** `200 OK`
 - **Content-Type:** `text/plain; charset=utf-8`
 - **Payload:** Plain-text contract detailing free preflight gate and 5 paid checks.
 - **Evaluation:** **PASS**.
 
-#### 5. `GET https://verify402.onrender.com/robots.txt`
-- **Command:** `curl -s -i https://verify402.onrender.com/robots.txt`
+#### 5. `GET https://vex402.online/robots.txt`
+- **Command:** `curl -s -i https://vex402.online/robots.txt`
 - **HTTP Status:** `200 OK`
 - **Content-Type:** `text/plain; charset=utf-8`
 - **Payload:** Allow rules for `*`, `GPTBot`, `ClaudeBot`, `PerplexityBot`.
 - **Evaluation:** **PASS**.
 
-#### 6. `GET https://verify402.onrender.com/.well-known/x402`
-- **Command:** `curl -s -i https://verify402.onrender.com/.well-known/x402`
+#### 6. `GET https://vex402.online/.well-known/x402`
+- **Command:** `curl -s -i https://vex402.online/.well-known/x402`
 - **HTTP Status:** `200 OK`
 - **Content-Type:** `application/json; charset=utf-8`
 - **Payload:** x402 capability manifest declaring `x402Version: 2`, `kind: "resource-server"`, and 5 paid resource URLs.
 - **Evaluation:** **PASS**.
 
-#### 7. `GET https://verify402.onrender.com/.well-known/verify402.json`
-- **Command:** `curl -s -i https://verify402.onrender.com/.well-known/verify402.json`
+#### 7. `GET https://vex402.online/.well-known/verify402.json`
+- **Command:** `curl -s -i https://vex402.online/.well-known/verify402.json`
 - **HTTP Status:** `200 OK`
 - **Evaluation:** **PASS**. The manifest reports MCP `1.0.3` and the current pinned tarball URL.
 
-#### 8. `GET https://verify402.onrender.com/sitemap.xml`
-- **Command:** `curl -s -i https://verify402.onrender.com/sitemap.xml`
+#### 8. `GET https://vex402.online/sitemap.xml`
+- **Command:** `curl -s -i https://vex402.online/sitemap.xml`
 - **HTTP Status:** `200 OK`
 - **Evaluation:** **PASS**. The XML sitemap indexes the public documentation pages.
 
@@ -177,7 +177,7 @@ In x402 v2 (`@x402/express`), challenge metadata is delivered in the `payment-re
 ### Free Preflight Gate Live Verification
 - **Command:**
   ```bash
-  curl -sS -X POST https://verify402.onrender.com/preflight \
+  curl -sS -X POST https://vex402.online/preflight \
     -H 'content-type: application/json' \
     -d '{
       "kind": "payment",
@@ -187,9 +187,9 @@ In x402 v2 (`@x402/express`), challenge metadata is delivered in the `payment-re
         "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
         "amount": "10000",
         "payTo": "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb",
-        "resource": "https://verify402.onrender.com/verify"
+        "resource": "https://vex402.online/verify"
       },
-      "policy": { "maxAmountUsd": 0.25, "allowedResourceHosts": ["verify402.onrender.com"] }
+      "policy": { "maxAmountUsd": 0.25, "allowedResourceHosts": ["vex402.online"] }
     }'
   ```
 - **Observed Verdict:** `PASS`, `sign_allowed: true`, block pinned at `52828168` (age: 1s), HMAC receipt issued with 90s TTL.
@@ -211,7 +211,7 @@ A developer on a clean machine can execute the following steps to verify Verify4
 
 ### Step 1: Test Free Preflight Gate (No Keys, No Install)
 ```bash
-curl -sS -X POST https://verify402.onrender.com/preflight \
+curl -sS -X POST https://vex402.online/preflight \
   -H 'content-type: application/json' \
   -d '{
     "kind": "payment",
@@ -229,7 +229,7 @@ Expected: `verdict: "PASS"`, fresh pinned block, and a short-lived HMAC receipt.
 ### Step 2: Inspect Live 402 Challenge and Bazaar Metadata Without Paying
 ```bash
 # Fetch HTTP response headers and extract payment-required
-HEADER=$(curl -s -I -X POST https://verify402.onrender.com/verify \
+HEADER=$(curl -s -I -X POST https://vex402.online/verify \
   -H "content-type: application/json" -d '{}' | grep -i "^payment-required:" | cut -d' ' -f2 | tr -d '\r')
 
 # Decode base64 challenge
@@ -257,7 +257,7 @@ Add to `.cursor/mcp.json` or Claude Desktop configuration:
         "verify402-mcp"
       ],
       "env": {
-        "VERIFY402_URL": "https://verify402.onrender.com"
+        "VERIFY402_URL": "https://vex402.online"
       }
     }
   }
@@ -277,3 +277,12 @@ In this mode, only `preflight_gate` is registered. No money can be spent.
 3. **Publish to Official MCP Registry (Requires Human OAuth):**
    - Authenticate with `mcp-publisher login github` using the `a32116150-ctrl` account.
    - Run `mcp-publisher publish server.json`.
+
+## Migration: verify402.onrender.com → vex402.online (2026-11-17)
+
+The public origin moved to `https://vex402.online` after the domain was
+registered at Hostinger. In the working tree this is a single origin everywhere.
+The old host still resolves and still serves the service, so links already in
+the wild keep working. Git history still carries the old origin — this is
+documented rather than rewritten (history is not repaired to be tidy; it is a
+record).

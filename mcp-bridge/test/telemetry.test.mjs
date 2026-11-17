@@ -10,7 +10,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 process.env.VERIFY402_TELEMETRY = "1";
-process.env.VERIFY402_URL = "https://verify402.onrender.com";
+process.env.VERIFY402_URL = "https://vex402.online";
 
 const { pingUsage } = await import("../index.mjs");
 

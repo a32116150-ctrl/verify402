@@ -4,9 +4,9 @@
 > Free fail-closed preflight gate + five verifiable truth checks paid per call via x402 in USDC. No API key, no account, no wallet required for the free gate.
 
 [![npm version](https://img.shields.io/npm/v/verify402-mcp.svg)](https://www.npmjs.com/package/verify402-mcp)
-[![MCP Server](https://img.shields.io/badge/MCP-verify402--mcp-blue.svg)](https://verify402.onrender.com/mcp)
+[![MCP Server](https://img.shields.io/badge/MCP-verify402--mcp-blue.svg)](https://vex402.online/mcp)
 [![MCP Registry](https://img.shields.io/badge/MCP%20Registry-active-success.svg)](https://registry.modelcontextprotocol.io/)
-[![OpenAPI 3.1](https://img.shields.io/badge/OpenAPI-3.1.0-green.svg)](https://verify402.onrender.com/openapi.json)
+[![OpenAPI 3.1](https://img.shields.io/badge/OpenAPI-3.1.0-green.svg)](https://vex402.online/openapi.json)
 [![x402 v2](https://img.shields.io/badge/x402-v2%20exact-purple.svg)](https://github.com/x402-foundation/x402)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
@@ -23,7 +23,7 @@
 Verify an x402 payment challenge before signing it:
 
 ```bash
-curl -sS -X POST https://verify402.onrender.com/preflight \
+curl -sS -X POST https://vex402.online/preflight \
   -H 'content-type: application/json' \
   -d '{
     "kind": "payment",
@@ -33,9 +33,9 @@ curl -sS -X POST https://verify402.onrender.com/preflight \
       "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
       "amount": "10000",
       "payTo": "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb",
-      "resource": "https://verify402.onrender.com/verify"
+      "resource": "https://vex402.online/verify"
     },
-    "policy": { "maxAmountUsd": 0.25, "allowedResourceHosts": ["verify402.onrender.com"] }
+    "policy": { "maxAmountUsd": 0.25, "allowedResourceHosts": ["vex402.online"] }
   }'
 ```
 
@@ -51,11 +51,11 @@ quote-based sellability check, not a honeypot proof. Read `notChecked` in the re
 
 I’m looking for three developers building AI agents, MCP tools, or x402 payment integrations to run 3–5 real intents and report what breaks. Demo payments use Base Sepolia testnet only; analysis reads mainnet chain data; no wallet or paid test is required.
 
-- [Open the tester kit](https://verify402.onrender.com/testers) — three intents: one expected pass, one uncertain, one expected block
-- [Run it in the browser](https://verify402.onrender.com/preflight#try) — paste a token address, or run the raw intent; no terminal needed
+- [Open the tester kit](https://vex402.online/testers) — three intents: one expected pass, one uncertain, one expected block
+- [Run it in the browser](https://vex402.online/preflight#try) — paste a token address, or run the raw intent; no terminal needed
 - [5-minute testing guide](TESTING.md)
 - [Open a tester feedback issue](https://github.com/a32116150-ctrl/verify402/issues/new?template=tester-feedback.yml)
-- [Field notes](https://verify402.onrender.com/blog) — scope, receipts, and failure modes
+- [Field notes](https://vex402.online/blog) — scope, receipts, and failure modes
 - [Full onboarding notes](examples/ONBOARDING.md)
 
 The most useful finding is a **false PASS**: an intent the gate allowed that you believe is unsafe.
@@ -86,7 +86,7 @@ Paste this into your client config file:
       "command": "npx",
       "args": ["-y", "verify402-mcp@latest"],
       "env": {
-        "VERIFY402_URL": "https://verify402.onrender.com"
+        "VERIFY402_URL": "https://vex402.online"
       }
     }
   }
@@ -103,7 +103,7 @@ Unlocks the 5 on-chain truth checks (`verify_arbitrage`, `check_token_safety`, `
       "command": "npx",
       "args": ["-y", "verify402-mcp@latest"],
       "env": {
-        "VERIFY402_URL": "https://verify402.onrender.com",
+        "VERIFY402_URL": "https://vex402.online",
         "EVM_PRIVATE_KEY": "0xYOUR_HOT_WALLET_PRIVATE_KEY",
         "MAX_PAYMENT_USD": "0.25",
         "MAX_DAILY_USD": "1.00",
@@ -177,15 +177,15 @@ The skill is explicit about the limits: a `PASS` is not a guarantee, the token c
 
 ## Machine-Readable Discovery
 
-- **Service Manifest:** [`/.well-known/verify402.json`](https://verify402.onrender.com/.well-known/verify402.json) ([Documentation](docs/service-manifest.md))
-- **OpenAPI 3.1 Specification:** [`/openapi.json`](https://verify402.onrender.com/openapi.json)
+- **Service Manifest:** [`/.well-known/verify402.json`](https://vex402.online/.well-known/verify402.json) ([Documentation](docs/service-manifest.md))
+- **OpenAPI 3.1 Specification:** [`/openapi.json`](https://vex402.online/openapi.json)
 - **MCP Registry Manifest:** [`server.json`](server.json) ([Publishing Guide](docs/mcp-registry-publishing.md))
 - **x402 Bazaar Discovery:** [`docs/x402-discovery.md`](docs/x402-discovery.md)
-- **Plain Text Contract:** [`/llms.txt`](https://verify402.onrender.com/llms.txt)
+- **Plain Text Contract:** [`/llms.txt`](https://vex402.online/llms.txt)
 - **Discovery Audit:** [`docs/discovery-audit.md`](docs/discovery-audit.md)
 - **Directory Submission Checklist:** [`docs/distribution-directory-checklist.md`](docs/distribution-directory-checklist.md)
 
-**Human Pages:** [Home](https://verify402.onrender.com/) · [Start](https://verify402.onrender.com/start) · [Tester Kit](https://verify402.onrender.com/testers) · [Blog](https://verify402.onrender.com/blog) · [Preflight Gate](https://verify402.onrender.com/preflight) · [MCP Server](https://verify402.onrender.com/mcp) · [Checks](https://verify402.onrender.com/checks) · [Live Findings](https://verify402.onrender.com/live) · [Proof & Receipts](https://verify402.onrender.com/proof) · [Docs](https://verify402.onrender.com/docs) · [Donate](https://verify402.onrender.com/donate)
+**Human Pages:** [Home](https://vex402.online/) · [Start](https://vex402.online/start) · [Tester Kit](https://vex402.online/testers) · [Blog](https://vex402.online/blog) · [Preflight Gate](https://vex402.online/preflight) · [MCP Server](https://vex402.online/mcp) · [Checks](https://vex402.online/checks) · [Live Findings](https://vex402.online/live) · [Proof & Receipts](https://vex402.online/proof) · [Docs](https://vex402.online/docs) · [Donate](https://vex402.online/donate)
 
 ---
 
@@ -385,7 +385,7 @@ The MCP server exposes it as `preflight_gate`. It runs with no wallet (free gate
 only); add `EVM_PRIVATE_KEY` for the five paid tools. If `sign_allowed` is
 false, do not sign; if `requires_ack` is true, surface the reasons to the
 operator. Client configs and the install command are at
-[`/mcp`](https://verify402.onrender.com/mcp).
+[`/mcp`](https://vex402.online/mcp).
 
 ### Reference executor
 
@@ -518,7 +518,7 @@ or any MCP client.
   is a marker release: no bridge runtime change (one corrected comment). No npm
   account is required to run the published package. Client configs, the exact
   OpenCode V2 shape, and the release command are at
-  [`/mcp`](https://verify402.onrender.com/mcp). The published `1.1.1`
+  [`/mcp`](https://vex402.online/mcp). The published `1.1.1`
   defaults paid calls to Base Sepolia testnet (`eip155:84532`) for the public
   demo; Base mainnet (`eip155:8453`) requires an explicit `VERIFY402_NETWORKS`
   opt-in in a separate deployment and is not enabled by this release. The
@@ -650,8 +650,8 @@ or any MCP client.
 
 ## First paid call, in ten lines
 
-1. `GET  https://verify402.onrender.com/info` — prices, endpoints, recovery contract.
-2. `GET  https://verify402.onrender.com/findings` — free verdicts on majors; see the honest `no_edge` baseline.
+1. `GET  https://vex402.online/info` — prices, endpoints, recovery contract.
+2. `GET  https://vex402.online/findings` — free verdicts on majors; see the honest `no_edge` baseline.
 3. `POST /verify` with your question (`{"chainId":1,"target":"WETH","size":100000}`) and no payment → HTTP 402.
 4. Read the payment instructions from the `PAYMENT-REQUIRED` response header.
 5. Build an x402 payment for ≤ the stated price (Node example: `mcp-bridge/first-payment.mjs`; MCP users: `mcp-bridge/`). On the public demo, pay the testnet challenge (`eip155:84532`); do not substitute a mainnet payment.

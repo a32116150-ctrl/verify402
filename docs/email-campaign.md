@@ -208,7 +208,7 @@ listing is generated from the npm metadata, the stale tarball link is the only
 thing that needs a nudge.
 
 Context, not a pitch: the free preflight gate now has a no-wallet browser path
-at https://verify402.onrender.com/preflight#try. I am looking for three builders
+at https://vex402.online/preflight#try. I am looking for three builders
 to run 3–5 real intents and report false PASSes. If the listing fix is the wrong
 channel, tell me and I will stop here.
 
@@ -231,7 +231,7 @@ this is a queue request, not a demand.
 
 verify402 is a free pre-signing gate for x402 payment requests and EVM
 transaction intents. No wallet, no account, no paid test. The browser path is
-https://verify402.onrender.com/preflight#try (simple token-approval check, plus
+https://vex402.online/preflight#try (simple token-approval check, plus
 raw JSON samples).
 
 When submissions reopen, I would like verify402 considered for the directory,
@@ -264,8 +264,8 @@ otherwise sign — a payment, an unlimited approval, a swap — in the browser a
 tell me where it returns a false PASS. Demo payments are Base Sepolia; analysis
 reads mainnet chain data; no paid test.
 
-Browser: https://verify402.onrender.com/preflight#try
-MCP: https://verify402.onrender.com/mcp
+Browser: https://vex402.online/preflight#try
+MCP: https://vex402.online/mcp
 
 The gate checks the transaction, not the counterparty's reputation or the
 token's sellability; those are named in notChecked, not implied away.
@@ -286,7 +286,7 @@ Hi Solana team,
 
 verify402 is a free pre-signing gate for agent payments. The demo accepts
 Solana devnet payment challenges, and the browser path needs no wallet:
-https://verify402.onrender.com/preflight#try
+https://vex402.online/preflight#try
 
 One boundary stated plainly: transaction simulation is EVM-only today
 (Ethereum/Arbitrum/Base). For Solana, the gate checks the payment request and
@@ -317,7 +317,7 @@ analysis reads Base mainnet chain data; no wallet or paid test is required.
 
 I am looking for three builders to run 3–5 real intents in the browser and report
 false PASSes (the failure mode that matters): 
-https://verify402.onrender.com/preflight#try
+https://vex402.online/preflight#try
 
 If this belongs with a Base ecosystem or developer-relations contact, could you
 point me to the right place? No funding ask, no token, no mainnet payments.

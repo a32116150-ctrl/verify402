@@ -2,7 +2,7 @@
 
 **Protocol Version:** x402 v2 (`@x402/core@^2.28.0`, `@x402/express@^2.28.0`, `@x402/extensions@^2.28.0`)
 **Extension:** x402 Bazaar Discovery (`declareDiscoveryExtension`)
-**Public Demo Host:** `https://verify402.onrender.com`
+**Public Demo Host:** `https://vex402.online`
 **Deployment Mode:** Testnet (`X402_MODE=testnet`) for payments; analysis reads mainnet chain data
 **Networks:** Base Sepolia (`eip155:84532`) & Solana devnet (`solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1`)
 
@@ -83,7 +83,7 @@ To inspect and verify that Bazaar metadata is emitted correctly by the live publ
 
 ```bash
 # Verify POST /verify emits Bazaar discovery extension
-curl -sS -X POST https://verify402.onrender.com/verify \
+curl -sS -X POST https://vex402.online/verify \
   -H 'content-type: application/json' \
   -d '{"target":"WETH"}' | jq .extensions
 ```

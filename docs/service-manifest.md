@@ -9,7 +9,7 @@
 
 ## Specification & Consumption
 
-Agents, crawlers, and frameworks can fetch `https://verify402.onrender.com/.well-known/verify402.json` to configure automated integrations without hardcoded URLs or pricing assumptions.
+Agents, crawlers, and frameworks can fetch `https://vex402.online/.well-known/verify402.json` to configure automated integrations without hardcoded URLs or pricing assumptions.
 
 ### Top-Level Fields
 
@@ -21,7 +21,7 @@ Agents, crawlers, and frameworks can fetch `https://verify402.onrender.com/.well
 | `description` | string | High-level summary of service functionality |
 | `version` | string | Semver release version |
 | `license` | string | Open source license (`Apache-2.0`) |
-| `canonicalUrl` | string | Canonical base URL (`https://verify402.onrender.com`) |
+| `canonicalUrl` | string | Canonical base URL (`https://vex402.online`) |
 | `repository` | object | Git repository link and subfolder |
 | `documentation` | object | Key public documentation and schema URLs |
 | `integrations` | object | MCP server configuration and HTTP API details |
@@ -79,7 +79,7 @@ The `paymentRequirements` section specifies:
 ```javascript
 import axios from "axios";
 
-const manifest = await axios.get("https://verify402.onrender.com/.well-known/verify402.json").then(r => r.data);
+const manifest = await axios.get("https://vex402.online/.well-known/verify402.json").then(r => r.data);
 
 console.log("Service:", manifest.name, manifest.version);
 console.log("Free tools:", manifest.integrations.mcp.tools.filter(t => t.type === "free").map(t => t.name));

@@ -73,7 +73,7 @@ function termsManifest(overrides = {}) {
     chainId: 8453,
     terms: [
       {
-        resource: "https://verify402.onrender.com/verify",
+        resource: "https://vex402.online/verify",
         network: "eip155:8453",
         asset: USDC,
         amount: "10000",
@@ -109,14 +109,14 @@ function payment(overrides = {}) {
       asset: USDC,
       amount: "10000",
       payTo: PAY_TO,
-      resource: "https://verify402.onrender.com/verify",
+      resource: "https://vex402.online/verify",
       maxTimeoutSeconds: 60,
       ...overrides.payment,
     },
     from: FROM,
     policy: {
       maxAmountUsd: 0.25,
-      allowedResourceHosts: ["verify402.onrender.com"],
+      allowedResourceHosts: ["vex402.online"],
       ...overrides.policy,
     },
   };
@@ -208,7 +208,7 @@ test("payment: expectedResource binds the exact resource URL and passes", async 
   const out = await run(payment({
     policy: {
       allowedResourceHosts: undefined,
-      expectedResource: "https://verify402.onrender.com/verify",
+      expectedResource: "https://vex402.online/verify",
     },
   }));
   assert.equal(out.verdict, "PASS");
@@ -219,7 +219,7 @@ test("payment: expectedResource binds the exact resource URL and passes", async 
 
 test("payment: a malformed allowedResourceHosts entry is a 400", async () => {
   await assert.rejects(
-    () => run(payment({ policy: { allowedResourceHosts: ["https://verify402.onrender.com"] } })),
+    () => run(payment({ policy: { allowedResourceHosts: ["https://vex402.online"] } })),
     (e) => e instanceof PreflightError && e.status === 400 && e.code === "invalid_policy",
   );
 });
@@ -332,7 +332,7 @@ test("payment: sellerTermsManifest matching the challenge records terms_match", 
 });
 
 test("payment: sellerTermsManifest amount mismatch blocks with terms_mismatch", async () => {
-  const manifest = await termsManifest({ terms: [{ resource: "https://verify402.onrender.com/verify", network: "eip155:8453", asset: USDC, amount: "20000", maxTimeoutSeconds: 60 }] });
+  const manifest = await termsManifest({ terms: [{ resource: "https://vex402.online/verify", network: "eip155:8453", asset: USDC, amount: "20000", maxTimeoutSeconds: 60 }] });
   const out = await run(
     payment({
       policy: {
@@ -350,7 +350,7 @@ test("payment: sellerTermsManifest amount mismatch blocks with terms_mismatch", 
 
 test("payment: sellerTermsManifest asset mismatch blocks with terms_mismatch", async () => {
   const OTHER = "0x1111111111111111111111111111111111111111";
-  const manifest = await termsManifest({ terms: [{ resource: "https://verify402.onrender.com/verify", network: "eip155:8453", asset: OTHER, amount: "10000", maxTimeoutSeconds: 60 }] });
+  const manifest = await termsManifest({ terms: [{ resource: "https://vex402.online/verify", network: "eip155:8453", asset: OTHER, amount: "10000", maxTimeoutSeconds: 60 }] });
   const out = await run(
     payment({
       policy: {
@@ -366,7 +366,7 @@ test("payment: sellerTermsManifest asset mismatch blocks with terms_mismatch", a
 });
 
 test("payment: sellerTermsManifest network mismatch blocks with terms_mismatch", async () => {
-  const manifest = await termsManifest({ terms: [{ resource: "https://verify402.onrender.com/verify", network: "eip155:84532", asset: USDC, amount: "10000", maxTimeoutSeconds: 60 }] });
+  const manifest = await termsManifest({ terms: [{ resource: "https://vex402.online/verify", network: "eip155:84532", asset: USDC, amount: "10000", maxTimeoutSeconds: 60 }] });
   const out = await run(
     payment({
       policy: {
@@ -724,10 +724,10 @@ test("payment: Solana request is validated structurally without an EVM RPC", asy
       asset: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
       amount: "10000",
       payTo: "BdcsYodhwWUhLTuL5FJ3m8D4u4wVy8KMw7vAvPVucAbJ",
-      resource: "https://verify402.onrender.com/verify",
+      resource: "https://vex402.online/verify",
       maxTimeoutSeconds: 60,
     },
-    policy: { maxAmountUsd: 0.25, allowedResourceHosts: ["verify402.onrender.com"] },
+    policy: { maxAmountUsd: 0.25, allowedResourceHosts: ["vex402.online"] },
   }, null);
   assert.equal(out.verdict, "PASS");
   assert.equal(out.block, null);

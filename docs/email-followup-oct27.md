@@ -71,8 +71,8 @@ The ask is narrow: three intents, one expected pass, one uncertain, one
 expected block. If a swapped payTo or a lookalike asset still gets a PASS,
 that is the finding worth having.
 
-Tester kit: https://verify402.onrender.com/testers
-Scope note: https://verify402.onrender.com/blog/what-a-pre-signing-gate-can-check
+Tester kit: https://vex402.online/testers
+Scope note: https://vex402.online/blog/what-a-pre-signing-gate-can-check
 
 If this is not the right team, a pointer to whoever owns x402 developer
 tooling is enough. No call needed.
@@ -104,7 +104,7 @@ approval warning, not only in a separate dashboard. The free HTTP endpoint and
 MCP tool are both public.
 
 Test it with the unlimited-approval sample:
-https://verify402.onrender.com/testers
+https://vex402.online/testers
 
 No partnership ask and no mainnet payment offer. If the answer is "we already
 do this in-house," that is useful too.
@@ -134,8 +134,8 @@ PASS / CAUTION / BLOCK and a receipt bound to the exact intent.
 The useful test is not "does it pass a normal payment" — it is whether a
 swapped payee or an unlimited approval gets stopped before the signer.
 
-Tester kit: https://verify402.onrender.com/testers
-Receipt note: https://verify402.onrender.com/blog/a-receipt-is-a-falsifiable-record
+Tester kit: https://vex402.online/testers
+Receipt note: https://vex402.online/blog/a-receipt-is-a-falsifiable-record
 
 If your team already has a policy engine, the only question is whether an
 intent-bound receipt would make it easier to audit. No call needed.
@@ -166,10 +166,10 @@ case: an intent the gate passes that your team believes is unsafe. If it is
 reproducible, I will fix it and publish what changed.
 
 Unlimited-approval sample and the three-intent ask:
-https://verify402.onrender.com/testers
+https://vex402.online/testers
 
 Scope, stated plainly:
-https://verify402.onrender.com/blog/what-a-pre-signing-gate-can-check
+https://vex402.online/blog/what-a-pre-signing-gate-can-check
 
 — verify402
 ```

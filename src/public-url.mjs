@@ -7,7 +7,8 @@
 // Host allowlist and rejects anything else.
 
 export const DEFAULT_TRUSTED_HOSTS = [
-  "verify402.onrender.com",
+  "vex402.online",
+  "www.vex402.online",
   "localhost",
   "127.0.0.1",
   "::1",

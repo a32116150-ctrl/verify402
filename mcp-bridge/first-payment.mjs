@@ -8,7 +8,7 @@
 //                     this payer is allowed to use (Base Sepolia testnet by
 //                     default; Base mainnet only after an explicit
 //                     VERIFY402_NETWORKS=eip155:8453 opt-in).
-//   VERIFY402_URL     default https://verify402.onrender.com
+//   VERIFY402_URL     default https://vex402.online
 //   VERIFY402_NETWORKS  comma-separated allowlist; default eip155:84532
 //   VERIFY402_PAY_TO  expected payee; default the verify402 payee
 //   MAX_PAYMENT_USD   spend cap, default 0.03
@@ -43,7 +43,7 @@ import { CLIENT_HEADERS } from "./client-id.mjs";
 
 export const FIRST_PAYMENT_ROUTE = "/route";
 export const FIRST_PAYMENT_MAX_USD = 0.03;
-export const DEFAULT_SERVER_URL = "https://verify402.onrender.com";
+export const DEFAULT_SERVER_URL = "https://vex402.online";
 export const SETTLEMENT_OK_MARKER = "VERIFY402_SETTLEMENT_OK";
 
 const EVM_ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
