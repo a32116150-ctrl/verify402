@@ -202,7 +202,7 @@ test("post-deploy fails when the service reports a stale release version", async
   assert.equal(code, 1, output);
   const v = RELEASE_VERSION.replaceAll(".", "\\.");
   assert.match(output, new RegExp(`release version is ${v} \\.\\.\\. FAIL`), output);
-  assert.match(output, /1\.0\.4 !== 1\.1\.1/, output);
+  assert.match(output, new RegExp(`1\.0\.4 !== ${RELEASE_VERSION.replaceAll(".", "\\.")}`), output);
   assert.match(output, /post-deploy: FAIL/, output);
 });
 

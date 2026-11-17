@@ -3,6 +3,19 @@
 All notable changes to verify402. This file records repository changes; it does
 not imply a deploy or an npm publish.
 
+## 1.1.2 — 2026-11-17
+
+A release for the MCP bridge; the service metadata follows the same version
+identity (see `src/version.mjs`).
+
+The change since 1.1.1: the installed payer now carries the challenge's
+`extensions.bazaar` declaration into the payment payload it sends to the
+facilitator, so a settlement can be cataloged. Until now, paid calls from the
+installable bridge could not be entered into the Bazaar even though the
+service's own buyer (a separate script) could. No protocol, price, schema or
+tool change. The default public origin also moved from `verify402.onrender.com`
+to `https://vex402.online`; the old host still works.
+
 ## 1.1.1 — 2026-11-16
 
 A fix release for the service. The MCP bridge has no runtime change — the only
