@@ -822,7 +822,7 @@ if (!BYPASS_PAYMENT) app.use(
       "POST /safety": {
         accepts: accepts(SAFETY_PRICE),
         description:
-          "Pre-trade gate for an agent about to buy a token. Verdict TRUST / CAUTION / AVOID with evidence: contract facts from the live chain, market liquidity and scam signals, a quote-based sellability check (a USD-sized sell QUOTED through the configured venues' own routers, direct and WETH-routed), a full round-trip cost at your intended size, and an offered-price sanity check against chain consensus. It does not execute a transfer; transfer restrictions and unconfigured venues are named in notChecked.",
+          "Pre-trade gate for an agent about to buy a token. Returns TRUST / CAUTION / AVOID with evidence: contract facts from the live chain, liquidity and scam signals, a quote-based sellability check through the configured venues' own routers (direct and WETH-routed), a full round-trip cost at your intended size, and an offered-price sanity check. It does not execute a transfer; transfer restrictions and unconfigured venues are named in notChecked.",
         mimeType: "application/json",
         extensions: {
           ...declareDiscoveryExtension({

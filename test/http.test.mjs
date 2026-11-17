@@ -32,6 +32,7 @@ const {
   READY_FAILURE_KEYS,
   bannedClaimHits,
 } = await import("../src/contract.mjs");
+const { PAID_ROUTES } = await import("../src/honesty.mjs");
 const {
   recordSettlement, requestHash, lookupRecovery, reserveRecovery, releaseRecovery,
   IDEMPOTENCY_TTL_MS, IDEMPOTENCY_MAX_REPLAYS, IDEMPOTENCY_STAGE_TTL_MS,
@@ -688,6 +689,23 @@ await check("402: an unpaid paid route returns a payment challenge, never a verd
     const text = decoded.includes("accepts") ? decoded : challenge;
     assert.ok(text.includes("eip155:84532"), "challenge names the EVM testnet rail");
     assert.ok(text.includes("solana:"), "challenge names the Solana testnet rail");
+
+    // CDP's facilitator rejects verify/settle when a resource description is
+    // longer than 500 characters, so a route one character over is a paid route
+    // that can only ever answer 502. /safety sat at 501 and was unbuyable.
+    for (const paidPath of PAID_ROUTES) {
+      const rr = await fetch(`http://127.0.0.1:${port}${paidPath}`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{}",
+      });
+      assert.equal(rr.status, 402, `${paidPath} must answer 402 unpaid`);
+      const ch = rr.headers.get("payment-required") || "";
+      const decodedBody = JSON.parse(Buffer.from(ch, "base64").toString("utf8"));
+      const len = (decodedBody.resource?.description || "").length;
+      assert.ok(len > 0, `${paidPath} must declare a resource description`);
+      assert.ok(len <= 500, `${paidPath} description is ${len} chars; CDP rejects anything over 500`);
+    }
 
     const card = await getWithHost(port, "/.well-known/agent-card.json", "attacker.example");
     assert.equal(card.status, 200);
