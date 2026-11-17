@@ -190,6 +190,20 @@ await check("400: missing token fields are typed bad requests", async () => {
   }
 });
 
+await check("free POST routes ignore the idempotency header (no 409, no weak-key rejection)", async () => {
+  // The header protects a payment. On a free route there is no payment to
+  // protect, so a weak or reused key must be inert rather than an error: a
+  // free caller must never be told to "retry the SAME payment".
+  const key = "test-1"; // deliberately weak: rejected on /verify above
+  const body = { tool: "verify_arbitrage", ok: true };
+  const first = await post("/usage/ping", body, { "x-idempotency-key": key });
+  assert.equal(first.status, 202);
+  const second = await post("/usage/ping", body, { "x-idempotency-key": key });
+  assert.equal(second.status, 202);
+  assert.notEqual(second.body.code, "operation_in_flight");
+  assert.notEqual(second.body.error, "weak_idempotency_key");
+});
+
 await check("400: weak idempotency keys are rejected before any work", async () => {
   const weak = [
     "test-1",
@@ -355,6 +369,31 @@ await check("429: preflight rate limit is typed and carries a request id", async
   assert.equal(last.body.error, "rate_limited");
   assert.equal(typeof last.body.requestId, "string");
   assert.equal(last.headers.get("retry-after"), "60");
+});
+
+await check("free findings are shareable pages with the evidence on them", async () => {
+  const r = await fetch(`${base}/finding/WETH`);
+  assert.equal(r.status, 200);
+  assert.match(r.headers.get("content-type") || "", /text\/html/);
+  const html = await r.text();
+  assert.match(html, /<link rel="canonical" href="https:\/\/verify402\.onrender\.com\/finding\/WETH">/);
+  assert.match(html, /<meta property="og:title"/);
+  assert.match(html, /round trip/);
+  // Offline the measurement cannot run; the page must say so and print no number.
+  assert.match(html, /could not be measured|verdict/);
+
+  const unknown = await fetch(`${base}/finding/NOTATOKEN`);
+  assert.equal(unknown.status, 404, "an arbitrary token must not be a free /verify");
+
+  const json = await (await fetch(`${base}/findings`)).json();
+  assert.ok(Array.isArray(json.results) && json.results.length > 0);
+  for (const row of json.results) {
+    assert.equal(
+      row.permalink,
+      `https://verify402.onrender.com/finding/${encodeURIComponent(row.target)}`,
+      "every row must carry the page that shows it",
+    );
+  }
 });
 
 await check("429: /findings has its own per-IP budget", async () => {

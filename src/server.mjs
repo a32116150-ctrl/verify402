@@ -53,6 +53,7 @@ import {
 import { fetchExplorer } from "./explorer.mjs";
 import { inspectUrl, inspectPaymentChallenge, extractChallenge, InspectError } from "./inspect.mjs";
 import { loadBoard, renderBoardPage, renderBadgeSvg, badgeFor, BOARD_SOURCE } from "./board.mjs";
+import { renderFindingPage, findingPermalink } from "./finding-page.mjs";
 import { cdpAuthHeaders, isCdpFacilitatorUrl } from "./cdp-auth.mjs";
 import { createDirectory } from "./directory.mjs";
 import {
@@ -78,7 +79,7 @@ import { recordPreflight, recordInspectHost, recordInspectOutcome, recordToolPin
 import {
   HttpError, requestIdMiddleware, sendPublicError, sendClassifiedError, classifyError,
 } from "./errors.mjs";
-import { paidHonesty, honestFailure, unconfiguredVenues } from "./honesty.mjs";
+import { paidHonesty, honestFailure, unconfiguredVenues, isPaidRoute } from "./honesty.mjs";
 import { installConsoleRedaction, logInfo, logWarn, logError } from "./log.mjs";
 import { randomUUID } from "node:crypto";
 
@@ -365,9 +366,13 @@ if (BYPASS_PAYMENT && MODE === "mainnet") {
 // layer. The settled record's verified payer comes only from the facilitator.
 app.use((req, res, next) => {
   const rawKey = String(req.get("x-idempotency-key") || req.get("idempotency-key") || "").trim();
-  // /preflight is free and issues its own receipt; it does not participate in
-  // paid-settlement recovery, where a reused key would 409 the gate.
-  if (rawKey && req.method === "POST" && !req.path.startsWith("/.well-known") && !req.path.startsWith("/preflight")) {
+  // Scope: paid routes only. Recovery exists to protect a payment, so a free
+  // POST (/inspect, /usage/ping) must never be rejected or 409'd because of a
+  // key header — on a free route the header is meaningless, and answering 409
+  // would invent a payment obligation that does not exist. /preflight and
+  // /.well-known are excluded for the same reason (preflight issues its own
+  // receipt and is free).
+  if (rawKey && req.method === "POST" && isPaidRoute(req.path)) {
     // The key is a bearer credential. A short, repeated, or sequential value is
     // guessable, so reject it before it can be bound to an operation.
     const keyCheck = validateIdempotencyKey(rawKey);
@@ -1106,6 +1111,10 @@ app.get("/sitemap.xml", (_req, res) => {
   <url><loc>https://verify402.onrender.com/checks</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://verify402.onrender.com/proof</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://verify402.onrender.com/live</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+${Object.keys(CHAINS[1].tokens)
+  .filter((t) => t !== "USDC")
+  .map((t) => `  <url><loc>https://verify402.onrender.com/finding/${t}</loc><changefreq>daily</changefreq><priority>0.6</priority></url>`)
+  .join("\n")}
   <url><loc>https://verify402.onrender.com/activity</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
   <url><loc>https://verify402.onrender.com/donate</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
   <url><loc>https://verify402.onrender.com/sponsor</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
@@ -1464,23 +1473,32 @@ app.get("/explorer", async (_req, res) => {
   }
 });
 
+// Every row gets the URL of the page that shows it, so a caller can cite the
+// finding instead of pasting numbers into a chat.
+function withFindingPermalinks(payload) {
+  return {
+    ...payload,
+    results: (payload.results || []).map((r) => ({ ...r, permalink: findingPermalink(r.target) })),
+  };
+}
+
 app.get("/findings", perIpRateLimit({ max: FINDINGS_RATE_PER_MIN, label: "findings calls" }), async (req, res) => {
   if (findingsSnap && Date.now() - findingsSnap.at < FINDINGS_TTL_MS) {
     res.set("Cache-Control", "public, max-age=30");
-    return res.json({ ...findingsSnap.payload, ageSeconds: findingsAge() });
+    return res.json({ ...withFindingPermalinks(findingsSnap.payload), ageSeconds: findingsAge() });
   }
   if (findingsSnap) {
     // Stale-while-revalidate: the visitor gets the last honest snapshot now,
     // clearly marked with its age, while a fresh one is measured behind it.
     refreshFindings().catch(() => {});
     res.set("Cache-Control", "no-store");
-    return res.json({ ...findingsSnap.payload, stale: true, ageSeconds: findingsAge() });
+    return res.json({ ...withFindingPermalinks(findingsSnap.payload), stale: true, ageSeconds: findingsAge() });
   }
   try {
     // Cold: bounded by the per-pair budget, so this cannot hang for minutes.
     const payload = await refreshFindings();
     res.set("Cache-Control", "public, max-age=30");
-    return res.json({ ...payload, ageSeconds: 0 });
+    return res.json({ ...withFindingPermalinks(payload), ageSeconds: 0 });
   } catch (e) {
     return sendPublicError(req, res, 503, "rpc_unavailable", "the measurement pass failed; retry in a few seconds", {
       log: e,
@@ -1708,6 +1726,33 @@ function boardWarming(res, kind) {
     "<p><a href=\"/inspect\">Inspect any 402 directly</a> while you wait.</p></body>",
   );
 }
+
+// Free findings, as shareable pages. `/findings` is JSON for machines; this is
+// the same row with a stable URL and Open Graph tags, so a human can post a
+// link that carries the evidence instead of a screenshot of it. Only the
+// showcase pairs are renderable — this is not a free /verify for any token.
+app.get("/finding/:target", perIpRateLimit({ max: FINDINGS_RATE_PER_MIN, label: "finding pages" }), async (req, res) => {
+  const target = String(req.params.target || "").trim().toUpperCase();
+  const allowed = Object.keys(CHAINS[1].tokens).filter((t) => t !== "USDC");
+  if (!allowed.includes(target)) {
+    res.status(404).type("html").send(
+      `<!doctype html><meta charset="utf-8"><title>Not a free finding · verify402</title>` +
+      `<p>Free findings cover ${allowed.join(", ")} only. For any other token, use the paid route <code>POST /verify</code>. ` +
+      `<a href="/findings">All free findings</a>.</p>`,
+    );
+    return;
+  }
+  try {
+    const row = await measureFindingPair(target);
+    res.set("Cache-Control", "public, max-age=60");
+    res.type("html").send(
+      renderFindingPage(row, { origin: "https://verify402.onrender.com", measuredAt: findingsSnap?.payload?.measuredAt ?? null }),
+    );
+  } catch (e) {
+    logError("[finding] render failed", e);
+    res.status(503).type("text").send("finding unavailable; retry shortly");
+  }
+});
 
 // Public board: a daily structural read of the first page of the public x402
 // endpoints. Data comes from the `board-data` branch (see scripts/board-scan.mjs
