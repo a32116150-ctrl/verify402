@@ -98,6 +98,36 @@ export function listedPaths(resources, origin) {
   return seen;
 }
 
+// A listed resource with no settlement for 30 days is removed from the catalog.
+// The catalog reports the last settlement per resource, so the countdown is
+// measurable: warn with a week left, fail with three days left.
+export const EXPIRY_WARN_DAYS = 21;
+export const EXPIRY_FAIL_DAYS = 27;
+
+/**
+ * Map each listed path to how long ago it last settled.
+ * Returns Map<path, { lastCalledAt: string|null, ageDays: number|null }>.
+ */
+export function listingAges(resources, origin, now = Date.now()) {
+  const out = new Map();
+  for (const entry of resources || []) {
+    const url = entry?.resource?.url ?? entry?.resource;
+    if (typeof url !== "string" || !url.startsWith(origin)) continue;
+    const path = url.slice(origin.length);
+    if (!PAID_PATHS.includes(path)) continue;
+    const last = entry?.quality?.lastCalledAt;
+    const ms = typeof last === "string" ? Date.parse(last) : Number.NaN;
+    out.set(path, {
+      lastCalledAt: typeof last === "string" ? last : null,
+      ageDays: Number.isFinite(ms) ? (now - ms) / 86_400_000 : null,
+      // The catalog returns the icon at the top level, re-hosted on its own CDN;
+      // a listing without one is a documented quality gap.
+      hasIcon: typeof entry?.iconUrl === "string" || typeof entry?.resource?.iconUrl === "string",
+    });
+  }
+  return out;
+}
+
 async function getJson(url, { method = "GET", body, attempts = 3 } = {}) {
   let lastError;
   for (let i = 0; i < attempts; i++) {
@@ -180,6 +210,24 @@ async function main() {
           `${path}: not in the Bazaar catalog — a resource with no settlement in 30 days is removed; settle it once to relist`,
         );
       }
+    }
+    const ages = listingAges(catalogue.json?.resources, publicOrigin);
+    for (const [path, { lastCalledAt, ageDays, hasIcon }] of ages) {
+      if (!hasIcon) console.log(`  ! ${path} listed without an icon — set resource.iconUrl and settle once`);
+      if (ageDays === null) {
+        console.log(`  ${path.padEnd(12)} listed · last settlement time not reported`);
+        continue;
+      }
+      const days = ageDays.toFixed(1);
+      console.log(`  ${path.padEnd(12)} listed · last settled ${days}d ago`);
+      if (ageDays >= EXPIRY_FAIL_DAYS) {
+        problems.push(
+          `${path}: last settled ${days} days ago — the catalog removes it at 30 days; run "npm run relist" now`,
+        );
+      } else if (ageDays >= EXPIRY_WARN_DAYS) {
+        console.log(`  ! ${path} expires in ${(30 - ageDays).toFixed(1)} days — relist before then`);
+      }
+      void lastCalledAt;
     }
     console.log(`\ncatalog: ${listed.size}/${PAID_PATHS.length} listed`);
   }

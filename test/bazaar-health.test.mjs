@@ -10,7 +10,10 @@ import assert from "node:assert/strict";
 import {
   checkChallenge,
   decodeChallenge,
+  listingAges,
   listedPaths,
+  EXPIRY_FAIL_DAYS,
+  EXPIRY_WARN_DAYS,
   MAX_DESCRIPTION,
 } from "../scripts/bazaar-health.mjs";
 
@@ -92,4 +95,28 @@ test("the catalog reader counts only our paid routes on our origin", () => {
   ];
   const listed = listedPaths(resources, ORIGIN);
   assert.deepEqual([...listed].sort(), ["/safety", "/verify"]);
+});
+
+test("listing age is computed from the catalog's own lastSettlement timestamp", () => {
+  const now = Date.parse("2026-11-17T12:00:00Z");
+  const resources = [
+    {
+      resource: { url: `${ORIGIN}/verify` },
+      iconUrl: "https://cdn.example/icon.png",
+      quality: { lastCalledAt: "2026-11-17T11:00:00Z" },
+    },
+    { resource: { url: `${ORIGIN}/safety` }, quality: { lastCalledAt: "2026-10-20T12:00:00Z" } },
+    { resource: { url: `${ORIGIN}/route` } },
+  ];
+  const ages = listingAges(resources, ORIGIN, now);
+  assert.equal(Math.round(ages.get("/verify").ageDays * 24), 1);
+  assert.equal(Math.round(ages.get("/safety").ageDays), 28);
+  assert.equal(ages.get("/route").ageDays, null, "a listing with no timestamp is reported, not assumed fresh");
+  assert.equal(ages.get("/verify").hasIcon, true, "the icon is read from the top level the catalog uses");
+  assert.equal(ages.get("/safety").hasIcon, false);
+});
+
+test("the expiry thresholds leave time to relist", () => {
+  assert.ok(EXPIRY_WARN_DAYS < EXPIRY_FAIL_DAYS);
+  assert.ok(EXPIRY_FAIL_DAYS < 30, "a failure must fire before the catalog removes the listing");
 });
