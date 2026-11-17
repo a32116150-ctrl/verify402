@@ -415,3 +415,22 @@ test("a paid call with no tool binding fails closed before the signer", async ()
   );
   assert.equal(signerCalls.count, 0);
 });
+
+// CDP's Bazaar indexes a resource only when the settle call carries
+// `paymentPayload.extensions.bazaar`; the server declares it in the 402 and the
+// payer has to carry it forward. Without this the endpoint validates cleanly and
+// is never listed — the exact silence we spent a week mistaking for indexing lag.
+test("the bridge carries the declared bazaar extension into the payment payload", async () => {
+  const bazaar = { info: { input: { type: "http", method: "POST" } } };
+  const { error, result } = await runCase({
+    challenge: makeChallenge({}, { extensions: { bazaar } }),
+  });
+  assert.equal(error, null);
+  assert.deepEqual(result.extensions, { bazaar });
+  assert.deepEqual(result.resource, { url: RESOURCE });
+});
+
+test("the bridge omits the extensions key when the challenge declares none", async () => {
+  const { result } = await runCase({ challenge: makeChallenge() });
+  assert.equal("extensions" in result, false);
+});

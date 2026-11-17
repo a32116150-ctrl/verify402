@@ -228,10 +228,17 @@ class X402Client {
     }
     const scheme = this.schemes.get(String(accepted.network));
     const partial = await scheme.createPaymentPayload(2, accepted);
+    // Echo the declared discovery extension back into the payment payload.
+    // CDP's Bazaar indexes a resource only when the settle call carries both
+    // `paymentPayload.resource` and `paymentPayload.extensions.bazaar`; the
+    // server declares them in the 402, the payer has to carry them forward.
+    // Only `bazaar` is echoed: an unknown extension name can be rejected.
+    const bazaar = paymentRequired?.extensions?.bazaar;
     return {
       x402Version: 2,
       payload: partial.payload,
       resource: paymentRequired.resource,
+      ...(bazaar ? { extensions: { bazaar } } : {}),
       accepted,
     };
   }
