@@ -779,6 +779,7 @@ if (!BYPASS_PAYMENT) app.use(
     {
       "POST /verify": {
         accepts: accepts(PRICE),
+        iconUrl: "https://verify402.onrender.com/logo-400.png",
         description:
           "Measure whether a cross-venue arbitrage round trip is profitable right now, using Uniswap's canonical QuoterV2 and the venues' own V2 routers, at one pinned block. Returns a verdict with full evidence.",
         mimeType: "application/json",
@@ -821,6 +822,7 @@ if (!BYPASS_PAYMENT) app.use(
       },
       "POST /safety": {
         accepts: accepts(SAFETY_PRICE),
+        iconUrl: "https://verify402.onrender.com/logo-400.png",
         description:
           "Pre-trade gate for an agent about to buy a token. Returns TRUST / CAUTION / AVOID with evidence: contract facts from the live chain, liquidity and scam signals, a quote-based sellability check through the configured venues' own routers (direct and WETH-routed), a full round-trip cost at your intended size, and an offered-price sanity check. It does not execute a transfer; transfer restrictions and unconfigured venues are named in notChecked.",
         mimeType: "application/json",
@@ -855,6 +857,7 @@ if (!BYPASS_PAYMENT) app.use(
       },
       "POST /route": {
         accepts: accepts(ROUTE_PRICE),
+        iconUrl: "https://verify402.onrender.com/logo-400.png",
         description:
           "The full execution book right now: every configured venue (direct and WETH-routed) quoting tokenIn -> tokenOut at one pinned block, best first. Verdict-free evidence; pair it with /quotecheck to audit someone else's number.",
         mimeType: "application/json",
@@ -893,6 +896,7 @@ if (!BYPASS_PAYMENT) app.use(
       },
       "POST /depth": {
         accepts: accepts(DEPTH_PRICE),
+        iconUrl: "https://verify402.onrender.com/logo-400.png",
         description:
           "Position sizing as a service. For a ladder of USD sizes, measure what the chain ACTUALLY pays: entry via the best route, immediate exit of the exact position, per-size impact %, round-trip cost %, and the largest size that stays under your cost tolerance. This is what pool-reserve-dollar figures cannot tell you: what a real block gives you for YOUR size.",
         mimeType: "application/json",
@@ -932,6 +936,7 @@ if (!BYPASS_PAYMENT) app.use(
       },
       "POST /quotecheck": {
         accepts: accepts(QUOTECHECK_PRICE),
+        iconUrl: "https://verify402.onrender.com/logo-400.png",
         description:
           "Fairness audit of a quote someone else gave you. Returns fair / overpaying / too_good_to_be_true / unknown, with the full venue book at one pinned block as evidence. Ask this BEFORE signing any swap whose number you did not produce yourself.",
         mimeType: "application/json",
