@@ -3,6 +3,15 @@
 All notable changes to verify402. This file records repository changes; it does
 not imply a deploy or an npm publish.
 
+## 1.1.4 — 2026-11-18
+
+Stdio framing fix for MCP clients that require stdout to be JSON-RPC only.
+The bridge printed a human-readable banner to stdout on connect, so any
+harness (e.g. containerised build tests) reading it as an MCP client saw a
+corrupt stream before the first JSON-RPC frame. Diagnostics now go to
+**stderr**; stdout carries only the protocol. No tool, price, schema,
+network or policy change. Full offline test suite passes with the change.
+
 ## 1.1.3 — 2026-11-18
 
 Documentation-only release over 1.1.2: no runtime, price, schema, tool, or

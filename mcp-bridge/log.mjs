@@ -159,9 +159,12 @@ function emit(level, message, error = null, context = null) {
   }
   const detail = error == null ? "" : formatError(error);
   const line = `${parts.join(" ")}${detail ? `\n${detail}` : ""}`;
+  // MCP stdio purity: stdout is reserved for JSON-RPC frames. Route logInfo
+  // (and anything else non-error) to stderr so the wire stays parseable.
   // Use the current console method so tests and embedders can still capture
   // structured events. installConsoleRedaction() makes this idempotent.
-  (console[level] || ORIGINAL[level])(line);
+  const out = level === "log" ? console.error : (console[level] || ORIGINAL[level]);
+  out(line);
 }
 
 export function logInfo(message, error = null, context = null) {
