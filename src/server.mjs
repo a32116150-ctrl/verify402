@@ -1248,7 +1248,10 @@ app.get("/.well-known/x402", (_req, res) => {
 // measurements limited to two in flight (a burst of four gets throttled by
 // public RPCs), each success cached for five minutes, and a hard per-pair
 // budget that reports `unavailable` instead of hanging.
-const FINDINGS_TTL_MS = 120_000;
+// A full pass can take 90-160 seconds on a public RPC, so a 120 s TTL keeps
+// every visitor on the edge of `stale`. Match the five-minute pair cache:
+// the snapshot is reused for at most five minutes, then re-measured.
+const FINDINGS_TTL_MS = 300_000;
 const FINDINGS_PAIR_BUDGET_MS = 26_000;
 const FINDINGS_PAIR_TTL_MS = 5 * 60_000;
 const FINDINGS_CONCURRENCY = 2;
@@ -2583,6 +2586,13 @@ if (IS_MAIN) {
     // Warm the free snapshot as soon as the process is up: a cold Render instance
     // should spend its boot time measuring, not making the first visitor wait.
     refreshFindings().catch((e) => logWarn("findings prewarm failed", e));
+    // Keep the warm snapshot warm: without traffic, a 5-minute-old snapshot is
+    // what the nav badge shows — which reads as "stale" to a visitor. Cheap:
+    // the pair cache means one pass every few minutes.
+    const warmer = setInterval(() => {
+      refreshFindings().catch((e) => logWarn("findings warmer failed", e));
+    }, 240_000);
+    warmer.unref?.();
   });
 
   // Graceful shutdown: stop accepting new connections immediately, let active
