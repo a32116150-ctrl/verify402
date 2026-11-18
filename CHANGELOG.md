@@ -3,6 +3,15 @@
 All notable changes to verify402. This file records repository changes; it does
 not imply a deploy or an npm publish.
 
+## 1.1.7 — 2026-11-19
+
+Metadata-only correction. 1.1.6 moved the paid-call default to Base mainnet,
+but the MCP Registry entry for it still described `VERIFY402_NETWORKS` as
+defaulting to `eip155:84532` — the exact rail mismatch 1.1.6 removed. Registry
+versions are immutable, so this release republishes identical code with
+corrected metadata: default `eip155:8453`, with the Base Sepolia demo as an
+explicit opt-in. No runtime, tool, price, schema or policy change.
+
 ## 1.1.6 — 2026-11-18
 
 Flips the paid-call default to the live service. `DEFAULT_NETWORKS` is now Base

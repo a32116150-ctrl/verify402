@@ -13,11 +13,12 @@ wallet. The analysis reads mainnet chain data. A Base Sepolia testnet demo
 trying the payment rail without real money. The bridge never signs or sends a
 trade.
 
-> **Published package note:** `verify402-mcp@1.1.6` is published to npm and
+> **Published package note:** `verify402-mcp@1.1.7` is published to npm and
 > defaults paid calls to Base mainnet (`eip155:8453`) — real USDC. The Base
 > Sepolia testnet demo (`eip155:84532`) requires an explicit `VERIFY402_URL`
-> and `VERIFY402_NETWORKS` opt-in. Earlier `1.1.5` and below defaulted to
-> testnet; they remain published and immutable. Do not republish or overwrite
+> and `VERIFY402_NETWORKS` opt-in. 1.1.7 is a metadata-only correction for the
+> MCP Registry entry; earlier `1.1.5` and below defaulted to testnet. All
+> published versions are immutable. Do not republish or overwrite
 > any published version.
 
 ## Anonymous usage telemetry (opt-in)

@@ -75,11 +75,11 @@ mcp-publisher validate server.json
 
 Note: The MCP Registry strictly limits the `description` field to 100 characters.
 
-The checked-in `server.json` describes the **source** release (`1.1.6`), whose
+The checked-in `server.json` describes the **source** release (`1.1.7`), whose
 runtime default is Base mainnet (`eip155:8453`, real USDC). It declares that
 default explicitly; the Base Sepolia testnet demo (`eip155:84532`) is an
 explicit opt-in via `VERIFY402_URL` and `VERIFY402_NETWORKS`. This metadata is
-only truthful once the `1.1.6` package artifact actually exists and is
+only truthful once the `1.1.7` package artifact actually exists and is
 published. Publish the registry entry only for the version that is really
 published.
 
@@ -140,19 +140,20 @@ do not publish.
 
 ## Current status
 
-Current published release: `verify402-mcp@1.1.5` is on npm and is `latest`.
-That version is immutable and defaults the bridge to Base Sepolia testnet
-(`eip155:84532`). The tree is prepared for `1.1.6`, which flips the default to
-Base mainnet (`eip155:8453`); its npm and registry publication are pending in
+Current published release: `verify402-mcp@1.1.6` is on npm and is `latest`.
+It defaults the bridge to Base mainnet (`eip155:8453`). Its registry entry
+carried a stale `VERIFY402_NETWORKS` default (`eip155:84532`) because registry
+versions are immutable, so the tree prepares `1.1.7`: identical code, corrected
+metadata. Its npm and registry publication are pending in
 `PUBLISH_STEPS_FOR_ME.md`.
 
-The official MCP Registry lists `1.1.5` as active and latest. The checked-in
-`server.json` describes `1.1.6`. This repository does **not** publish packages
+The official MCP Registry lists `1.1.6` as active and latest. The checked-in
+`server.json` describes `1.1.7`. This repository does **not** publish packages
 or registry entries automatically.
 
 | Step | Status |
 |---|---|
-| `server.json` updated | DONE in the tree — manifest is `1.1.6`, mainnet default declared |
+| `server.json` updated | DONE in the tree — manifest is `1.1.7`, mainnet default declared |
 | `mcpName` in package.json | DONE |
-| Published to npm | PENDING — `1.1.5` is live; `1.1.6` is prepared |
-| Published to MCP Registry | PENDING — `1.1.5` active; `1.1.6` waits on npm |
+| Published to npm | PENDING — `1.1.6` is live; `1.1.7` is prepared |
+| Published to MCP Registry | PENDING — `1.1.6` active; `1.1.7` waits on npm |

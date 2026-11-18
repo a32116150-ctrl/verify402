@@ -9,35 +9,35 @@
     "source": "github",
     "subfolder": "mcp-bridge"
   },
-  "version": "1.1.6",
+  "version": "1.1.7",
   "packages": [
     {
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "verify402-mcp",
-      "version": "1.1.6",
+      "version": "1.1.7",
       "transport": {
         "type": "stdio"
       },
       "environmentVariables": [
         {
           "name": "VERIFY402_URL",
-          "description": "verify402 base URL",
+          "description": "verify402 base URL (default https://vex402.online, the live mainnet service). Point at https://verify402.onrender.com for the Base Sepolia testnet demo.",
           "isRequired": false,
           "isSecret": false
         },
         {
           "name": "EVM_PRIVATE_KEY",
-          "description": "Private key for a dedicated hot wallet. Omit for the free preflight_gate only. verify402-mcp@1.1.6 (this published release) defaults paid calls to Base mainnet (eip155:8453) \u2014 real USDC, $0.03-$0.10 per call, capped by MAX_PAYMENT_USD. The Base Sepolia testnet demo (eip155:84532) is an explicit opt-in with its own VERIFY402_URL and VERIFY402_NETWORKS. Never use a main wallet.",
+          "description": "Private key for a dedicated hot wallet. Omit for the free preflight_gate only. verify402-mcp@1.1.7 (this published release) defaults paid calls to Base mainnet (eip155:8453) \u2014 real USDC, $0.03-$0.10 per call, capped by MAX_PAYMENT_USD. The Base Sepolia testnet demo (eip155:84532) is an explicit opt-in with its own VERIFY402_URL and VERIFY402_NETWORKS. Never use a main wallet.",
           "isRequired": false,
           "isSecret": true
         },
         {
           "name": "VERIFY402_NETWORKS",
-          "description": "Comma-separated EVM payment networks for paid calls. Default Base Sepolia testnet (eip155:84532); set eip155:8453 explicitly for Base mainnet. The supported network-to-canonical-asset map is constrained to Base Sepolia and Base mainnet.",
+          "description": "Comma-separated EVM payment networks for paid calls. Default Base mainnet (eip155:8453), real USDC; set eip155:84532 explicitly, together with the testnet demo URL, for the Base Sepolia demo. The supported network-to-canonical-asset map is constrained to Base mainnet and Base Sepolia.",
           "isRequired": false,
           "isSecret": false,
-          "default": "eip155:84532"
+          "default": "eip155:8453"
         },
         {
           "name": "MAX_PAYMENT_USD",

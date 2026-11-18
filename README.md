@@ -518,18 +518,19 @@ or any MCP client.
   separate MCP bridge calls from generic HTTP. Labels are self-declared and
   spoofable, not identities.
 - **Install:** `npx -y verify402-mcp@latest` from the public npm registry
-  (currently `1.1.6`). For a pinned install of the published package, use
-  `npx -y verify402-mcp@1.1.6`; its npm tarball is
-  `https://registry.npmjs.org/verify402-mcp/-/verify402-mcp-1.1.6.tgz`. `1.1.6`
-  changes the paid-call default: paid calls now target the live Base mainnet
-  rail (`eip155:8453`, real USDC), with the same spend caps. The Base Sepolia
-  testnet demo (`eip155:84532`) is an explicit opt-in via `VERIFY402_URL` and
-  `VERIFY402_NETWORKS`. No npm account is required to run the published
-  package. Client configs, the exact OpenCode V2 shape, and the release command
-  are at [`/mcp`](https://vex402.online/mcp). The immutable `1.1.5` and earlier
-  packages remain published; `1.1.5` and below defaulted to testnet, and
-  `1.0.4` used Base mainnet. The official MCP Registry lists the published
-  entry as active (`isLatest: true`).
+  (currently `1.1.7`). For a pinned install of the published package, use
+  `npx -y verify402-mcp@1.1.7`; its npm tarball is
+  `https://registry.npmjs.org/verify402-mcp/-/verify402-mcp-1.1.7.tgz`. `1.1.6`
+  moved the paid-call default to the live Base mainnet rail (`eip155:8453`,
+  real USDC), with the same spend caps; the Base Sepolia testnet demo
+  (`eip155:84532`) is an explicit opt-in via `VERIFY402_URL` and
+  `VERIFY402_NETWORKS`. `1.1.7` is a metadata-only correction so the MCP
+  Registry advertises that same mainnet default. No npm account is required to
+  run the published package. Client configs, the exact OpenCode V2 shape, and
+  the release command are at [`/mcp`](https://vex402.online/mcp). The immutable
+  `1.1.6` and earlier packages remain published; `1.1.5` and below defaulted
+  to testnet, and `1.0.4` used Base mainnet. The official MCP Registry lists
+  the published entry as active (`isLatest: true`).
 
 ## Settlement, response delivery, and recovery (honest contract)
 

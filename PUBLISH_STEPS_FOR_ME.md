@@ -448,56 +448,57 @@ Expect `mode: mainnet`, `recoveryStore: ok`, `version: 1.1.4`.
 
 ---
 
-# Release verify402-mcp 1.1.6 — for me
+# Release verify402-mcp 1.1.7 — for me
 
-Flips the paid-call default to the live Base mainnet rail (`eip155:8453`, real
-USDC) at https://vex402.online, with the same spend caps. The Base Sepolia
-testnet demo (`eip155:84532`, https://verify402.onrender.com) becomes an
-explicit `VERIFY402_URL` + `VERIFY402_NETWORKS` opt-in. Refusal messages now
-name the networks a 402 actually offered. No tool, price or schema change.
+Metadata-only correction. 1.1.6 already moved the paid-call default to Base
+mainnet (`eip155:8453`, real USDC) at https://vex402.online, but its MCP
+Registry entry still advertised `VERIFY402_NETWORKS` as defaulting to
+`eip155:84532`. Registry versions are immutable, so 1.1.7 republishes the same
+code with corrected metadata: default `eip155:8453`, Base Sepolia demo as an
+explicit opt-in. No tool, price, schema or runtime change.
 
 ## Validate and inspect the release
 
 ```bash
 TEST_OFFLINE=1 npm run test:offline
-npx -y verify402-mcp@1.1.6 --help
+npx -y verify402-mcp@1.1.7 --help
 ```
 
-## Create and verify the npm 1.1.6 artifact
+## Create and verify the npm 1.1.7 artifact
 
 ```bash
 cd mcp-bridge
 npm ci --no-audit --no-fund
 npm pack
-tar -tzf verify402-mcp-1.1.6.tgz
+tar -tzf verify402-mcp-1.1.7.tgz
 ```
 
-Expected: `package/package.json` is `1.1.6`.
+Expected: `package/package.json` is `1.1.7`.
 
-## Publish npm 1.1.6
+## Publish npm 1.1.7
 
 This step runs once the artifact above is verified. It needs the account's 2FA
 code, entered by the account owner:
 
 ```bash
 npm publish --access public
-npm view verify402-mcp@1.1.6 version
+npm view verify402-mcp@1.1.7 version
 ```
 
-## Transition the release metadata to published 1.1.6
+## Transition the release metadata to published 1.1.7
 
-This step runs only when the npm 1.1.6 artifact exists. The tree carries the
-1.1.6 identity; npm publication is the remaining gate, not metadata.
+This step runs only when the npm 1.1.7 artifact exists. The tree carries the
+1.1.7 identity; npm publication is the remaining gate, not metadata.
 
-## Verify the actual 1.1.6 registry version
+## Verify the actual 1.1.7 registry version
 
 ```bash
 mcp-publisher validate server.json
 mcp-publisher publish server.json
-curl -s "https://registry.modelcontextprotocol.io/v0.1/servers/io.github.a32116150-ctrl%2Fverify402-mcp/versions/1.1.6"
+curl -s "https://registry.modelcontextprotocol.io/v0.1/servers/io.github.a32116150-ctrl%2Fverify402-mcp/versions/1.1.7"
 ```
 
-Expect `version: "1.1.6"`, the Base mainnet default, `status: active`, and
+Expect `version: "1.1.7"`, the Base mainnet default, `status: active`, and
 `isLatest: true`. If validation rejects a field, correct it — never fabricate.
 
 ## Deploy only after a separate approval
@@ -512,4 +513,4 @@ sudo systemctl restart verify402
 curl -s https://vex402.online/health
 ```
 
-Expect `mode: mainnet`, `recoveryStore: ok`, `version: 1.1.6`.
+Expect `mode: mainnet`, `recoveryStore: ok`, `version: 1.1.7`.

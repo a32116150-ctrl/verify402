@@ -41,7 +41,7 @@ The `integrations.mcp` section details how to connect via MCP:
 - **Package Identifier:** `verify402-mcp`
 - **Tarball URL:** npm package tarball (`https://registry.npmjs.org/verify402-mcp/-/verify402-mcp-1.0.4.tgz`) for direct `npx` execution without local cloning. A GitHub release asset is optional and is not required for installation.
 - **Registry Name:** `io.github.a32116150-ctrl/verify402-mcp` (matches official MCP Registry name).
-- **Published package boundary:** npm `verify402-mcp@1.1.6` defaults paid calls to Base mainnet (`eip155:8453`, real USDC) against https://vex402.online, with `MAX_PAYMENT_USD`/`MAX_DAILY_USD` enforced before signing. For the Base Sepolia testnet demo, clients set `VERIFY402_URL=https://verify402.onrender.com` and `VERIFY402_NETWORKS=eip155:84532` explicitly. Earlier `1.1.5` and below defaulted to testnet.
+- **Published package boundary:** npm `verify402-mcp@1.1.7` defaults paid calls to Base mainnet (`eip155:8453`, real USDC) against https://vex402.online, with `MAX_PAYMENT_USD`/`MAX_DAILY_USD` enforced before signing. For the Base Sepolia testnet demo, clients set `VERIFY402_URL=https://verify402.onrender.com` and `VERIFY402_NETWORKS=eip155:84532` explicitly. Earlier `1.1.5` and below defaulted to testnet.
 - **Tools:**
   - `preflight_gate`: Free pre-signing gate for payment requests and raw transactions.
   - `verify_arbitrage`: Paid ($0.05) cross-venue arbitrage reality check.

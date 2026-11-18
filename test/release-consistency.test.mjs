@@ -150,10 +150,11 @@ test("MCP Registry metadata truthfully describes the published package release",
   assert.ok(network, "server.json must document VERIFY402_NETWORKS");
 
   // The registry entry describes the published package release. Its built-in
-  // runtime default is Base Sepolia testnet; Base mainnet is an explicit opt-in.
-  assert.equal(Object.hasOwn(network, "default"), true, "server.json must declare the 1.0.9 default network");
-  assert.equal(network.default, DEMO_NETWORK);
-  assert.equal(network.isRequired, false, "the safe Base Sepolia default means configuration is optional");
+  // runtime default is Base mainnet; the Base Sepolia demo is an explicit
+  // opt-in.
+  assert.equal(Object.hasOwn(network, "default"), true, "server.json must declare the default network");
+  assert.equal(network.default, MAINNET_NETWORK);
+  assert.equal(network.isRequired, false, "the mainnet default means configuration is optional");
   assert.match(network.description, /Base Sepolia/);
   assert.match(network.description, /eip155:84532|84532/);
   assert.match(network.description, /Base mainnet/);
@@ -530,6 +531,14 @@ test("registry metadata describes the published package without claiming registr
   assert.doesNotMatch(description, /unpublished|candidate/i);
   assert.match(description, /defaults paid calls to Base mainnet/i, "this release must state the mainnet default");
   assert.match(description, /explicit opt-in/i);
+
+  const networks = pkg.environmentVariables.find((entry) => entry.name === "VERIFY402_NETWORKS");
+  assert.equal(
+    networks.default,
+    MAINNET_NETWORK,
+    "the registry metadata must not advertise a testnet default",
+  );
+  assert.match(networks.description, /Default Base mainnet/i);
   assert.doesNotMatch(
     `${server.description} ${description}`,
     /registry entry (?:is|has been) published|listed on the .*registry/i,
