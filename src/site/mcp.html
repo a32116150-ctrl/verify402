@@ -70,7 +70,7 @@
         <p class="hero-note">
           <span><span class="dot"></span>Official MCP Registry: <a href="https://registry.modelcontextprotocol.io/" class="textlink" target="_blank" rel="noopener">see entry</a></span>
           <span>npm: <a href="https://www.npmjs.com/package/verify402-mcp" class="textlink" target="_blank" rel="noopener">verify402-mcp v1.1.2</a></span>
-          <span>Paid calls · Base Sepolia testnet</span>
+          <span>Demo · Base Sepolia</span><span>Mainnet live · <a href="https://api.vex402.online/info" class="textlink">api.vex402.online</a></span>
           <span>Free gate · no wallet</span>
         </p>
       </div>
@@ -114,7 +114,7 @@
           </tbody>
         </table>
       </div>
-      <p class="small muted" style="margin-top:20px">Paid calls are testnet USDC over x402 for the public demo. The bridge signs the payment only — it never signs or sends a trade — and it only pays a 402 from the configured server, on an allowlisted network, to the verify402 payee.</p>
+      <p class="small muted" style="margin-top:20px">Paid calls in the public demo are Base Sepolia testnet USDC over x402. The mainnet instance is live at https://api.vex402.online (Base + Solana mainnet, USDC, Coinbase CDP facilitator) — opt in with VERIFY402_URL=https://api.vex402.online and VERIFY402_NETWORKS=eip155:8453. The bridge signs the payment only — it never signs or sends a trade — and it only pays a 402 from the configured server, on an allowlisted network, to the verify402 payee.</p>
     </div>
   </section>
 
@@ -123,7 +123,7 @@
       <div class="sec-head">
         <p class="eyebrow">Install</p>
         <h2>Start with the free gate. Add the wallet later.</h2>
-        <p class="lead">The npm package is published to the public registry, so you can run it directly with <code class="inline">npx</code> without cloning or building. The published version is <strong>1.1.2</strong>. <code class="inline">1.1.2</code> carries one bridge fix: the installed payer forwards the challenge's <code class="inline">extensions.bazaar</code> into the payment payload, so a settlement can be cataloged. Paid calls in the public demo use Base Sepolia testnet USDC; mainnet settlement is not enabled by this release.</p>
+        <p class="lead">The npm package is published to the public registry, so you can run it directly with <code class="inline">npx</code> without cloning or building. The published version is <strong>1.1.2</strong>. <code class="inline">1.1.2</code> carries one bridge fix: the installed payer forwards the challenge's <code class="inline">extensions.bazaar</code> into the payment payload, so a settlement can be cataloged. Paid calls in the public demo use Base Sepolia testnet USDC. Mainnet settlement is live at https://api.vex402.online (operator-tested end to end; no external buyer yet) — it is a separate deployment, not an automatic mode of this package's demo.</p>
       </div>
 
       <div class="proof-grid" style="margin-top:40px">
@@ -135,7 +135,7 @@
         <div class="pcard2">
           <p class="tag"><span class="dot"></span>Mode 2 · paid tools</p>
           <h3>A dedicated hot wallet.</h3>
-          <p>For the public demo, add a wallet with <strong>Base Sepolia testnet USDC</strong> and set <code class="inline">VERIFY402_NETWORKS=eip155:84532</code>. <code class="inline">MAX_PAYMENT_USD</code> caps one payment at signature time; <code class="inline">MAX_DAILY_USD</code> caps the UTC day. Never use a main wallet. The analysis reads mainnet chain data, but payment is testnet-only; mainnet settlement is an explicit future deployment choice.</p>
+          <p>For the public demo, add a wallet with <strong>Base Sepolia testnet USDC</strong> and set <code class="inline">VERIFY402_NETWORKS=eip155:84532</code>. <code class="inline">MAX_PAYMENT_USD</code> caps one payment at signature time; <code class="inline">MAX_DAILY_USD</code> caps the UTC day. Never use a main wallet. The analysis reads mainnet chain data, and payment in the public demo is testnet-only; the live mainnet deployment is explicit opt-in at https://api.vex402.online, with a mainnet-funded wallet.</p>
         </div>
       </div>
 
@@ -310,7 +310,7 @@
       <a href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener">npm package</a>
     </div>
   </div>
-  <p class="foot-legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data; demo payments are testnet. The only settlements ever recorded are the operator's own testnet transactions. No external buyer yet. Prices are per call, paid in testnet USDC over x402; /preflight is free. The MCP server pays for calls only; it never signs a trade.</p>
+  <p class="foot-legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data; demo payments are testnet. The only settlements are the operator's own — two 0.03 USDC end-to-end tests on Base mainnet (2026-11-18) plus testnet demos. No external buyer yet. Prices are per call, paid in testnet USDC over x402; /preflight is free. The MCP server pays for calls only; it never signs a trade.</p>
 </footer>
 
 <script src="/assets/site.js"></script>

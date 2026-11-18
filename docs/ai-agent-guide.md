@@ -130,7 +130,7 @@ In your MCP config `env` block, add:
 - **USDC-Only Default**: Rejects payment requests in unknown or non-standard tokens.
 - **Payee Whitelist**: Refuses payments to addresses other than `VERIFY402_PAY_TO`.
 
-> **Explicit mainnet (not the public demo):** Mainnet settlement is a separate deployment choice that requires a mainnet facilitator, an always-on paid host, and separate readiness verification. Only then set `VERIFY402_NETWORKS=eip155:8453` and fund a mainnet wallet. The public demo offers `eip155:84532`; a mainnet-only bridge configuration will refuse that challenge instead of spending mainnet funds.
+> **Mainnet is live (explicit opt-in, not the public demo):** a mainnet instance runs at https://api.vex402.online (Base + Solana mainnet, real USDC via Coinbase CDP). It is operator-tested end to end (two on-chain settlements, 2026-11-18) and no external buyer has paid anything yet. To use it, set `VERIFY402_URL=https://api.vex402.online` **and** `VERIFY402_NETWORKS=eip155:8453`, with a dedicated mainnet hot wallet funded with USDC on Base. The public demo still offers `eip155:84532`; a mainnet-only bridge configuration will refuse that challenge instead of spending mainnet funds.
 
 ---
 

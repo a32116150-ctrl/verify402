@@ -10,7 +10,7 @@
 [![x402 v2](https://img.shields.io/badge/x402-v2%20exact-purple.svg)](https://github.com/x402-foundation/x402)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-> **Demo scope:** the public demo settles payments in **Base Sepolia testnet USDC**. The analysis itself reads mainnet chain data (Ethereum, Arbitrum, Base). This is not a mainnet payment service, and no testnet payment is mainnet revenue.
+> **Status (2026-11-18):** the public demo on this site settles in **Base Sepolia testnet USDC**. A mainnet instance is live at **[api.vex402.online](https://api.vex402.online/info)** — Base + Solana mainnet, real USDC via the Coinbase CDP facilitator. Two operator end-to-end payments have settled there so far ([0x37e61b09…](https://basescan.org/tx/0x37e61b094133af984a30590e03f27f0daea67716e3650a9b16f3bb5aad734dfb)); no external buyer has paid anything yet. The analysis reads mainnet chain data (Ethereum, Arbitrum, Base). No external settlement is claimed as traction.
 
 ---
 
@@ -49,7 +49,7 @@ quote-based sellability check, not a honeypot proof. Read `notChecked` in the re
 
 ### Test the free gate (3 testers wanted)
 
-I’m looking for three developers building AI agents, MCP tools, or x402 payment integrations to run 3–5 real intents and report what breaks. Demo payments use Base Sepolia testnet only; analysis reads mainnet chain data; no wallet or paid test is required.
+I’m looking for three developers building AI agents, MCP tools, or x402 payment integrations to run 3–5 real intents and report what breaks. Demo payments use Base Sepolia testnet only; the mainnet instance is live at [api.vex402.online](https://api.vex402.online/info) (explicit opt-in). Analysis reads mainnet chain data; no wallet or paid test is required.
 
 - [Open the tester kit](https://vex402.online/testers) — three intents: one expected pass, one uncertain, one expected block
 - [Run it in the browser](https://vex402.online/preflight#try) — paste a token address, or run the raw intent; no terminal needed
@@ -115,7 +115,7 @@ Unlocks the 5 on-chain truth checks (`verify_arbitrage`, `check_token_safety`, `
 }
 ```
 
-`VERIFY402_NETWORKS=eip155:84532` is the Base Sepolia testnet rail the live demo offers. Do **not** change it to `eip155:8453` to make a test pass: the bridge would refuse the live 402 challenge rather than spend mainnet funds. Mainnet settlement is an explicit future deployment choice, not a demo default.
+`VERIFY402_NETWORKS=eip155:84532` is the Base Sepolia testnet rail the live demo offers. Do **not** change it to `eip155:8453` to make a test pass: the bridge would refuse the live 402 challenge rather than spend mainnet funds. Mainnet is a separate, explicit deployment — live at https://api.vex402.online — with its own funded wallet and explicit `VERIFY402_URL` / `VERIFY402_NETWORKS=eip155:8453` opt-in.
 
 ---
 

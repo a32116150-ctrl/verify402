@@ -6,7 +6,14 @@
     <atom:link href="https://vex402.online/blog/rss.xml" rel="self" type="application/rss+xml" />
     <description>Scope, receipts, and field notes from building a pre-signing gate for agent payments.</description>
     <language>en</language>
-    <lastBuildDate>Mon, 16 Nov 2026 21:55:00 GMT</lastBuildDate>
+    <lastBuildDate>Wed, 18 Nov 2026 16:45:00 GMT</lastBuildDate>
+    <item>
+      <title>verify402 is live on mainnet — here is the receipt</title>
+      <link>https://vex402.online/blog/verify402-is-live-on-mainnet</link>
+      <guid isPermaLink="true">https://vex402.online/blog/verify402-is-live-on-mainnet</guid>
+      <pubDate>Wed, 18 Nov 2026 16:45:00 GMT</pubDate>
+      <description>Exact-x402 on Base + Solana mainnet at api.vex402.online. Two operator end-to-end USDC settlements, chain-verifiable. No external buyer yet.</description>
+    </item>
     <item>
       <title>verify402 settles through the Coinbase CDP facilitator (testnet)</title>
       <link>https://vex402.online/blog/verify402-cdp-facilitator-testnet</link>
