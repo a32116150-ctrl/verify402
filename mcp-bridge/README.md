@@ -8,7 +8,9 @@ Works with Claude Desktop, Cursor, OpenCode, and any MCP client that speaks
 stdio. The free gate needs **no wallet**. The public demo's paid tools use a
 dedicated hot wallet funded with **Base Sepolia testnet USDC** (`eip155:84532`).
 The analysis reads mainnet chain data, but the demo never settles mainnet
-payments. The bridge never signs or sends a trade.
+payments. A live mainnet instance is available at https://api.vex402.online
+(explicit opt-in, see below) — Base + Solana mainnet, real USDC via the
+Coinbase CDP facilitator. The bridge never signs or sends a trade.
 
 > **Published package note:** `verify402-mcp@1.0.9` is published to npm and
 > defaults paid calls to Base Sepolia testnet (`eip155:84532`) for the public
@@ -269,22 +271,23 @@ paid-call policy (network allowlist, configured payee, canonical USDC,
 per-payment cap, tool-bound resource) is unchanged and still runs before any
 signature exists, in `payment-policy.mjs`.
 
-## Explicit mainnet configuration (not the public demo)
+## Using the live mainnet instance (explicit opt-in, not the demo)
 
-Mainnet settlement is a separate deployment choice, not a bridge or demo
-default. Do not point this client at mainnet until the service-side mainnet
-readiness checks, facilitator, always-on host, and wallet funding have been
-verified independently.
+A mainnet instance is live at https://api.vex402.online — Base + Solana
+mainnet, USDC, exact-x402, settled by the Coinbase CDP facilitator, always-on.
+It is operator-tested end to end; no external buyer has paid anything yet. The
+demo stays testnet; to use mainnet, set **both**:
 
 ```bash
-# Only for a deliberate mainnet deployment, never against the public demo.
+VERIFY402_URL=https://api.vex402.online
 VERIFY402_NETWORKS=eip155:8453
-VERIFY402_PAY_TO=<the payee named by the mainnet 402>
 ```
 
-The public demo offers `eip155:84532`; a mainnet-only policy will refuse that
-challenge instead of silently spending mainnet funds. The reverse is also
-enforced: the demo policy refuses a mainnet-only challenge.
+with a dedicated hot wallet holding USDC on Base. Never point this client at
+mainnet against the public demo's challenge, and never set these in a shared
+or default config by accident. The public demo offers `eip155:84532`; a
+mainnet-only policy will refuse that challenge instead of silently spending.
+The reverse is also enforced: the demo policy refuses a mainnet-only challenge.
 
 ## Development
 

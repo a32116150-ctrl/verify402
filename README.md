@@ -39,7 +39,7 @@ curl -sS -X POST https://vex402.online/preflight \
   }'
 ```
 
-This example uses the **public demo's Base Sepolia testnet USDC** (`eip155:84532`), not mainnet. The free gate is only validating the request shape; it is not a payment. The paid analysis routes read mainnet chain data (Ethereum, Arbitrum, Base), but the demo does not settle mainnet payments.
+This example uses the **public demo's Base Sepolia testnet USDC** (`eip155:84532`), not mainnet. The free gate is only validating the request shape; it is not a payment. The paid analysis routes read mainnet chain data (Ethereum, Arbitrum, Base), but the demo does not settle mainnet payments. (A mainnet instance is live at https://api.vex402.online.)
 
 Returns `PASS` / `CAUTION` / `BLOCK`, typed reasons, exact `checked` and `notChecked` lists, pinned block number, and a verifiable 90-second HMAC receipt.
 
@@ -137,7 +137,7 @@ If you want your agent to use the paid truth tools, follow these 4 steps to set 
 
 #### Mainnet is explicit (not the demo default)
 
-The public demo is testnet-only for payments. A future mainnet deployment must opt in deliberately, with a mainnet facilitator, an always-on paid host, and a mainnet-funded wallet:
+Mainnet is live at https://api.vex402.online — Base + Solana mainnet, USDC via the Coinbase CDP facilitator, an always-on paid host, and a mainnet hot wallet. It is not the demo default; opt in deliberately by pointing this bridge at it:
 
 ```bash
 # Only for a future mainnet deployment. Do not use these values against the public demo.
@@ -146,7 +146,7 @@ VERIFY402_NETWORKS=eip155:8453
 VERIFY402_PAY_TO=0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb
 ```
 
-Setting `VERIFY402_NETWORKS=eip155:8453` while pointing at the public demo is a configuration error: the live 402 offers `eip155:84532`, so the bridge fails closed instead of paying. See `MAINNET_SWITCH_CHECKLIST.md` before any mainnet deployment.
+Setting `VERIFY402_NETWORKS=eip155:8453` while pointing at the public demo is a configuration error: the demo's 402 offers `eip155:84532`, so the bridge fails closed instead of paying. For mainnet, point `VERIFY402_URL` at https://api.vex402.online as well. See `MAINNET_SWITCH_CHECKLIST.md`.
 
 ---
 
@@ -493,7 +493,7 @@ or any MCP client.
 - **Free gate only:** omit `EVM_PRIVATE_KEY`; the server registers only
   `preflight_gate`, `inspect_402`, and `directory_402`, and nothing can be charged.
 - **Paid tools:** add a dedicated hot wallet with testnet USDC for the public
-  demo (mainnet only in an explicit deployment). The bridge signs the x402
+  demo (mainnet live at https://api.vex402.online — explicit opt-in). The bridge signs the x402
   payment only — never a trade — and enforces `MAX_PAYMENT_USD` (default $0.25)
   in the pre-signature guard before any signature exists. It also requires an
   allowlisted EVM network, the verify402 payee, and a known paid resource on the
@@ -670,7 +670,7 @@ or any MCP client.
 
 ## Hosting status
 
-Demo instance runs on a free host: first request after idle can take about a minute; testnet only.
+The public demo instance runs on a free host: first request after idle can take about a minute; testnet only. The mainnet instance (https://api.vex402.online) is always-on and separate.
 
 ## License
 
