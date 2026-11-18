@@ -365,7 +365,7 @@ Expect `version: "1.1.3"`, the Base Sepolia default, `status: active`, and
 `isLatest: true`. If validation rejects the description, correct it — do not
 fabricate fields.
 
-## Deploy only after a separate approval
+## Deploy, after a separate approval
 
 After npm publish is verified: push the release commit, confirm Render redeploys,
 then on the mainnet host:
@@ -377,3 +377,71 @@ curl -s https://api.vex402.online/health
 ```
 
 Expect `mode: mainnet`, `recoveryStore: ok`, and `version: 1.1.3`.
+
+---
+
+# Release verify402-mcp 1.1.4 — for me
+
+Stdio framing fix over 1.1.3: `logInfo()` diagnostics moved to stderr; stdout
+now carries only JSON-RPC frames. No tool, price, schema, network or policy
+change. The release exists because some containerised MCP harnesses read the
+server as a client and rejected the pre-1.1.4 stdout banner.
+
+## Validate and inspect the release
+
+```bash
+TEST_OFFLINE=1 npm run test:offline
+git diff mcp-bridge/index.mjs mcp-bridge/log.mjs
+```
+
+Boot check: the first line written to stdout must parse as JSON-RPC.
+
+## Create and verify the npm 1.1.4 artifact
+
+```bash
+cd mcp-bridge
+npm ci --no-audit --no-fund
+npm pack
+tar -tzf verify402-mcp-1.1.4.tgz
+```
+
+Expected: `package/package.json` is `1.1.4`.
+
+## Publish npm 1.1.4
+
+This step runs once the artifact above is verified:
+
+```bash
+npm publish --access public
+npm view verify402-mcp@1.1.4 version
+```
+
+## Transition the release metadata to published 1.1.4
+
+This step runs only when the npm 1.1.4 artifact exists — do not claim
+`published` otherwise. The tree carries the 1.1.4 identity; npm publication is
+the remaining gate, not metadata.
+
+## Verify the actual 1.1.4 registry version
+
+```bash
+mcp-publisher validate server.json
+mcp-publisher publish server.json
+curl -s "https://registry.modelcontextprotocol.io/v0.1/servers/io.github.a32116150-ctrl%2Fverify402-mcp/versions/1.1.4"
+```
+
+Expect `version: "1.1.4"`, the Base Sepolia default, `status: active`, and
+`isLatest: true`. If validation rejects a field, correct it — never fabricate.
+
+## Deploy only after a separate approval
+
+After npm publish is verified: push the release commit, confirm Render redeploys,
+then on the mainnet host:
+
+```bash
+git pull origin master
+systemctl restart verify402
+curl -s https://api.vex402.online/health
+```
+
+Expect `mode: mainnet`, `recoveryStore: ok`, `version: 1.1.4`.
