@@ -1105,6 +1105,7 @@ app.get("/sitemap.xml", (_req, res) => {
   <url><loc>https://vex402.online/board</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
   <url><loc>https://vex402.online/directory</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://vex402.online/testers</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://vex402.online/audit</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://vex402.online/blog</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://vex402.online/blog/what-a-pre-signing-gate-can-check</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://vex402.online/blog/a-receipt-is-a-falsifiable-record</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
