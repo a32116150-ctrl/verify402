@@ -3,6 +3,21 @@
 All notable changes to verify402. This file records repository changes; it does
 not imply a deploy or an npm publish.
 
+## 1.1.6 — 2026-11-18
+
+Flips the paid-call default to the live service. `DEFAULT_NETWORKS` is now Base
+mainnet (`eip155:8453`) and the default server is https://vex402.online, so a
+bridge with a funded wallet pays real USDC out of the box. Paying is still
+opt-in in the only hard sense — no `EVM_PRIVATE_KEY`, no signer — and every
+payment stays bounded by `MAX_PAYMENT_USD`, `MAX_DAILY_USD`, the pinned payee,
+the canonical-USDC check and the paid-route list.
+
+The Base Sepolia testnet demo (`eip155:84532`, https://verify402.onrender.com)
+becomes an explicit `VERIFY402_URL` + `VERIFY402_NETWORKS` opt-in. Refusal
+messages now name the networks a 402 actually offered, so a rail mismatch is
+diagnosable in one line. Docs, `.env.example`, the MCP Registry description and
+the `/mcp` page state the new default. Full offline test suite passes.
+
 ## 1.1.5 — 2026-11-18
 
 Ships `instructions` in the MCP `initialize` response. An agent connecting to

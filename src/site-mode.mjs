@@ -145,19 +145,19 @@ const PAGE_PAIRS = [
     "<span>Live · Base mainnet</span><span>Solana mainnet</span>",
   ],
   [
-    "Paid calls in the public demo are Base Sepolia testnet USDC over x402. The mainnet instance is live at https://api.vex402.online (Base + Solana mainnet, USDC, Coinbase CDP facilitator) — opt in with VERIFY402_URL=https://api.vex402.online and VERIFY402_NETWORKS=eip155:8453.",
-    "Paid calls on this instance settle in USDC over x402 on Base mainnet and Solana mainnet through the Coinbase CDP facilitator. The MCP bridge reaches it with VERIFY402_URL=https://vex402.online and VERIFY402_NETWORKS=eip155:8453.",
+    "Paid calls in this testnet demo are Base Sepolia testnet USDC over x402. The npm package defaults to the live mainnet service at https://vex402.online (Base + Solana mainnet, real USDC, Coinbase CDP facilitator) — point it here instead with VERIFY402_URL=https://verify402.onrender.com and VERIFY402_NETWORKS=eip155:84532.",
+    "Paid calls on this instance settle in USDC over x402 on Base mainnet and Solana mainnet through the Coinbase CDP facilitator. The npm package defaults here: VERIFY402_URL=https://vex402.online and VERIFY402_NETWORKS=eip155:8453. The Base Sepolia testnet demo is explicit opt-in at https://verify402.onrender.com.",
   ],
   [
-    "Paid calls in the public demo use Base Sepolia testnet USDC. Mainnet settlement is live at https://api.vex402.online (operator-tested end to end; no external buyer yet) — it is a separate deployment, not an automatic mode of this package's demo.",
-    "Paid calls on this instance settle in USDC on Base mainnet (operator-tested end to end; no external buyer yet). The npm package's default payment allowlist is still Base Sepolia testnet; mainnet is explicit opt-in.",
+    "This testnet demo's paid calls use Base Sepolia testnet USDC. The package itself now defaults to the live mainnet service at https://vex402.online (operator-tested end to end; no external buyer yet) — real USDC, with the same spend caps. Point the package here with VERIFY402_URL=https://verify402.onrender.com and VERIFY402_NETWORKS=eip155:84532 to use testnet instead.",
+    "Paid calls on this instance settle in USDC on Base mainnet (operator-tested end to end; no external buyer yet). The npm package defaults to this mainnet rail; the Base Sepolia testnet demo at https://verify402.onrender.com is explicit opt-in.",
   ],
   [
-    'For the public demo, add a wallet with <strong>Base Sepolia testnet USDC</strong> and set <code class="inline">VERIFY402_NETWORKS=eip155:84532</code>.',
-    'For this instance, add a wallet with <strong>USDC on Base mainnet</strong> and set <code class="inline">VERIFY402_NETWORKS=eip155:8453</code>.',
+    'By default the bridge pays the live mainnet service: add a dedicated wallet holding a small amount of <strong>USDC on Base mainnet</strong> and leave <code class="inline">VERIFY402_NETWORKS=eip155:8453</code>.',
+    'For this instance, add a wallet with <strong>USDC on Base mainnet</strong> and leave <code class="inline">VERIFY402_NETWORKS=eip155:8453</code> (the default). The Base Sepolia testnet demo is explicit opt-in.',
   ],
   [
-    "The analysis reads mainnet chain data, and payment in the public demo is testnet-only; the live mainnet deployment is explicit opt-in at https://api.vex402.online, with a mainnet-funded wallet.",
+    "The analysis reads mainnet chain data, and this testnet demo's payment rail is Base Sepolia testnet-only. The package default is the live mainnet service at https://vex402.online, with a mainnet-funded wallet.",
     "The analysis reads mainnet chain data, and payment on this instance is real USDC on Base mainnet; use a small, dedicated wallet.",
   ],
 ];

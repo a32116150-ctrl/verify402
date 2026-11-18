@@ -35,6 +35,7 @@ const SOLANA = {
   extra: { feePayer: "GVJJ7rdGiXr5xaYbRwRbjfaJL7fmwRygFi1H6aGqDveb" },
 };
 const policy = createPaymentPolicy({
+  networks: [DEMO_NETWORK],
   resourcePrefix: "https://vex402.online",
 });
 
@@ -45,33 +46,35 @@ test("selects the Base Sepolia requirement from the live EVM + Solana offer", ()
   assert.equal(selected[0].payTo, DEFAULT_PAY_TO);
 });
 
-test("the real bridge default is Base Sepolia and refuses a mainnet-only 402", () => {
-  assert.deepEqual(DEFAULT_NETWORKS, [DEMO_NETWORK]);
+test("the real bridge default is Base mainnet and refuses a testnet-only 402", () => {
+  assert.deepEqual(DEFAULT_NETWORKS, [MAINNET_NETWORK]);
 
-  const demo = createPaymentPolicyFromEnv({
+  const live = createPaymentPolicyFromEnv({
     resourcePrefix: "https://vex402.online",
     env: {},
   });
-  assert.deepEqual(demo.allowedNetworks, [DEMO_NETWORK]);
+  assert.deepEqual(live.allowedNetworks, [MAINNET_NETWORK]);
   assert.deepEqual(
-    demo.filter(2, [MAINNET, TESTNET]).map((r) => r.network),
-    [DEMO_NETWORK],
+    live.filter(2, [SOLANA, MAINNET]).map((r) => r.network),
+    [MAINNET_NETWORK],
   );
   assert.throws(
-    () => demo.filter(2, [MAINNET]),
-    /no payment on an allowed network\/payee/,
+    () => live.filter(2, [TESTNET]),
+    (err) =>
+      /no payment on an allowed network\/payee/.test(err.message) &&
+      /offered: eip155:84532/.test(err.message),
   );
 });
 
-test("an explicit mainnet setting preserves the deliberate mainnet path", () => {
-  const mainnet = createPaymentPolicyFromEnv({
-    resourcePrefix: "https://vex402.online",
-    env: { VERIFY402_NETWORKS: MAINNET_NETWORK },
+test("the testnet demo is an explicit opt-in", () => {
+  const demo = createPaymentPolicyFromEnv({
+    resourcePrefix: "https://verify402.onrender.com",
+    env: { VERIFY402_NETWORKS: DEMO_NETWORK },
   });
-  assert.deepEqual(mainnet.allowedNetworks, [MAINNET_NETWORK]);
-  assert.equal(mainnet.filter(2, [MAINNET]).length, 1);
+  assert.deepEqual(demo.allowedNetworks, [DEMO_NETWORK]);
+  assert.equal(demo.filter(2, [TESTNET]).length, 1);
   assert.throws(
-    () => mainnet.filter(2, [TESTNET]),
+    () => demo.filter(2, [MAINNET]),
     /no payment on an allowed network\/payee/,
   );
 });
@@ -134,7 +137,10 @@ test("rejects a requirement that changed after selection", () => {
 });
 
 test("allows a local http prefix for tests", () => {
-  const local = createPaymentPolicy({ resourcePrefix: "http://localhost:4021" });
+  const local = createPaymentPolicy({
+    networks: [DEMO_NETWORK],
+    resourcePrefix: "http://localhost:4021",
+  });
   const result = local.checkBeforeSign({
     paymentRequired: { resource: { url: "http://localhost:4021/verify" } },
     selectedRequirements: TESTNET,
@@ -188,12 +194,12 @@ test("an explicitly empty environment value fails closed instead of falling back
   );
 });
 
-test("an unset environment value still uses the documented Base Sepolia default", () => {
+test("an unset environment value still uses the documented Base mainnet default", () => {
   const policy = createPaymentPolicyFromEnv({
     resourcePrefix: "https://vex402.online",
     env: {},
   });
-  assert.deepEqual(policy.allowedNetworks, [DEMO_NETWORK]);
+  assert.deepEqual(policy.allowedNetworks, [MAINNET_NETWORK]);
   assert.equal(policy.allowedPayTo, DEFAULT_PAY_TO.toLowerCase());
 });
 

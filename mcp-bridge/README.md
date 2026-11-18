@@ -5,20 +5,20 @@ agent signs a payment or a chain transaction, plus five paid on-chain checks
 paid per call over x402.
 
 Works with Claude Desktop, Cursor, OpenCode, and any MCP client that speaks
-stdio. The free gate needs **no wallet**. The public demo's paid tools use a
-dedicated hot wallet funded with **Base Sepolia testnet USDC** (`eip155:84532`).
-The analysis reads mainnet chain data, but the demo never settles mainnet
-payments. A live mainnet instance is available at https://api.vex402.online
-(explicit opt-in, see below) — Base + Solana mainnet, real USDC via the
-Coinbase CDP facilitator. The bridge never signs or sends a trade.
+stdio. The free gate needs **no wallet**. The paid tools settle in **real USDC
+on Base mainnet** (`eip155:8453`) at https://vex402.online — Base + Solana
+mainnet, real USDC via the Coinbase CDP facilitator — using a dedicated hot
+wallet. The analysis reads mainnet chain data. A Base Sepolia testnet demo
+(`eip155:84532`, https://verify402.onrender.com) is an explicit opt-in for
+trying the payment rail without real money. The bridge never signs or sends a
+trade.
 
-> **Published package note:** `verify402-mcp@1.0.9` is published to npm and
-> defaults paid calls to Base Sepolia testnet (`eip155:84532`) for the public
-> demo. Base mainnet (`eip155:8453`) requires an explicit `VERIFY402_NETWORKS`
-> opt-in in a separate deployment and is not enabled by this release. The
-> previously published `1.0.8`, `1.0.6`, `1.0.5`, and `1.0.4` packages are
-> immutable, and `1.0.4` used Base mainnet by default. Do not republish or
-> overwrite any of them.
+> **Published package note:** `verify402-mcp@1.1.6` is published to npm and
+> defaults paid calls to Base mainnet (`eip155:8453`) — real USDC. The Base
+> Sepolia testnet demo (`eip155:84532`) requires an explicit `VERIFY402_URL`
+> and `VERIFY402_NETWORKS` opt-in. Earlier `1.1.5` and below defaulted to
+> testnet; they remain published and immutable. Do not republish or overwrite
+> any published version.
 
 ## Anonymous usage telemetry (opt-in)
 
@@ -131,12 +131,13 @@ To enable the 5 deep on-chain truth checks (`verify_arbitrage`, `check_token_saf
 1. **Create a Dedicated Hot Wallet**:
    - Create a brand new wallet in MetaMask, Rabby, or via `cast wallet new`.
    - ⚠️ **SECURITY WARNING**: Never use your primary personal wallet, cold storage, or vault.
-2. **Fund the Wallet on Base Sepolia testnet (EIP-155:84532)**:
-   - **USDC**: Get Base Sepolia testnet USDC from a faucet (the bridge pays per call: $0.03 to $0.10 in testnet USDC).
-   - **Gas (ETH on Base Sepolia)**: Get a small amount of Base Sepolia testnet ETH for gas if your client needs it. No mainnet funds are required for the public demo.
+2. **Fund the Wallet on Base mainnet (EIP-155:8453)**:
+   - **USDC**: Send only what you are willing to spend (the bridge pays per call: $0.03 to $0.10 in real USDC).
+   - **Gas (ETH on Base)**: Keep a little ETH on Base for gas if your client needs it.
+   - For the Base Sepolia testnet demo instead, use testnet USDC from a faucet (`eip155:84532`) and set the demo URL and network explicitly.
 3. **Configure Environment Variables in Your MCP Client**:
    - Set `EVM_PRIVATE_KEY` to the 64-character private key of the hot wallet.
-   - Set `VERIFY402_NETWORKS` to `eip155:84532` (Base Sepolia testnet).
+   - `VERIFY402_NETWORKS` defaults to `eip155:8453` (Base mainnet); set it only to change rails.
    - Set safety caps `MAX_PAYMENT_USD` (e.g., `"0.25"`) and `MAX_DAILY_USD` (e.g., `"1.00"`).
 
 **Paid Configuration Block (Claude Desktop, Cursor, Cline, Windsurf)**:
@@ -151,7 +152,7 @@ To enable the 5 deep on-chain truth checks (`verify_arbitrage`, `check_token_saf
         "EVM_PRIVATE_KEY": "0xYOUR_HOT_WALLET_PRIVATE_KEY",
         "MAX_PAYMENT_USD": "0.25",
         "MAX_DAILY_USD": "1.00",
-        "VERIFY402_NETWORKS": "eip155:84532",
+        "VERIFY402_NETWORKS": "eip155:8453",
         "VERIFY402_PAY_TO": "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb"
       }
     }
@@ -172,7 +173,7 @@ In `opencode.jsonc` (or `~/.config/opencode/opencode.jsonc`):
         "environment": {
           "VERIFY402_URL": "https://vex402.online",
           "EVM_PRIVATE_KEY": "{env:EVM_PRIVATE_KEY}",
-          "VERIFY402_NETWORKS": "eip155:84532",
+          "VERIFY402_NETWORKS": "eip155:8453",
           "MAX_PAYMENT_USD": "0.25",
           "MAX_DAILY_USD": "1.00"
         }
@@ -216,14 +217,15 @@ Once configured, your agent automatically sees the tools in its context. You can
   payee, the canonical USDC contract **and** the canonical EIP-712 domain for
   that network, an `extra.assetTransferMethod` of `eip3009`, a
   `maxTimeoutSeconds` that is a positive integer no greater than `300`, and an
-  amount inside the cap. A challenge that also offers Base mainnet is refused
-  as a whole rather than filtered down to the testnet option. The client also
-  proves that the requirement it signs is the exact object the server sent.
+  amount inside the cap. A challenge that also offers another rail (for
+  example Base Sepolia testnet) is refused as a whole rather than filtered down
+  to the allowed option. The client also proves that the requirement it signs
+  is the exact object the server sent.
 - The allowlist can be narrowed or pointed at another deployment with
   `VERIFY402_NETWORKS`, `VERIFY402_PAY_TO`, and `VERIFY402_RESOURCE_PREFIX`.
-  The bridge defaults are Base Sepolia testnet (`eip155:84532`) and the
-  public verify402 payee. `VERIFY402_NETWORKS` is constrained to the supported
-  map (`eip155:84532`, `eip155:8453`); an explicitly empty value fails closed
+  The bridge defaults are Base mainnet (`eip155:8453`) and the public verify402
+  payee. `VERIFY402_NETWORKS` is constrained to the supported map
+  (`eip155:8453`, `eip155:84532`); an explicitly empty value fails closed
   instead of falling back to a default.
 - `MAX_PAYMENT_USD` is enforced inside the x402 client, before a signature
   exists; removing it is a security regression. The caps limit what the bridge
@@ -273,21 +275,27 @@ signature exists, in `payment-policy.mjs`.
 
 ## Using the live mainnet instance (explicit opt-in, not the demo)
 
-A mainnet instance is live at https://api.vex402.online — Base + Solana
-mainnet, USDC, exact-x402, settled by the Coinbase CDP facilitator, always-on.
-It is operator-tested end to end; no external buyer has paid anything yet. The
-demo stays testnet; to use mainnet, set **both**:
+The service is live at https://vex402.online — Base + Solana mainnet, USDC,
+exact-x402, settled by the Coinbase CDP facilitator, always-on. It is
+operator-tested end to end; no external buyer has paid anything yet. Mainnet
+is the bridge default:
 
 ```bash
-VERIFY402_URL=https://api.vex402.online
-VERIFY402_NETWORKS=eip155:8453
+VERIFY402_URL=https://vex402.online      # default
+VERIFY402_NETWORKS=eip155:8453           # default
 ```
 
-with a dedicated hot wallet holding USDC on Base. Never point this client at
-mainnet against the public demo's challenge, and never set these in a shared
-or default config by accident. The public demo offers `eip155:84532`; a
-mainnet-only policy will refuse that challenge instead of silently spending.
-The reverse is also enforced: the demo policy refuses a mainnet-only challenge.
+with a dedicated hot wallet holding a small amount of USDC on Base. For the
+Base Sepolia testnet demo, opt in explicitly:
+
+```bash
+VERIFY402_URL=https://verify402.onrender.com
+VERIFY402_NETWORKS=eip155:84532
+```
+
+The rails never cross: a mainnet-only policy refuses the demo's `eip155:84532`
+challenge instead of silently spending, and a testnet policy refuses a
+mainnet-only challenge.
 
 ## Development
 

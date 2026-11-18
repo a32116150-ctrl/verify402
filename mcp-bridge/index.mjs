@@ -129,10 +129,12 @@ Usage:
 Environment:
   VERIFY402_URL     verify402 base URL (default https://vex402.online)
   EVM_PRIVATE_KEY   optional; omit for the free preflight_gate only
-  MAX_PAYMENT_USD   cap on one x402 payment (default 0.25)
+  MAX_PAYMENT_USD   cap on one x402 payment (default 0.25; enforced before signing)
   MAX_DAILY_USD     optional cap for the UTC day, persisted in a small ledger
   SPEND_LEDGER_PATH optional ledger path (default .spend-ledger.json)
-  VERIFY402_NETWORKS  comma-separated EVM networks for paid calls (default eip155:84532, Base Sepolia testnet; eip155:8453 only by explicit opt-in)
+  VERIFY402_NETWORKS  comma-separated EVM networks for paid calls (default eip155:8453,
+                      Base mainnet = real USDC; the Base Sepolia testnet demo is
+                      eip155:84532 and must be chosen explicitly)
   VERIFY402_PAY_TO    EVM payee the 402 must name (default the verify402 payee)
   VERIFY402_RESOURCE_PREFIX  resource origin/prefix the 402 must match (default VERIFY402_URL)
 
@@ -294,7 +296,7 @@ How to call them safely:
 1. Never sign a payment or transaction without preflight_gate. If it returns BLOCK, do not sign; fix the intent.
 2. A PASS is not a guarantee: it means the listed checks passed at one pinned block.
 3. If retrying a payment after a lost response, reuse the same x-idempotency-key so you are not charged twice.
-4. Prices and network are enforced by the 402 challenge you receive, not by these instructions.
+4. Prices and network are enforced by the 402 challenge you receive, not by these instructions. By default paid calls settle in real USDC on Base mainnet (eip155:8453); the Base Sepolia testnet demo is an explicit opt-in.
 5. The paid analysis calls the chain for you; unconfigured venues and off-chain promises are not checked and are named in notChecked.`;
 
 async function main() {
@@ -311,7 +313,7 @@ async function main() {
       from: z.string().optional().describe("The wallet that will sign. Strongly recommended: enables simulation and balance checks."),
       payment: z.object({
         scheme: z.string().optional().describe('x402 scheme, normally "exact"'),
-        network: z.string().describe('CAIP-2 network, e.g. "eip155:84532" for the public demo or "solana:..."'),
+        network: z.string().describe('CAIP-2 network, e.g. "eip155:8453" for the live mainnet rail, "eip155:84532" for the testnet demo, or "solana:..."'),
         asset: z.string().describe("Token address or mint, e.g. canonical USDC on that network"),
         amount: z.string().describe("RAW amount in the asset's smallest unit, as a string"),
         payTo: z.string().describe("Recipient address from the 402 challenge"),

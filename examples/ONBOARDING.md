@@ -10,12 +10,11 @@ receipt bound to that exact intent, the request body, and a fresh pinned block.
 
 Live: **https://vex402.online**
 
-> Free hosting: the first call after a sleep can take ~30 s. Run the curl once
-> to warm it; later calls are fast.
->
-> The public demo settles payments in **Base Sepolia testnet USDC**
-> (`eip155:84532`). The analysis reads mainnet chain data; this is not a
-> mainnet payment service. The free gate itself never moves funds.
+> The live service settles payments in **real USDC on Base mainnet**
+> (`eip155:8453`). The free gate itself never moves funds. A Base Sepolia
+> testnet demo (`eip155:84532`) is available at
+> https://verify402.onrender.com — it runs on a free host, so the first call
+> after a sleep can take ~30 s.
 
 ---
 
@@ -28,8 +27,8 @@ curl -sS -X POST https://vex402.online/preflight \
     "kind": "payment",
     "payment": {
       "scheme": "exact",
-      "network": "eip155:84532",
-      "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+      "network": "eip155:8453",
+      "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
       "amount": "10000",
       "payTo": "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb",
       "resource": "https://vex402.online/verify",
@@ -39,10 +38,10 @@ curl -sS -X POST https://vex402.online/preflight \
   }'
 ```
 
-`amount` is in raw units: `10000` = **0.01 testnet USDC** (6 decimals).
-`network` `eip155:84532` is Base Sepolia, the public demo's payment rail.
-`asset` is canonical testnet USDC on Base Sepolia. The analysis routes still
-read mainnet chain data; only the payment rail is testnet.
+`amount` is in raw units: `10000` = **0.01 USDC** (6 decimals).
+`network` `eip155:8453` is Base mainnet, the live payment rail.
+`asset` is canonical USDC on Base. For the testnet demo, use `eip155:84532`
+and testnet USDC `0x036CbD53842c5426634e7929541eC2318f3dCF7e`.
 
 You should get:
 
@@ -147,10 +146,10 @@ Receipts expire after 90 seconds by default (15–300 configurable via
 Warm the `npx` cache once:
 
 ```bash
-npx -y verify402-mcp@1.1.5 --help
+npx -y verify402-mcp@1.1.6 --help
 ```
 
-This pins the published `1.1.5` package. Paid tools in the public demo use Base Sepolia testnet USDC; paid calls on mainnet are an explicit opt-in at https://api.vex402.online.
+This pins the published `1.1.6` package. Paid tools default to real USDC on Base mainnet at https://vex402.online; the Base Sepolia testnet demo is an explicit opt-in.
 
 Then add it to Claude Desktop / Cursor (`.cursor/mcp.json`):
 
@@ -159,7 +158,7 @@ Then add it to Claude Desktop / Cursor (`.cursor/mcp.json`):
   "mcpServers": {
     "verify402": {
       "command": "npx",
-      "args": ["-y", "verify402-mcp@1.1.5"],
+      "args": ["-y", "verify402-mcp@1.1.6"],
       "env": { "VERIFY402_URL": "https://vex402.online" }
     }
   }

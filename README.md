@@ -10,7 +10,7 @@
 [![x402 v2](https://img.shields.io/badge/x402-v2%20exact-purple.svg)](https://github.com/x402-foundation/x402)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-> **Status (2026-11-18):** the public demo on this site settles in **Base Sepolia testnet USDC**. A mainnet instance is live at **[api.vex402.online](https://api.vex402.online/info)** — Base + Solana mainnet, real USDC via the Coinbase CDP facilitator. Two operator end-to-end payments have settled there so far ([0x37e61b09…](https://basescan.org/tx/0x37e61b094133af984a30590e03f27f0daea67716e3650a9b16f3bb5aad734dfb)); no external buyer has paid anything yet. The analysis reads mainnet chain data (Ethereum, Arbitrum, Base). No external settlement is claimed as traction.
+> **Status (2026-11-18):** this service is live on **Base + Solana mainnet** at **[vex402.online](https://vex402.online)** — real USDC via the Coinbase CDP facilitator. Two operator end-to-end payments have settled so far ([0x37e61b09…](https://basescan.org/tx/0x37e61b094133af984a30590e03f27f0daea67716e3650a9b16f3bb5aad734dfb)); no external buyer has paid anything yet. A **Base Sepolia testnet demo** stays available at [verify402.onrender.com](https://verify402.onrender.com) for trying the payment rail without real money. The analysis reads mainnet chain data (Ethereum, Arbitrum, Base). No external settlement is claimed as traction.
 
 ---
 
@@ -29,8 +29,8 @@ curl -sS -X POST https://vex402.online/preflight \
     "kind": "payment",
     "payment": {
       "scheme": "exact",
-      "network": "eip155:84532",
-      "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+      "network": "eip155:8453",
+      "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
       "amount": "10000",
       "payTo": "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb",
       "resource": "https://vex402.online/verify"
@@ -39,7 +39,7 @@ curl -sS -X POST https://vex402.online/preflight \
   }'
 ```
 
-This example uses the **public demo's Base Sepolia testnet USDC** (`eip155:84532`), not mainnet. The free gate is only validating the request shape; it is not a payment. The paid analysis routes read mainnet chain data (Ethereum, Arbitrum, Base), but the demo does not settle mainnet payments. (A mainnet instance is live at https://api.vex402.online.)
+This example uses the **live Base mainnet USDC rail** (`eip155:8453`). The free gate is only validating the request shape; it is not a payment. For the Base Sepolia **testnet demo**, use `eip155:84532`, asset `0x036CbD53842c5426634e7929541eC2318f3dCF7e`, and the demo host https://verify402.onrender.com.
 
 Returns `PASS` / `CAUTION` / `BLOCK`, typed reasons, exact `checked` and `notChecked` lists, pinned block number, and a verifiable 90-second HMAC receipt.
 
@@ -49,7 +49,7 @@ quote-based sellability check, not a honeypot proof. Read `notChecked` in the re
 
 ### Test the free gate (3 testers wanted)
 
-I’m looking for three developers building AI agents, MCP tools, or x402 payment integrations to run 3–5 real intents and report what breaks. Demo payments use Base Sepolia testnet only; the mainnet instance is live at [api.vex402.online](https://api.vex402.online/info) (explicit opt-in). Analysis reads mainnet chain data; no wallet or paid test is required.
+I’m looking for three developers building AI agents, MCP tools, or x402 payment integrations to run 3–5 real intents and report what breaks. The free gate needs no wallet. Paid calls settle in real USDC on Base mainnet at [vex402.online](https://vex402.online); a Base Sepolia testnet demo is available if you would rather not spend real money. Analysis reads mainnet chain data; no wallet or paid test is required.
 
 - [Open the tester kit](https://vex402.online/testers) — three intents: one expected pass, one uncertain, one expected block
 - [Run it in the browser](https://vex402.online/preflight#try) — paste a token address, or run the raw intent; no terminal needed
@@ -94,7 +94,7 @@ Paste this into your client config file:
 ```
 
 #### Option B: Paid Mode (Unlocks 5 Deep Truth Checks)
-Unlocks the 5 on-chain truth checks (`verify_arbitrage`, `check_token_safety`, `get_best_route`, `verify_quote_fairness`, `get_trade_depth`). The agent pays per call via x402 in **testnet USDC** on the public demo. The analysis still reads mainnet chain data; only the payment rail is testnet.
+Unlocks the 5 on-chain truth checks (`verify_arbitrage`, `check_token_safety`, `get_best_route`, `verify_quote_fairness`, `get_trade_depth`). The agent pays per call via x402 in **real USDC on Base mainnet** — $0.03 to $0.10 per call, capped by `MAX_PAYMENT_USD`. The analysis reads mainnet chain data.
 
 ```json
 {
@@ -107,7 +107,7 @@ Unlocks the 5 on-chain truth checks (`verify_arbitrage`, `check_token_safety`, `
         "EVM_PRIVATE_KEY": "0xYOUR_HOT_WALLET_PRIVATE_KEY",
         "MAX_PAYMENT_USD": "0.25",
         "MAX_DAILY_USD": "1.00",
-        "VERIFY402_NETWORKS": "eip155:84532",
+        "VERIFY402_NETWORKS": "eip155:8453",
         "VERIFY402_PAY_TO": "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb"
       }
     }
@@ -115,7 +115,7 @@ Unlocks the 5 on-chain truth checks (`verify_arbitrage`, `check_token_safety`, `
 }
 ```
 
-`VERIFY402_NETWORKS=eip155:84532` is the Base Sepolia testnet rail the live demo offers. Do **not** change it to `eip155:8453` to make a test pass: the bridge would refuse the live 402 challenge rather than spend mainnet funds. Mainnet is a separate, explicit deployment — live at https://api.vex402.online — with its own funded wallet and explicit `VERIFY402_URL` / `VERIFY402_NETWORKS=eip155:8453` opt-in.
+`VERIFY402_NETWORKS=eip155:8453` is the live Base mainnet rail, and it is the bridge's runtime default. Paying is bounded by `MAX_PAYMENT_USD`, `MAX_DAILY_USD`, the pinned payee and the canonical-USDC check, all enforced before a signature exists. For the **Base Sepolia testnet demo**, point `VERIFY402_URL` at https://verify402.onrender.com and set `VERIFY402_NETWORKS=eip155:84532`; never mix the two rails in one run.
 
 ---
 
@@ -126,27 +126,33 @@ If you want your agent to use the paid truth tools, follow these 4 steps to set 
 1. **Create a Dedicated Hot Wallet**:
    - Generate a brand new EVM address using MetaMask, Rabby, or CLI (`cast wallet new`).
    - ⚠️ **NEVER USE YOUR MAIN WALLET OR COLD VAULT.** Treat this wallet like physical petty cash.
-2. **Fund with testnet USDC on Base Sepolia (EIP-155:84532)**:
-   - Send a small amount of **Base Sepolia testnet USDC** to your new hot wallet. Do not fund it with mainnet assets for the public demo.
-   - The tools cost tiny fixed amounts per call: `$0.03` (route), `$0.05` (arbitrage/quotecheck/depth), `$0.10` (token safety).
-3. **Fund with testnet Gas (Base Sepolia ETH)**:
-   - Send a small amount of Base Sepolia testnet ETH for gas overhead if your client needs it.
+2. **Fund with a small amount of USDC on Base mainnet (EIP-155:8453)**:
+   - Send only what you are willing to spend — the tools cost fixed amounts per call: `$0.03` (route), `$0.05` (arbitrage/quotecheck/depth), `$0.10` (token safety).
+   - For the Base Sepolia testnet demo instead, fund Base Sepolia testnet USDC (`eip155:84532`) and set the demo URL and network explicitly.
+3. **Fund with a little ETH on the same chain for gas** if your client needs it.
 4. **Export the Private Key**:
    - Copy the wallet's private key (hex string starting with `0x`) into the `EVM_PRIVATE_KEY` field in your MCP config.
    - *Client-Side Guardrails*: The bridge enforces `MAX_PAYMENT_USD` (hard cap per call, default $0.25) and `MAX_DAILY_USD` (daily budget cap) before any signature can be created. This caps what the bridge can authorize; it is **not** protection against a compromised private key.
 
-#### Mainnet is explicit (not the demo default)
+#### Mainnet is the default; testnet is the opt-in
 
-Mainnet is live at https://api.vex402.online — Base + Solana mainnet, USDC via the Coinbase CDP facilitator, an always-on paid host, and a mainnet hot wallet. It is not the demo default; opt in deliberately by pointing this bridge at it:
+The service is live on Base + Solana mainnet — real USDC via the Coinbase CDP facilitator, an always-on host, and a mainnet payee. The bridge defaults to Base mainnet (`eip155:8453`), so the only required paid-mode setting is the wallet key:
 
 ```bash
-# Only for a future mainnet deployment. Do not use these values against the public demo.
-X402_MODE=mainnet
-VERIFY402_NETWORKS=eip155:8453
+VERIFY402_URL=https://vex402.online        # default
+VERIFY402_NETWORKS=eip155:8453             # default
 VERIFY402_PAY_TO=0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb
+MAX_PAYMENT_USD=0.25                       # default cap on one payment
 ```
 
-Setting `VERIFY402_NETWORKS=eip155:8453` while pointing at the public demo is a configuration error: the demo's 402 offers `eip155:84532`, so the bridge fails closed instead of paying. For mainnet, point `VERIFY402_URL` at https://api.vex402.online as well. See `MAINNET_SWITCH_CHECKLIST.md`.
+For the Base Sepolia **testnet demo**, opt in explicitly:
+
+```bash
+VERIFY402_URL=https://verify402.onrender.com
+VERIFY402_NETWORKS=eip155:84532
+```
+
+A testnet-only 402 is refused when the policy allows mainnet, and a mainnet-only 402 is refused when it allows testnet; the bridge never crosses rails silently. See `MAINNET_SWITCH_CHECKLIST.md`.
 
 ---
 
@@ -492,8 +498,8 @@ or any MCP client.
 
 - **Free gate only:** omit `EVM_PRIVATE_KEY`; the server registers only
   `preflight_gate`, `inspect_402`, and `directory_402`, and nothing can be charged.
-- **Paid tools:** add a dedicated hot wallet with testnet USDC for the public
-  demo (mainnet live at https://api.vex402.online — explicit opt-in). The bridge signs the x402
+- **Paid tools:** add a dedicated hot wallet with a small amount of USDC on
+  Base mainnet (testnet demo available at https://verify402.onrender.com). The bridge signs the x402
   payment only — never a trade — and enforces `MAX_PAYMENT_USD` (default $0.25)
   in the pre-signature guard before any signature exists. It also requires an
   allowlisted EVM network, the verify402 payee, and a known paid resource on the
@@ -512,20 +518,18 @@ or any MCP client.
   separate MCP bridge calls from generic HTTP. Labels are self-declared and
   spoofable, not identities.
 - **Install:** `npx -y verify402-mcp@latest` from the public npm registry
-  (currently `1.1.5`). For a pinned install of the published package, use
-  `npx -y verify402-mcp@1.1.5`; its npm tarball is
-  `https://registry.npmjs.org/verify402-mcp/-/verify402-mcp-1.1.5.tgz`. `1.1.5`
-  is a marker release: no bridge runtime change (one corrected comment). No npm
-  account is required to run the published package. Client configs, the exact
-  OpenCode V2 shape, and the release command are at
-  [`/mcp`](https://vex402.online/mcp). The published `1.1.5`
-  defaults paid calls to Base Sepolia testnet (`eip155:84532`) for the public
-  demo; Base mainnet (`eip155:8453`) requires an explicit `VERIFY402_NETWORKS`
-  opt-in in a separate deployment and is not enabled by this release. The
-  immutable `1.0.8` and `1.0.7` packages remain published; the older `1.0.6`
-  package remains installable, and `1.0.4` predates the testnet default and
-  used Base mainnet. The official MCP Registry lists the published entry as
-  active (`isLatest: true`).
+  (currently `1.1.6`). For a pinned install of the published package, use
+  `npx -y verify402-mcp@1.1.6`; its npm tarball is
+  `https://registry.npmjs.org/verify402-mcp/-/verify402-mcp-1.1.6.tgz`. `1.1.6`
+  changes the paid-call default: paid calls now target the live Base mainnet
+  rail (`eip155:8453`, real USDC), with the same spend caps. The Base Sepolia
+  testnet demo (`eip155:84532`) is an explicit opt-in via `VERIFY402_URL` and
+  `VERIFY402_NETWORKS`. No npm account is required to run the published
+  package. Client configs, the exact OpenCode V2 shape, and the release command
+  are at [`/mcp`](https://vex402.online/mcp). The immutable `1.1.5` and earlier
+  packages remain published; `1.1.5` and below defaulted to testnet, and
+  `1.0.4` used Base mainnet. The official MCP Registry lists the published
+  entry as active (`isLatest: true`).
 
 ## Settlement, response delivery, and recovery (honest contract)
 
@@ -654,7 +658,7 @@ or any MCP client.
 2. `GET  https://vex402.online/findings` — free verdicts on majors; see the honest `no_edge` baseline.
 3. `POST /verify` with your question (`{"chainId":1,"target":"WETH","size":100000}`) and no payment → HTTP 402.
 4. Read the payment instructions from the `PAYMENT-REQUIRED` response header.
-5. Build an x402 payment for ≤ the stated price (Node example: `mcp-bridge/first-payment.mjs`; MCP users: `mcp-bridge/`). On the public demo, pay the testnet challenge (`eip155:84532`); do not substitute a mainnet payment.
+5. Build an x402 payment for ≤ the stated price (Node example: `mcp-bridge/first-payment.mjs`; MCP users: `mcp-bridge/`). The live challenge is Base mainnet (`eip155:8453`); the demo challenge is Base Sepolia (`eip155:84532`). Pay the rail you actually opted into.
 6. Re-send the same request with the proof in the `PAYMENT-SIGNATURE` header (x402 v2; the legacy `x-payment` header is also accepted). The verdict arrives with the settlement response.
 7. On a retry/restart, add `x-idempotency-key: <crypto.randomUUID()>` to step 3 so lost responses replay free instead of paying twice. The key is a secret; a leaked key allows replay until the TTL/cap.
 8. Verify the receipt: `evidence_bundle.responseHash` must equal sha256(canonical JSON of the body minus `evidence_bundle`, `recovery`, `cache`, `elapsedMs`).
@@ -670,7 +674,7 @@ or any MCP client.
 
 ## Hosting status
 
-The public demo instance runs on a free host: first request after idle can take about a minute; testnet only. The mainnet instance (https://api.vex402.online) is always-on and separate.
+The testnet demo runs on a free host: the first request after idle can take about a minute; it settles testnet only. The mainnet instance (https://vex402.online) is always-on and is the package default.
 
 ## License
 

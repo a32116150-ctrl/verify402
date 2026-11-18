@@ -20,7 +20,7 @@ npx -y verify402-mcp --help
 |---|---|---|
 | **Requires Wallet?** | ❌ No | ✅ Yes (Dedicated hot wallet) |
 | **Requires Private Key?** | ❌ No | ✅ Yes (`EVM_PRIVATE_KEY`) |
-| **Requires Crypto / Gas?** | ❌ No | ✅ Yes (Base Sepolia testnet USDC + a little testnet ETH for the public demo) |
+| **Requires Crypto / Gas?** | ❌ No | ✅ Yes (a little USDC + ETH on Base mainnet) |
 | **Tools Included** | `preflight_gate` | `preflight_gate`, `verify_arbitrage`, `check_token_safety`, `get_best_route`, `verify_quote_fairness`, `get_trade_depth` |
 | **Cost** | **$0.00** | $0.03 – $0.10 per call via x402 |
 
@@ -99,20 +99,21 @@ If you want the agent to use paid truth checks:
   ```
 - **CRITICAL RULE**: Never use your main wallet, treasury, or cold storage.
 
-### Step 2: Fund with Testnet USDC on Base Sepolia
-- Network: **Base Sepolia testnet (Chain ID 84532)**
-- Asset: **testnet USDC** (`0x036CbD53842c5426634e7929541eC2318f3dCF7e`)
-- Get testnet USDC from a Base Sepolia faucet. Do not send mainnet funds to the public-demo wallet.
-- Recommended starting balance: a small amount of testnet USDC is enough for several calls.
-- Typical check prices (paid in testnet USDC for the public demo):
+### Step 2: Fund with a Little USDC on Base Mainnet
+- Network: **Base mainnet (Chain ID 8453)**
+- Asset: **USDC** (`0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`)
+- Send only what you are willing to spend; this rail is real money.
+- For the Base Sepolia testnet demo instead: network `eip155:84532`, testnet USDC `0x036CbD53842c5426634e7929541eC2318f3dCF7e` from a faucet, and the demo host https://verify402.onrender.com.
+- Recommended starting balance: a small amount of USDC is enough for several calls.
+- Typical check prices (real USDC on mainnet):
   - `get_best_route`: **$0.03**
   - `verify_arbitrage`: **$0.05**
   - `verify_quote_fairness`: **$0.05**
   - `get_trade_depth`: **$0.05**
   - `check_token_safety`: **$0.10**
 
-### Step 3: Fund with Testnet Gas
-- Send a small amount of **Base Sepolia testnet ETH** to the wallet address if your client needs gas for approvals. The public demo does not require mainnet ETH.
+### Step 3: Fund with a Little Gas
+- Keep a small amount of **ETH on Base** for gas if your client needs approvals.
 
 ### Step 4: Add Environment Variables & Budget Caps
 In your MCP config `env` block, add:
@@ -120,7 +121,7 @@ In your MCP config `env` block, add:
 "EVM_PRIVATE_KEY": "0xYOUR_HOT_WALLET_KEY",
 "MAX_PAYMENT_USD": "0.25",
 "MAX_DAILY_USD": "1.00",
-"VERIFY402_NETWORKS": "eip155:84532",
+"VERIFY402_NETWORKS": "eip155:8453",
 "VERIFY402_PAY_TO": "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb"
 ```
 
@@ -130,7 +131,7 @@ In your MCP config `env` block, add:
 - **USDC-Only Default**: Rejects payment requests in unknown or non-standard tokens.
 - **Payee Whitelist**: Refuses payments to addresses other than `VERIFY402_PAY_TO`.
 
-> **Mainnet is live (explicit opt-in, not the public demo):** a mainnet instance runs at https://api.vex402.online (Base + Solana mainnet, real USDC via Coinbase CDP). It is operator-tested end to end (two on-chain settlements, 2026-11-18) and no external buyer has paid anything yet. To use it, set `VERIFY402_URL=https://api.vex402.online` **and** `VERIFY402_NETWORKS=eip155:8453`, with a dedicated mainnet hot wallet funded with USDC on Base. The public demo still offers `eip155:84532`; a mainnet-only bridge configuration will refuse that challenge instead of spending mainnet funds.
+> **Mainnet is the default:** the live service at https://vex402.online settles real USDC on Base + Solana mainnet via Coinbase CDP. It is operator-tested end to end (two on-chain settlements, 2026-11-18) and no external buyer has paid anything yet. The bridge defaults to `VERIFY402_URL=https://vex402.online` and `VERIFY402_NETWORKS=eip155:8453`, with a dedicated hot wallet funded with a little USDC on Base. For the Base Sepolia testnet demo, set `VERIFY402_URL=https://verify402.onrender.com` and `VERIFY402_NETWORKS=eip155:84532`; the two rails are never mixed.
 
 ---
 

@@ -190,7 +190,12 @@ await check("402 challenge offers Base Sepolia testnet USDC", () => {
     throw new Error(`deployed 402 challenge would be refused by a payer: ${sharedValidation.reason}`);
   }
 
-  const demoPolicy = createPaymentPolicyFromEnv({ resourcePrefix: BASE, env: {} });
+  // The checker runs against a testnet deployment, so it opts in to the demo
+  // rail explicitly; the package default is Base mainnet now.
+  const demoPolicy = createPaymentPolicyFromEnv({
+    resourcePrefix: BASE,
+    env: { VERIFY402_NETWORKS: DEMO_NETWORK },
+  });
   const selected = demoPolicy.filter(2, accepts);
   if (!selected.some((entry) => entry.network === DEMO_NETWORK)) {
     throw new Error("bridge demo policy did not select the Base Sepolia requirement");

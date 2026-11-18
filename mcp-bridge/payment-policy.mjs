@@ -3,8 +3,9 @@
 // The bridge is a payer, not a blank cheque for any remote 402. Before a
 // signature exists, the policy requires:
 //
-//   - the network to be explicitly allowlisted (the public demo default is
-//     Base Sepolia testnet, eip155:84532);
+//   - the network to be explicitly allowlisted (the default is the live
+//     mainnet service, Base mainnet eip155:8453; the Base Sepolia testnet
+//     demo, eip155:84532, is an explicit opt-in);
 //   - payTo to be the verify402 payee (default the EVM payTo);
 //   - the 402 resource to be on the configured server and a known paid route.
 //
@@ -13,14 +14,18 @@
 // Redirects are refused by the axios clients in index.mjs and
 // first-payment.mjs.
 //
-// Mainnet is available only through an explicit VERIFY402_NETWORKS value. The
-// demo default must never silently select Base mainnet.
+// Owner decision, 2026-11-18: the VPS exists to run the mainnet service, so
+// the package defaults to it. Paying is still opt-in in the only sense that
+// matters — no EVM_PRIVATE_KEY, no signer — and every payment is bounded by
+// MAX_PAYMENT_USD (default $0.25), the pinned payee, the canonical USDC asset
+// and the paid-route list. The testnet demo is an explicit VERIFY402_URL +
+// VERIFY402_NETWORKS=eip155:84532 choice, never a silent fallback.
 //
 // Free-only mode never imports or constructs this policy.
 
 export const DEMO_NETWORK = "eip155:84532";
 export const MAINNET_NETWORK = "eip155:8453";
-export const DEFAULT_NETWORKS = [DEMO_NETWORK];
+export const DEFAULT_NETWORKS = [MAINNET_NETWORK];
 export const DEFAULT_PAY_TO = "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb";
 export const DEFAULT_PAID_ROUTES = ["/verify", "/safety", "/route", "/quotecheck", "/depth"];
 
@@ -276,7 +281,13 @@ export function validatePaymentChallenge(challenge, {
   }
 
   if (!selected) {
-    return fail("402 challenge offers no allowed EVM payment requirement");
+    const offered = [...new Set(challenge.accepts
+      .map((requirement) => String(requirement?.network ?? ""))
+      .filter(Boolean))];
+    return fail(
+      `402 challenge offers no allowed EVM payment requirement ` +
+      `(offered: ${offered.join(", ") || "none"}; allowed: ${[...networks].join(", ")})`,
+    );
   }
   return { ok: true, requirement: selected };
 }
@@ -361,9 +372,12 @@ export function createPaymentPolicy({
         return allowed.has(network) && requirementPayTo === allowedPayTo;
       });
       if (passing.length === 0) {
+        const offered = [...new Set(requirements.map((r) => String(r?.network ?? "(none)")))];
         throw new Error(
           `402 offered no payment on an allowed network/payee ` +
-            `(allowed networks: ${allowedNetworks.join(", ")}; payee: ${allowedPayTo})`,
+            `(allowed networks: ${allowedNetworks.join(", ")}; payee: ${allowedPayTo}; ` +
+            `offered: ${offered.join(", ")}). ` +
+            `Set VERIFY402_NETWORKS to one of the offered networks — and only if you intend to pay it.`,
         );
       }
       return passing;
@@ -534,9 +548,10 @@ export function createPaymentGuard(policy, {
 /**
  * Build the paid-call policy from the bridge's documented environment.
  *
- * The default is deliberately Base Sepolia testnet. Base mainnet is selected
- * only when VERIFY402_NETWORKS explicitly names eip155:8453. An explicitly
- * empty network list or payee throws, so a typo cannot widen the policy.
+ * The default is Base mainnet (eip155:8453), the live service's rail. The
+ * Base Sepolia testnet demo is selected only when VERIFY402_NETWORKS explicitly
+ * names eip155:84532. An explicitly empty network list or payee throws, so a
+ * typo cannot widen the policy.
  */
 export function createPaymentPolicyFromEnv({
   resourcePrefix,

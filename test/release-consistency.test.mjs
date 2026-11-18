@@ -312,7 +312,7 @@ test("runtime metadata follows the configured mode instead of hardcoding the dem
   assert.match(buildInfoHosting("mainnet").status, /does not claim production validation/);
 });
 
-test("public demo docs name Base Sepolia testnet USDC, not mainnet as the demo default", () => {
+test("public docs describe the mainnet default and the explicit testnet demo", () => {
   const docs = [
     "README.md",
     "examples/ONBOARDING.md",
@@ -325,42 +325,41 @@ test("public demo docs name Base Sepolia testnet USDC, not mainnet as the demo d
 
   for (const rel of docs) {
     const text = read(rel);
-    assert.match(text, /eip155:84532/, `${rel} must name the demo testnet network`);
+    assert.match(text, /eip155:84532/, `${rel} must still describe the testnet demo network`);
     assert.match(text, new RegExp(TESTNET_USDC, "i"), `${rel} must name testnet USDC`);
     assert.match(text, /testnet/i, `${rel} must say the demo payment rail is testnet`);
   }
 
   const readme = read("README.md");
-  assert.match(readme, /"VERIFY402_NETWORKS": "eip155:84532"/);
+  assert.match(readme, /"VERIFY402_NETWORKS": "eip155:8453"/);
   assert.match(readme, /mainnet chain data/i);
-  assert.match(readme, /Mainnet is explicit[\s\S]{0,1600}VERIFY402_NETWORKS=eip155:8453/i);
+  assert.match(readme, /testnet[\s\S]{0,1600}VERIFY402_NETWORKS=eip155:84532/i);
 
   const envExample = read(".env.example");
-  assert.match(envExample, /VERIFY402_NETWORKS=eip155:84532/);
   assert.match(envExample, /VERIFY402_NETWORKS=eip155:8453/);
-  assert.match(envExample, /Future mainnet deployment only/i);
+  assert.match(envExample, /VERIFY402_NETWORKS=eip155:84532/);
 
   // An active line is the default; a commented line is only documentation.
   const activeEnv = envExample
     .split("\n")
     .filter((line) => !/^\s*#/.test(line))
     .join("\n");
-  assert.match(activeEnv, /^VERIFY402_NETWORKS=eip155:84532$/m);
-  assert.doesNotMatch(activeEnv, /^VERIFY402_NETWORKS=eip155:8453$/m);
+  assert.match(activeEnv, /^VERIFY402_NETWORKS=eip155:8453$/m);
+  assert.doesNotMatch(activeEnv, /^VERIFY402_NETWORKS=eip155:84532$/m);
 
   const bridgeEnv = read("mcp-bridge/.env.example");
   const activeBridgeEnv = bridgeEnv
     .split("\n")
     .filter((line) => !/^\s*#/.test(line))
     .join("\n");
-  assert.match(activeBridgeEnv, /^VERIFY402_NETWORKS=eip155:84532$/m);
-  assert.doesNotMatch(activeBridgeEnv, /^VERIFY402_NETWORKS=eip155:8453$/m);
+  assert.match(activeBridgeEnv, /^VERIFY402_NETWORKS=eip155:8453$/m);
+  assert.doesNotMatch(activeBridgeEnv, /^VERIFY402_NETWORKS=eip155:84532$/m);
 
   const bridgeReadme = read("mcp-bridge/README.md");
   assert.match(bridgeReadme, /testnet USDC/i);
   assert.match(bridgeReadme, /eip155:84532/);
   assert.match(bridgeReadme, /Published package note/i);
-  assert.doesNotMatch(bridgeReadme, /Defaults are Base mainnet/i);
+  assert.match(bridgeReadme, /Defaults are Base mainnet/i);
 
   for (const name of fs.readdirSync(path.join(ROOT, "src/site"))) {
     if (!name.endsWith(".html")) continue;
@@ -372,61 +371,61 @@ test("public demo docs name Base Sepolia testnet USDC, not mainnet as the demo d
   }
 });
 
-test("bridge demo default is testnet, accepts the live testnet challenge, and fails closed on mainnet", () => {
+test("bridge default is Base mainnet, accepts the live mainnet challenge, and fails closed on testnet", () => {
   const readme = read("README.md");
   const documentedNetwork = readme.match(/"VERIFY402_NETWORKS":\s*"([^"]+)"/)?.[1];
-  assert.equal(documentedNetwork, DEMO_NETWORK);
+  assert.equal(documentedNetwork, MAINNET_NETWORK);
 
-  assert.deepEqual(DEFAULT_NETWORKS, [DEMO_NETWORK]);
-  assert.equal(DEFAULT_NETWORKS.includes(MAINNET_NETWORK), false);
+  assert.deepEqual(DEFAULT_NETWORKS, [MAINNET_NETWORK]);
+  assert.equal(DEFAULT_NETWORKS.includes(DEMO_NETWORK), false);
 
   // Exercise the same policy builder the paid client uses, with no env
   // override. This is the runtime default, not a paragraph in a README.
-  const demoPolicy = createPaymentPolicyFromEnv({
+  const livePolicy = createPaymentPolicyFromEnv({
     resourcePrefix: "https://vex402.online",
     env: {},
   });
 
-  assert.deepEqual(demoPolicy.allowedNetworks, [DEMO_NETWORK]);
-  const selected = demoPolicy.filter(2, [MAINNET_REQUIREMENT, TESTNET_REQUIREMENT]);
-  assert.deepEqual(selected.map((r) => r.network), [DEMO_NETWORK]);
+  assert.deepEqual(livePolicy.allowedNetworks, [MAINNET_NETWORK]);
+  const selected = livePolicy.filter(2, [MAINNET_REQUIREMENT, TESTNET_REQUIREMENT]);
+  assert.deepEqual(selected.map((r) => r.network), [MAINNET_NETWORK]);
 
   assert.throws(
-    () => demoPolicy.filter(2, [MAINNET_REQUIREMENT]),
+    () => livePolicy.filter(2, [TESTNET_REQUIREMENT]),
     /no payment on an allowed network\/payee/,
-    "demo policy must refuse a mainnet-only 402",
+    "the mainnet default must refuse a testnet-only 402",
   );
 
-  // If a future change made mainnet the runtime default, this is the exact
-  // regression: the demo's Base Sepolia challenge would be refused.
-  const simulatedMainnetDefault = createPaymentPolicyFromEnv({
+  // If a future change made testnet the runtime default, this is the exact
+  // regression: the live mainnet challenge would be refused.
+  const simulatedTestnetDefault = createPaymentPolicyFromEnv({
     resourcePrefix: "https://vex402.online",
-    env: { VERIFY402_NETWORKS: MAINNET_NETWORK },
+    env: { VERIFY402_NETWORKS: DEMO_NETWORK },
   });
   assert.throws(
-    () => simulatedMainnetDefault.filter(2, [TESTNET_REQUIREMENT]),
+    () => simulatedTestnetDefault.filter(2, [MAINNET_REQUIREMENT]),
     /no payment on an allowed network\/payee/,
-    "a mainnet runtime default must fail the demo-policy test",
+    "a testnet runtime default must fail the live-policy test",
   );
 
-  const explicitMainnet = createPaymentPolicyFromEnv({
+  const explicitTestnet = createPaymentPolicyFromEnv({
     resourcePrefix: "https://vex402.online",
-    env: { VERIFY402_NETWORKS: MAINNET_NETWORK },
+    env: { VERIFY402_NETWORKS: DEMO_NETWORK },
   });
-  assert.deepEqual(explicitMainnet.allowedNetworks, [MAINNET_NETWORK]);
-  assert.equal(explicitMainnet.filter(2, [MAINNET_REQUIREMENT]).length, 1);
+  assert.deepEqual(explicitTestnet.allowedNetworks, [DEMO_NETWORK]);
+  assert.equal(explicitTestnet.filter(2, [TESTNET_REQUIREMENT]).length, 1);
 
   assert.equal(
-    demoPolicy.checkBeforeSign({
+    livePolicy.checkBeforeSign({
       paymentRequired: { resource: { url: "https://vex402.online/verify" } },
-      selectedRequirements: TESTNET_REQUIREMENT,
+      selectedRequirements: MAINNET_REQUIREMENT,
     }),
     undefined,
   );
   assert.equal(
-    demoPolicy.checkBeforeSign({
+    livePolicy.checkBeforeSign({
       paymentRequired: { resource: { url: "https://vex402.online/preflight" } },
-      selectedRequirements: TESTNET_REQUIREMENT,
+      selectedRequirements: MAINNET_REQUIREMENT,
     })?.abort,
     true,
   );
@@ -529,8 +528,8 @@ test("registry metadata describes the published package without claiming registr
   assert.match(description, /Base Sepolia/);
   assert.match(description, /Base mainnet/);
   assert.doesNotMatch(description, /unpublished|candidate/i);
-  assert.doesNotMatch(description, /defaults to Base mainnet/i, "this release must not claim a mainnet default");
-  assert.match(description, /not enabled by this release/i);
+  assert.match(description, /defaults paid calls to Base mainnet/i, "this release must state the mainnet default");
+  assert.match(description, /explicit opt-in/i);
   assert.doesNotMatch(
     `${server.description} ${description}`,
     /registry entry (?:is|has been) published|listed on the .*registry/i,

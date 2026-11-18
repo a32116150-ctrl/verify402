@@ -448,66 +448,68 @@ Expect `mode: mainnet`, `recoveryStore: ok`, `version: 1.1.4`.
 
 ---
 
-# Release verify402-mcp 1.1.5 — for me
+# Release verify402-mcp 1.1.6 — for me
 
-Ships `instructions` in the MCP `initialize` response. An agent connecting to
-the server is told how to use the free and paid tools, and what
-PASS / CAUTION / BLOCK mean. No tool, price, schema, network or policy change.
-The 1.1.5 release carries the glama `initialize` instructions the listing
-previously said were missing.
+Flips the paid-call default to the live Base mainnet rail (`eip155:8453`, real
+USDC) at https://vex402.online, with the same spend caps. The Base Sepolia
+testnet demo (`eip155:84532`, https://verify402.onrender.com) becomes an
+explicit `VERIFY402_URL` + `VERIFY402_NETWORKS` opt-in. Refusal messages now
+name the networks a 402 actually offered. No tool, price or schema change.
 
 ## Validate and inspect the release
 
 ```bash
 TEST_OFFLINE=1 npm run test:offline
-npx -y verify402-mcp --help
+npx -y verify402-mcp@1.1.6 --help
 ```
 
-## Create and verify the npm 1.1.5 artifact
+## Create and verify the npm 1.1.6 artifact
 
 ```bash
 cd mcp-bridge
 npm ci --no-audit --no-fund
 npm pack
-tar -tzf verify402-mcp-1.1.5.tgz
+tar -tzf verify402-mcp-1.1.6.tgz
 ```
 
-Expected: `package/package.json` is `1.1.5`.
+Expected: `package/package.json` is `1.1.6`.
 
-## Publish npm 1.1.5
+## Publish npm 1.1.6
 
-This step runs once the artifact above is verified:
+This step runs once the artifact above is verified. It needs the account's 2FA
+code, entered by the account owner:
 
 ```bash
 npm publish --access public
-npm view verify402-mcp@1.1.5 version
+npm view verify402-mcp@1.1.6 version
 ```
 
-## Transition the release metadata to published 1.1.5
+## Transition the release metadata to published 1.1.6
 
-This step runs only when the npm 1.1.5 artifact exists. The tree carries the
-1.1.5 identity; npm publication is the remaining gate, not metadata.
+This step runs only when the npm 1.1.6 artifact exists. The tree carries the
+1.1.6 identity; npm publication is the remaining gate, not metadata.
 
-## Verify the actual 1.1.5 registry version
+## Verify the actual 1.1.6 registry version
 
 ```bash
 mcp-publisher validate server.json
 mcp-publisher publish server.json
-curl -s "https://registry.modelcontextprotocol.io/v0.1/servers/io.github.a32116150-ctrl%2Fverify402-mcp/versions/1.1.5"
+curl -s "https://registry.modelcontextprotocol.io/v0.1/servers/io.github.a32116150-ctrl%2Fverify402-mcp/versions/1.1.6"
 ```
 
-Expect `version: "1.1.5"`, the Base Sepolia default, `status: active`, and
+Expect `version: "1.1.6"`, the Base mainnet default, `status: active`, and
 `isLatest: true`. If validation rejects a field, correct it — never fabricate.
 
 ## Deploy only after a separate approval
 
-After npm publish is verified: push the release commit, confirm Render redeploys,
-then on the mainnet host:
+After npm publish is verified: push the release commit, then on the VPS:
 
 ```bash
-git pull origin master
-systemctl restart verify402
-curl -s https://api.vex402.online/health
+cd /opt/verify402
+git fetch origin
+git reset --hard origin/master
+sudo systemctl restart verify402
+curl -s https://vex402.online/health
 ```
 
-Expect `mode: mainnet`, `recoveryStore: ok`, `version: 1.1.5`.
+Expect `mode: mainnet`, `recoveryStore: ok`, `version: 1.1.6`.

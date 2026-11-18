@@ -75,12 +75,13 @@ mcp-publisher validate server.json
 
 Note: The MCP Registry strictly limits the `description` field to 100 characters.
 
-The checked-in `server.json` describes the **source** release (`1.0.9`), whose
-runtime default is Base Sepolia testnet (`eip155:84532`). It therefore declares
-that default explicitly and keeps `VERIFY402_NETWORKS` optional; Base mainnet
-(`eip155:8453`) is an opt-in. This metadata is only truthful once a `1.0.9`
-package artifact actually exists and is published. Publish the registry entry
-only for the version that is really published.
+The checked-in `server.json` describes the **source** release (`1.1.6`), whose
+runtime default is Base mainnet (`eip155:8453`, real USDC). It declares that
+default explicitly; the Base Sepolia testnet demo (`eip155:84532`) is an
+explicit opt-in via `VERIFY402_URL` and `VERIFY402_NETWORKS`. This metadata is
+only truthful once the `1.1.6` package artifact actually exists and is
+published. Publish the registry entry only for the version that is really
+published.
 
 ## Step 6: Publish to the registry
 
@@ -139,20 +140,19 @@ do not publish.
 
 ## Current status
 
-Current release: `verify402-mcp@1.0.9` is published on npm and is `latest`.
-That version is immutable, maps to git commit
-`60c7b6fcffb1c1d47561577b752d9c68b8ecba16`, and defaults the bridge to Base
-Sepolia testnet (`eip155:84532`). The previous `1.0.8` and `1.0.7` packages
-remain published and immutable.
+Current published release: `verify402-mcp@1.1.5` is on npm and is `latest`.
+That version is immutable and defaults the bridge to Base Sepolia testnet
+(`eip155:84532`). The tree is prepared for `1.1.6`, which flips the default to
+Base mainnet (`eip155:8453`); its npm and registry publication are pending in
+`PUBLISH_STEPS_FOR_ME.md`.
 
-The official MCP Registry lists `1.0.9` as active and latest
-(`publishedAt: 2026-10-26T11:56:38.535824Z`). The checked-in `server.json`
-matches the published package. This repository does **not** publish packages or
-registry entries automatically.
+The official MCP Registry lists `1.1.5` as active and latest. The checked-in
+`server.json` describes `1.1.6`. This repository does **not** publish packages
+or registry entries automatically.
 
 | Step | Status |
 |---|---|
-| `server.json` created | DONE — manifest is `1.0.9`, testnet default declared |
+| `server.json` updated | DONE in the tree — manifest is `1.1.6`, mainnet default declared |
 | `mcpName` in package.json | DONE |
-| Published to npm | DONE — `verify402-mcp@1.0.9` is live and `latest` (immutable) |
-| Published to MCP Registry | DONE — active `1.0.9`, `isLatest: true` |
+| Published to npm | PENDING — `1.1.5` is live; `1.1.6` is prepared |
+| Published to MCP Registry | PENDING — `1.1.5` active; `1.1.6` waits on npm |
