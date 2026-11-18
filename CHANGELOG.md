@@ -3,6 +3,13 @@
 All notable changes to verify402. This file records repository changes; it does
 not imply a deploy or an npm publish.
 
+## 1.1.5 — 2026-11-18
+
+Ships `instructions` in the MCP `initialize` response. An agent connecting to
+the server is told how to use the free and paid tools, what PASS / CAUTION /
+BLOCK mean, and not to sign without the Gate. No tool, price, schema, network
+or policy change. Full offline test suite passes.
+
 ## 1.1.4 — 2026-11-18
 
 Stdio framing fix for MCP clients that require stdout to be JSON-RPC only.

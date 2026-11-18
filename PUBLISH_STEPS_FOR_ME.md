@@ -433,7 +433,7 @@ curl -s "https://registry.modelcontextprotocol.io/v0.1/servers/io.github.a321161
 Expect `version: "1.1.4"`, the Base Sepolia default, `status: active`, and
 `isLatest: true`. If validation rejects a field, correct it — never fabricate.
 
-## Deploy only after a separate approval
+## Deploy, after a separate approval
 
 After npm publish is verified: push the release commit, confirm Render redeploys,
 then on the mainnet host:
@@ -445,3 +445,69 @@ curl -s https://api.vex402.online/health
 ```
 
 Expect `mode: mainnet`, `recoveryStore: ok`, `version: 1.1.4`.
+
+---
+
+# Release verify402-mcp 1.1.5 — for me
+
+Ships `instructions` in the MCP `initialize` response. An agent connecting to
+the server is told how to use the free and paid tools, and what
+PASS / CAUTION / BLOCK mean. No tool, price, schema, network or policy change.
+The 1.1.5 release carries the glama `initialize` instructions the listing
+previously said were missing.
+
+## Validate and inspect the release
+
+```bash
+TEST_OFFLINE=1 npm run test:offline
+npx -y verify402-mcp --help
+```
+
+## Create and verify the npm 1.1.5 artifact
+
+```bash
+cd mcp-bridge
+npm ci --no-audit --no-fund
+npm pack
+tar -tzf verify402-mcp-1.1.5.tgz
+```
+
+Expected: `package/package.json` is `1.1.5`.
+
+## Publish npm 1.1.5
+
+This step runs once the artifact above is verified:
+
+```bash
+npm publish --access public
+npm view verify402-mcp@1.1.5 version
+```
+
+## Transition the release metadata to published 1.1.5
+
+This step runs only when the npm 1.1.5 artifact exists. The tree carries the
+1.1.5 identity; npm publication is the remaining gate, not metadata.
+
+## Verify the actual 1.1.5 registry version
+
+```bash
+mcp-publisher validate server.json
+mcp-publisher publish server.json
+curl -s "https://registry.modelcontextprotocol.io/v0.1/servers/io.github.a32116150-ctrl%2Fverify402-mcp/versions/1.1.5"
+```
+
+Expect `version: "1.1.5"`, the Base Sepolia default, `status: active`, and
+`isLatest: true`. If validation rejects a field, correct it — never fabricate.
+
+## Deploy only after a separate approval
+
+After npm publish is verified: push the release commit, confirm Render redeploys,
+then on the mainnet host:
+
+```bash
+git pull origin master
+systemctl restart verify402
+curl -s https://api.vex402.online/health
+```
+
+Expect `mode: mainnet`, `recoveryStore: ok`, `version: 1.1.5`.

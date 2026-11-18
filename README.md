@@ -512,13 +512,13 @@ or any MCP client.
   separate MCP bridge calls from generic HTTP. Labels are self-declared and
   spoofable, not identities.
 - **Install:** `npx -y verify402-mcp@latest` from the public npm registry
-  (currently `1.1.4`). For a pinned install of the published package, use
-  `npx -y verify402-mcp@1.1.4`; its npm tarball is
-  `https://registry.npmjs.org/verify402-mcp/-/verify402-mcp-1.1.4.tgz`. `1.1.4`
+  (currently `1.1.5`). For a pinned install of the published package, use
+  `npx -y verify402-mcp@1.1.5`; its npm tarball is
+  `https://registry.npmjs.org/verify402-mcp/-/verify402-mcp-1.1.5.tgz`. `1.1.5`
   is a marker release: no bridge runtime change (one corrected comment). No npm
   account is required to run the published package. Client configs, the exact
   OpenCode V2 shape, and the release command are at
-  [`/mcp`](https://vex402.online/mcp). The published `1.1.4`
+  [`/mcp`](https://vex402.online/mcp). The published `1.1.5`
   defaults paid calls to Base Sepolia testnet (`eip155:84532`) for the public
   demo; Base mainnet (`eip155:8453`) requires an explicit `VERIFY402_NETWORKS`
   opt-in in a separate deployment and is not enabled by this release. The

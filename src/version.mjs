@@ -2,13 +2,13 @@
 // The published npm package has its own package.json; the release-consistency
 // test asserts that this constant, mcp-bridge/package.json, server.json,
 // package-lock.json, the manifest, OpenAPI, and the /mcp page agree.
-export const RELEASE_VERSION = "1.1.4";
+export const RELEASE_VERSION = "1.1.5";
 
 // The version a user can actually install from the public npm registry today.
 // 1.1.3 is a documentation-only release over 1.1.2: no runtime change. It is
 // the release that announces the live mainnet instance (api.vex402.online,
 // Base + Solana mainnet, Coinbase CDP facilitator) with the tree.
-export const PUBLISHED_VERSION = "1.1.4";
+export const PUBLISHED_VERSION = "1.1.5";
 
 // Machine-readable statement of where this source tree sits in the release
 // process. "published" means the npm artifact exists and was verified:

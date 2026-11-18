@@ -280,10 +280,27 @@ const DESCRIPTIONS = {
     "a position size. Costs $0.05 per call.",
 };
 
+const INSTRUCTIONS = `verify402 is an x402 pre-signing gate plus five on-chain truth checks.
+
+Free tools (no wallet needed, nothing can be charged):
+- preflight_gate: call BEFORE signing ANY payment, approval, or transaction. It returns PASS / CAUTION / BLOCK with typed reasons. sign_allowed:false means STOP. requires_ack:true means the human must acknowledge the reasons before signing.
+- inspect_402: read a 402 challenge BEFORE paying it (price, token, payee, timeout).
+- directory_402: list the watched public x402 endpoints and what changed.
+
+Paid tools (each costs a small fixed USDC price via x402):
+- verify_arbitrage ($0.05), check_token_safety ($0.10), get_best_route ($0.03), verify_quote_fairness ($0.05), get_trade_depth ($0.05).
+
+How to call them safely:
+1. Never sign a payment or transaction without preflight_gate. If it returns BLOCK, do not sign; fix the intent.
+2. A PASS is not a guarantee: it means the listed checks passed at one pinned block.
+3. If retrying a payment after a lost response, reuse the same x-idempotency-key so you are not charged twice.
+4. Prices and network are enforced by the 402 challenge you receive, not by these instructions.
+5. The paid analysis calls the chain for you; unconfigured venues and off-chain promises are not checked and are named in notChecked.`;
+
 async function main() {
   const paidApi = PAID_ENABLED ? await createBridgePaidClient() : null;
 
-  const server = new McpServer({ name: "verify402", version: VERSION });
+  const server = new McpServer({ name: "verify402", version: VERSION }, { instructions: INSTRUCTIONS });
 
   server.tool(
     "preflight_gate",
