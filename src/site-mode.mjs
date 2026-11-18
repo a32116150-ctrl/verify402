@@ -79,7 +79,7 @@ const PAGE_PAIRS = [
     '<div class="net-ribbon mainnet" role="note">',
   ],
   [
-    '<strong>TESTNET</strong> · Base Sepolia · every payment on this page is testnet USDC. The live mainnet instance is <a class="textlink" href="https://api.vex402.online/info">api.vex402.online</a>.',
+    '<strong>TESTNET</strong> · Base Sepolia · every payment on this page is testnet USDC. The live mainnet instance is <a class="textlink" href="https://vex402.online/info">vex402.online</a>.',
     "<strong>MAINNET</strong> · Base · every payment on this page is real USDC.",
   ],
   [
@@ -99,7 +99,7 @@ const PAGE_PAIRS = [
     "· Base mainnet</div>",
   ],
   [
-    '<strong>Payments</strong> are Base Sepolia testnet USDC. The live mainnet instance is <a class="textlink" href="https://api.vex402.online/info">api.vex402.online</a>. <strong>Verdicts</strong>',
+    '<strong>Payments</strong> are Base Sepolia testnet USDC. The live mainnet instance is <a class="textlink" href="https://vex402.online/info">vex402.online</a>. <strong>Verdicts</strong>',
     "<strong>Payments</strong> are real USDC on Base mainnet. <strong>Verdicts</strong>",
   ],
 
@@ -141,7 +141,7 @@ const PAGE_PAIRS = [
 
   // ---- mcp ----
   [
-    '<span>Demo · Base Sepolia</span><span>Mainnet live · <a href="https://api.vex402.online/info" class="textlink">api.vex402.online</a></span>',
+    '<span>Demo · Base Sepolia</span><span>Mainnet live · <a href="https://vex402.online/info" class="textlink">vex402.online</a></span>',
     "<span>Live · Base mainnet</span><span>Solana mainnet</span>",
   ],
   [

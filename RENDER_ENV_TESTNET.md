@@ -19,7 +19,7 @@ Current live service: `https://vex402.online/`
 | `READY_CHAIN_ID` | `84532` for Base Sepolia readiness, or `1`, `42161`, `8453` | No | Chain used by `/ready` | Defaults to `1` | Set `84532` only for readiness; paid routes still require 1/42161/8453 |
 | `READY_RPC_URL` | private readiness endpoint (never paste the value here) | Yes if it embeds an API key | RPC provider dashboard | Falls back to the chain-specific variable, then the public default | Optional; use a dedicated endpoint for a stable `/ready` |
 | `BASE_SEPOLIA_RPC_URL` | private Base Sepolia endpoint (never paste the value here) | Yes if it embeds an API key | RPC provider dashboard | Uses `https://sepolia.base.org` | Only used by readiness on `READY_CHAIN_ID=84532` |
-| `ETH_RPC_URL` | unset or your private endpoint | Yes if set | RPC provider dashboard | Uses `https://eth.llamarpc.com`, then `https://eth.drpc.org`, `https://eth.merkle.io`, `https://ethereum-rpc.publicnode.com` | Delete the broken combined row; add only if you have a private key |
+| `ETH_RPC_URL` | unset or your private endpoint | Yes if set | RPC provider dashboard | Uses `https://ethereum-rpc.publicnode.com`, then `https://eth.drpc.org`, `https://eth.merkle.io` | Delete the broken combined row; add only if you have a private key |
 | `ARB_RPC_URL` | unset or your private endpoint | Yes if set | RPC provider dashboard | Uses `https://arb1.arbitrum.io/rpc` | Add only if you have a private key |
 | `BASE_RPC_URL` | unset or your private endpoint | Yes if set | RPC provider dashboard | Uses `https://mainnet.base.org` | Add only if you have a private key |
 
@@ -93,7 +93,7 @@ Readiness additionally reads:
 - `BASE_SEPOLIA_RPC_URL` (when `READY_CHAIN_ID=84532`)
 
 If unset:
-- Ethereum uses `https://eth.llamarpc.com`, then `https://eth.drpc.org`, `https://eth.merkle.io`, and `https://ethereum-rpc.publicnode.com`.
+- Ethereum uses `https://ethereum-rpc.publicnode.com`, then `https://eth.drpc.org` and `https://eth.merkle.io`.
 - Arbitrum uses `https://arb1.arbitrum.io/rpc`.
 - Base uses `https://mainnet.base.org`.
 

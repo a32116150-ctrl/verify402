@@ -12,7 +12,6 @@
       rows: [
         ["intent", "x402 payment"],
         ["amount", "0.01 USDC"],
-        ["block", "21,492,881"],
         ["expires", "90 seconds"]
       ]
     },
@@ -26,7 +25,7 @@
         ["intent", "approve"],
         ["spender", "0x4e…91c"],
         ["allowance", "unlimited"],
-        ["block", "21,492,881"]
+        ["expires", "90 seconds"]
       ]
     },
     swap: {
@@ -39,7 +38,7 @@
         ["intent", "swap"],
         ["pair", "USDC / WETH"],
         ["quote age", "41 seconds"],
-        ["block", "21,492,881"]
+        ["expires", "90 seconds"]
       ]
     }
   };
