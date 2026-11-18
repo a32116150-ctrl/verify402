@@ -791,6 +791,11 @@ code.inline { border-radius: 0; background: var(--soft-2); }
   line-height: 1.45;
   text-align: center;
 }
+.net-ribbon.mainnet {
+  background: var(--green-soft);
+  color: var(--green);
+  border-bottom-color: var(--green);
+}
 .net-ribbon strong { letter-spacing: .12em; }
 .search-label { display: block; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted-2); margin: 0 0 8px; }
 .search {
@@ -833,6 +838,17 @@ code.inline { border-radius: 0; background: var(--soft-2); }
 .chip.no_edge { color: var(--muted); background: var(--soft); border-color: transparent; }
 .chip.unavailable { color: var(--amber); background: var(--amber-soft); border-color: transparent; }
 .chip.testnet { color: var(--amber); background: var(--amber-soft); border-color: transparent; }
+.tag-mainnet {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--green-soft);
+  color: var(--green);
+  font: 600 11px/1.6 var(--sans);
+  letter-spacing: .08em;
+  vertical-align: middle;
+}
 .tag-testnet {
   display: inline-block;
   margin-left: 8px;

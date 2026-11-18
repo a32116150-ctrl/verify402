@@ -1,4 +1,4 @@
-/* verify402 activity — a testnet explorer for payments and published verdicts.
+/* verify402 activity — an explorer for payments and published verdicts (testnet or mainnet).
    One fetch to /explorer, then tabs + a client-side search over the rows. */
 (function () {
   var paymentsBody = document.querySelector("[data-settlements]");
@@ -38,8 +38,14 @@
     return !query || haystack.indexOf(query) !== -1;
   }
 
+  function railMode() {
+    return state.data && state.data.mode === "mainnet" ? "mainnet" : "testnet";
+  }
+  function chainLabel() {
+    return (state.data && state.data.chain) || "Base";
+  }
   function paymentHaystack(row) {
-    return [row.timestamp, row.amount, row.symbol, row.from, row.to, row.txHash, "testnet", "base sepolia"]
+    return [row.timestamp, row.amount, row.symbol, row.from, row.to, row.txHash, railMode(), chainLabel()]
       .join(" ")
       .toLowerCase();
   }
@@ -74,7 +80,7 @@
       return (
         "<tr>" +
         '<td class="mono">' + esc(utc(row.timestamp)) + "</td>" +
-        '<td class="mono">' + esc(row.amount) + " " + esc(row.symbol) + ' <span class="chip testnet">testnet</span></td>' +
+        '<td class="mono">' + esc(row.amount) + " " + esc(row.symbol) + ' <span class="chip ' + (railMode() === "mainnet" ? "real" : "testnet") + '">' + railMode() + "</span></td>" +
         '<td class="mono">' + esc(short(row.from)) + "</td>" +
         '<td class="mono">' + link + "</td>" +
         "</tr>"
@@ -140,7 +146,7 @@
     if (total) {
       total.textContent =
         state.data.totals.count + " payment" + (state.data.totals.count === 1 ? "" : "s") +
-        " · " + state.data.totals.amount + " " + state.data.totals.symbol + " (testnet)";
+        " · " + state.data.totals.amount + " " + state.data.totals.symbol + " (" + railMode() + ")";
     }
     var verdictCount = document.querySelector("[data-verdict-count]");
     if (verdictCount) {

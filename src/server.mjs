@@ -12,6 +12,7 @@
 
 import { readFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { renderSiteHtml } from "./site-mode.mjs";
 const LANDING_HTML = readFileSync(new URL("./landing.html", import.meta.url), "utf8");
 const SITE_DIR = fileURLToPath(new URL("./site", import.meta.url));
 
@@ -1463,6 +1464,7 @@ app.get("/explorer", async (_req, res) => {
       results: findingsSnap?.payload?.results || [],
       measuredAt: findingsSnap?.payload?.measuredAt || null,
       baseUrl: PUBLIC_BASE_URL,
+      rpcUrl: process.env.EXPLORER_RPC_URL || undefined,
     });
     explorerSnap = { at: now, payload };
     res.set("Cache-Control", "public, max-age=30");
@@ -1809,11 +1811,33 @@ app.get("/badge", async (req, res) => {
 // Express does not redirect to a directory listing that does not exist.
 app.get(["/blog", "/blog/"], (_req, res) => {
   res.set("Cache-Control", "no-store");
-  res.sendFile(`${SITE_DIR}/blog.html`);
+  res.type("text/html").send(renderSiteHtml(readFileSync(`${SITE_DIR}/blog.html`, "utf8"), { mode: MODE, path: "/blog" }));
 });
 
 // Static pages for humans: /start, /checks, /live, /proof, /docs, /donate, /sponsor (+ /assets).
 // Clean URLs via the html extension; HTML is no-store so edits go live at once.
+// The copy is rendered per mode first: the same files are served by the testnet
+// demo and the mainnet box, and payment-rail claims must match the 402 a caller
+// actually receives.
+app.use((req, res, next) => {
+  if (req.method !== "GET" && req.method !== "HEAD") return next();
+  const urlPath = req.path;
+  const dot = urlPath.lastIndexOf(".");
+  const slash = urlPath.lastIndexOf("/");
+  const ext = dot > slash ? urlPath.slice(dot) : "";
+  if (ext && ext !== ".html") return next();
+  const rel = ext === ".html" ? urlPath : `${urlPath.replace(/\/$/, "")}.html`;
+  if (!rel.startsWith("/") || rel.includes("..")) return next();
+  let raw;
+  try {
+    raw = readFileSync(SITE_DIR + rel, "utf8");
+  } catch {
+    return next();
+  }
+  res.set("Cache-Control", "no-store");
+  res.type("text/html").send(renderSiteHtml(raw, { mode: MODE, path: urlPath }));
+});
+
 app.use(express.static(SITE_DIR, {
   index: false,
   extensions: ["html"],
@@ -1832,7 +1856,7 @@ app.get("/", (req, res) => {
   const wantsHtml = accept.includes("text/html") || isCrawler;
   if (wantsHtml) {
     res.set("Cache-Control", "no-store");
-    return res.type("text/html").send(LANDING_HTML);
+    return res.type("text/html").send(renderSiteHtml(LANDING_HTML, { mode: MODE, path: "/" }));
   }
   res.type("text/plain").send(
     [
