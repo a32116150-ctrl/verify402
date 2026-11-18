@@ -1,4 +1,4 @@
-# Release verify402-mcp 1.1.2 — for me
+# Release verify402-mcp 1.1.3 — for me
 
 Status: **prepared, not published, not deployed, registry entry not updated.**
 `1.1.2` exists so the published npm package matches a fix the bridge needs: the
@@ -242,7 +242,7 @@ curl -s "https://registry.modelcontextprotocol.io/v0.1/servers/io.github.a321161
 Expect a `server` object with `version: "1.1.2"`, the Base Sepolia default,
 `status: active`, and `isLatest: true`. Record the returned `publishedAt`.
 
-## 10. Deploy only after a separate approval
+## 10. Deploy after a separate approval
 
 Deployment is a separate decision. Re-check the dashboard settings recorded in
 step 4. If any changed, stop and repeat step 4.
@@ -303,3 +303,77 @@ durable `/usage` counters, and opt-in anonymous pings.
   early deployment instead of announcing it.
 - **A public page claims 1.1.2 is published:** only acceptable after step 6, and
   the claims must match which artifact is actually verified.
+
+---
+
+# Release verify402-mcp 1.1.3 — for me
+
+Docs-only release; the tree, this runbook and the registry now say 1.1.3.
+No runtime, price, schema, tool or network change. The release announces the
+live mainnet instance (https://api.vex402.online, Base + Solana mainnet, USDC,
+Coinbase CDP facilitator). Safety defaults do not change: the bridge still
+pays Base Sepolia testnet by default.
+
+## Validate and inspect the release
+
+```bash
+TEST_OFFLINE=1 npm run test:offline
+grep -Rni "1.1.2" . --exclude-dir=node_modules --exclude-dir=.git
+```
+
+The 1.1.2 references left in-tree are historical and must still read as
+history (CHANGELOG 1.1.2 entry, 1.1.2 blog posts and cards, 1.1.2 MCP Registry
+verification output). Do not rewrite them.
+
+## Create and verify the npm 1.1.3 artifact
+
+```bash
+cd mcp-bridge
+npm ci --no-audit --no-fund
+npm pack
+tar -tzf verify402-mcp-1.1.3.tgz
+```
+
+Expected: `package/package.json` is `1.1.3`.
+
+## Publish npm 1.1.3
+
+This step runs once the artifact above is verified:
+
+```bash
+npm publish --access public
+npm view verify402-mcp@1.1.3 version
+```
+
+## Transition the release metadata to published 1.1.3
+
+This step runs only when the npm 1.1.3 artifact exists — do not claim
+`published` otherwise. The tree already carries the 1.1.3 identity
+(`src/version.mjs`, `server.json`, `CHANGELOG.md`, root and bridge
+`package.json` + lockfiles). npm publication is the remaining gate, not
+metadata.
+
+## Verify the actual 1.1.3 registry version
+
+```bash
+mcp-publisher validate server.json
+mcp-publisher publish server.json
+curl -s "https://registry.modelcontextprotocol.io/v0.1/servers/io.github.a32116150-ctrl%2Fverify402-mcp/versions/1.1.3"
+```
+
+Expect `version: "1.1.3"`, the Base Sepolia default, `status: active`, and
+`isLatest: true`. If validation rejects the description, correct it — do not
+fabricate fields.
+
+## Deploy only after a separate approval
+
+After npm publish is verified: push the release commit, confirm Render redeploys,
+then on the mainnet host:
+
+```bash
+git pull origin master
+systemctl restart verify402
+curl -s https://api.vex402.online/health
+```
+
+Expect `mode: mainnet`, `recoveryStore: ok`, and `version: 1.1.3`.

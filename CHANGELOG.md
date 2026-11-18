@@ -3,6 +3,18 @@
 All notable changes to verify402. This file records repository changes; it does
 not imply a deploy or an npm publish.
 
+## 1.1.3 — 2026-11-18
+
+Documentation-only release over 1.1.2: no runtime, price, schema, tool, or
+network change. It announces that the mainnet instance of verify402 is live at
+`https://api.vex402.online` (Base + Solana mainnet, USDC, Coinbase CDP
+facilitator, exact-x402). Two operator end-to-end settlements have moved
+on-chain as of this release (transactions visible on Base); no external buyer
+has paid anything yet, and this release makes no claim otherwise. The public
+demo at `vex402.online` remains testnet. Safety defaults do not change: the
+bridge defaults paid calls to Base Sepolia testnet (`eip155:84532`), and the
+mainnet instance is an explicit opt-in (`VERIFY402_URL` + `VERIFY402_NETWORKS=eip155:8453`).
+
 ## 1.1.2 — 2026-11-17
 
 A release for the MCP bridge; the service metadata follows the same version
