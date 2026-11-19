@@ -3,6 +3,23 @@
 All notable changes to verify402. This file records repository changes; it does
 not imply a deploy or an npm publish.
 
+## 2.0.1 — 2026-11-19
+
+Consistency patch over 2.0.0 — text and metadata only, no behavior change.
+
+- The published package contradicted itself after 2.0.0: the instructions listed
+  six paid tools while the package's own text still said "five". Everything the
+  npm package, repository, site, docs, and skill say now consistently reads
+  six paid checks (including `get_assurance`).
+- The live site and the 402 challenge (x402 Bazaar metadata) for `/assure`
+  described the retired pre-flight-wrapper design; both now describe the paid
+  checks bundle at one pinned block.
+- Request-shape examples on the checks page now match the OpenAPI examples.
+- The telemetry allowlist accepts `get_assurance`.
+- Bazaar health check covers six routes.
+Published as `verify402-mcp@2.0.1`; the live service and registry advertise the
+same identity.
+
 ## 2.0.0 — 2026-11-19
 
 Version identity moves to 2.0.0 for the v2 release.

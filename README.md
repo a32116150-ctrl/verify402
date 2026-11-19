@@ -519,9 +519,9 @@ or any MCP client.
   separate MCP bridge calls from generic HTTP. Labels are self-declared and
   spoofable, not identities.
 - **Install:** `npx -y verify402-mcp@latest` from the public npm registry
-  (currently `2.0.0`). For a pinned install of the published package, use
-  `npx -y verify402-mcp@2.0.0`; its npm tarball is
-  `https://registry.npmjs.org/verify402-mcp/-/verify402-mcp-2.0.0.tgz`. `1.1.6`
+  (currently `2.0.1`). For a pinned install of the published package, use
+  `npx -y verify402-mcp@2.0.1`; its npm tarball is
+  `https://registry.npmjs.org/verify402-mcp/-/verify402-mcp-2.0.1.tgz`. `1.1.6`
   moved the paid-call default to the live Base mainnet rail (`eip155:8453`,
   real USDC), with the same spend caps; the Base Sepolia testnet demo
   (`eip155:84532`) is an explicit opt-in via `VERIFY402_URL` and
