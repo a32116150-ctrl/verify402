@@ -32,6 +32,8 @@ import { CHAINS, DEFAULT_SIZE, chain, readinessChain, resolveToken, requireChain
 import {
   PRICE_DEFAULTS,
   PREFLIGHT_RATE_PER_MIN,
+  FREE_GATE_DAILY_LIMIT,
+  FREE_API_KEY_DAILY_LIMIT,
   INSPECT_RATE_PER_MIN,
   FINDINGS_RATE_PER_MIN,
   PREFLIGHT_MAX_IN_FLIGHT,
@@ -198,7 +200,7 @@ const ROUTE_PRICE = process.env.ROUTE_PRICE || PRICE_DEFAULTS.route;
 const QUOTECHECK_PRICE = process.env.QUOTECHECK_PRICE || PRICE_DEFAULTS.quotecheck;
 // Sizing: the decision that happens BEFORE every trade after a route is known.
 const DEPTH_PRICE = process.env.DEPTH_PRICE || PRICE_DEFAULTS.depth;
-const ASSURE_PRICE = process.env.ASSURE_PRICE || PRICE_DEFAULTS.safety;
+const ASSURE_PRICE = process.env.ASSURE_PRICE || "$0.19";
 
 // Live paid-usage counters. Mainnet keeps a small persisted index of USDC
 // transfers to the payee and extends it from the launch block; testnet is read
@@ -1642,7 +1644,70 @@ function perIpRateLimit({ max, label }) {
   };
 }
 
-const preflightRateLimit = perIpRateLimit({ max: PREFLIGHT_RATE_PER_MIN, label: "free gate calls" });
+// Free gate: 60 calls/minute and a daily cap per IP. An optional
+// operator-issued free API key (X-Verify402-Key, configured via
+// FREE_API_KEYS) raises the daily cap without changing the minute cap.
+const FREE_API_KEYS = new Set(
+  String(process.env.FREE_API_KEYS || "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean),
+);
+
+function freeGateRateLimit() {
+  const buckets = new Map();
+  let sweptAt = 0;
+  return function rateLimit(req, res, next) {
+    const ip = req.ip || req.socket?.remoteAddress || "unknown";
+    const now = Date.now();
+    const day = new Date(now).toISOString().slice(0, 10);
+    const presentedKey = String(req.get("x-verify402-key") || "").trim();
+    const keyed = presentedKey.length > 0 && FREE_API_KEYS.has(presentedKey);
+    const dailyMax = keyed ? FREE_API_KEY_DAILY_LIMIT : FREE_GATE_DAILY_LIMIT;
+
+    let bucket = buckets.get(ip);
+    if (!bucket || bucket.day !== day) {
+      bucket = { day, minuteAt: now, minuteN: 0, dayN: 0 };
+      buckets.set(ip, bucket);
+    }
+    if (bucket.dayN >= dailyMax) {
+      const midnight = Date.parse(`${day}T00:00:00.000Z`) + 86_400_000;
+      const retryAfter = Math.max(1, Math.ceil((midnight - now) / 1000));
+      res.set("Retry-After", String(retryAfter));
+      return res.status(429).json({
+        error: "rate_limited",
+        code: "free_gate_daily_limit",
+        message: `max ${dailyMax} free gate calls per day per IP${keyed ? " for this API key" : ""}`,
+        requestId: req.requestId,
+      });
+    }
+    if (now - bucket.minuteAt >= 60_000) {
+      bucket.minuteAt = now;
+      bucket.minuteN = 0;
+    }
+    bucket.minuteN += 1;
+    if (bucket.minuteN > PREFLIGHT_RATE_PER_MIN) {
+      res.set("Retry-After", "60");
+      return res.status(429).json({
+        error: "rate_limited",
+        message: `max ${PREFLIGHT_RATE_PER_MIN} free gate calls per minute per IP`,
+        requestId: req.requestId,
+      });
+    }
+    bucket.dayN += 1;
+
+    if (now - sweptAt >= 60_000) {
+      sweptAt = now;
+      for (const [key, value] of buckets) {
+        if (value.day !== day && now - value.minuteAt > 120_000) buckets.delete(key);
+      }
+    }
+    next();
+  };
+}
+
+const preflightRateLimit = freeGateRateLimit();
+
 const inspectRateLimit = perIpRateLimit({ max: INSPECT_RATE_PER_MIN, label: "inspections" });
 const pingRateLimit = perIpRateLimit({ max: 120, label: "pings" });
 
@@ -2127,7 +2192,7 @@ app.get("/info", (_req, res) => {
     mode: MODE,
     networks: NETWORKS.label,
     description:
-      "Machine-payable truth service. /preflight is the free pre-signing gate: validate an x402 payment request or a chain transaction and get PASS / CAUTION / BLOCK with typed reasons and a short-lived receipt. /verify measures whether a cross-venue arbitrage round trip is profitable; /safety is a pre-trade gate with a quote-based sellability check, not a honeypot proof. All quotes come from Uniswap's canonical QuoterV2 and each venue's own router, never from our own reimplementation of venue mathematics. The MCP server (verify402-mcp) exposes the gate and the five checks as native tools; install at /mcp.",
+      "Machine-payable truth service. /preflight is the free pre-signing gate: validate an x402 payment request or a chain transaction and get PASS / CAUTION / BLOCK with typed reasons and a short-lived receipt. /verify measures whether a cross-venue arbitrage round trip is profitable; /safety is a pre-trade gate with a quote-based sellability check, not a honeypot proof. /assure runs the paid checks that are supplied and returns one evidence bundle at one pinned block. All quotes come from Uniswap's canonical QuoterV2 and each venue's own router, never from our own reimplementation of venue mathematics. The MCP server (verify402-mcp) exposes the gate and the five checks as native tools; install at /mcp.",
     prices: {
       preflight: "free",
       preflight_verify: "free",
@@ -2717,41 +2782,217 @@ app.post("/assure", async (req, res) => {
   const started = Date.now();
   try {
     const body = req.body || {};
-    const ttlSeconds = body.ttlSeconds != null
-      ? numberField(body.ttlSeconds, "ttlSeconds", { min: MIN_TTL_SECONDS, max: MAX_TTL_SECONDS })
-      : 300;
-    const assuredBody = { ...body, ttlSeconds };
-    const result = await preflight(assuredBody, { now: Date.now() });
-    const evidenceHash = sha256Hex(canonicalStable({
-      spec: result.spec,
-      verdict: result.verdict,
-      reasons: result.reasons,
-      checked: result.checked,
-      notChecked: result.notChecked,
-      receipt: result.receipt
-        ? { spec: result.receipt.spec, expiresAt: result.receipt.expiresAt, intentHash: result.receipt.intentHash }
-        : null,
-    }));
-    const assurance = {
+    const chainId = requireChainId(body);
+    const client = clientFor(chainId);
+    const sections = {};
+    const checked = [];
+    const notChecked = new Set();
+
+    let blockNumber;
+    try {
+      blockNumber = await client.getBlockNumber();
+    } catch (e) {
+      return paidCatch(req, res, e);
+    }
+
+    const safetyInput = body.safety && typeof body.safety === "object" ? body.safety : null;
+    if (safetyInput?.tokenAddress) {
+      const tokenAddress = String(safetyInput.tokenAddress).trim();
+      const baseSymbol = String(safetyInput.baseSymbol ?? "USDC").toUpperCase();
+      const c = CHAINS[chainId];
+      const baseTok = c.tokens[baseSymbol];
+      if (!baseTok) return badRequest(req, res, "unknown_base", `unknown base ${baseSymbol}`, { known: Object.keys(c.tokens) });
+      const maxWhole = Number.MAX_SAFE_INTEGER / 10 ** baseTok.decimals;
+      const intendedUsd = numberField(safetyInput.intendedUsd ?? 500, "safety.intendedUsd", {
+        min: 0, max: maxWhole, exclusiveMin: true, fallback: 500,
+      });
+      const offeredPriceUsd = safetyInput.offeredPriceUsd != null
+        ? numberField(safetyInput.offeredPriceUsd, "safety.offeredPriceUsd", { min: 0, max: maxWhole })
+        : null;
+
+      const result = await preTradeCheck(chainId, {
+        tokenAddress,
+        intendedUsd,
+        offeredPriceUsd,
+        baseSymbol,
+        blockNumber,
+      });
+      if (hardFailureResponse(req, res, result)) return;
+      if (result?.ok === false && result.kind === "bad_request") {
+        return badRequest(req, res, "bad_request", result.error || "invalid safety parameters");
+      }
+      sections.safety = result;
+      for (const item of result.checked ?? []) checked.push(`safety:${item}`);
+      for (const item of result.notChecked ?? []) notChecked.add(item);
+    } else {
+      notChecked.add("safety: not requested");
+    }
+
+    const routeInput = body.route && typeof body.route === "object" ? body.route : null;
+    if (routeInput?.tokenIn != null && routeInput?.tokenOut != null && routeInput?.amountIn != null) {
+      let addrIn; let addrOut; let amountIn;
+      try {
+        addrIn = resolveToken(chainId, String(routeInput.tokenIn).trim()).address;
+      } catch {
+        addrIn = String(routeInput.tokenIn).trim();
+      }
+      try {
+        addrOut = resolveToken(chainId, String(routeInput.tokenOut).trim()).address;
+      } catch {
+        addrOut = String(routeInput.tokenOut).trim();
+      }
+      if (!/^0x[0-9a-fA-F]{40}$/.test(addrIn) || !/^0x[0-9a-fA-F]{40}$/.test(addrOut)) {
+        return badRequest(req, res, "invalid_token", "route.tokenIn/tokenOut must be a known symbol or a 0x address");
+      }
+      if (addrIn.toLowerCase() === addrOut.toLowerCase()) {
+        return badRequest(req, res, "same_token", "route.tokenIn and route.tokenOut must differ");
+      }
+      try {
+        amountIn = parseRawPositive(routeInput.amountIn, "route.amountIn");
+      } catch (e) {
+        return badRequest(req, res, "invalid_amountIn", e.message);
+      }
+
+      const book = await bestRouteBook(client, chainId, { tokenIn: addrIn, tokenOut: addrOut, amountIn, blockNumber });
+      if (book.hard_failure) {
+        return hardFailureResponse(req, res, { ok: false, kind: book.hard_failure.kind, _detail: book.hard_failure.detail });
+      }
+      const best = book.quoted[0] ?? null;
+      const quoteStatus = best ? (book.unavailable.length ? "partial" : "ok") : "no_pool";
+      const result = {
+        ok: Boolean(best),
+        quote_status: quoteStatus,
+        unavailable_reason: quoteStatus === "no_pool" ? "no_pool" : quoteStatus === "partial" ? "some_venues_no_pool" : null,
+        chainId,
+        chainName: CHAINS[chainId].name,
+        blockNumber: Number(blockNumber),
+        amountIn: amountIn.toString(),
+        best: best ? { venue: best.venue, kind: best.kind, amountOut: best.amountOut.toString() } : null,
+        book: book.quoted.map((q) => ({ venue: q.venue, kind: q.kind, amountOut: q.amountOut.toString() })),
+        unavailable: book.unavailable.map((u) => u.venue),
+        unavailable_reasons: book.unavailable,
+        note: best ? null : "no configured venue quoted this pair at this size",
+      };
+      sections.route = result;
+      checked.push("route:book");
+      notChecked.add("route: venues not configured on this chain");
+    } else if (routeInput) {
+      return badRequest(req, res, "missing_route_fields", "route requires tokenIn, tokenOut, and amountIn");
+    } else {
+      notChecked.add("route: not requested");
+    }
+
+    const quoteInput = body.quotecheck && typeof body.quotecheck === "object" ? body.quotecheck : null;
+    if (quoteInput?.tokenIn != null && quoteInput?.tokenOut != null && quoteInput?.amountIn != null && quoteInput?.quotedOut != null) {
+      let amountIn; let quotedOut;
+      try {
+        amountIn = parseRawPositive(quoteInput.amountIn, "quotecheck.amountIn");
+      } catch (e) {
+        return badRequest(req, res, "invalid_amountIn", e.message);
+      }
+      try {
+        quotedOut = parseRawPositive(quoteInput.quotedOut, "quotecheck.quotedOut");
+      } catch (e) {
+        return badRequest(req, res, "invalid_quotedOut", e.message);
+      }
+      const result = await fairQuoteCheck(chainId, {
+        tokenIn: quoteInput.tokenIn,
+        tokenOut: quoteInput.tokenOut,
+        amountIn: amountIn.toString(),
+        quotedOut: quotedOut.toString(),
+        venueClaimed: quoteInput.venueClaimed ?? null,
+        chainIn: quoteInput.chainIn ?? null,
+        blockNumber,
+      });
+      if (hardFailureResponse(req, res, result)) return;
+      if (result?.ok === false && result.kind === "bad_request") {
+        return badRequest(req, res, "bad_request", result.error || "invalid quotecheck parameters");
+      }
+      sections.quotecheck = result;
+      checked.push("quotecheck:fairness");
+      notChecked.add("quotecheck: off-chain promises and seller terms");
+    } else if (quoteInput) {
+      return badRequest(req, res, "missing_quotecheck_fields", "quotecheck requires tokenIn, tokenOut, amountIn, and quotedOut");
+    } else {
+      notChecked.add("quotecheck: not requested");
+    }
+
+    const depthInput = body.depth && typeof body.depth === "object" ? body.depth : null;
+    if (depthInput?.tokenAddress) {
+      const token = String(depthInput.tokenAddress).trim();
+      const baseSymbol = String(depthInput.baseSymbol ?? "USDC").toUpperCase();
+      const c = CHAINS[chainId];
+      const baseTok = c.tokens[baseSymbol];
+      if (!baseTok) return badRequest(req, res, "unknown_base", `unknown base ${baseSymbol}`, { known: Object.keys(c.tokens) });
+      let sizesUsd = null;
+      if (depthInput.sizesUsd != null) {
+        if (!Array.isArray(depthInput.sizesUsd) || !depthInput.sizesUsd.length || depthInput.sizesUsd.length > 20) {
+          return badRequest(req, res, "invalid_sizesUsd", "sizesUsd must be a non-empty array of at most 20 positive numbers, each <= 1,000,000 USD");
+        }
+        try {
+          sizesUsd = depthInput.sizesUsd.map((value) => numberField(value, "depth.sizesUsd", {
+            min: 0, max: 1_000_000, exclusiveMin: true,
+          }));
+        } catch (e) {
+          if (e instanceof HttpError && e.status === 400) {
+            return badRequest(req, res, "invalid_sizesUsd", "sizesUsd must contain only positive numbers, each <= 1,000,000 USD");
+          }
+          throw e;
+        }
+      }
+      const maxRoundTripBps = percentToBps(depthInput.maxRoundTripPct ?? 1.0, "depth.maxRoundTripPct", { max: 100 });
+      const result = await depthProfile(chainId, {
+        tokenAddress: token,
+        baseSymbol,
+        sizesUsd,
+        maxRoundTripBps,
+        blockNumber,
+      });
+      if (hardFailureResponse(req, res, result)) return;
+      if (result?.ok === false && result.kind === "bad_request") {
+        return badRequest(req, res, "bad_request", result.error || "invalid depth parameters");
+      }
+      sections.depth = result;
+      checked.push("depth:capacity");
+      notChecked.add("depth: external market context is advisory");
+    } else if (depthInput) {
+      return badRequest(req, res, "missing_tokenAddress", "depth.tokenAddress is required");
+    } else {
+      notChecked.add("depth: not requested");
+    }
+
+    if (!Object.keys(sections).length) {
+      return badRequest(req, res, "no_paid_checks", "at least one of safety, route, quotecheck, or depth must be supplied");
+    }
+
+    const result = {
+      ok: Object.values(sections).every((section) => section?.ok !== false),
       spec: "verify402/assurance@1",
-      checkedAt: new Date().toISOString(),
-      ttlSeconds,
-      expiresAt: result.receipt?.expiresAt ?? null,
-      evidenceHash: `sha256:${evidenceHash}`,
-      notChecked: result.notChecked,
-      verdict: result.verdict,
+      chainId,
+      chainName: CHAINS[chainId].name,
+      blockNumber: Number(blockNumber),
+      checked,
+      notChecked: [...notChecked],
+      sections,
+      verdict: Object.values(sections).some((section) => section?.verdict === "AVOID" || section?.verdict === "too_good_to_be_true")
+        ? "AVOID"
+        : Object.values(sections).some((section) => section?.verdict === "CAUTION" || section?.verdict === "overpaying")
+          ? "CAUTION"
+          : "PASS",
+      summary: "Paid checks ran at one pinned block. Read notChecked before acting.",
     };
+
+    const key = `assure:${chainId}:${JSON.stringify(body)}:${blockNumber}`;
+    if (cache.has(key)) {
+      return emitPaid(req, res, { ...cache.get(key), cache: { hit: true, pinnedBlock: Number(blockNumber) }, elapsedMs: Date.now() - started });
+    }
+    cachePut(key, result);
     emitPaid(req, res, {
       ...result,
-      assurance,
-      cache: { hit: false, pinnedBlock: null },
+      cache: { hit: false, pinnedBlock: Number(blockNumber) },
       elapsedMs: Date.now() - started,
     });
   } catch (e) {
-    if (e instanceof PreflightError) {
-      if (e.status >= 400 && e.status < 500) return badRequest(req, res, e.code, e.message);
-      return paidFail(req, res, e.status, e.code, e.message);
-    }
     return paidCatch(req, res, e);
   }
 });

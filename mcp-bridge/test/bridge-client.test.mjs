@@ -328,6 +328,7 @@ const TOOL_ROUTE_IDS = {
   get_best_route: "/route",
   verify_quote_fairness: "/quotecheck",
   get_trade_depth: "/depth",
+  get_assurance: "/assure",
 };
 
 test("every paid tool is bound to exactly one paid route", () => {

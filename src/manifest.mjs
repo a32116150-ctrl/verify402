@@ -36,6 +36,7 @@ export function buildServiceManifest({
     route: PRICE_DEFAULTS.route,
     quotecheck: PRICE_DEFAULTS.quotecheck,
     depth: PRICE_DEFAULTS.depth,
+    assure: PRICE_DEFAULTS.assure ?? "$0.19",
   },
   payTo = {
     evm: "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb",
@@ -176,6 +177,12 @@ export function buildServiceManifest({
             priceUsd: numPrice(prices.depth),
             description: "Position sizing: ladder of trade sizes, measuring impact %, round-trip cost %, and capacityUsd.",
           },
+          {
+            name: "get_assurance",
+            type: "paid",
+            priceUsd: numPrice(prices.assure ?? "$0.19"),
+            description: "Runs the supplied paid checks at one pinned block and returns one evidence bundle. Price is below buying the same checks separately.",
+          },
         ],
         environmentVariables: [
           {
@@ -188,8 +195,8 @@ export function buildServiceManifest({
           {
             name: "EVM_PRIVATE_KEY",
             description: mode === "mainnet"
-              ? "Private key for a dedicated hot wallet. Required only for the 5 paid tools; omit for free-only preflight_gate. This instance is configured for Base mainnet USDC; mainnet operation requires separate readiness verification."
-              : `Private key for a dedicated hot wallet. Required only for the 5 paid tools; omit for free-only preflight_gate. This release (verify402-mcp@${PUBLISHED_VERSION}) defaults paid calls to Base Sepolia testnet (${DEMO_NETWORK}) for the public demo. Base mainnet (${MAINNET_NETWORK}) is an explicit opt-in for a separate deployment and is not enabled by this release. Fund only Base Sepolia testnet USDC for this demo.`,
+              ? "Private key for a dedicated hot wallet. Required only for the 6 paid tools; omit for free-only preflight_gate. This instance is configured for Base mainnet USDC; mainnet operation requires separate readiness verification."
+              : `Private key for a dedicated hot wallet. Required only for the 6 paid tools; omit for free-only preflight_gate. This release (verify402-mcp@${PUBLISHED_VERSION}) defaults paid calls to Base Sepolia testnet (${DEMO_NETWORK}) for the public demo. Base mainnet (${MAINNET_NETWORK}) is an explicit opt-in for a separate deployment and is not enabled by this release. Fund only Base Sepolia testnet USDC for this demo.`,
             isRequired: false,
             isSecret: true,
           },
@@ -251,6 +258,7 @@ export function buildServiceManifest({
         route: { route: "/route", priceUsd: numPrice(prices.route), atomicAmountUsdc: atomicUsdc(prices.route) },
         quotecheck: { route: "/quotecheck", priceUsd: numPrice(prices.quotecheck), atomicAmountUsdc: atomicUsdc(prices.quotecheck) },
         depth: { route: "/depth", priceUsd: numPrice(prices.depth), atomicAmountUsdc: atomicUsdc(prices.depth) },
+        assure: { route: "/assure", priceUsd: numPrice(prices.assure ?? "$0.19"), atomicAmountUsdc: atomicUsdc(prices.assure ?? "$0.19") },
       },
       settlementHeaders: {
         paymentRequired: "WWW-Authenticate: x402",

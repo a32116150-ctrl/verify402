@@ -10,9 +10,17 @@ export const PRICE_DEFAULTS = Object.freeze({
   route: "$0.03",
   quotecheck: "$0.05",
   depth: "$0.05",
+  assure: "$0.19",
 });
 
 export const PREFLIGHT_RATE_PER_MIN = 60;
+// Anonymous free-gate calls are capped per IP per UTC day. The cap is a cost
+// control, not a security boundary; a determined caller can rotate IPs.
+export const FREE_GATE_DAILY_LIMIT = Number(process.env.FREE_GATE_DAILY_LIMIT || 100);
+// Optional operator-issued free keys get a higher daily cap. Keys are supplied
+// through FREE_API_KEYS and presented as X-Verify402-Key; this is not an
+// account system and keys are not issued by the service itself.
+export const FREE_API_KEY_DAILY_LIMIT = Number(process.env.FREE_API_KEY_DAILY_LIMIT || 1000);
 // The inspector performs one outbound fetch per call, so its default budget is
 // smaller than the purely local preflight gate.
 export const INSPECT_RATE_PER_MIN = 20;

@@ -888,6 +888,30 @@ export function buildOpenapi(prices, { mode = "testnet", baseUrl = DEMO_BASE_URL
           exampleRequest: { chainId: 1, tokenIn: "USDC", tokenOut: "WETH", amountIn: "1000000000", quotedOut: "326000000000000000" },
         }),
       },
+      "/assure": {
+        post: paidOperation({
+          rail,
+          price: usd(prices.assure ?? "0.19"),
+          operationId: "assurePayment",
+          summary: "Bundle of paid checks at one pinned block",
+          tag: "Truth",
+          guidance:
+            "Runs the paid checks whose inputs are supplied (safety, route, quotecheck, depth) at one pinned block and returns one evidence record. Price is below buying the same checks separately. It does not run sanctions, reputation, or honeypot checks that are outside the service scope.",
+          inputSchema: {
+            type: "object",
+            required: ["chainId"],
+            properties: {
+              chainId,
+              safety: { type: "object", additionalProperties: true },
+              route: { type: "object", additionalProperties: true },
+              quotecheck: { type: "object", additionalProperties: true },
+              depth: { type: "object", additionalProperties: true },
+            },
+            additionalProperties: true,
+          },
+          exampleRequest: { chainId: 1, safety: { tokenAddress: "WETH", intendedUsd: 500 }, route: { tokenIn: "USDC", tokenOut: "WETH", amountIn: "1000000" } },
+        }),
+      },
       "/depth": {
         post: paidOperation({
           rail,

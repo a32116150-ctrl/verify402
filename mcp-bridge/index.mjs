@@ -97,6 +97,7 @@ export const PAID_TOOL_ROUTES = Object.freeze({
   get_best_route: "/route",
   verify_quote_fairness: "/quotecheck",
   get_trade_depth: "/depth",
+  get_assurance: "/assure",
 });
 
 // Carries the current tool's expected resource from the tool handler to the
@@ -139,7 +140,8 @@ Environment:
   VERIFY402_RESOURCE_PREFIX  resource origin/prefix the 402 must match (default VERIFY402_URL)
 
 The free tools are preflight_gate, inspect_402 and directory_402. The paid tools are verify_arbitrage,
-check_token_safety, get_best_route, verify_quote_fairness and get_trade_depth.
+check_token_safety, get_best_route, verify_quote_fairness, get_trade_depth and
+get_assurance.
 The bridge signs x402 payments only; it never signs or sends a trade.
 `);
   process.exit(0);
@@ -280,6 +282,11 @@ const DESCRIPTIONS = {
     "entry and exit across every configured venue at a ladder of USD sizes, per-size impact and " +
     "round-trip cost, plus the largest size under your cost tolerance. Ask BEFORE choosing " +
     "a position size. Costs $0.05 per call.",
+  get_assurance:
+    "Run the paid checks you need at ONE pinned block and get one evidence bundle back - " +
+    "safety, route, quotecheck, depth, or any combination. Cheaper than buying each separately. " +
+    "Pass you only what you need: an unsupplied check is reported as notChecked, not guessed. " +
+    "Costs $0.19 per call.",
 };
 
 const INSTRUCTIONS = `verify402 is an x402 pre-signing gate plus five on-chain truth checks.
@@ -290,7 +297,7 @@ Free tools (no wallet needed, nothing can be charged):
 - directory_402: list the watched public x402 endpoints and what changed.
 
 Paid tools (each costs a small fixed USDC price via x402):
-- verify_arbitrage ($0.05), check_token_safety ($0.10), get_best_route ($0.03), verify_quote_fairness ($0.05), get_trade_depth ($0.05).
+- verify_arbitrage ($0.05), check_token_safety ($0.10), get_best_route ($0.03), verify_quote_fairness ($0.05), get_trade_depth ($0.05), get_assurance ($0.19).
 
 How to call them safely:
 1. Never sign a payment or transaction without preflight_gate. If it returns BLOCK, do not sign; fix the intent.
@@ -611,6 +618,59 @@ async function main() {
         pingUsage("get_trade_depth", true);
       } catch (err) {
         pingUsage("get_trade_depth", false);
+        throw err;
+      }
+      return { content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }] };
+    },
+  );
+
+  server.tool(
+    "get_assurance",
+    DESCRIPTIONS.get_assurance,
+    {
+      chainId: z.number().int().describe("REQUIRED. 1 Ethereum, 42161 Arbitrum, 8453 Base. There is no default; omitting it returns 400 missing_chain."),
+      safety: z.object({
+        tokenAddress: z.string().optional().describe("Token you plan to buy, symbol or 0x address"),
+        intendedUsd: z.number().optional().describe("Size of intended purchase in USD (default 500)"),
+        offeredPriceUsd: z.number().optional().describe("Optional price per token someone offered you"),
+        baseSymbol: z.string().optional().describe("What you pay with (default USDC)"),
+      }).optional().describe("Token sellability and contract facts (same work as check_token_safety)"),
+      route: z.object({
+        tokenIn: z.string().describe("Token you are selling (symbol or 0x address)"),
+        tokenOut: z.string().describe("Token you would receive (symbol or 0x address)"),
+        amountIn: z.string().describe("RAW atomic units of tokenIn, wei-scale, as a string"),
+      }).optional().describe("Best execution book at one pinned block (same work as get_best_route)"),
+      quotecheck: z.object({
+        tokenIn: z.string().describe("Token you are selling"),
+        tokenOut: z.string().describe("Token you would receive"),
+        amountIn: z.string().describe("RAW atomic units of tokenIn"),
+        quotedOut: z.string().describe("RAW atomic units of tokenOut you were OFFERED"),
+        venueClaimed: z.string().optional().describe("Optional: who gave you the offer"),
+      }).optional().describe("Fairness audit of a third-party quote (same work as verify_quote_fairness)"),
+      depth: z.object({
+        tokenAddress: z.string().describe("Token you plan to buy, symbol or 0x address"),
+        baseSymbol: z.string().optional().describe("What you pay with (default USDC)"),
+        sizesUsd: z.array(z.number()).optional().describe("Ladder of sizes in USD, max 6"),
+        maxRoundTripPct: z.number().optional().describe("Your round-trip cost tolerance, default 1%"),
+      }).optional().describe("Position sizing ladder (same work as get_trade_depth)"),
+    },
+    async (args) => {
+      let res;
+      try {
+        res = await runPaidTool({
+          tool: "get_assurance",
+          client: paidApi,
+          body: {
+            chainId: args.chainId,
+            safety: args.safety ?? null,
+            route: args.route ?? null,
+            quotecheck: args.quotecheck ?? null,
+            depth: args.depth ?? null,
+          },
+        });
+        pingUsage("get_assurance", true);
+      } catch (err) {
+        pingUsage("get_assurance", false);
         throw err;
       }
       return { content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }] };

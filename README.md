@@ -1,7 +1,7 @@
 # verify402
 
 > **Machine-payable on-chain truth & pre-signing checks for AI agents.**
-> Free fail-closed preflight gate + five verifiable truth checks paid per call via x402 in USDC. No API key, no account, no wallet required for the free gate.
+> Free fail-closed preflight gate + six paid checks via x402 in USDC. No API key, no account, no wallet required for the free gate.
 
 [![npm version](https://img.shields.io/npm/v/verify402-mcp.svg)](https://www.npmjs.com/package/verify402-mcp)
 [![MCP Server](https://img.shields.io/badge/MCP-verify402--mcp-blue.svg)](https://vex402.online/mcp)
@@ -170,6 +170,7 @@ Once configured, restart your AI client. The agent automatically has access to t
 | **Audit a swap quote** | *"I was quoted 0.35 WETH for 1,000 USDC. Call `verify_quote_fairness` to see if this quote is honest or if I'm being overcharged."* | `verify_quote_fairness` | $0.05 |
 | **Check market depth & slippage** | *"Check `get_trade_depth` for WETH on Uniswap V3 to see how much slippage I would take on a $25,000 swap."* | `get_trade_depth` | $0.05 |
 | **Find true on-chain swap route** | *"Query `get_best_route` to find the exact net payout for swapping 2,000 USDC to WETH across all DEX pools."* | `get_best_route` | $0.03 |
+| **Get one evidence bundle** | *"Run `get_assurance` with the safety and route inputs you need, and show me the evidence bundle at one pinned block."* | `get_assurance` | $0.19 |
 
 ---
 
@@ -493,7 +494,7 @@ wiring, and the distribution order.
 `mcp-bridge/` is packaged as **`verify402-mcp`** (stdio). It exposes the free
 pre-signing gate (`preflight_gate`), the 402 inspector and directory, and the five paid endpoints
 (`verify_arbitrage`, `check_token_safety`, `get_best_route`,
-`verify_quote_fairness`, `get_trade_depth`) to Claude Desktop, Cursor, OpenCode,
+`verify_quote_fairness`, `get_trade_depth`, `get_assurance`) to Claude Desktop, Cursor, OpenCode,
 or any MCP client.
 
 - **Free gate only:** omit `EVM_PRIVATE_KEY`; the server registers only

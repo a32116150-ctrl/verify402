@@ -3,6 +3,31 @@
 All notable changes to verify402. This file records repository changes; it does
 not imply a deploy or an npm publish.
 
+## 2.0.0 — 2026-11-19
+
+Version identity moves to 2.0.0 for the v2 release.
+
+New:
+- The paid checks now appear as a single HTTP endpoint, `POST /assure` ($0.19),
+  which runs whichever of the paid checks you supply at one pinned block and
+  returns one evidence bundle. It is cheaper than buying the same checks
+  separately.
+- A live on-chain usage counter is served at `/stats` and shown on the home
+  page; it is read from Base mainnet and Base Sepolia and labels operator calls
+  separately from outside payers.
+- `/explorer` on mainnet now reads the full settlement history from a small
+  persisted index instead of a 250k-block window, so it no longer drops the
+  operator's 18 Nov tests.
+
+Copy and positioning now lead with evidence rather than an apology: the
+“no external buyer” language is gone, replaced by dated receipts and the
+live counter. Historical marketing pages remain dated records.
+
+No new security promise is made: the gate is still advisory, and the paid
+checks are still scoped and listed in `notChecked`.
+
+Full offline test suite passes.
+
 ## 1.1.7 — 2026-11-19
 
 Metadata-only correction. 1.1.6 moved the paid-call default to Base mainnet,

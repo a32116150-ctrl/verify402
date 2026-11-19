@@ -24,6 +24,7 @@ export const DEFAULT_PRICES = {
   "/route": 0.03,
   "/quotecheck": 0.05,
   "/depth": 0.05,
+  "/assure": 0.19,
 };
 
 const dayKey = () => new Date().toISOString().slice(0, 10);
