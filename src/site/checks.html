@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Checks — verify402</title>
-<meta name="description" content="Five fixed-price checks for AI agents: verify an arbitrage, gate a token, compare a route, audit a quote, size a trade. Public demo payments use testnet USDC over x402 on Base Sepolia; analysis reads mainnet chain data.">
+<meta name="description" content="Six fixed-price checks for AI agents: verify an arbitrage, gate a token, compare a route, audit a quote, size a trade, or run them all at one pinned block. Public demo payments use testnet USDC over x402 on Base Sepolia; analysis reads mainnet chain data.">
 <meta name="google-site-verification" content="iGmI2QL110IkjnW0thU3DRZrdgQe_7mZsPWgkZVte7o">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -57,8 +57,8 @@
 <main>
   <div class="wrap page-head with-figure">
     <div class="page-copy">
-      <h1>Five checks.<br>No subscription.</h1>
-      <p class="lead">Each call measures one claim against the chain at a pinned block and returns a verdict with evidence. Pay per call in testnet USDC for the public demo; no account, no minimum, no monthly bill.</p>
+      <h1>Six checks.<br>No subscription.</h1>
+      <p class="lead">Each call measures one claim against the chain at a pinned block and returns a verdict with evidence. Pay per call in USDC on Base mainnet, or testnet USDC on the public demo; no account, no minimum, no monthly bill.</p>
       <div class="btn-row" style="margin-top:24px">
         <a class="btn" href="/preflight#try">Run free preflight</a>
         <a class="btn ghost" href="#prices">See prices</a>
@@ -75,7 +75,7 @@
     <div class="wrap">
       <div class="callout good">
         <h3>Before any of these: the free preflight gate</h3>
-        <p><a class="textlink" href="/preflight">/preflight</a> checks the transaction or the x402 payment request itself — <b>PASS / CAUTION / BLOCK</b>, a short-lived receipt, and an honest <code class="inline">notChecked</code> list. It is free because it has to run before every signature. These five checks are the deep measurements behind it. Use the gate from an agent with the <a class="textlink" href="/mcp">MCP server</a>.</p>
+        <p><a class="textlink" href="/preflight">/preflight</a> checks the transaction or the x402 payment request itself — <b>PASS / CAUTION / BLOCK</b>, a short-lived receipt, and an honest <code class="inline">notChecked</code> list. It is free because it has to run before every signature. These six checks are the deep measurements behind it. Use the gate from an agent with the <a class="textlink" href="/mcp">MCP server</a>.</p>
       </div>
     </div>
   </section>
@@ -101,7 +101,7 @@
         <details class="request" data-ui>
           <summary>Request shape</summary>
 <pre><span class="c">POST</span> /verify
-{ <span class="y">"pair"</span>: <span class="g">"USDC/WETH"</span>, <span class="y">"dex"</span>: <span class="g">"uniswap-v3"</span>, <span class="y">"sizeUsd"</span>: 100000 }</pre>
+{ <span class="y">"chainId"</span>: 1, <span class="y">"target"</span>: <span class="g">"WETH"</span>, <span class="y">"base"</span>: <span class="g">"USDC"</span>, <span class="y">"size"</span>: 10000 }</pre>
         </details>
       </article>
 
@@ -111,7 +111,7 @@
         <details class="request" data-ui>
           <summary>Request shape</summary>
 <pre><span class="c">POST</span> /safety
-{ <span class="y">"tokenAddress"</span>: <span class="g">"0x…"</span>, <span class="y">"chainId"</span>: 1, <span class="y">"intendedUsd"</span>: 500 }</pre>
+{ <span class="y">"chainId"</span>: 1, <span class="y">"tokenAddress"</span>: <span class="g">"0x95aD…"</span>, <span class="y">"intendedUsd"</span>: 500 }</pre>
         </details>
         <p class="small muted" style="margin-top:14px">Most calls land on CAUTION or AVOID. A gate that only said yes would be a marketing page, not a gate.</p>
       </article>
@@ -122,7 +122,7 @@
         <details class="request" data-ui>
           <summary>Request shape</summary>
 <pre><span class="c">POST</span> /route
-{ <span class="y">"tokenAddress"</span>: <span class="g">"WETH"</span>, <span class="y">"intendedUsd"</span>: 500 }</pre>
+{ <span class="y">"chainId"</span>: 1, <span class="y">"tokenIn"</span>: <span class="g">"USDC"</span>, <span class="y">"tokenOut"</span>: <span class="g">"WETH"</span>, <span class="y">"amountIn"</span>: <span class="g">"1000000000"</span> }</pre>
         </details>
       </article>
 
@@ -132,15 +132,15 @@
         <details class="request" data-ui>
           <summary>Request shape</summary>
 <pre><span class="c">POST</span> /quotecheck
-{ <span class="y">"tokenAddress"</span>: <span class="g">"0x…"</span>, <span class="y">"intendedUsd"</span>: 500, <span class="y">"offeredPriceUsd"</span>: 0.000021 }</pre>
+{ <span class="y">"chainId"</span>: 1, <span class="y">"tokenIn"</span>: <span class="g">"USDC"</span>, <span class="y">"tokenOut"</span>: <span class="g">"WETH"</span>, <span class="y">"amountIn"</span>: <span class="g">"1000000000"</span>, <span class="y">"quotedOut"</span>: <span class="g">"326000000000000000"</span>, <span class="y">"venueClaimed"</span>: <span class="g">"some-router.example"</span> }</pre>
         </details>
       </article>
 
       <article id="assure">
-        <h2>/assure — $0.19 · keep the evidence</h2>
-        <p class="lead" style="margin-top:14px">Runs the pre-signing gate and returns a hash-bound evidence bundle: verdict, reasons, checked and notChecked lists, pinned block, and a five-minute receipt. Use it when a verdict has to be retained, audited, or shown to a third party; the free gate stays the discovery tool.</p>
+        <h2>/assure — $0.19 · one evidence bundle</h2>
+        <p class="lead" style="margin-top:14px">Runs whichever paid checks you supply — <b>safety</b>, <b>route</b>, <b>quotecheck</b>, <b>depth</b>, or any combination — at one pinned block and returns one evidence record. Cheaper than buying the same checks separately. Unsupplied checks are reported as <code class="inline">notChecked</code>, never guessed.</p>
         <pre><span class="c">POST</span> /assure
-{ <span class="y">"kind"</span>: <span class="g">"payment"</span>, <span class="y">"payment"</span>: { <span class="y">"chainId"</span>: 8453, <span class="y">"scheme"</span>: <span class="g">"exact"</span>, <span class="y">"amount"</span>: <span class="g">"30000"</span>, <span class="y">"asset"</span>: <span class="g">"0x8335…"</span>, <span class="y">"payTo"</span>: <span class="g">"0xAeEF…"</span>, <span class="y">"resource"</span>: <span class="g">"https://vex402.online/route"</span> } }</pre>
+{ <span class="y">"chainId"</span>: 1, <span class="y">"safety"</span>: { <span class="y">"tokenAddress"</span>: <span class="g">"WETH"</span>, <span class="y">"intendedUsd"</span>: 500 }, <span class="y">"route"</span>: { <span class="y">"tokenIn"</span>: <span class="g">"USDC"</span>, <span class="y">"tokenOut"</span>: <span class="g">"WETH"</span>, <span class="y">"amountIn"</span>: <span class="g">"1000000"</span> } }</pre>
       </article>
 
       <article id="depth">
@@ -171,7 +171,7 @@
             <tr><td class="mono">/route</td><td>What would the chain pay?</td><td class="mono">$0.03</td><td>Every quoted venue at your size</td></tr>
             <tr><td class="mono">/quotecheck</td><td>Is the quote honest?</td><td class="mono">$0.05</td><td>fair / overpaying / too_good_to_be_true</td></tr>
             <tr><td class="mono">/depth</td><td>How big can I trade?</td><td class="mono">$0.05</td><td>Capacity ladder across sizes</td></tr>
-            <tr><td class="mono">/assure</td><td>Keep the evidence</td><td class="mono">$0.19</td><td>Evidence bundle and five-minute receipt</td></tr>
+            <tr><td class="mono">/assure</td><td>One evidence bundle</td><td class="mono">$0.19</td><td>All supplied checks at one pinned block · below separate price</td></tr>
             <tr><td class="mono">/findings</td><td>Show me honest verdicts</td><td class="mono">free</td><td>Ethereum majors, pinned block</td></tr>
           </tbody>
         </table>
@@ -192,7 +192,7 @@
       <a href="/inspect">402 inspector</a>
       <a href="/directory">402 directory</a>
       <a href="/preflight">Preflight gate</a>
-      <a href="/checks">The five checks</a>
+      <a href="/checks">The six checks</a>
       <a href="/mcp">MCP server</a>
       <a href="/live">Live findings</a>
       <a href="/activity">Activity</a>

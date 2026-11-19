@@ -47,7 +47,7 @@ Use before signing any EVM transaction, token approval, or x402/USDC payment;
 also use when checking a swap quote, token sellability, arbitrage claim, or
 position size. Calls verify402's free preflight gate, reads
 PASS/CAUTION/BLOCK and `checked`/`notChecked`, verifies the short-lived receipt,
-and refuses to sign without it. Routes the five paid verify402 checks and
+and refuses to sign without it. Routes the six paid verify402 checks and
 states their limits.
 
 ### Listing paragraph (paste into the 120+ character field)
@@ -56,7 +56,7 @@ verify402 preflight is a free operating manual for AI agents that are about to
 sign an EVM transaction, token approval, or x402/USDC payment. It teaches the
 agent to build the exact intent, call verify402's free preflight gate, read
 PASS/CAUTION/BLOCK and the `checked`/`notChecked` lists, verify the short-lived
-receipt, and refuse to sign without it. It also routes the five optional paid
+receipt, and refuse to sign without it. It also routes the six optional paid
 on-chain checks and states their limits. It is for agent developers and
 autonomous trading, payment, and treasury agents that need a pre-signing check,
 not a guarantee.
@@ -83,7 +83,7 @@ at the signing boundary, how to build the exact payment or transaction intent,
 which policy fields actually enforce something, how to read the verdict and the
 `notChecked` gaps, and how to verify the receipt before an executor signs.
 
-It also covers the five paid checks and when they are worth a call:
+It also covers the six paid checks and when they are worth a call:
 `check_token_safety` before buying an unknown token, `verify_quote_fairness`
 before accepting someone else's quote, `get_best_route` before a swap,
 `get_trade_depth` before choosing a size, and `verify_arbitrage` only when

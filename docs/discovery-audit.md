@@ -40,14 +40,14 @@ the audit date, not the current demo.
 - **Transport:** stdio
 - **NOT a remote MCP server** -- `/mcp` serves an HTML page
 - **Distribution:** GitHub release tarball via npx
-- **Tools:** `preflight_gate` (free), plus 5 paid tools when wallet configured
+- **Tools:** `preflight_gate` (free), plus 6 paid tools when wallet configured
 
 ### x402 Payment Implementation
 
 - **x402 version:** v2 (`@x402/*@^2.28.0`)
 - **Scheme:** exact
 - **Networks:** Base mainnet + Solana mainnet (mainnet mode)
-- **Bazaar extension:** Already implemented via `declareDiscoveryExtension` on all 5 paid routes
+- **Bazaar extension:** Already implemented via `declareDiscoveryExtension` on all 6 paid routes
 
 ### Discovery Metadata Surface & Audit Results
 
@@ -61,7 +61,7 @@ the audit date, not the current demo.
 | LLMs Documentation | **IMPLEMENTED** | `/llms.txt` (`src/server.mjs`) | Links to manifests, OpenAPI, MCP package, and onboarding guide. |
 | XML Sitemap | **IMPLEMENTED** | `/sitemap.xml` (`src/server.mjs`) | Indexes all 9 public documentation pages for search crawlers. |
 | Robots Crawler Policy | **IMPLEMENTED** | `/robots.txt` (`src/server.mjs`) | Allows LLM bots (GPTBot, ClaudeBot, PerplexityBot) and declares sitemap. |
-| x402 Bazaar Discovery | **IMPLEMENTED** | `src/server.mjs` (`declareDiscoveryExtension`) | Declared on all 5 paid routes; documented in `docs/x402-discovery.md`. |
+| x402 Bazaar Discovery | **IMPLEMENTED** | `src/server.mjs` (`declareDiscoveryExtension`) | Declared on all 6 paid routes; documented in `docs/x402-discovery.md`. |
 | ERC-8004 Agent Card | **IMPLEMENTED** | `/.well-known/agent-card.json` | A2A registration file. |
 | 402 Index Proof | **VERIFIED** | `/.well-known/402index-verify.txt` | Cryptographic SHA-256 domain verification token. |
 | Directory Checklist | **IMPLEMENTED** | `docs/distribution-directory-checklist.md` | Directory matrix with explicit statuses and submission payloads. |

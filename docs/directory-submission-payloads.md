@@ -34,8 +34,8 @@ file that you cannot see is true on screen.
 - **Registry entry:** `io.github.a32116150-ctrl/verify402-mcp` (MCP Registry, active/latest)
 - **Category hints:** finance, crypto, security, payments, agent-tools
 - **Tags:** mcp, model-context-protocol, x402, ai-agents, payments, base, solana, preflight
-- **One-line description:** Free, fail-closed pre-signing gate for agent payments, plus five paid on-chain checks (testnet).
-- **Long description:** verify402 puts a check before the signature instead of after the loss. An agent calls `preflight_gate` on a payment challenge or an EVM transaction intent; the gate returns PASS, CAUTION, or BLOCK with typed reason codes, a short-lived HMAC receipt, and an explicit list of what was not checked. `inspect_402` reads any public 402 before you pay it; `directory_402` exposes a watched public list of x402 endpoints. The five paid checks (arbitrage, token safety, route, quote fairness, depth) are priced per call in testnet USDC over x402 and are off unless the operator configures a wallet. Free mode (no key) registers three tools and can never spend. Demo payments settle on Base Sepolia / Solana devnet; analysis reads mainnet chain data.
+- **One-line description:** Free, fail-closed pre-signing gate for agent payments, plus six paid x402 checks (testnet).
+- **Long description:** verify402 puts a check before the signature instead of after the loss. An agent calls `preflight_gate` on a payment challenge or an EVM transaction intent; the gate returns PASS, CAUTION, or BLOCK with typed reason codes, a short-lived HMAC receipt, and an explicit list of what was not checked. `inspect_402` reads any public 402 before you pay it; `directory_402` exposes a watched public list of x402 endpoints. The six paid checks (arbitrage, token safety, route, quote fairness, depth) are priced per call in testnet USDC over x402 and are off unless the operator configures a wallet. Free mode (no key) registers three tools and can never spend. Demo payments settle on Base Sepolia / Solana devnet; analysis reads mainnet chain data.
 
 ## Tools (all 8, 1.1.1)
 
@@ -106,7 +106,7 @@ legitimate, free submission. Proposed entry for the **Finance & Fintech**
 section, matching the list's existing line format:
 
 ```markdown
-- [a32116150-ctrl/verify402](https://github.com/a32116150-ctrl/verify402) 📇 🏠 - Free, fail-closed preflight gate for agent payments: PASS / CAUTION / BLOCK with a short-lived receipt before the signature; reads any public x402 endpoint and a watched directory of live 402s; five paid on-chain checks in testnet USDC.
+- [a32116150-ctrl/verify402](https://github.com/a32116150-ctrl/verify402) 📇 🏠 - Free, fail-closed preflight gate for agent payments: PASS / CAUTION / BLOCK with a short-lived receipt before the signature; reads any public x402 endpoint and a watched directory of live 402s; six paid x402 checks in testnet USDC.
 ```
 
 Notes: no Glama badge until Glama indexes us. The repo has 0 stars today; the

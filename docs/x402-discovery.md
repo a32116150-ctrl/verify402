@@ -25,7 +25,7 @@ When an unauthenticated agent makes an HTTP request to any paid route without a 
 
 ## 2. Server Implementation
 
-Verify402 implements Bazaar discovery across all five paid routes in `src/server.mjs` using `@x402/extensions/bazaar`:
+Verify402 implements Bazaar discovery across all six paid routes in `src/server.mjs` using `@x402/extensions/bazaar`:
 
 ```javascript
 import { declareDiscoveryExtension } from "@x402/extensions/bazaar";

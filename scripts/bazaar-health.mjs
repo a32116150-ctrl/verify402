@@ -2,7 +2,7 @@
 // Daily health check for the paid routes and their Bazaar listings.
 //
 // Free by design: no wallet, no payment, no API key. It answers one question —
-// "can an agent still find and buy these five routes?" — and exits non-zero when
+// "can an agent still find and buy these six routes?" — and exits non-zero when
 // the answer is no.
 //
 // Why this exists. Two defects each broke a paid route for every payer and
@@ -29,7 +29,7 @@ import { pathToFileURL } from "node:url";
 export const LIVE_ORIGIN = "https://vex402.online";
 export const CDP_BASE = "https://api.cdp.coinbase.com/platform/v2/x402";
 export const DEFAULT_PAY_TO = "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb";
-export const PAID_PATHS = ["/verify", "/safety", "/route", "/quotecheck", "/depth"];
+export const PAID_PATHS = ["/verify", "/safety", "/route", "/quotecheck", "/depth", "/assure"];
 
 // CDP rejects verify/settle when the resource description is longer than this.
 export const MAX_DESCRIPTION = 500;

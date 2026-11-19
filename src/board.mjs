@@ -553,7 +553,7 @@ ${rows.map(rowHtml).join("\n")}
     <div>
       <h2>Product</h2>
       <a href="/preflight">Preflight gate</a>
-      <a href="/checks">The five checks</a>
+      <a href="/checks">The six checks</a>
       <a href="/inspect">Inspect a 402</a>
       <a href="/board">Public board</a>
       <a href="/mcp">MCP server</a>

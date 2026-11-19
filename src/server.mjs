@@ -971,15 +971,38 @@ if (!BYPASS_PAYMENT) app.use(
         accepts: accepts(ASSURE_PRICE),
         iconUrl: "https://vex402.online/logo-400.png",
         description:
-          "Paid assurance over a pre-signing gate. Runs the free preflight and returns the verdict with a longer-lived, hash-bound evidence bundle, the chain block, checked and notChecked lists, and a signed receipt. Use this when a pre-signing verdict must be retained or audited; the free /preflight remains the discovery tool.",
+          "One evidence bundle at one pinned block: run whichever paid checks you supply (safety, route, quotecheck, depth) together and get a single evidence record. Cheaper than buying the checks separately; unsupplied checks are reported as notChecked, never guessed.",
         mimeType: "application/json",
         extensions: {
           ...declareDiscoveryExtension({
             method: "POST",
             bodyType: "json",
-            input: { kind: "payment", payment: { chainId: 8453, scheme: "exact", amount: "30000", asset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", payTo: "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb", resource: "https://vex402.online/route" } },
-            output: { example: { verdict: "PASS", receipt: { spec: "verify402/preflight-receipt@1", expiresAt: "2026-11-19T12:00:00.000Z" }, assurance: { spec: "verify402/assurance@1", evidenceHash: "sha256:..." } } },
-            inputSchema: { properties: { kind: { type: "string", enum: ["payment", "transaction"] } }, required: [] },
+            input: {
+              chainId: 8453,
+              safety: { tokenAddress: "0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE", intendedUsd: 500 },
+              route: { tokenIn: "USDC", tokenOut: "WETH", amountIn: "500000000" },
+            },
+            output: {
+              example: {
+                ok: true,
+                verdict: "CAUTION",
+                blockNumber: 21000000,
+                sections: { safety: { verdict: "CAUTION" }, route: { summary: "2 venues quoted" } },
+                checked: ["target token facts", "entry via best route"],
+                notChecked: ["quote fairness (not supplied)", "capacity ladder (not supplied)"],
+                assurance: { spec: "verify402/assurance@1", evidenceHash: "sha256:..." },
+              },
+            },
+            inputSchema: {
+              properties: {
+                chainId: { type: "integer", description: "1 Ethereum, 42161 Arbitrum, 8453 Base" },
+                safety: { type: "object", description: "Token sellability facts (tokenAddress, intendedUsd, offeredPriceUsd, baseSymbol)" },
+                route: { type: "object", description: "Best route at one pinned block (tokenIn, tokenOut, amountIn raw units)" },
+                quotecheck: { type: "object", description: "Fairness audit of a quote (tokenIn, tokenOut, amountIn, quotedOut, venueClaimed)" },
+                depth: { type: "object", description: "Position sizing ladder (tokenAddress, baseSymbol, sizesUsd, maxRoundTripPct)" },
+              },
+              required: ["chainId"],
+            },
           }),
         },
       },
@@ -2128,12 +2151,12 @@ app.get("/", (req, res) => {
       `  POST /route    ${ROUTE_PRICE} per call        what would the chain actually pay for this swap?`,
       `  POST /quotecheck ${QUOTECHECK_PRICE} per call      audit a quote someone else gave you`,
       `  POST /depth    ${DEPTH_PRICE} per call        how big can I trade before cost eats me?`,
-      `  POST /assure   ${ASSURE_PRICE} per call       pre-signing assurance with a hash-bound evidence bundle`,
+      `  POST /assure   ${ASSURE_PRICE} per call       bundle of paid checks at one pinned block, one evidence record`,
       "  GET  /findings free                 live verdicts on Ethereum majors, free",
       "  GET  /usage    free                 anonymous free-gate call counts (process-local)",
       "  GET  /usage/site free               aggregate page views of the human site (no cookies, no IP)",
       "  GET  /stats    free                 live paid-usage counter (on-chain USDC transfers)",
-      "  GET  /mcp      free                 MCP server: free gate + five paid tools",
+      "  GET  /mcp      free                 MCP server: free gate + six paid tools",
       "  GET  /start    free                 five-minute quickstart for developers (human page)",
       "  GET  /info     free                 machine-readable service description",
       "  GET  /health   free",
@@ -2192,7 +2215,7 @@ app.get("/info", (_req, res) => {
     mode: MODE,
     networks: NETWORKS.label,
     description:
-      "Machine-payable truth service. /preflight is the free pre-signing gate: validate an x402 payment request or a chain transaction and get PASS / CAUTION / BLOCK with typed reasons and a short-lived receipt. /verify measures whether a cross-venue arbitrage round trip is profitable; /safety is a pre-trade gate with a quote-based sellability check, not a honeypot proof. /assure runs the paid checks that are supplied and returns one evidence bundle at one pinned block. All quotes come from Uniswap's canonical QuoterV2 and each venue's own router, never from our own reimplementation of venue mathematics. The MCP server (verify402-mcp) exposes the gate and the five checks as native tools; install at /mcp.",
+      "Machine-payable truth service. /preflight is the free pre-signing gate: validate an x402 payment request or a chain transaction and get PASS / CAUTION / BLOCK with typed reasons and a short-lived receipt. /verify measures whether a cross-venue arbitrage round trip is profitable; /safety is a pre-trade gate with a quote-based sellability check, not a honeypot proof. /assure runs the paid checks that are supplied and returns one evidence bundle at one pinned block. All quotes come from Uniswap's canonical QuoterV2 and each venue's own router, never from our own reimplementation of venue mathematics. The MCP server (verify402-mcp) exposes the gate and the six checks as native tools; install at /mcp.",
     prices: {
       preflight: "free",
       preflight_verify: "free",

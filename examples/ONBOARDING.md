@@ -166,7 +166,7 @@ Then add it to Claude Desktop / Cursor (`.cursor/mcp.json`):
 ```
 
 With no `EVM_PRIVATE_KEY`, the server registers only `preflight_gate`. Nothing
-can be charged. The five paid measurement tools stay off.
+can be charged. The six paid checks stay off.
 
 ## 5. Enforce it where the signing happens
 

@@ -4,7 +4,7 @@ name: bazaar-health
 #
 # Free: no wallet, no payment, no API key, no secrets. It reads each route's 402
 # challenge, asks CDP's public /validate about it, and counts how many of our
-# five routes the Bazaar catalog still lists.
+# six routes the Bazaar catalog still lists.
 #
 # This exists because two defects each broke a paid route for every payer and
 # produced no alert: the payer never sent extensions.bazaar (so settlements were

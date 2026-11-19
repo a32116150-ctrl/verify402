@@ -2,7 +2,7 @@
   "name": "verify402-mcp",
   "version": "2.0.0",
   "mcpName": "io.github.a32116150-ctrl/verify402-mcp",
-  "description": "MCP server for verify402: a free, fail-closed preflight gate before signing, plus five paid on-chain checks paid per call via x402.",
+  "description": "MCP server for verify402: a free, fail-closed preflight gate before signing, plus six paid x402 checks paid per call via x402.",
   "type": "module",
   "bin": {
     "verify402-mcp": "index.mjs"

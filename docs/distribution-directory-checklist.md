@@ -30,7 +30,7 @@ This checklist tracks official and third-party registry listings for Verify402. 
 | Directory / Catalog | Category | Status | Blocker / Requirement |
 |---|---|---|---|
 | **Official MCP Registry** | MCP Specification | **VERIFIED** | Active listing at `io.github.a32116150-ctrl/verify402-mcp` v1.0.3 |
-| **x402 Bazaar Discovery** | Protocol Discovery | **IMPLEMENTED** | Active in 402 challenge responses across all 5 paid routes |
+| **x402 Bazaar Discovery** | Protocol Discovery | **IMPLEMENTED** | Active in 402 challenge responses across all 6 paid routes |
 | **402 Index** | x402 Directory | **VERIFIED** | Active via `/.well-known/402index-verify.txt` domain proof |
 | **ERC-8004 Agent Card** | A2A Discovery | **IMPLEMENTED** | Active via `/.well-known/agent-card.json` |
 | **Smithery.ai** | MCP Directory | **PREPARED** | Ready for submission; `verify402-mcp@1.0.4` is on npm |
@@ -110,7 +110,7 @@ This checklist tracks official and third-party registry listings for Verify402. 
 - **Submission Details:**
   - **Name:** verify402
   - **Title:** verify402 — On-chain truth verification & preflight gate
-  - **Description:** Fail-closed preflight safety gate for crypto payments plus 5 paid on-chain truth checks (arbitrage, token safety, best route, quote fairness, depth).
+  - **Description:** Fail-closed preflight safety gate for crypto payments plus 6 paid x402 checks (arbitrage, token safety, best route, quote fairness, depth).
   - **Transport:** stdio
   - **Repository URL:** `https://github.com/a32116150-ctrl/verify402`
   - **Tags:** `crypto`, `defi`, `x402`, `trading-bot`, `security`, `base`, `solana`

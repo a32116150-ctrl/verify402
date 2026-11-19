@@ -3,7 +3,7 @@
 //
 // Makes verify402 consumable by any MCP client (Claude Desktop, OpenCode, any
 // agent framework) as native tools. The free preflight gate works with no
-// wallet. The five paid checks use an x402 payment handshake from the wallet in
+// wallet. The six paid checks use an x402 payment handshake from the wallet in
 // EVM_PRIVATE_KEY and return the verdict.
 //
 // ARCHITECTURE (per docs.x402.org/guides/mcp-server-with-x402):
@@ -139,8 +139,7 @@ Environment:
   VERIFY402_PAY_TO    EVM payee the 402 must name (default the verify402 payee)
   VERIFY402_RESOURCE_PREFIX  resource origin/prefix the 402 must match (default VERIFY402_URL)
 
-The free tools are preflight_gate, inspect_402 and directory_402. The paid tools are verify_arbitrage,
-check_token_safety, get_best_route, verify_quote_fairness, get_trade_depth and
+The free tools are preflight_gate, inspect_402 and directory_402. The paid tools are verify_arbitrage, check_token_safety, get_best_route, verify_quote_fairness, get_trade_depth, get_assurance and
 get_assurance.
 The bridge signs x402 payments only; it never signs or sends a trade.
 `);
@@ -289,7 +288,7 @@ const DESCRIPTIONS = {
     "Costs $0.19 per call.",
 };
 
-const INSTRUCTIONS = `verify402 is an x402 pre-signing gate plus five on-chain truth checks.
+const INSTRUCTIONS = `verify402 is an x402 pre-signing gate plus six paid x402 checks.
 
 Free tools (no wallet needed, nothing can be charged):
 - preflight_gate: call BEFORE signing ANY payment, approval, or transaction. It returns PASS / CAUTION / BLOCK with typed reasons. sign_allowed:false means STOP. requires_ack:true means the human must acknowledge the reasons before signing.

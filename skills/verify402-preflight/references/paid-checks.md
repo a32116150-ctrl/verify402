@@ -1,4 +1,4 @@
-# The five paid checks
+# The six paid checks
 
 These are the paid verify402 tools exposed by the MCP bridge. They use x402:
 the bridge pays per call from its configured wallet. They are not a

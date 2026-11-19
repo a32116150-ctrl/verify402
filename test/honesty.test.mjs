@@ -20,7 +20,7 @@ const nonEmpty = (arr) => Array.isArray(arr) && arr.length > 0 && arr.every((s) 
 
 console.log("\nhonesty contract");
 
-check("all five paid routes are declared", () => {
+check("all six paid routes are declared", () => {
   assert.deepEqual(PAID_ROUTES.sort(), ["/depth", "/quotecheck", "/route", "/safety", "/verify"]);
 });
 

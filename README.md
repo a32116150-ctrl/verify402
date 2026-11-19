@@ -94,7 +94,7 @@ Paste this into your client config file:
 ```
 
 #### Option B: Paid Mode (Unlocks 5 Deep Truth Checks)
-Unlocks the 5 on-chain truth checks (`verify_arbitrage`, `check_token_safety`, `get_best_route`, `verify_quote_fairness`, `get_trade_depth`). The agent pays per call via x402 in **real USDC on Base mainnet** — $0.03 to $0.10 per call, capped by `MAX_PAYMENT_USD`. The analysis reads mainnet chain data.
+Unlocks the six paid x402 checks (`verify_arbitrage`, `check_token_safety`, `get_best_route`, `verify_quote_fairness`, `get_trade_depth`, `get_assurance`). The agent pays per call via x402 in **real USDC on Base mainnet** — $0.03 to $0.10 per call, capped by `MAX_PAYMENT_USD`. The analysis reads mainnet chain data.
 
 ```json
 {
@@ -176,7 +176,7 @@ Once configured, restart your AI client. The agent automatically has access to t
 
 ### Step 4: Install the preflight skill
 
-The free agent skill lives at [`skills/verify402-preflight`](skills/verify402-preflight/SKILL.md). It is the operating manual for the gate: exact payment and transaction payloads, how to read `PASS` / `CAUTION` / `BLOCK`, how to verify the receipt before an executor signs, and when the five paid checks are worth a call. It is built around the MCP server above; the references document the non-MCP fallback.
+The free agent skill lives at [`skills/verify402-preflight`](skills/verify402-preflight/SKILL.md). It is the operating manual for the gate: exact payment and transaction payloads, how to read `PASS` / `CAUTION` / `BLOCK`, how to verify the receipt before an executor signs, and when the six paid checks are worth a call. It is built around the MCP server above; the references document the non-MCP fallback.
 
 The skill is explicit about the limits: a `PASS` is not a guarantee, the token check is not a honeypot proof, and no result is a profit forecast.
 
@@ -389,7 +389,7 @@ Response: `PASS` / `CAUTION` / `BLOCK`, `reasons[]`, `checked[]`,
   worked, never arguments or intents.
 
 The MCP server exposes it as `preflight_gate`. It runs with no wallet (free gate
-only); add `EVM_PRIVATE_KEY` for the five paid tools. If `sign_allowed` is
+only); add `EVM_PRIVATE_KEY` for the six paid tools. If `sign_allowed` is
 false, do not sign; if `requires_ack` is true, surface the reasons to the
 operator. Client configs and the install command are at
 [`/mcp`](https://vex402.online/mcp).
@@ -492,7 +492,7 @@ wiring, and the distribution order.
 ## MCP: how AI agents consume this
 
 `mcp-bridge/` is packaged as **`verify402-mcp`** (stdio). It exposes the free
-pre-signing gate (`preflight_gate`), the 402 inspector and directory, and the five paid endpoints
+pre-signing gate (`preflight_gate`), the 402 inspector and directory, and the six paid endpoints
 (`verify_arbitrage`, `check_token_safety`, `get_best_route`,
 `verify_quote_fairness`, `get_trade_depth`, `get_assurance`) to Claude Desktop, Cursor, OpenCode,
 or any MCP client.

@@ -20,7 +20,7 @@ npx -y verify402-mcp@2.0.0 --help
 
 This pins the published `2.0.0` package. Paid tools default to real USDC on Base mainnet at https://vex402.online; the testnet demo is an explicit opt-in.
 
-Expected: a usage line listing the free tools (`preflight_gate`, `inspect_402`, `directory_402`) and the five paid tools.
+Expected: a usage line listing the free tools (`preflight_gate`, `inspect_402`, `directory_402`) and the six paid tools.
 
 ## 2. Add the MCP server
 

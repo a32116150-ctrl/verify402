@@ -203,7 +203,7 @@
         <p class="eyebrow">05 · What I need back</p>
         <h2 style="margin-top:14px">The only failure: a false PASS.</h2>
         <p class="lead" style="margin-top:14px">Run 3–5 intents your agent would actually sign — or has signed before. Send the intent (redacted is fine), the verdict, and the reasons. The number that does not exist yet is the <b>false-PASS rate</b>: a transaction the gate passed that you believe is unsafe.</p>
-        <p class="small muted" style="margin-top:14px">The gate is free and rate-limited. The five paid measurements — <a class="textlink" href="/checks">/verify, /safety, /route, /quotecheck, /depth</a> — are separate and not needed for this test.</p>
+        <p class="small muted" style="margin-top:14px">The gate is free and rate-limited. The six paid checks — <a class="textlink" href="/checks">/verify, /safety, /route, /quotecheck, /depth, /assure</a> — are separate and not needed for this test.</p>
         <div class="callout warn" style="margin-top:24px">
           <h3>What the gate does not do</h3>
           <p>It catches measurable signing mistakes: wrong network, non-canonical asset, amount over your cap, payee outside your allowlist, unlimited approval, a reverting call, a stale block. It does not screen reputation or sanctions, audit a contract, simulate full balance deltas, audit the counterparty, scan tool output for hidden instructions, or guarantee a token is safe. Those limits are printed in <code class="inline">notChecked</code> on every response. A PASS means the checks in <code class="inline">checked</code> passed at that block — nothing more.</p>
@@ -218,13 +218,13 @@
       <div class="sec-head">
         <p class="eyebrow">Keep going</p>
         <h2>The gate is the front door.</h2>
-        <p class="lead">Read the full request shape, the receipt contract and the five paid measurements — or run the gate against your own wallet.</p>
+        <p class="lead">Read the full request shape, the receipt contract and the six paid checks — or run the gate against your own wallet.</p>
       </div>
       <div class="btn-row" style="margin-top:28px">
         <a class="btn" href="/preflight#try">Run a free preflight</a>
         <a class="btn ghost" href="/docs#preflight">Request shape</a>
         <a class="btn ghost" href="/mcp">MCP integration</a>
-        <a class="btn ghost" href="/checks">The five checks</a>
+        <a class="btn ghost" href="/checks">The six checks</a>
       </div>
     </div>
   </section>
@@ -239,7 +239,7 @@
       <a href="/inspect">402 inspector</a>
       <a href="/directory">402 directory</a>
       <a href="/preflight">Preflight gate</a>
-      <a href="/checks">The five checks</a>
+      <a href="/checks">The six checks</a>
       <a href="/mcp">MCP server</a>
       <a href="/live">Live findings</a>
       <a href="/activity">Activity</a>

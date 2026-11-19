@@ -58,7 +58,7 @@ export function paymentRail(mode) {
         "and phantom-price detection. It does not execute a transfer; transfer restrictions and " +
         "unconfigured venues are named in notChecked. " +
         "TRUST / CAUTION / AVOID with evidence. Per-call x402 payment in testnet USDC on Base Sepolia or Solana devnet for the public demo; analysis reads mainnet chain data. " +
-        "An MCP server (verify402-mcp, stdio) exposes the free gate and all five checks to any " +
+        "An MCP server (verify402-mcp, stdio) exposes the free gate and all six checks to any " +
         "MCP client; install at /mcp. No profitability is ever promised; the service reports what it measured."
       : "Machine-payable truth service for AI agents. POST /preflight is the free pre-signing " +
         "gate: validate an x402 payment request or a chain transaction and get PASS / CAUTION / " +
@@ -71,7 +71,7 @@ export function paymentRail(mode) {
         "unconfigured venues are named in notChecked. " +
         "TRUST / CAUTION / AVOID with evidence. This instance is configured for x402 payment in USDC on Base mainnet or Solana mainnet; analysis reads mainnet chain data. " +
         "Mainnet readiness must be verified separately; the public demo does not validate it. " +
-        "An MCP server (verify402-mcp, stdio) exposes the free gate and all five checks to any " +
+        "An MCP server (verify402-mcp, stdio) exposes the free gate and all six checks to any " +
         "MCP client; install at /mcp. No profitability is ever promised; the service reports what it measured.",
   };
 }

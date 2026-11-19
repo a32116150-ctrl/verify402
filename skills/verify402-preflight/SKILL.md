@@ -1,6 +1,6 @@
 ---
 name: verify402-preflight
-description: Use before signing any EVM transaction, token approval or permit, or x402/USDC payment; also use when checking a swap quote, token sellability, arbitrage claim, or position size. Calls the verify402 MCP preflight gate, reads PASS/CAUTION/BLOCK and checked/notChecked, verifies the short-lived receipt, and refuses to sign without it. Routes the five paid verify402 checks and states their limits. Requires the verify402 MCP server; the references include a non-MCP fallback.
+description: Use before signing any EVM transaction, token approval or permit, or x402/USDC payment; also use when checking a swap quote, token sellability, arbitrage claim, or position size. Calls the verify402 MCP preflight gate, reads PASS/CAUTION/BLOCK and checked/notChecked, verifies the short-lived receipt, and refuses to sign without it. Routes the six paid verify402 checks and states their limits. Requires the verify402 MCP server; the references include a non-MCP fallback.
 requires:
   mcp: [verify402-mcp]
 license: Apache-2.0
@@ -211,7 +211,7 @@ exact verifier call, failure reasons, and an executor pattern.
 
 ## Paid checks: spend only when the answer changes a decision
 
-The five paid tools use x402. The public demo pays in Base Sepolia testnet USDC
+The six paid tools use x402. The public demo pays in Base Sepolia testnet USDC
 (`eip155:84532`); the analysis reads mainnet chain data. Mainnet settlement is a
 separate deployment choice, not the demo default.
 
@@ -320,7 +320,7 @@ only as trustworthy as where you got it. Do not call it provenance.
   constants, and response shapes.
 - `references/receipt-verification.md` — receipt fields, verifier call, and
   executor ordering.
-- `references/paid-checks.md` — the five paid tools, inputs, outputs, ordering,
+- `references/paid-checks.md` — the six paid tools, inputs, outputs, ordering,
   and spend controls.
 - `references/failure-modes.md` — error codes, meanings, and safe recovery.
 - `references/claims-and-limits.md` — precise wording, limitations, and the

@@ -119,7 +119,7 @@
         <p class="eyebrow">03 · Before you sign</p>
         <h2 style="margin-top:14px">One free gate, one short-lived receipt.</h2>
         <p class="lead" style="margin-top:14px"><code class="inline">POST /preflight</code> is free. Give it an x402 payment request or a chain transaction; it returns <b>PASS / CAUTION / BLOCK</b>, typed reasons, the checks that actually ran, and the checks that did not. Every response carries an HMAC-signed receipt bound to the exact normalized intent, the exact request body, and, where the chain is readable, a fresh pinned block. On EVM, a block older than 30s is CAUTION; older than 120s is BLOCK; a block with no timestamp is a 503. <code class="inline">requestHash</code> is additive within <code class="inline">@1</code>: receipts issued before it existed stay signature-valid but are not caller-bound, and a supplied <code class="inline">request</code> verifies with <code class="inline">missing_request_hash</code>. A missing <code class="inline">intentHash</code> returns <code class="inline">missing_intent_hash</code>. The reference executor requires both <code class="inline">intentBound</code> and <code class="inline">requestBound</code>; receipt-only verification remains compatible but reports both as false.</p>
-        <p class="small muted" style="margin-top:12px">Use it from an agent: <a class="textlink" href="/mcp">verify402-mcp</a> exposes the gate (no wallet) and the five paid checks (hot wallet, per-call x402) over MCP.</p>
+        <p class="small muted" style="margin-top:12px">Use it from an agent: <a class="textlink" href="/mcp">verify402-mcp</a> exposes the gate (no wallet) and the six paid checks (hot wallet, per-call x402) over MCP.</p>
         <div class="table-wrap" data-ui style="margin-top:22px">
           <table class="table">
             <thead><tr><th>Intent</th><th>What it needs</th><th>What it checks</th></tr></thead>
@@ -213,7 +213,7 @@
       <a href="/inspect">402 inspector</a>
       <a href="/directory">402 directory</a>
       <a href="/preflight">Preflight gate</a>
-      <a href="/checks">The five checks</a>
+      <a href="/checks">The six checks</a>
       <a href="/mcp">MCP server</a>
       <a href="/live">Live findings</a>
       <a href="/activity">Activity</a>

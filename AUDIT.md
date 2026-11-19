@@ -206,7 +206,7 @@ Express app (src/server.mjs)
   - recovery middleware (runs before the paywall)
   - x402 paymentMiddleware (unless BYPASS_PAYMENT=1)
   - free routes: /preflight, /preflight/verify, /findings, /usage, discovery
-  - paid routes: /verify, /safety, /route, /quotecheck, /depth
+  - paid routes: /verify, /safety, /route, /quotecheck, /depth, /assure
   - static site, landing page, OpenAPI, manifest, agent card
         |
         +--> src/measure.mjs   -> viem public clients -> RPC
@@ -868,7 +868,7 @@ This is the single largest test gap. `safety.mjs` is the most claim-sensitive mo
 ## 7. Dead code, duplication, and maintainability
 
 - `src/depth.mjs:29-37` duplicates token metadata logic that already exists in `safety.mjs:52-88`; this duplication caused H-3.
-- `src/server.mjs` repeats block-number fetch + cache key construction in five paid routes; a shared `measureAtBlock` helper would make the pinned-block contract consistent.
+- `src/server.mjs` repeats block-number fetch + cache key construction in six paid routes; a shared `measureAtBlock` helper would make the pinned-block contract consistent.
 - `src/openapi.mjs`, `src/manifest.mjs`, `src/server.mjs`, and `docs/*` independently encode prices, networks, TTLs, and concurrency. They already disagree (M-4).
 - `mcp-bridge/index.mjs` repeats paid tool request shapes; an idempotency wrapper would be a single place to add recovery.
 - No obvious unused modules. `quoteV3Path`, `bestRouteBook`, `expiredRecoveryInfo`, and the budget helpers are all reachable.

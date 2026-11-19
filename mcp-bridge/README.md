@@ -1,7 +1,7 @@
 # verify402-mcp
 
 MCP server for **verify402**: a free, fail-closed **preflight gate** before an
-agent signs a payment or a chain transaction, plus five paid on-chain checks
+agent signs a payment or a chain transaction, plus six paid x402 checks
 paid per call over x402.
 
 Works with Claude Desktop, Cursor, OpenCode, and any MCP client that speaks
@@ -29,7 +29,7 @@ results, wallet data, or IPs. Off by default; set `VERIFY402_TELEMETRY=1` to
 turn it on. A failed ping never changes the tool's answer, and only these
 tool names are accepted: `preflight_gate`, `inspect_402`, `directory_402`,
 `verify_arbitrage`, `check_token_safety`, `get_best_route`,
-`verify_quote_fairness`, `get_trade_depth`.
+`verify_quote_fairness`, `get_trade_depth`, `get_assurance`.
 
 ## Tools
 
@@ -43,6 +43,7 @@ tool names are accepted: `preflight_gate`, `inspect_402`, `directory_402`,
 | `get_best_route` | $0.03 | "What would the chain actually pay for this swap?" — best route + every quoted venue |
 | `verify_quote_fairness` | $0.05 | "A broker/bot offered me this number — is it honest?" fair / overpaying / too_good_to_be_true |
 | `get_trade_depth` | $0.05 | "How big can I trade here before the round trip eats me?" — per-size impact, round-trip cost, capacity |
+| `get_assurance` | $0.19 | One evidence bundle at one pinned block: whichever of safety/route/quotecheck/depth you supply, together. Below buying the checks separately |
 
 `preflight_gate` is the front door. `inspect_402` reads a 402 challenge
 before an agent pays it, and `directory_402` lists the endpoints we watch.
@@ -127,7 +128,7 @@ To give your AI agent the free **`preflight_gate`** (checks transaction calldata
 ```
 
 ### Step 2: Paid Mode (Setting Up the Hot Wallet)
-To enable the 5 deep on-chain truth checks (`verify_arbitrage`, `check_token_safety`, `get_best_route`, `verify_quote_fairness`, `get_trade_depth`), configure a dedicated hot wallet that pays per call in USDC via x402:
+To enable the six paid x402 checks (`verify_arbitrage`, `check_token_safety`, `get_best_route`, `verify_quote_fairness`, `get_trade_depth`, `get_assurance`), configure a dedicated hot wallet that pays per call in USDC via x402:
 
 1. **Create a Dedicated Hot Wallet**:
    - Create a brand new wallet in MetaMask, Rabby, or via `cast wallet new`.

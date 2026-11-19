@@ -34,7 +34,7 @@ Only allowed statuses are used: **PASS**, **FAIL**, **BLOCKED**, **NOT RUN**, an
 | Live 402 Challenge on `/route` | x402 Protocol | **PASS** | HTTP 402 with `payment-required` header declaring Base + Solana exact settlement ($0.03). |
 | Live 402 Challenge on `/quotecheck` | x402 Protocol | **PASS** | HTTP 402 with `payment-required` header declaring Base + Solana exact settlement ($0.05). |
 | Live 402 Challenge on `/depth` | x402 Protocol | **PASS** | HTTP 402 with `payment-required` header declaring Base + Solana exact settlement ($0.05). |
-| Live Bazaar Metadata in 402 Headers | x402 Bazaar | **PASS** | `extensions.bazaar` is present in base64 `payment-required` header across all 5 paid routes. |
+| Live Bazaar Metadata in 402 Headers | x402 Bazaar | **PASS** | `extensions.bazaar` is present in base64 `payment-required` header across all 6 paid routes. |
 | External Catalog Indexing | Ecosystem | **UNCONFIRMED** | No synchronous external confirmation API. Asynchronous crawler indexing pending. |
 | MCP Distribution Artifact | Distribution | **PASS** | GitHub Release tarball `verify402-mcp-1.0.3.tgz` resolves live with HTTP 302 to immutable storage. |
 | MCP Clean Launch & Tool Enumeration | MCP Bridge | **PASS** | Tested stdio launch: free mode exports 1 tool; paid mode exports all 6 tools with valid schemas. |
@@ -73,7 +73,7 @@ Only allowed statuses are used: **PASS**, **FAIL**, **BLOCKED**, **NOT RUN**, an
 - **Command:** `curl -s -i https://vex402.online/llms.txt`
 - **HTTP Status:** `200 OK`
 - **Content-Type:** `text/plain; charset=utf-8`
-- **Payload:** Plain-text contract detailing free preflight gate and 5 paid checks.
+- **Payload:** Plain-text contract detailing free preflight gate and 6 paid checks.
 - **Evaluation:** **PASS**.
 
 #### 5. `GET https://vex402.online/robots.txt`
@@ -87,7 +87,7 @@ Only allowed statuses are used: **PASS**, **FAIL**, **BLOCKED**, **NOT RUN**, an
 - **Command:** `curl -s -i https://vex402.online/.well-known/x402`
 - **HTTP Status:** `200 OK`
 - **Content-Type:** `application/json; charset=utf-8`
-- **Payload:** x402 capability manifest declaring `x402Version: 2`, `kind: "resource-server"`, and 5 paid resource URLs.
+- **Payload:** x402 capability manifest declaring `x402Version: 2`, `kind: "resource-server"`, and 6 paid resource URLs.
 - **Evaluation:** **PASS**.
 
 #### 7. `GET https://vex402.online/.well-known/verify402.json`
