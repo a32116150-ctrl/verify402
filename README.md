@@ -37,6 +37,8 @@ curl -sS -X POST https://vex402.online/preflight \
     },
     "policy": { "maxAmountUsd": 0.25, "allowedResourceHosts": ["vex402.online"] }
   }'
+# The payTo above is the service's own payee (for the demo shape). Replace it
+# with the real target's payee when you run this against your own 402.
 ```
 
 This example uses the **live Base mainnet USDC rail** (`eip155:8453`). The free gate is only validating the request shape; it is not a payment. The public Base Sepolia testnet demo was retired on 2026-11-19; every paid call on the live service settles on mainnet in real USDC.
