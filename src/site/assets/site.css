@@ -241,7 +241,7 @@ section.soft { background: var(--soft); border-top: 0; border-bottom: 0; }
 }
 .callout.warn { border-left-color: var(--amber); background: var(--amber-soft); }
 .callout.good { border-left-color: var(--green); background: var(--green-soft); }
-.callout h3 { font-size: 17px; }
+.callout h3 { font-size: 17px; color: var(--ink); }
 .callout p { margin-top: 8px; font-size: 15px; color: var(--ink-2); }
 .callout p, .callout a { overflow-wrap: anywhere; word-break: break-word; }
 
