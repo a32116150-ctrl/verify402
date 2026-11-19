@@ -8,16 +8,14 @@ Works with Claude Desktop, Cursor, OpenCode, and any MCP client that speaks
 stdio. The free gate needs **no wallet**. The paid tools settle in **real USDC
 on Base mainnet** (`eip155:8453`) at https://vex402.online — Base + Solana
 mainnet, real USDC via the Coinbase CDP facilitator — using a dedicated hot
-wallet. The analysis reads mainnet chain data. A Base Sepolia testnet demo
-(`eip155:84532`, https://verify402.onrender.com) is an explicit opt-in for
-trying the payment rail without real money. The bridge never signs or sends a
-trade.
+wallet. The analysis reads mainnet chain data. The public Base Sepolia testnet demo was
+retired on 2026-11-19 — the live service at https://vex402.online is the only
+public endpoint. The bridge never signs or sends a trade.
 
-> **Published package note:** `verify402-mcp@1.1.7` is published to npm and
-> defaults paid calls to Base mainnet (`eip155:8453`) — real USDC. The Base
-> Sepolia testnet demo (`eip155:84532`) requires an explicit `VERIFY402_URL`
-> and `VERIFY402_NETWORKS` opt-in. 1.1.7 is a metadata-only correction for the
-> MCP Registry entry; earlier `1.1.5` and below defaulted to testnet. All
+> **Published package note:** `verify402-mcp@2.0.1` is published to npm and
+> defaults paid calls to Base mainnet (`eip155:8453`) — real USDC. The public
+> testnet demo was retired on 2026-11-19; paid calls default to, and are,
+> mainnet. 2.0.1 is a consistency patch (text and metadata only). All
 > published versions are immutable. Do not republish or overwrite
 > any published version.
 
@@ -136,7 +134,7 @@ To enable the six paid x402 checks (`verify_arbitrage`, `check_token_safety`, `g
 2. **Fund the Wallet on Base mainnet (EIP-155:8453)**:
    - **USDC**: Send only what you are willing to spend (the bridge pays per call: $0.03 to $0.10 in real USDC).
    - **Gas (ETH on Base)**: Keep a little ETH on Base for gas if your client needs it.
-   - For the Base Sepolia testnet demo instead, use testnet USDC from a faucet (`eip155:84532`) and set the demo URL and network explicitly.
+   - Paid calls settle on Base mainnet in real USDC, from $0.03 per call. There is no public testnet endpoint.
 3. **Configure Environment Variables in Your MCP Client**:
    - Set `EVM_PRIVATE_KEY` to the 64-character private key of the hot wallet.
    - `VERIFY402_NETWORKS` defaults to `eip155:8453` (Base mainnet); set it only to change rails.
@@ -287,13 +285,8 @@ VERIFY402_URL=https://vex402.online      # default
 VERIFY402_NETWORKS=eip155:8453           # default
 ```
 
-with a dedicated hot wallet holding a small amount of USDC on Base. For the
-Base Sepolia testnet demo, opt in explicitly:
-
-```bash
-VERIFY402_URL=https://verify402.onrender.com
-VERIFY402_NETWORKS=eip155:84532
-```
+with a dedicated hot wallet holding a small amount of USDC on Base. The public
+testnet demo was retired on 2026-11-19; there is no public testnet endpoint.
 
 The rails never cross: a mainnet-only policy refuses the demo's `eip155:84532`
 challenge instead of silently spending, and a testnet policy refuses a

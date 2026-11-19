@@ -103,7 +103,7 @@ If you want the agent to use paid truth checks:
 - Network: **Base mainnet (Chain ID 8453)**
 - Asset: **USDC** (`0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`)
 - Send only what you are willing to spend; this rail is real money.
-- For the Base Sepolia testnet demo instead: network `eip155:84532`, testnet USDC `0x036CbD53842c5426634e7929541eC2318f3dCF7e` from a faucet, and the demo host https://verify402.onrender.com.
+- The public Base Sepolia testnet demo was retired on 2026-11-19 (it served mainnet analysis for testnet USDC). Every paid call on the live service is on mainnet, in real USDC.
 - Recommended starting balance: a small amount of USDC is enough for several calls.
 - Typical check prices (real USDC on mainnet):
   - `get_best_route`: **$0.03**
@@ -131,7 +131,7 @@ In your MCP config `env` block, add:
 - **USDC-Only Default**: Rejects payment requests in unknown or non-standard tokens.
 - **Payee Whitelist**: Refuses payments to addresses other than `VERIFY402_PAY_TO`.
 
-> **Mainnet is the default:** the live service at https://vex402.online settles real USDC on Base + Solana mainnet via Coinbase CDP. It is operator-tested end to end (two on-chain settlements, 2026-11-18) and no external buyer has paid anything yet. The bridge defaults to `VERIFY402_URL=https://vex402.online` and `VERIFY402_NETWORKS=eip155:8453`, with a dedicated hot wallet funded with a little USDC on Base. For the Base Sepolia testnet demo, set `VERIFY402_URL=https://verify402.onrender.com` and `VERIFY402_NETWORKS=eip155:84532`; the two rails are never mixed.
+> **Mainnet is the default:** the live service at https://vex402.online settles real USDC on Base + Solana mainnet via Coinbase CDP. Eight paid calls have settled — six operator calls (0.31 USDC) and two outside x402 agents at 0.03 USDC each (2026-11-19). The bridge defaults to `VERIFY402_URL=https://vex402.online` and `VERIFY402_NETWORKS=eip155:8453`, with a dedicated hot wallet funded with a little USDC on Base. The public Base Sepolia testnet demo was retired on 2026-11-19; the only public endpoint is the mainnet service.
 
 ---
 

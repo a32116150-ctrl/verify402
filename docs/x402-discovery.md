@@ -110,8 +110,8 @@ The HTTP status code must be `402 Payment Required`.
 
 ### Facilitator Architecture
 - **Settlement Role:** In x402, facilitators are non-custodial settlement processors: they verify payer signatures and coordinate transaction broadcasts.
-- **Current public demo:** testnet settlement through the public `https://x402.org/facilitator`.
-- **Explicit mainnet (separate deployment only):** Verify402 can support keyless mainnet settlement via PayAI (`https://facilitator.payai.network`) and Coinbase CDP (`createCdpFacilitatorClient`), but this is not the public demo and requires separate readiness verification.
+- **Live settlement:** mainnet via Coinbase CDP (real USDC; proven end to end). The public testnet demo was retired on 2026-11-19.
+- **Facilitators:** Verify402 settles via Coinbase CDP. PayAI (`https://facilitator.payai.network`) remains a documented alternative.
 - **External Catalog Indexing:**
   - Some third-party facilitators and aggregators (e.g. x402scan, 402 Index) crawl hosts either via DNS TXT records (`draft-hawkins-x402-dns-discovery-02`), `.well-known/x402`, or OpenAPI documents (`/openapi.json`).
   - Neither PayAI nor CDP provides a synchronous "confirm indexed" submission API.

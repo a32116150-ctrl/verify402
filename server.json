@@ -22,19 +22,19 @@
       "environmentVariables": [
         {
           "name": "VERIFY402_URL",
-          "description": "verify402 base URL (default https://vex402.online, the live mainnet service). Point at https://verify402.onrender.com for the Base Sepolia testnet demo.",
+          "description": "verify402 base URL. Default https://vex402.online, the live mainnet service. The public Base Sepolia demo was retired on 2026-11-19; there is no public testnet endpoint.",
           "isRequired": false,
           "isSecret": false
         },
         {
           "name": "EVM_PRIVATE_KEY",
-          "description": "Private key for a dedicated hot wallet. Omit for the free preflight_gate only. verify402-mcp@2.0.1 (this published release) defaults paid calls to Base mainnet (eip155:8453) \u2014 real USDC, $0.03-$0.10 per call, capped by MAX_PAYMENT_USD. The Base Sepolia testnet demo (eip155:84532) is an explicit opt-in with its own VERIFY402_URL and VERIFY402_NETWORKS. Never use a main wallet.",
+          "description": "Private key for a dedicated hot wallet. Omit for the free preflight_gate only. verify402-mcp@2.0.1 (this published release) defaults paid calls to Base mainnet (eip155:8453) \u2014 real USDC, $0.03-$0.10 per call, capped by MAX_PAYMENT_USD. The public Base Sepolia testnet demo (eip155:84532) was retired on 2026-11-19; there is no public testnet endpoint. Never use a main wallet.",
           "isRequired": false,
           "isSecret": true
         },
         {
           "name": "VERIFY402_NETWORKS",
-          "description": "Comma-separated EVM payment networks for paid calls. Default Base mainnet (eip155:8453), real USDC; set eip155:84532 explicitly, together with the testnet demo URL, for the Base Sepolia demo. The supported network-to-canonical-asset map is constrained to Base mainnet and Base Sepolia.",
+          "description": "Comma-separated EVM payment networks for paid calls. Default Base mainnet (eip155:8453), real USDC; eip155:84532 (Base Sepolia) is no longer a public endpoint; the demo was retired on 2026-11-19. The supported network-to-canonical-asset map is constrained to Base mainnet and Base Sepolia.",
           "isRequired": false,
           "isSecret": false,
           "default": "eip155:8453"

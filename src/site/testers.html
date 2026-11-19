@@ -70,7 +70,7 @@
       <a class="btn" href="#send">Send the first intent</a>
       <a class="btn ghost" href="/preflight#try">Run one yourself first</a>
     </div>
-    <p class="small muted" style="margin-top:18px">Free and read-only. The public demo settles testnet payments only; analysis reads mainnet chain data. No wallet connection, no signup, no payment.</p>
+    <p class="small muted" style="margin-top:18px">Free and read-only. The analysis reads mainnet chain data. No wallet connection, no signup, no payment.</p>
   </div>
 
   <section class="tight">
@@ -112,7 +112,7 @@
 
         <article>
           <h3>1 · A payment you expect to pass</h3>
-          <p class="small muted" style="margin-top:10px">A normal x402 payment on the testnet demo. Replace the payee and resource with your own, or send the shape and I will adapt it.</p>
+          <p class="small muted" style="margin-top:10px">A normal x402 payment intent. Replace the payee and resource with your own, or send the shape and I will adapt it.</p>
           <details class="request" open>
             <summary>Payment intent</summary>
 <pre><span class="c">POST</span> /preflight
@@ -120,8 +120,8 @@
   <span class="y">"kind"</span>: <span class="g">"payment"</span>,
   <span class="y">"payment"</span>: {
     <span class="y">"scheme"</span>: <span class="g">"exact"</span>,
-    <span class="y">"network"</span>: <span class="g">"eip155:84532"</span>,
-    <span class="y">"asset"</span>: <span class="g">"0x036CbD53842c5426634e7929541eC2318f3dCF7e"</span>,
+    <span class="y">"network"</span>: <span class="g">"eip155:8453"</span>,
+    <span class="y">"asset"</span>: <span class="g">"0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"</span>,
     <span class="y">"amount"</span>: <span class="g">"10000"</span>,
     <span class="y">"payTo"</span>: <span class="g">"0x1111111111111111111111111111111111111111"</span>,
     <span class="y">"resource"</span>: <span class="g">"https://your-service.example/endpoint"</span>
@@ -198,7 +198,7 @@
 
       <div class="callout warn" style="margin-top:20px">
         <h3>What this is not</h3>
-        <p>No wallet connection, no payment, no mainnet settlement, no token, no funding ask. The public demo uses Base Sepolia testnet USDC; analysis reads mainnet chain data. Do not send mainnet funds for this test. The gate is a check, not an audit, a guarantee, or financial advice.</p>
+        <p>No wallet connection, no payment, no mainnet settlement, no token, no funding ask. No wallet connection, no payment, and the analysis reads mainnet chain data. The gate is a check, not an audit, a guarantee, or financial advice.</p>
       </div>
     </div>
   </section>
@@ -259,7 +259,7 @@
       <a href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener">npm package</a>
     </div>
   </div>
-  <p class="foot-legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data; demo payments are testnet. Testnet settlements on this demo are the operator's own. Mainnet receipts: vex402.online/proof. Prices are per call, paid in testnet USDC over x402; /preflight is free.</p>
+  <p class="foot-legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data. This instance settles real USDC on Base mainnet / Solana mainnet over x402. Six operator calls and two outside payments of 0.03 USDC each (2026-11-19) have settled on Base mainnet. Prices are per call, paid in USDC over x402; /preflight is free.</p>
 </footer>
 
 <script src="/assets/site.js"></script>

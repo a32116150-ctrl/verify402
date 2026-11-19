@@ -77,7 +77,7 @@
       <article id="payment">
         <p class="eyebrow">01 · A good payment</p>
         <h2 style="margin-top:14px">One curl. A real PASS.</h2>
-        <p class="lead" style="margin-top:14px">This is a canonical x402 payment request: 0.01 testnet USDC on Base Sepolia, a known payee, a known resource. Paste it as-is. The analysis reads mainnet chain data; this demo's payment rail is testnet-only.</p>
+        <p class="lead" style="margin-top:14px">This is a canonical x402 payment request: 0.01 USDC on Base mainnet, a known payee, a known resource. Paste it as-is. The analysis reads mainnet chain data; this instance's payment rail is Base mainnet / Solana mainnet.</p>
         <div style="margin-top:24px">
           <p class="code-cap">POST /preflight · free</p>
 <pre data-ui><span class="c">curl -sS -X POST</span> https://vex402.online/preflight \
@@ -86,8 +86,8 @@
     "kind": "payment",
     "payment": {
       "scheme": "exact",
-      "network": "eip155:84532",
-      "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+      "network": "eip155:8453",
+      "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
       "amount": "10000",
       "payTo": "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb",
       "resource": "https://vex402.online/verify",
@@ -96,7 +96,7 @@
     "policy": { "maxAmountUsd": 0.25, "allowedResourceHosts": ["vex402.online"] }
   }'</span></pre>
         </div>
-        <p class="small muted" style="margin-top:14px"><code class="inline">amount</code> is in raw units: <code class="inline">10000</code> = 0.01 testnet USDC (6 decimals). Free hosting sleeps: the first call after a pause can take ~30 seconds. This is the free gate: no payment is sent.</p>
+        <p class="small muted" style="margin-top:14px"><code class="inline">amount</code> is in raw units: <code class="inline">10000</code> = 0.01 USDC (6 decimals). This is the free gate: no payment is sent.</p>
         <div style="margin-top:24px">
           <p class="code-cap">Response · abbreviated</p>
 <pre data-ui>{
@@ -269,7 +269,7 @@
       <a href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener">npm package</a>
     </div>
   </div>
-  <p class="foot-legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data; demo payments are testnet. Testnet settlements on this demo are the operator's own. Mainnet receipts: vex402.online/proof. Prices are per call, paid in testnet USDC over x402; /preflight is free.</p>
+  <p class="foot-legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data. This instance settles real USDC on Base mainnet / Solana mainnet over x402. Six operator calls and two outside payments of 0.03 USDC each (2026-11-19) have settled on Base mainnet. Prices are per call, paid in USDC over x402; /preflight is free.</p>
 </footer>
 
 <script src="/assets/site.js"></script>

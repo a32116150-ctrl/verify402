@@ -16,10 +16,10 @@ verify402 is a preflight gate for agents before they sign or pay. Send it the pa
 
 ## Scope and safety
 
-- The public demo uses **Base Sepolia testnet USDC** (`eip155:84532`).
-- The analysis reads mainnet chain data, but the demo does not settle mainnet payments.
-- The preflight gate itself never moves funds.
-- **Do not send mainnet funds for this test.**
+- The only public endpoint is the mainnet service at vex402.online, settling real USDC (from $0.03 per paid call).
+- The analysis reads mainnet chain data.
+- The preflight gate itself never moves funds; it is the free way to try the product.
+- **Start with the free gate. A paid call is the cheapest honest live test.**
 - A `PASS` means the listed checks passed at that pinned block. It is not a safety guarantee, contract audit, sanctions screen, or reputation check. Read `notChecked` in every response.
 - Never send private keys, seed phrases, or unredacted wallet data. Redact addresses and amounts if needed.
 

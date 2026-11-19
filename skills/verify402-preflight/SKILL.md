@@ -211,9 +211,9 @@ exact verifier call, failure reasons, and an executor pattern.
 
 ## Paid checks: spend only when the answer changes a decision
 
-The six paid tools use x402. The public demo pays in Base Sepolia testnet USDC
-(`eip155:84532`); the analysis reads mainnet chain data. Mainnet settlement is a
-separate deployment choice, not the demo default.
+The six paid tools use x402. The public Base Sepolia testnet demo was retired
+on 2026-11-19; every paid call on the live service at vex402.online settles on
+Base mainnet in real USDC, from $0.03. The analysis reads mainnet chain data.
 
 | Tool | Price | Use it for | Do not claim |
 |---|---:|---|---|

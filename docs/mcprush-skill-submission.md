@@ -91,7 +91,7 @@ someone claims an edge. `no_edge` is treated as a valid answer.
 
 The limits are explicit: a PASS is not a guarantee, the token check is not a
 honeypot proof, `capacityUsd` is not a promise of exit, and no result is a
-profit forecast. The public demo pays in Base Sepolia testnet USDC; the
+profit forecast. The live service pays in real USDC on Base mainnet (from $0.03 per call); the
 analysis reads mainnet chain data, and mainnet settlement is not the demo
 default.
 
@@ -123,7 +123,7 @@ default.
   `sellerPayoutManifest` (`payee_payout_binding`).
 - It does not claim the token check is a honeypot proof.
 - It does not claim `no_edge` is a failure.
-- It does not ask the user to move mainnet funds. The public demo is testnet
+- It does not ask the user to move funds beyond a fixed per-call price.
   payments only.
 - The skill is free. There is no upsell gate inside it; the paid checks are
   described because the MCP server exposes them, not because the skill requires

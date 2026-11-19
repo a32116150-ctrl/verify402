@@ -309,6 +309,28 @@ app.use((_req, res, next) => {
   next();
 });
 
+// The public Base Sepolia demo at verify402.onrender.com was retired on
+// 2026-11-19. It served the same mainnet analysis for testnet USDC — free
+// product, no reason for an agent to ever pay. In testnet mode this instance
+// now redirects humans to the mainnet service and refuses everything else,
+// before any route runs. Local development and the offline test harness set
+// TESTNET_DEMO_ENABLED=1 to boot the full sandbox.
+const DEMO_RETIRED = MODE === "testnet" && process.env.TESTNET_DEMO_ENABLED !== "1";
+if (DEMO_RETIRED) {
+  const MAINNET = "https://vex402.online";
+  app.use((req, res) => {
+    if (req.method === "GET" || req.method === "HEAD") {
+      return res.redirect(301, `${MAINNET}${req.originalUrl || "/"}`);
+    }
+    return res.status(410).json({
+      ok: false,
+      error: "demo_retired",
+      message: "The public testnet demo was retired on 2026-11-19. The product is the mainnet service at https://vex402.online — free preflight gate at /preflight, paid checks from $0.03 in real USDC.",
+      redirect: MAINNET,
+    });
+  });
+}
+
 // CORS is deliberately narrow. Free, read-only discovery may be fetched by a
 // browser from any origin; paid and state-changing routes emit no ACAO at all.
 // Agents call paid routes server-side, so a wildcard there would only widen the

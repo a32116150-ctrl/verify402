@@ -18,7 +18,7 @@
 // the package defaults to it. Paying is still opt-in in the only sense that
 // matters — no EVM_PRIVATE_KEY, no signer — and every payment is bounded by
 // MAX_PAYMENT_USD (default $0.25), the pinned payee, the canonical USDC asset
-// and the paid-route list. The testnet demo is an explicit VERIFY402_URL +
+// and the paid-route list. The public testnet demo was retired on 2026-11-19.
 // VERIFY402_NETWORKS=eip155:84532 choice, never a silent fallback.
 //
 // Free-only mode never imports or constructs this policy.

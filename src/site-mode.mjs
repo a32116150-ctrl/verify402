@@ -149,12 +149,12 @@ const PAGE_PAIRS = [
     "<span>Live · Base mainnet</span><span>Solana mainnet</span>",
   ],
   [
-    "Paid calls in this testnet demo are Base Sepolia testnet USDC over x402. The npm package defaults to the live mainnet service at https://vex402.online (Base + Solana mainnet, real USDC, Coinbase CDP facilitator) — point it here instead with VERIFY402_URL=https://verify402.onrender.com and VERIFY402_NETWORKS=eip155:84532.",
-    "Paid calls on this instance settle in USDC over x402 on Base mainnet and Solana mainnet through the Coinbase CDP facilitator. The npm package defaults here: VERIFY402_URL=https://vex402.online and VERIFY402_NETWORKS=eip155:8453. The Base Sepolia testnet demo is explicit opt-in at https://verify402.onrender.com.",
+    "The public Base Sepolia testnet demo was retired on 2026-11-19; this instance serves the retirement redirect. The live service is the mainnet product at https://vex402.online.",
+    "Paid calls on this instance settle in USDC over x402 on Base mainnet and Solana mainnet through the Coinbase CDP facilitator. The npm package defaults here: VERIFY402_URL=https://vex402.online and VERIFY402_NETWORKS=eip155:8453. The public testnet demo was retired on 2026-11-19.",
   ],
   [
-    "This testnet demo's paid calls use Base Sepolia testnet USDC. The package itself now defaults to the live mainnet service at https://vex402.online (settled end to end; two outside x402 agents have paid 0.03 USDC each) — real USDC, with the same spend caps. Point the package here with VERIFY402_URL=https://verify402.onrender.com and VERIFY402_NETWORKS=eip155:84532 to use testnet instead.",
-    "Paid calls on this instance settle in USDC on Base mainnet (settled end to end; two outside x402 agents have paid 0.03 USDC each). The npm package defaults to this mainnet rail; the Base Sepolia testnet demo at https://verify402.onrender.com is explicit opt-in.",
+    "The public testnet demo was retired on 2026-11-19; this instance serves the retirement redirect. The package defaults to the live mainnet service at https://vex402.online (settled end to end; two outside x402 agents have paid 0.03 USDC each) — real USDC, with the same spend caps.",
+    "Paid calls on this instance settle in USDC on Base mainnet (settled end to end; two outside x402 agents have paid 0.03 USDC each). The npm package defaults to this mainnet rail; the public testnet demo was retired on 2026-11-19.",
   ],
   [
     'By default the bridge pays the live mainnet service: add a dedicated wallet holding a small amount of <strong>USDC on Base mainnet</strong> and leave <code class="inline">VERIFY402_NETWORKS=eip155:8453</code>.',

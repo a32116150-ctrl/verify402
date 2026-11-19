@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>verify402 — don’t sign blind</title>
-<meta name="description" content="verify402 checks the payment, calldata, and chain before an AI agent signs. A free preflight gate, six fixed-price paid checks, typed reasons, and a receipt you can verify. The mainnet service is live at vex402.online (settled end to end; two outside x402 agents have paid). Public demo payments are Base Sepolia testnet USDC; analysis reads mainnet chain data.">
+<meta name="description" content="verify402 checks the payment, calldata, and chain before an AI agent signs. A free preflight gate, six fixed-price paid checks, typed reasons, and a receipt you can verify. The mainnet service is live at vex402.online (settled end to end; two outside x402 agents have paid). Paid calls settle in real USDC on Base mainnet.">
 <meta name="google-site-verification" content="iGmI2QL110IkjnW0thU3DRZrdgQe_7mZsPWgkZVte7o">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -132,7 +132,7 @@
         <li data-reveal><b>1</b><span>independent agent audit, run against the source</span></li>
         <li data-reveal><b>2</b><span>real defects found, fixed, and covered by regression tests</span></li>
         <li data-reveal><b data-stat="mainnet-paid">—</b><span>paid calls on Base mainnet — <span data-stat="mainnet-usdc">—</span> USDC settled, chain-verifiable</span></li>
-        <li data-reveal><b data-stat="testnet-paid">—</b><span>paid calls on the Base Sepolia demo — testnet USDC</span></li>
+        <li data-reveal><b data-stat="testnet-paid">—</b><span>settlements on the retired testnet demo (historical)</span></li>
         <li data-reveal><b data-stat="outside-payers">—</b><span>outside payers on mainnet — <span data-stat="outside-usdc">—</span> USDC from wallets the operator does not control</span></li>
         <li class="ledger-note" data-reveal>Live from the chain · updated <span data-stat-updated>—</span> · <span data-stat="total-paid">—</span> paid calls across both networks · free gate <span data-stat="free-calls">—</span> checks on this instance. <a href="/proof">Read the receipts</a>.</li>
       </ul>
@@ -223,7 +223,7 @@
           <code>npx -y verify402-mcp@latest</code>
           <button type="button" data-copy="npx -y verify402-mcp@latest">Copy</button>
         </div>
-        <p class="install-note">Free mode registers only the gate. Paid mode is opt-in, capped by <code>MAX_PAYMENT_USD</code>, and pays the public demo in Base Sepolia testnet USDC.</p>
+        <p class="install-note">Free mode registers only the gate. Paid mode is opt-in, capped by <code>MAX_PAYMENT_USD</code>, and pays this instance in USDC on Base mainnet.</p>
         <p class="install-note">npm downloads · <strong data-npm-week>—</strong> last 7 days · <strong data-npm-month>—</strong> last 30. Downloads are installs, not unique agents; the count is read from the npm registry.</p>
       </div>
     </div>
@@ -252,7 +252,7 @@
     <div class="wrap">
       <p class="pricing-line" data-reveal><span>Free to check.</span><span>From <span class="price-block">$0.03</span>.</span></p>
       <div class="pricing-foot">
-        <p data-reveal>The gate costs nothing. The six paid checks are $0.03–$0.10 per call. One bundle of the paid checks at a pinned block is $0.19. Paid in USDC on Base mainnet; the public demo uses Base Sepolia testnet USDC. No subscription, no minimum, no account.</p>
+        <p data-reveal>The gate costs nothing. The six paid checks are $0.03–$0.10 per call. One bundle of the paid checks at a pinned block is $0.19. Paid in USDC on Base mainnet. No subscription, no minimum, no account.</p>
         <a class="btn" href="/checks" data-reveal>See all prices</a>
       </div>
     </div>
@@ -280,7 +280,7 @@
         </details>
         <details class="faq-item" data-reveal>
           <summary>What does it cost?</summary>
-          <p>The preflight gate and the live findings are free. The six paid checks are fixed price, from $0.03 to $0.10 per call. Paid calls use testnet USDC in the public demo; mainnet settlement is not the demo default.</p>
+          <p>The preflight gate and the live findings are free. The six paid checks are fixed price, from $0.03 to $0.10 per call. Paid calls settle in USDC on Base mainnet.</p>
         </details>
         <details class="faq-item" data-reveal>
           <summary>Do I need a wallet?</summary>
@@ -296,7 +296,7 @@
         </details>
         <details class="faq-item" data-reveal>
           <summary>Is this mainnet?</summary>
-          <p>The analysis reads mainnet chain data. Public demo payments are Base Sepolia testnet USDC. No mainnet payment service is being offered here, and no result is a profit forecast.</p>
+          <p>The analysis reads mainnet chain data. This instance settles real USDC on Base mainnet and Solana mainnet through the Coinbase CDP facilitator. No result is a profit forecast.</p>
         </details>
       </div>
     </div>
@@ -349,7 +349,7 @@
       <a href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener">npm package</a>
     </div>
   </div>
-  <p class="foot-legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data; public demo payments are Base Sepolia testnet USDC. Testnet settlements on this demo are the operator’s own. Mainnet receipts: vex402.online/proof. Prices are per call; the preflight gate is free.</p>
+  <p class="foot-legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data. This instance settles real USDC on Base mainnet / Solana mainnet over x402. Prices are per call, paid in USDC over x402; the preflight gate is free.</p>
 </footer>
 
 <script src="/assets/site.js"></script>

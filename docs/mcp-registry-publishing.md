@@ -77,9 +77,9 @@ Note: The MCP Registry strictly limits the `description` field to 100 characters
 
 The checked-in `server.json` describes the **source** release (`1.1.7`), whose
 runtime default is Base mainnet (`eip155:8453`, real USDC). It declares that
-default explicitly; the Base Sepolia testnet demo (`eip155:84532`) is an
-explicit opt-in via `VERIFY402_URL` and `VERIFY402_NETWORKS`. This metadata is
-only truthful once the `1.1.7` package artifact actually exists and is
+default explicitly. The public Base Sepolia testnet demo was retired on
+2026-11-19; there is no public testnet endpoint. This metadata is only
+truthful once the version the registry entry names actually exists and is
 published. Publish the registry entry only for the version that is really
 published.
 

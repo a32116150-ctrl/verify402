@@ -5,9 +5,8 @@ API key required for the free tool.
 
 The service is live on **Base mainnet** (`eip155:8453`): paid calls settle in
 real USDC, and the analysis reads mainnet chain data. A Base Sepolia testnet
-demo (`eip155:84532`, testnet USDC
-`0x036CbD53842c5426634e7929541eC2318f3dCF7e`, https://verify402.onrender.com)
-is available if you want to try the payment rail without spending real money.
+The live service is at https://vex402.online (mainnet); the public testnet
+demo was retired on 2026-11-19.
 
 ## 1. Warm the npx cache once
 
@@ -18,7 +17,7 @@ takes more than 30 seconds to start, so run this once first:
 npx -y verify402-mcp@2.0.1 --help
 ```
 
-This pins the published `2.0.1` package. Paid tools default to real USDC on Base mainnet at https://vex402.online; the testnet demo is an explicit opt-in.
+This pins the published `2.0.1` package. Paid tools default to real USDC on Base mainnet at https://vex402.online; there is no public testnet endpoint (demo retired 2026-11-19).
 
 Expected: a usage line listing the free tools (`preflight_gate`, `inspect_402`, `directory_402`) and the six paid tools.
 
@@ -82,11 +81,9 @@ MAX_DAILY_USD=0.50              # optional UTC-day cap
 VERIFY402_NETWORKS=eip155:8453  # default: Base mainnet, real USDC
 ```
 
-Never use a main wallet. The bridge signs x402 payments only; it never signs or
-broadcasts a trade. For the Base Sepolia testnet demo instead, set
-`VERIFY402_URL=https://verify402.onrender.com` and
-`VERIFY402_NETWORKS=eip155:84532`; the two rails are never mixed, and an
-unexpected network is refused before signing.
+Never use a main wallet. The bridge signs x402 payments only; it never signs
+or broadcasts a trade. The public testnet demo was retired on 2026-11-19; there
+is no public testnet endpoint.
 
 ## Uninstall
 

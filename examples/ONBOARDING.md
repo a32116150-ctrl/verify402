@@ -11,10 +11,8 @@ receipt bound to that exact intent, the request body, and a fresh pinned block.
 Live: **https://vex402.online**
 
 > The live service settles payments in **real USDC on Base mainnet**
-> (`eip155:8453`). The free gate itself never moves funds. A Base Sepolia
-> testnet demo (`eip155:84532`) is available at
-> https://verify402.onrender.com — it runs on a free host, so the first call
-> after a sleep can take ~30 s.
+> (`eip155:8453`). The free gate itself never moves funds. The public testnet
+> demo was retired on 2026-11-19; the live service is the only endpoint.
 
 ---
 
@@ -40,8 +38,7 @@ curl -sS -X POST https://vex402.online/preflight \
 
 `amount` is in raw units: `10000` = **0.01 USDC** (6 decimals).
 `network` `eip155:8453` is Base mainnet, the live payment rail.
-`asset` is canonical USDC on Base. For the testnet demo, use `eip155:84532`
-and testnet USDC `0x036CbD53842c5426634e7929541eC2318f3dCF7e`.
+`asset` is canonical USDC on Base (`0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`).
 
 You should get:
 
@@ -149,7 +146,7 @@ Warm the `npx` cache once:
 npx -y verify402-mcp@2.0.1 --help
 ```
 
-This pins the published `2.0.1` package. Paid tools default to real USDC on Base mainnet at https://vex402.online; the Base Sepolia testnet demo is an explicit opt-in.
+This pins the published `2.0.1` package. Paid tools default to real USDC on Base mainnet at https://vex402.online; the public testnet demo was retired on 2026-11-19.
 
 Then add it to Claude Desktop / Cursor (`.cursor/mcp.json`):
 

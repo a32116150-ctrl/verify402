@@ -196,7 +196,7 @@ export function buildServiceManifest({
             name: "EVM_PRIVATE_KEY",
             description: mode === "mainnet"
               ? "Private key for a dedicated hot wallet. Required only for the 6 paid tools; omit for free-only preflight_gate. This instance is configured for Base mainnet USDC; mainnet operation requires separate readiness verification."
-              : `Private key for a dedicated hot wallet. Required only for the 6 paid tools; omit for free-only preflight_gate. This release (verify402-mcp@${PUBLISHED_VERSION}) defaults paid calls to Base Sepolia testnet (${DEMO_NETWORK}) for the public demo. Base mainnet (${MAINNET_NETWORK}) is an explicit opt-in for a separate deployment and is not enabled by this release. Fund only Base Sepolia testnet USDC for this demo.`,
+              : `Private key for a dedicated hot wallet. Required only for the 6 paid tools; omit for free-only preflight_gate. This local testnet sandbox (${DEMO_NETWORK}) is not a public endpoint — the public testnet demo was retired on 2026-11-19; the only public endpoint is the mainnet service at https://vex402.online (${MAINNET_NETWORK}, real USDC). Fund only what you are willing to spend.`,
             isRequired: false,
             isSecret: true,
           },

@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Activity — testnet explorer for verify402</title>
-<meta name="description" content="A testnet explorer for verify402: every payment the service received on Base Sepolia, every verdict it published, and a search box for a transaction hash, address, pair, or verdict.">
+<title>Activity — mainnet explorer for verify402</title>
+<meta name="description" content="A mainnet explorer for verify402: every payment the service received on Base, every verdict it published, and a search box for a transaction hash, address, pair, or verdict.">
 <meta name="google-site-verification" content="iGmIQL110IkjnW0thU3DRZrdgQe_7mZsPWgkZVte7o">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -55,15 +55,15 @@
   </div>
 </header>
 
-<div class="net-ribbon" role="note">
-  <strong>TESTNET</strong> · Base Sepolia · every payment on this page is testnet USDC. The live mainnet instance is <a class="textlink" href="https://vex402.online/info">vex402.online</a>.
+<div class="net-ribbon mainnet" role="note">
+  <strong>MAINNET</strong> · Base · every payment on this page is real USDC.
 </div>
 
 <main>
   <div class="wrap page-head">
-    <p class="eyebrow">On-chain · testnet <span class="tag-testnet">TESTNET</span></p>
+    <p class="eyebrow">On-chain · mainnet <span class="tag-mainnet">MAINNET</span></p>
     <h1>Payments in.<br>Verdicts out.</h1>
-    <p class="lead">A testnet explorer for this service: every payment it received, every verdict it published, and a search box for a hash, an address, a pair, or a verdict.</p>
+    <p class="lead">A mainnet explorer for this service: every payment it received, every verdict it published, and a search box for a hash, an address, a pair, or a verdict.</p>
     <div class="btn-row" style="margin-top:24px">
       <a class="btn" href="/proof">See the proof page</a>
       <a class="btn ghost" href="#tests">Test results</a>
@@ -86,14 +86,14 @@
         <div class="vcard-body">
           <div class="table-wrap">
             <table class="table">
-              <thead><tr><th>Time (UTC)</th><th>Amount (testnet USDC)</th><th>From</th><th>Transaction</th></tr></thead>
+              <thead><tr><th>Time (UTC)</th><th>Amount (USDC)</th><th>From</th><th>Transaction</th></tr></thead>
               <tbody data-settlements>
                 <tr><td colspan="4" class="muted">loading…</td></tr>
               </tbody>
             </table>
           </div>
         </div>
-        <div class="vcard-foot"><span data-total>—</span> · <a class="textlink" data-address href="#">payTo</a> · Base Sepolia testnet</div>
+        <div class="vcard-foot"><span data-total>—</span> · <a class="textlink" data-address href="#">payTo</a> · Base mainnet</div>
       </div>
 
       <div class="vcard" data-panel="verdicts" hidden>
@@ -125,7 +125,7 @@
     <div class="wrap">
       <div class="callout warn">
         <h3>Two networks, one page. Read the label.</h3>
-        <p><strong>Payments</strong> are Base Sepolia testnet USDC. The live mainnet instance is <a class="textlink" href="https://vex402.online/info">vex402.online</a>. <strong>Verdicts</strong> are measurements of public Ethereum mainnet liquidity; they are not payments. <a class="textlink" href="/info">/info</a> states the mode the process is actually running in, and <a class="textlink" href="/health">/health</a> states the recovery store.</p>
+        <p><strong>Payments</strong> are real USDC on Base mainnet. <strong>Verdicts</strong> are measurements of public Ethereum mainnet liquidity; they are not payments. <a class="textlink" href="/info">/info</a> states the mode the process is actually running in, and <a class="textlink" href="/health">/health</a> states the recovery store.</p>
       </div>
     </div>
   </section>
@@ -192,7 +192,7 @@
       <a href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener">npm package</a>
     </div>
   </div>
-  <p class="foot-legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data; demo payments are testnet. Testnet settlements on this demo are the operator's own. Mainnet receipts: vex402.online/proof. Prices are per call, paid in testnet USDC over x402.</p>
+  <p class="foot-legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data. This instance settles real USDC on Base mainnet / Solana mainnet over x402. Six operator calls and two outside payments of 0.03 USDC each (2026-11-19) have settled on Base mainnet. Prices are per call, paid in USDC over x402.</p>
 </footer>
 
 <script src="/assets/site.js"></script>

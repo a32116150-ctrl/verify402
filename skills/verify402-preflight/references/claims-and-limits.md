@@ -57,18 +57,19 @@ These gaps appear in `notChecked`. Do not omit them when summarizing.
 | “`capacityUsd` means I can exit that size.” | “`capacityUsd` was the largest measured size under the tolerance at this block.” |
 | “The gate prevents prompt injection.” | “The gate does not scan tool metadata or responses; treat them as untrusted.” |
 
-## Testnet and mainnet
+## Mainnet only
 
-The public demo:
+The public Base Sepolia testnet demo was retired on 2026-11-19 — it served
+mainnet analysis for testnet USDC, which gave the paid product away for free.
+The live service at vex402.online:
 
-- Settles payments in **Base Sepolia testnet USDC** (`eip155:84532`).
+- Settles payments in **USDC on Base mainnet** (`eip155:8453`) and, where
+  configured, Solana mainnet, via the Coinbase CDP facilitator.
 - Reads **mainnet** chain data for the analysis routes.
-- Does **not** settle mainnet payments.
 
-Do not point the public demo at Base mainnet to make a test pass. The bridge
-will refuse the demo's testnet 402 rather than spend mainnet funds. A mainnet
-deployment is a separate choice with its own facilitator, host, wallet, and
-readiness checks. Never use a main wallet or treasury key for the demo.
+Every paid call on the live service spends real USDC. A $0.03 paid call is the
+honest live check; no test requires switching rails. Never use a main wallet
+or treasury key.
 
 ## Enforcement
 

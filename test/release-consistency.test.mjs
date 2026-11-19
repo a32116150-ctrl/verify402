@@ -179,7 +179,7 @@ test("MCP Registry metadata truthfully describes the published package release",
 test("public surfaces do not advertise mainnet as the demo payment rail", () => {
   const landing = read("src/landing.html");
   assert.doesNotMatch(landing, /Mainnet-armed/i);
-  assert.match(landing, /testnet USDC/i);
+  assert.match(landing, /real USDC on Base mainnet/i);
   assert.match(landing, /mainnet chain data/i);
 
   const serverSource = read("src/server.mjs");
@@ -195,7 +195,7 @@ test("public surfaces do not advertise mainnet as the demo payment rail", () => 
 
   const checks = read("src/site/checks.html");
   assert.doesNotMatch(checks, /USDC over x402 on Base or Solana/i);
-  assert.match(checks, /Base Sepolia/);
+  assert.match(checks, /USDC on Base mainnet/i);
 
   const bridgeIndex = read("mcp-bridge/index.mjs");
   assert.match(bridgeIndex, /createPaymentPolicyFromEnv/);
@@ -210,7 +210,7 @@ test("public surfaces do not advertise mainnet as the demo payment rail", () => 
   const serviceManifest = read("docs/service-manifest.md");
   assert.doesNotMatch(serviceManifest, /Published GitHub release asset/i);
   assert.match(serviceManifest, /registry\.npmjs\.org\/verify402-mcp/);
-  assert.match(serviceManifest, /eip155:84532/);
+  assert.match(serviceManifest, /retired on 2026-11-19/);
   assert.match(serviceManifest, /PAYMENT-SIGNATURE/);
 
   const discovery = read("docs/x402-discovery.md");
@@ -313,32 +313,26 @@ test("runtime metadata follows the configured mode instead of hardcoding the dem
   assert.match(buildInfoHosting("mainnet").status, /does not claim production validation/);
 });
 
-test("public docs describe the mainnet default and the explicit testnet demo", () => {
+test("public docs describe the mainnet service and record the testnet demo retirement", () => {
   const docs = [
     "README.md",
     "examples/ONBOARDING.md",
     "mcp-bridge/llms-install.md",
     "docs/ai-agent-guide.md",
-    "src/site/start.html",
-    "src/site/preflight.html",
-    "src/site/docs.html",
   ];
 
   for (const rel of docs) {
     const text = read(rel);
-    assert.match(text, /eip155:84532/, `${rel} must still describe the testnet demo network`);
-    assert.match(text, new RegExp(TESTNET_USDC, "i"), `${rel} must name testnet USDC`);
-    assert.match(text, /testnet/i, `${rel} must say the demo payment rail is testnet`);
+    assert.match(text, /retired on 2026-11-19/, `${rel} must record the demo retirement`);
   }
 
   const readme = read("README.md");
   assert.match(readme, /"VERIFY402_NETWORKS": "eip155:8453"/);
   assert.match(readme, /mainnet chain data/i);
-  assert.match(readme, /testnet[\s\S]{0,1600}VERIFY402_NETWORKS=eip155:84532/i);
 
   const envExample = read(".env.example");
   assert.match(envExample, /VERIFY402_NETWORKS=eip155:8453/);
-  assert.match(envExample, /VERIFY402_NETWORKS=eip155:84532/);
+  assert.match(envExample, /retired on 2026-11-19/);
 
   // An active line is the default; a commented line is only documentation.
   const activeEnv = envExample
@@ -357,10 +351,10 @@ test("public docs describe the mainnet default and the explicit testnet demo", (
   assert.doesNotMatch(activeBridgeEnv, /^VERIFY402_NETWORKS=eip155:84532$/m);
 
   const bridgeReadme = read("mcp-bridge/README.md");
-  assert.match(bridgeReadme, /testnet USDC/i);
-  assert.match(bridgeReadme, /eip155:84532/);
+  assert.match(bridgeReadme, /retired on 2026-11-19/);
+  assert.match(bridgeReadme, /eip155:8453/);
   assert.match(bridgeReadme, /Published package note/i);
-  assert.match(bridgeReadme, /Defaults are Base mainnet/i);
+  assert.match(bridgeReadme, /Base mainnet/i);
 
   for (const name of fs.readdirSync(path.join(ROOT, "src/site"))) {
     if (!name.endsWith(".html")) continue;
@@ -530,7 +524,7 @@ test("registry metadata describes the published package without claiming registr
   assert.match(description, /Base mainnet/);
   assert.doesNotMatch(description, /unpublished|candidate/i);
   assert.match(description, /defaults paid calls to Base mainnet/i, "this release must state the mainnet default");
-  assert.match(description, /explicit opt-in/i);
+  assert.match(description, /retired on 2026-11-19/i);
 
   const networks = pkg.environmentVariables.find((entry) => entry.name === "VERIFY402_NETWORKS");
   assert.equal(

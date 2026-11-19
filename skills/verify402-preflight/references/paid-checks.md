@@ -4,9 +4,10 @@ These are the paid verify402 tools exposed by the MCP bridge. They use x402:
 the bridge pays per call from its configured wallet. They are not a
 subscription, and they do not sign or send a trade.
 
-**Public demo:** payments are Base Sepolia testnet USDC (`eip155:84532`). The
-analysis reads mainnet chain data. Mainnet settlement is a separate deployment
-choice, not the demo default.
+**Live service:** the public Base Sepolia testnet demo was retired on
+2026-11-19 — the only public endpoint is the mainnet service at vex402.online,
+settling real USDC on Base / Solana mainnet via the Coinbase CDP facilitator.
+Prices are fixed per call; no subscription, no minimum.
 
 **Free-only install:** without `EVM_PRIVATE_KEY`, only `preflight_gate` is
 registered. Do not promise paid results when the wallet is not configured.
@@ -190,7 +191,7 @@ The MCP bridge enforces these before a payment signature:
 
 - `MAX_PAYMENT_USD` — hard cap on one payment (default `0.25`).
 - `MAX_DAILY_USD` — optional UTC-day cap, persisted in a small ledger.
-- `VERIFY402_NETWORKS` — network allowlist (public demo: `eip155:84532`).
+- `VERIFY402_NETWORKS` — network allowlist (default `eip155:8453`, Base mainnet).
 - `VERIFY402_PAY_TO` — the payee the 402 must name.
 - `VERIFY402_RESOURCE_PREFIX` — the resource prefix the 402 must match.
 
@@ -198,9 +199,9 @@ A 402 that names another network, payee, resource, or a higher amount is
 refused before a signature exists. The bridge signs the payment only; it never
 signs or sends a trade.
 
-Never use a main wallet or a treasury key. For the public demo, use a dedicated
-wallet holding only testnet USDC. Do not switch to mainnet to make a test pass;
-the bridge will fail closed against the demo's testnet 402.
+Never use a main wallet or a treasury key. Use a dedicated hot wallet holding
+only what you are willing to spend. A $0.03 paid call is the honest live check;
+no test requires switching rails.
 
 ## Failure behavior
 

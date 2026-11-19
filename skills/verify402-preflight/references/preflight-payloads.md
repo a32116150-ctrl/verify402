@@ -3,20 +3,22 @@
 Exact shapes for `POST /preflight` and the MCP `preflight_gate` tool. The MCP
 tool accepts the same fields as the JSON body.
 
-## Base Sepolia testnet constants
+## Base mainnet constants
 
-Used by the public demo. Do not substitute these for mainnet values.
+The only public endpoint is the live service at vex402.online. Do not
+substitute these for testnet values, and do not send mainnet funds beyond what
+you intend to spend.
 
 | Item | Value |
 |---|---|
-| Network | `eip155:84532` (Base Sepolia) |
-| Chain id | `84532` |
-| Testnet USDC | `0x036CbD53842c5426634e7929541eC2318f3dCF7e` |
-| Demo payee | `0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb` |
-| Demo host | `vex402.online` |
+| Network | `eip155:8453` (Base mainnet) |
+| Chain id | `8453` |
+| Canonical USDC | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` |
+| Payee | `0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb` |
+| Host | `vex402.online` |
 
-The public demo settles payments in testnet USDC. The analysis routes read
-mainnet chain data. A testnet payment is not mainnet revenue.
+Payments settle on Base mainnet in real USDC. The analysis routes read
+mainnet chain data.
 
 ## Payment intent
 

@@ -76,9 +76,9 @@ Tools are exposed through both REST endpoints (`src/server.mjs`) and the MCP Bri
 
 ## 4. When Adding a Supported Blockchain or Network
 
-Verify402's analysis supports Ethereum, Base, and Arbitrum; payment rails include
-Base Sepolia / Solana devnet for the public demo and Base / Solana mainnet only
-for an explicit future deployment. If adding another chain (e.g. Polygon):
+Verify402's analysis supports Ethereum, Base, and Arbitrum; payment rails are
+Base / Solana mainnet only — the public testnet demo was retired on 2026-11-19.
+If adding another chain (e.g. Polygon):
 1. Configure chain in `src/config.mjs` (`CHAINS`).
 2. Add network CAIP-2 identifier to `NETWORKS` in `src/server.mjs`.
 3. Update `src/manifest.mjs` (`supportedNetworks`).
