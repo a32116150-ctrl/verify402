@@ -94,7 +94,7 @@ Paste this into your client config file:
 ```
 
 #### Option B: Paid Mode (Unlocks 5 Deep Truth Checks)
-Unlocks the six paid x402 checks (`verify_arbitrage`, `check_token_safety`, `get_best_route`, `verify_quote_fairness`, `get_trade_depth`, `get_assurance`). The agent pays per call via x402 in **real USDC on Base mainnet** — $0.03 to $0.10 per call, capped by `MAX_PAYMENT_USD`. The analysis reads mainnet chain data.
+Unlocks the six paid x402 checks (`verify_arbitrage`, `check_token_safety`, `get_best_route`, `verify_quote_fairness`, `get_trade_depth`, `get_assurance`). The agent pays per call via x402 in **real USDC on Base mainnet** — $0.03 to $0.10 per call, or $0.19 for the assurance bundle, capped by `MAX_PAYMENT_USD`. The analysis reads mainnet chain data.
 
 ```json
 {
@@ -134,7 +134,7 @@ If you want your agent to use the paid truth tools, follow these 4 steps to set 
    - Copy the wallet's private key (hex string starting with `0x`) into the `EVM_PRIVATE_KEY` field in your MCP config.
    - *Client-Side Guardrails*: The bridge enforces `MAX_PAYMENT_USD` (hard cap per call, default $0.25) and `MAX_DAILY_USD` (daily budget cap) before any signature can be created. This caps what the bridge can authorize; it is **not** protection against a compromised private key.
 
-#### Mainnet is the default; testnet is the opt-in
+#### One rail: mainnet
 
 The service is live on Base + Solana mainnet — real USDC via the Coinbase CDP facilitator, an always-on host, and a mainnet payee. The bridge defaults to Base mainnet (`eip155:8453`), so the only required paid-mode setting is the wallet key:
 
@@ -234,7 +234,7 @@ come out profitable.* If it ever does, the engine is wrong until proven otherwis
 ```bash
 npm install
 npm test                              # full suite (RPC checks need network)
-node src/server.mjs                   # testnet payment mode
+node src/server.mjs                   # boots the testnet sandbox (local dev; public demo retired 2026-11-19)
 BYPASS_PAYMENT=1 node src/server.mjs  # local dev only - loud warning, no billing
 X402_MODE=mainnet FACILITATOR_URL=... AGENT_URL=https://verify402.example node src/server.mjs
 ```
@@ -514,13 +514,13 @@ or any MCP client.
   separate MCP bridge calls from generic HTTP. Labels are self-declared and
   spoofable, not identities.
 - **Install:** `npx -y verify402-mcp@latest` from the public npm registry
-  (currently `2.0.1`). For a pinned install of the published package, use
-  `npx -y verify402-mcp@2.0.1`; its npm tarball is
-  `https://registry.npmjs.org/verify402-mcp/-/verify402-mcp-2.0.1.tgz`. `1.1.6`
+  (currently `2.5.0`). For a pinned install of the published package, use
+  `npx -y verify402-mcp@2.5.0`; its npm tarball is
+  `https://registry.npmjs.org/verify402-mcp/-/verify402-mcp-2.5.0.tgz`. `1.1.6`
   moved the paid-call default to the live Base mainnet rail (`eip155:8453`,
   real USDC), with the same spend caps; the retired Base Sepolia testnet demo
   (`eip155:84532`) is an explicit opt-in via `VERIFY402_URL` and
-  `VERIFY402_NETWORKS`. `2.0.0` adds the paid assurance endpoint and the hash-bound evidence bundle; `1.1.7` was a metadata-only correction so the MCP
+  `VERIFY402_NETWORKS`. `2.5.0` retires the testnet demo — paid calls are mainnet-only (real USDC); `2.0.0` added the paid assurance endpoint and the hash-bound evidence bundle; `1.1.7` was a metadata-only correction so the MCP
   Registry advertises that same mainnet default. No npm account is required to
   run the published package. Client configs, the exact OpenCode V2 shape, and
   the release command are at [`/mcp`](https://vex402.online/mcp). The immutable
@@ -540,7 +540,7 @@ or any MCP client.
 > construction**: one server process per database file (see `DEPLOY.md` §3.1).
 
 - **Delivery:** the verdict is returned inside the settlement response — the paid answer
-  arrives together with the payment confirmation (testnet receipt: tx
+  arrives together with the payment confirmation (historical testnet receipt, before the demo retired: tx
   `0x11121007bafec47f132763f42e2f58af6ebba7fba9c7ed1b5980d3f595a9324a`).
 - **Recovery — implemented (`x-idempotency-key`):** send the header on the FIRST call of an
   operation, minting ONE key per operation. If the response is lost after settlement,
@@ -655,7 +655,7 @@ or any MCP client.
 2. `GET  https://vex402.online/findings` — free verdicts on majors; see the honest `no_edge` baseline.
 3. `POST /verify` with your question (`{"chainId":1,"target":"WETH","size":100000}`) and no payment → HTTP 402.
 4. Read the payment instructions from the `PAYMENT-REQUIRED` response header.
-5. Build an x402 payment for ≤ the stated price (Node example: `mcp-bridge/first-payment.mjs`; MCP users: `mcp-bridge/`). The live challenge is Base mainnet (`eip155:8453`); the demo challenge is Base Sepolia (`eip155:84532`). Pay the rail you actually opted into.
+5. Build an x402 payment for ≤ the stated price (Node example: `mcp-bridge/first-payment.mjs`; MCP users: `mcp-bridge/`). The live challenge is Base mainnet (`eip155:8453`).
 6. Re-send the same request with the proof in the `PAYMENT-SIGNATURE` header (x402 v2; the legacy `x-payment` header is also accepted). The verdict arrives with the settlement response.
 7. On a retry/restart, add `x-idempotency-key: <crypto.randomUUID()>` to step 3 so lost responses replay free instead of paying twice. The key is a secret; a leaked key allows replay until the TTL/cap.
 8. Verify the receipt: `evidence_bundle.responseHash` must equal sha256(canonical JSON of the body minus `evidence_bundle`, `recovery`, `cache`, `elapsedMs`).

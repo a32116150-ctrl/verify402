@@ -3,6 +3,25 @@
 All notable changes to verify402. This file records repository changes; it does
 not imply a deploy or an npm publish.
 
+## 2.5.0 — 2026-11-19
+
+The mainnet-only release. The public Base Sepolia testnet demo is gone — it
+served real mainnet analysis for testnet USDC, which gave the paid product
+away for free. Every paid call on the live service settles real USDC on
+Base mainnet / Solana mainnet via the Coinbase CDP facilitator, from $0.03
+per call ($0.19 for the assure bundle).
+
+- The public testnet demo at verify402.onrender.com was retired on
+  2026-11-19: GET/HEAD redirect to https://vex402.online, everything else
+  answers 410 demo_retired. The static site now carries one truthful mainnet
+  version of every page.
+- Docs, skill, bridge help text and registry metadata all record the
+  retirement; the landing page labels the testnet ledger counter as historical.
+- No tool, price, schema or policy change against 2.0.1 beyond the
+  retirement; six paid checks including get_assurance ($0.19).
+Published as `verify402-mcp@2.5.0`; the live service, npm and the registry
+will be updated to the same identity.
+
 ## 2.0.1 — 2026-11-19
 
 Consistency patch over 2.0.0 — text and metadata only, no behavior change.

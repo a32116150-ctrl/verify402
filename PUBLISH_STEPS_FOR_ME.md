@@ -539,7 +539,7 @@ Deployed only after the registry and npm versions were verified. Superseded by 2
 
 ## Release verify402-mcp 2.0.1 — for me
 
-Status: **prepared, not published, not deployed, registry entry not updated.**
+Status: **published on npm 2026-11-19 and deployed; registry entry updated by the operator.**
 2.0.1 is a consistency patch over 2.0.0 — text and metadata only, no behavior change.
 
 ## Validate and inspect the release
@@ -556,6 +556,29 @@ Update `src/version.mjs`, `PUBLISHED_VERSION`, and the MCP Registry entry only a
 
 ## Verify the actual 2.0.1 registry version
 Check the MCP Registry and npm for `2.0.1`.
+
+Deployed after the registry and npm versions were verified. Superseded by 2.5.0.
+
+## Release verify402-mcp 2.5.0 — for me
+
+Status: **prepared, not published.**
+The mainnet-only release. The testnet demo is retired; paid calls are
+mainnet-only.
+
+## Validate and inspect the release
+Run `npm run test:offline` and inspect the release metadata before changing anything.
+
+## Create and verify the npm 2.5.0 artifact
+Build and verify the npm tarball for `verify402-mcp@2.5.0`.
+
+## Publish npm 2.5.0
+Publish to npm with the authenticator code. This step runs only when the npm 2.5.0 artifact exists and is verified.
+
+## Transition the release metadata to published 2.5.0
+Update `src/version.mjs`, `PUBLISHED_VERSION`, and the MCP Registry entry only after npm succeeds.
+
+## Verify the actual 2.5.0 registry version
+Check the MCP Registry and npm for `2.5.0`.
 
 ## Deploy only after
 Deploy only after the registry and npm versions are verified.

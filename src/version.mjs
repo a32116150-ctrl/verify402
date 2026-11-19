@@ -2,12 +2,12 @@
 // The published npm package has its own package.json; the release-consistency
 // test asserts that this constant, mcp-bridge/package.json, server.json,
 // package-lock.json, the manifest, OpenAPI, and the /mcp page agree.
-export const RELEASE_VERSION = "2.0.1";
+export const RELEASE_VERSION = "2.5.0";
 
 // The version a user can actually install from the public npm registry today.
-// 2.0.0 is the v2 release (assure bundle, six paid tools); 2.0.1 is a
-// consistency patch over it — text and metadata only, no behavior change.
-export const PUBLISHED_VERSION = "2.0.1";
+// 2.0.0 is the v2 release (assure bundle, six paid tools); 2.0.1 a consistency
+// patch; 2.5.0 the mainnet-only release (the testnet demo retired 2026-11-19).
+export const PUBLISHED_VERSION = "2.5.0";
 
 // Machine-readable statement of where this source tree sits in the release
 // process. "published" means the npm artifact exists and was verified:

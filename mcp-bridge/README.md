@@ -12,12 +12,11 @@ wallet. The analysis reads mainnet chain data. The public Base Sepolia testnet d
 retired on 2026-11-19 — the live service at https://vex402.online is the only
 public endpoint. The bridge never signs or sends a trade.
 
-> **Published package note:** `verify402-mcp@2.0.1` is published to npm and
-> defaults paid calls to Base mainnet (`eip155:8453`) — real USDC. The public
-> testnet demo was retired on 2026-11-19; paid calls default to, and are,
-> mainnet. 2.0.1 is a consistency patch (text and metadata only). All
-> published versions are immutable. Do not republish or overwrite
-> any published version.
+> **Published package note:** `verify402-mcp@2.5.0` is published to npm and
+> paid calls default to Base mainnet (`eip155:8453`) — real USDC. The public
+> testnet demo was retired on 2026-11-19; the live service is the only
+> endpoint. 2.5.0 is the mainnet-only release. All published versions are
+> immutable. Do not republish or overwrite any published version.
 
 ## Anonymous usage telemetry (opt-in)
 
