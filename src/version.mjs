@@ -2,13 +2,13 @@
 // The published npm package has its own package.json; the release-consistency
 // test asserts that this constant, mcp-bridge/package.json, server.json,
 // package-lock.json, the manifest, OpenAPI, and the /mcp page agree.
-export const RELEASE_VERSION = "1.1.7";
+export const RELEASE_VERSION = "2.0.0";
 
 // The version a user can actually install from the public npm registry today.
 // 1.1.6 flipped the paid-call default to the live Base mainnet rail
 // (eip155:8453); 1.1.7 is a metadata-only correction so the MCP Registry
 // advertises that same default instead of the old testnet one.
-export const PUBLISHED_VERSION = "1.1.7";
+export const PUBLISHED_VERSION = "2.0.0";
 
 // Machine-readable statement of where this source tree sits in the release
 // process. "published" means the npm artifact exists and was verified:

@@ -501,7 +501,7 @@ curl -s "https://registry.modelcontextprotocol.io/v0.1/servers/io.github.a321161
 Expect `version: "1.1.7"`, the Base mainnet default, `status: active`, and
 `isLatest: true`. If validation rejects a field, correct it — never fabricate.
 
-## Deploy only after a separate approval
+## Deploy after separate approval
 
 After npm publish is verified: push the release commit, then on the VPS:
 
@@ -514,3 +514,26 @@ curl -s https://vex402.online/health
 ```
 
 Expect `mode: mainnet`, `recoveryStore: ok`, `version: 1.1.7`.
+
+# Release verify402-mcp 2.0.0 — for me
+
+Status: **prepared, not published, not deployed, registry entry not updated.**
+`2.0.0` adds the paid assurance endpoint and the v2 positioning.
+
+## Validate and inspect the release
+Run `npm run test:offline` and inspect the release metadata before changing anything.
+
+## Create and verify the npm 2.0.0 artifact
+Build and verify the npm tarball for `verify402-mcp@2.0.0`.
+
+## Publish npm 2.0.0
+Publish to npm with the authenticator code. This step runs only when the npm 2.0.0 artifact exists and is verified.
+
+## Transition the release metadata to published 2.0.0
+Update `src/version.mjs`, `PUBLISHED_VERSION`, and the MCP Registry entry only after npm succeeds.
+
+## Verify the actual 2.0.0 registry version
+Check the MCP Registry and npm for `2.0.0`.
+
+## Deploy only after
+Deploy only after the registry and npm versions are verified.

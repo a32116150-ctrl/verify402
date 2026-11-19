@@ -15,10 +15,10 @@ The first run downloads the MCP SDK and `viem`. Some clients kill a server that
 takes more than 30 seconds to start, so run this once first:
 
 ```bash
-npx -y verify402-mcp@1.1.7 --help
+npx -y verify402-mcp@2.0.0 --help
 ```
 
-This pins the published `1.1.7` package. Paid tools default to real USDC on Base mainnet at https://vex402.online; the testnet demo is an explicit opt-in.
+This pins the published `2.0.0` package. Paid tools default to real USDC on Base mainnet at https://vex402.online; the testnet demo is an explicit opt-in.
 
 Expected: a usage line listing the free tools (`preflight_gate`, `inspect_402`, `directory_402`) and the five paid tools.
 
@@ -33,7 +33,7 @@ Free gate only — no wallet, nothing can be charged:
       "command": "npx",
       "args": [
         "-y",
-        "verify402-mcp@1.1.7"
+        "verify402-mcp@2.0.0"
       ],
       "env": {
         "VERIFY402_URL": "https://vex402.online"
