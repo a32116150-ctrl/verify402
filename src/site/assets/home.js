@@ -114,4 +114,53 @@
       .catch(function () {});
   }
 
+  // Live paid-usage counters: one same-origin /stats fetch, refreshed once a
+  // minute. A dash is better than a made-up number while the chain read runs.
+  var statEls = document.querySelectorAll("[data-stat]");
+  if (statEls.length) {
+    var fmtStat = function (value) {
+      if (typeof value === "number") return value.toLocaleString("en-US");
+      if (typeof value === "string" && value) return value;
+      return "—";
+    };
+    var paintStats = function (data) {
+      var mainnet = data && data.mainnet;
+      var testnet = data && data.testnet;
+      var total = (mainnet && testnet)
+        ? mainnet.paidCalls + testnet.paidCalls
+        : null;
+      var values = {
+        "mainnet-paid": mainnet && mainnet.paidCalls,
+        "mainnet-usdc": mainnet && mainnet.usdc,
+        "testnet-paid": testnet && testnet.paidCalls,
+        "outside-payers": mainnet && mainnet.outsidePayers,
+        "outside-usdc": mainnet && mainnet.outsideUsdc,
+        "free-calls": data && data.freeCalls,
+        "total-paid": total
+      };
+      Object.keys(values).forEach(function (key) {
+        var els = document.querySelectorAll('[data-stat="' + key + '"]');
+        Array.prototype.forEach.call(els, function (el) {
+          el.textContent = fmtStat(values[key]);
+        });
+      });
+      var updated = document.querySelector("[data-stat-updated]");
+      if (updated && data && data.fetchedAt) {
+        var date = new Date(data.fetchedAt);
+        updated.textContent = isNaN(date.getTime()) ? "—" : date.toISOString().slice(11, 16) + " UTC";
+      }
+    };
+    var loadStats = function () {
+      fetch("/stats", { cache: "no-store" })
+        .then(function (response) {
+          if (!response.ok) throw new Error("HTTP " + response.status);
+          return response.json();
+        })
+        .then(paintStats)
+        .catch(function () {});
+    };
+    loadStats();
+    window.setInterval(loadStats, 60000);
+  }
+
 })();

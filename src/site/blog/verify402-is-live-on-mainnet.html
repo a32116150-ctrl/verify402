@@ -4,11 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>verify402 is live on mainnet — here is the receipt · verify402</title>
-<meta name="description" content="verify402 now serves Base mainnet and Solana mainnet at vex402.online: exact-x402, USDC via the Coinbase CDP facilitator, settled end to end twice, payer-signed by the operator, no external buyer yet. The exact state of the claim, and what it does not prove.">
+<meta name="description" content="verify402 now serves Base mainnet and Solana mainnet at vex402.online: exact-x402, USDC via the Coinbase CDP facilitator, settled end to end twice by the operator. Updated 19 November: the first two outside payments, 0.03 USDC each. The exact state of the claim, and what it does not prove.">
 <link rel="canonical" href="https://vex402.online/blog/verify402-is-live-on-mainnet">
 <meta property="og:type" content="article">
 <meta property="og:title" content="verify402 is live on mainnet — here is the receipt">
-<meta property="og:description" content="Exact-x402 on Base + Solana mainnet at vex402.online; two end-to-end USDC settlements, chain-verifiable. No external buyer yet — the honest next part is traffic, not code.">
+<meta property="og:description" content="Exact-x402 on Base + Solana mainnet at vex402.online; two operator end-to-end USDC settlements, then two outside payments on 19 November. Chain-verifiable.">
 <meta property="og:url" content="https://vex402.online/blog/verify402-is-live-on-mainnet">
 <meta property="og:image" content="https://vex402.online/assets/logo-400.png">
 <meta name="twitter:card" content="summary">
@@ -19,7 +19,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/assets/site.css">
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "BlogPosting", "headline": "verify402 is live on mainnet — here is the receipt", "description": "verify402 serves Base mainnet and Solana mainnet at vex402.online. Two operator end-to-end USDC settlements, chain-verifiable. No external buyer yet.", "datePublished": "2026-11-18", "dateModified": "2026-11-18", "author": {"@type": "Organization", "name": "verify402", "url": "https://vex402.online"}, "publisher": {"@type": "Organization", "name": "verify402", "url": "https://vex402.online"}, "mainEntityOfPage": "https://vex402.online/blog/verify402-is-live-on-mainnet", "image": "https://vex402.online/assets/logo-400.png"}</script>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "BlogPosting", "headline": "verify402 is live on mainnet — here is the receipt", "description": "verify402 serves Base mainnet and Solana mainnet at vex402.online. Two operator end-to-end USDC settlements, then two outside payments on 19 November. Chain-verifiable.", "datePublished": "2026-11-18", "dateModified": "2026-11-19", "author": {"@type": "Organization", "name": "verify402", "url": "https://vex402.online"}, "publisher": {"@type": "Organization", "name": "verify402", "url": "https://vex402.online"}, "mainEntityOfPage": "https://vex402.online/blog/verify402-is-live-on-mainnet", "image": "https://vex402.online/assets/logo-400.png"}</script>
 </head>
 <body>
 
@@ -64,7 +64,12 @@
   <div class="wrap page-head">
     <p class="eyebrow">Mainnet · 7 min read · Nov 18, 2026</p>
     <h1>verify402 is live on mainnet — here is the receipt.</h1>
-    <p class="lead">The gate now serves Base mainnet and Solana mainnet at <code>vex402.online</code>, settling real USDC through the Coinbase CDP facilitator. Two end-to-end settlements have moved on-chain as of today. Both were the operator's own money. No external buyer has paid anything yet — and that is the part of this note that matters most.</p>
+    <p class="lead">The gate now serves Base mainnet and Solana mainnet at <code>vex402.online</code>, settling real USDC through the Coinbase CDP facilitator. Two end-to-end settlements had moved on-chain when this was published. Both were the operator's own money; at publication, nobody outside the operator had paid anything. On 19 November that changed: see the update below.</p>
+
+    <div class="callout good">
+      <h3>Update — first outside payments (Nov 19)</h3>
+      <p>On 19 November, two wallets the operator does not control each paid 0.03 USDC for a <code class="inline">/route</code> call: <a href="https://basescan.org/tx/0x5244036ebcce4d298865df45c4d116c2ba91508527c3601b1f972fa1f569e378" rel="noopener">0x5244…e378</a> at 06:02 UTC and <a href="https://basescan.org/tx/0x31cb184ef8e01b7db64f43f209d742b2f036c405b863015f1ef43255c1daadb9" rel="noopener">0x31cb…adb9</a> at 08:18 UTC. Both look like automated x402 agents, not human customers; neither has paid twice. That makes eight paid calls on Base mainnet in total — six operator tests (0.31 USDC) and two outside payments (0.06 USDC). The live counter is on the <a href="/">home page</a> and the receipts are on <a href="/proof">/proof</a>. The rest of this post is the 18 November record; the lines below that said nobody outside the operator had paid were true when written.</p>
+    </div>
 
     <div class="callout good">
       <h3>Update — Glama: green</h3>
@@ -87,7 +92,7 @@
 
     <h2>The receipts, precisely</h2>
 
-    <p>Two settlements have happened through the live path, both by the operator paying the service's own payee (the operator's Phantom base wallet). Both are $0.03 USDC. Both settled under CDP.</p>
+    <p>As of 18 November, two settlements had happened through the live path, both by the operator paying the service's own payee (the operator's Phantom base wallet). Both are $0.03 USDC. Both settled under CDP.</p>
 
     <ul>
       <li><code class="inline">/route</code> · block 59,146,773 · tx <code class="inline">0xcd61e0ec0a7b9ab80bcc0ecb01c7c155016e5a80d3caf650bb1ac9d047b27b5d</code> · payer 0x9a48…5AD4b → payee 0xAeEF…2df9cb</li>
@@ -97,10 +102,10 @@
     <h2>What this does not prove</h2>
 
     <ul>
-      <li>Not demand. Zero external buyer has paid anything. The ledger nobody has paid remains the ledger that matters.</li>
+      <li>Not demand, as of publication. On 18 November, nobody outside the operator had paid anything; the two outside payments above arrived the next day. Two automated calls are not demand yet.</li>
       <li>Not the Bazaar placement. We have not relisted <code class="inline">vex402.online</code> in the x402 catalog yet; the stale testnet listings at the old host are not evidence of mainnet traffic.</li>
       <li>Not that the analysis is correct. The verdicts are measurements, not guarantees; /preflight exists precisely because "the model sounded sure" is not a check.</li>
-      <li>Not your money. The only settled USDC is the operator's. If you pay, you pay for what the challenge asks — check <code class="inline">eip155:8453</code> and the payee before you sign.</li>
+      <li>Not your money. As of 18 November, the only settled USDC was the operator's; the two outside payments on 19 November came from outside wallets. If you pay, you pay for what the challenge asks — check <code class="inline">eip155:8453</code> and the payee before you sign.</li>
     </ul>
 
     <h2>How to try it, honestly</h2>
@@ -127,7 +132,7 @@
 </main>
 
 <footer class="site-foot">
-  <p class="foot-legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data; demo payments are testnet. The only settlements are the operator's own — two 0.03 USDC end-to-end tests on Base mainnet (2026-11-18) plus testnet demos. No external buyer yet. Prices are per call, paid in testnet USDC over x402; /preflight is free.</p>
+  <p class="foot-legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data; demo payments are testnet. Testnet settlements on this demo are the operator's own. Mainnet receipts: vex402.online/proof. Prices are per call, paid in testnet USDC over x402; /preflight is free.</p>
 </footer>
 
 </body>

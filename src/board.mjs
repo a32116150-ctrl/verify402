@@ -588,7 +588,7 @@ ${rows.map(rowHtml).join("\n")}
       <a href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener">npm package</a>
     </div>
   </div>
-  <p class="foot-legal">verify402 is a measurement service, not financial advice. Board rows are structural reads of public payment demands, timestamped; they are not audits, endorsements, or promises about any seller. No external buyer yet. Analysis reads mainnet chain data; demo payments are testnet.</p>
+  <p class="foot-legal">verify402 is a measurement service, not financial advice. Board rows are structural reads of public payment demands, timestamped; they are not audits, endorsements, or promises about any seller. Two outside x402 payers have settled on Base mainnet. Analysis reads mainnet chain data; demo payments are testnet.</p>
 </footer>
 
 <script>

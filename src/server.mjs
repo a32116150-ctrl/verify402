@@ -11,6 +11,7 @@
 // intended caller is a program.
 
 import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { renderSiteHtml, withAssetFingerprint } from "./site-mode.mjs";
 const LANDING_HTML = readFileSync(new URL("./landing.html", import.meta.url), "utf8");
@@ -51,7 +52,13 @@ import { setDurableRecovery, statePersistence, recoveryDoesNotGuarantee, persist
 import {
   initSiteAnalytics, siteAnalyticsMiddleware, siteAnalyticsSnapshot, flushSiteAnalytics,
 } from "./site-analytics.mjs";
-import { fetchExplorer } from "./explorer.mjs";
+import { buildExplorerPayload, fetchExplorer } from "./explorer.mjs";
+import {
+  createSettlementIndex,
+  fetchTestnetStats,
+  summarizeSettlements,
+  DEFAULT_OPERATOR_ADDRESSES,
+} from "./settlement-stats.mjs";
 import { inspectUrl, inspectPaymentChallenge, extractChallenge, InspectError } from "./inspect.mjs";
 import { loadBoard, renderBoardPage, renderBadgeSvg, badgeFor, BOARD_SOURCE } from "./board.mjs";
 import { renderFindingPage, findingPermalink } from "./finding-page.mjs";
@@ -192,6 +199,27 @@ const QUOTECHECK_PRICE = process.env.QUOTECHECK_PRICE || PRICE_DEFAULTS.quoteche
 // Sizing: the decision that happens BEFORE every trade after a route is known.
 const DEPTH_PRICE = process.env.DEPTH_PRICE || PRICE_DEFAULTS.depth;
 
+// Live paid-usage counters. Mainnet keeps a small persisted index of USDC
+// transfers to the payee and extends it from the launch block; testnet is read
+// from public Blockscout. The operator list is what lets the counter separate
+// "our own tests" from "someone else paid" without guessing.
+const OPERATOR_ADDRESSES = (process.env.OPERATOR_ADDRESSES || DEFAULT_OPERATOR_ADDRESSES.join(","))
+  .split(",")
+  .map((value) => value.trim())
+  .filter(Boolean);
+const SETTLEMENT_INDEX_PATH = process.env.SETTLEMENT_INDEX_PATH === "off"
+  ? null
+  : process.env.SETTLEMENT_INDEX_PATH
+    || (RECOVERY_DB_PATH ? join(dirname(RECOVERY_DB_PATH), "settlement-index.json") : null);
+const settlementIndex = MODE === "mainnet"
+  ? createSettlementIndex({
+      payTo: PAY_TO_EVM,
+      rpcUrl: process.env.BASE_RPC_URL || "https://base-rpc.publicnode.com",
+      filePath: SETTLEMENT_INDEX_PATH,
+      startBlock: Number(process.env.SETTLEMENT_INDEX_START_BLOCK || 59_000_000),
+    })
+  : null;
+
 // The public x402.org facilitator is testnet-only. Mainnet needs a real one.
 // Mainnet: Coinbase's CDP facilitator. CDP_API_KEY_ID / CDP_API_KEY_SECRET are
 // read from the environment at boot. The client is ./facilitator-client.mjs —
@@ -289,6 +317,7 @@ const DISCOVERY_GET_PATHS = new Set([
   "/info",
   "/usage",
   "/usage/site",
+  "/stats",
   "/findings",
   "/explorer",
   "/npm-stats",
@@ -1461,14 +1490,39 @@ app.get("/explorer", async (_req, res) => {
     return res.json({ ...explorerSnap.payload, ageSeconds: Math.round((now - explorerSnap.at) / 1000) });
   }
   try {
-    const payload = await fetchExplorer({
-      mode: MODE,
-      payTo: PAY_TO_EVM,
-      results: findingsSnap?.payload?.results || [],
-      measuredAt: findingsSnap?.payload?.measuredAt || null,
-      baseUrl: PUBLIC_BASE_URL,
-      rpcUrl: process.env.EXPLORER_RPC_URL || undefined,
-    });
+    let payload = null;
+    if (MODE === "mainnet" && settlementIndex) {
+      try {
+        const snap = await settlementIndex.refresh();
+        payload = buildExplorerPayload({
+          mode: MODE,
+          payTo: PAY_TO_EVM,
+          transfers: snap.rows.map((row) => ({
+            transaction_hash: row.txHash,
+            timestamp: row.timestamp,
+            from: { hash: row.from },
+            to: { hash: PAY_TO_EVM },
+            token: { symbol: "USDC", decimals: 6 },
+            total: { value: row.amountRaw },
+          })),
+          results: findingsSnap?.payload?.results || [],
+          measuredAt: findingsSnap?.payload?.measuredAt || null,
+          baseUrl: PUBLIC_BASE_URL,
+        });
+      } catch (error) {
+        logWarn("[explorer] settlement index unavailable; using the recent chain window", error?.message || error);
+      }
+    }
+    if (!payload) {
+      payload = await fetchExplorer({
+        mode: MODE,
+        payTo: PAY_TO_EVM,
+        results: findingsSnap?.payload?.results || [],
+        measuredAt: findingsSnap?.payload?.measuredAt || null,
+        baseUrl: PUBLIC_BASE_URL,
+        rpcUrl: process.env.EXPLORER_RPC_URL || undefined,
+      });
+    }
     explorerSnap = { at: now, payload };
     res.set("Cache-Control", "public, max-age=30");
     return res.json({ ...payload, ageSeconds: 0 });
@@ -1621,6 +1675,120 @@ app.post("/preflight", preflightRateLimit, preflightConcurrency, async (req, res
     });
   }
 });
+
+// Live paid-usage counters. The mainnet side is backed by the persisted
+// settlement index; the testnet side is read from public Blockscout. Both are
+// chain rows, not estimates.
+let statsSnap = null;
+let statsAt = 0;
+let statsPromise = null;
+const STATS_TTL_MS = 60_000;
+
+async function refreshStats() {
+  let mainnet = null;
+  if (settlementIndex) {
+    try {
+      const snap = await settlementIndex.refresh();
+      mainnet = {
+        chain: "Base",
+        network: "eip155:8453",
+        source: "rpc-index",
+        ...summarizeSettlements(snap.rows, OPERATOR_ADDRESSES),
+      };
+    } catch (error) {
+      logWarn("[stats] mainnet settlement index unavailable", error?.message || error);
+    }
+  }
+
+  let testnet = null;
+  try {
+    testnet = await fetchTestnetStats({
+      payTo: PAY_TO_EVM,
+      operatorAddresses: OPERATOR_ADDRESSES,
+    });
+  } catch (error) {
+    logWarn("[stats] testnet Blockscout unavailable", error?.message || error);
+  }
+
+  // The testnet demo has no mainnet index of its own. Read the live mainnet
+  // counter once instead of rescanning Base from the free host. If the mainnet
+  // service is down, the page shows a dash rather than a guess.
+  if (!mainnet && MODE === "testnet" && process.env.TEST_OFFLINE !== "1") {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 4_000);
+    try {
+      const response = await fetch("https://vex402.online/stats", {
+        headers: { accept: "application/json" },
+        signal: controller.signal,
+      });
+      if (response.ok) {
+        const body = await response.json();
+        if (body?.mainnet) mainnet = body.mainnet;
+      }
+    } catch {
+      // A dash is better than a made-up number.
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  return {
+    spec: "verify402/stats@1",
+    fetchedAt: new Date().toISOString(),
+    mode: MODE,
+    mainnet,
+    testnet,
+    freeCalls: usageSnapshot().total,
+    note: "Counts are on-chain USDC transfers to the service address. A paid call is not a unique agent; operator tests are counted separately from outside payers. Testnet amounts are testnet USDC.",
+  };
+}
+
+function ensureStats() {
+  if (!statsPromise) {
+    statsPromise = refreshStats()
+      .then((payload) => {
+        statsSnap = payload;
+        statsAt = Date.now();
+        return payload;
+      })
+      .finally(() => { statsPromise = null; });
+  }
+  return statsPromise;
+}
+
+app.get("/stats", async (_req, res) => {
+  const now = Date.now();
+  if (statsSnap && now - statsAt < STATS_TTL_MS) {
+    res.set("Cache-Control", "public, max-age=30");
+    return res.json({ ...statsSnap, ageSeconds: Math.round((now - statsAt) / 1000) });
+  }
+  try {
+    const payload = await ensureStats();
+    res.set("Cache-Control", "public, max-age=30");
+    return res.json({ ...payload, ageSeconds: 0 });
+  } catch (error) {
+    logError("[stats] chain counter failed", error);
+    if (statsSnap) {
+      res.set("Cache-Control", "no-store");
+      return res.json({ ...statsSnap, stale: true, ageSeconds: Math.round((now - statsAt) / 1000) });
+    }
+    return res.status(503).json({
+      error: "stats_unavailable",
+      message: "the chain counter did not answer; retry shortly",
+    });
+  }
+});
+
+// Warm the counter at boot and once a minute after that. The first mainnet
+// scan is the only expensive one; later scans read only new blocks.
+if (process.env.TEST_OFFLINE !== "1") {
+  const warm = setTimeout(() => { ensureStats().catch(() => {}); }, 3_000);
+  if (typeof warm.unref === "function") warm.unref();
+  const timer = setInterval(() => {
+    if (Date.now() - statsAt >= STATS_TTL_MS) ensureStats().catch(() => {});
+  }, 30_000);
+  if (typeof timer.unref === "function") timer.unref();
+}
 
 // Anonymous, process-local free-gate counts. This is a call counter, not an
 // identity system; see src/usage.mjs for the boundary.
@@ -1880,6 +2048,7 @@ app.get("/", (req, res) => {
       "  GET  /findings free                 live verdicts on Ethereum majors, free",
       "  GET  /usage    free                 anonymous free-gate call counts (process-local)",
       "  GET  /usage/site free               aggregate page views of the human site (no cookies, no IP)",
+      "  GET  /stats    free                 live paid-usage counter (on-chain USDC transfers)",
       "  GET  /mcp      free                 MCP server: free gate + five paid tools",
       "  GET  /start    free                 five-minute quickstart for developers (human page)",
       "  GET  /info     free                 machine-readable service description",

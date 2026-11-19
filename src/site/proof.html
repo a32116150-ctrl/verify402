@@ -68,13 +68,16 @@
     <div class="wrap">
 
       <article>
-        <h2>Proven on-chain: two mainnet settlements</h2>
-        <p class="lead" style="margin-top:14px">Two end-to-end settlements have moved real USDC on Base mainnet. Both were the operator paying the service's own payee (the operator's Phantom base wallet) — the honest scope of the proof.</p>
+        <h2>Proven on-chain: eight paid calls on Base mainnet</h2>
+        <p class="lead" style="margin-top:14px">Eight exact-x402 payments have settled in real USDC to the payee. Six are the operator's own tests — two 0.03 USDC route settlements on 2026-11-18 and four tests of the other paid routes (0.05, 0.10, 0.05 and 0.05 USDC). Two are outside payments of 0.03 USDC each on 2026-11-19, from wallets the operator does not control. The outside payers look like automated x402 agents: that is outside money, but not yet a human customer.</p>
         <div class="callout good" style="margin-top:22px">
           <h3>Receipts</h3>
-          <p><a href="https://basescan.org/tx/0xcd61e0ec0a7b9ab80bcc0ecb01c7c155016e5a80d3caf650bb1ac9d047b27b5d" rel="noopener">0xcd61…b27b5d</a> · block 59,146,773 · <code class="inline">/route</code><br>
-          <a href="https://basescan.org/tx/0x37e61b094133af984a30590e03f27f0daea67716e3650a9b16f3bb5aad734dfb" rel="noopener">0x37e6…34dfb</a> · block 59,150,929 · <code class="inline">/route</code><br>
+          <p><a href="https://basescan.org/tx/0xcd61e0ec0a7b9ab80bcc0ecb01c7c155016e5a80d3caf650bb1ac9d047b27b5d" rel="noopener">0xcd61…b27b5d</a> · block 59,146,773 · <code class="inline">/route</code> · operator<br>
+          <a href="https://basescan.org/tx/0x37e61b094133af984a30590e03f27f0daea67716e3650a9b16f3bb5aad734dfb" rel="noopener">0x37e6…34dfb</a> · block 59,150,929 · <code class="inline">/route</code> · operator<br>
+          <a href="https://basescan.org/tx/0x5244036ebcce4d298865df45c4d116c2ba91508527c3601b1f972fa1f569e378" rel="noopener">0x5244…e378</a> · block 59,388,774 · <code class="inline">/route</code> · outside<br>
+          <a href="https://basescan.org/tx/0x31cb184ef8e01b7db64f43f209d742b2f036c405b863015f1ef43255c1daadb9" rel="noopener">0x31cb…adb9</a> · block 59,429,646 · <code class="inline">/route</code> · outside<br>
           Base · payTo <code class="inline">0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb</code></p>
+          <p class="small muted" style="margin-top:10px">The four other operator tests are at blocks 59,157,271–59,157,334; the <a class="textlink" href="/activity">activity page</a> lists every on-chain transfer the index has seen.</p>
         </div>
       </article>
 
@@ -111,8 +114,8 @@
       </article>
 
       <article>
-        <h2>Not proven: no external buyer, no funding.</h2>
-        <p class="lead" style="margin-top:14px">Nobody outside the operator has paid for a call yet. There are no grants, no revenue, and no sponsors. The free tier and the RPC calls come out of the operator's own pocket. When the first external payment lands, this page changes the same day — with the transaction.</p>
+        <h2>Not proven: demand, repeat buyers, funding.</h2>
+        <p class="lead" style="margin-top:14px">Two outside wallets have paid for a call — 0.03 USDC each, from automated x402 agents. No human customer has signed up, nobody has paid twice, and there are no grants, sponsors, or funding. The free tier and the RPC calls still come out of the operator's own pocket. The first outside payments are recorded above, with their transactions, on the day they landed.</p>
         <div class="callout warn" style="margin-top:22px">
           <h3>Donation ledger</h3>
           <p><b>No donations or hosting sponsors yet.</b> Every contribution will be acknowledged here with a transaction link, if the donor wants it named. <a href="/donate">Donation options</a> · <a href="/sponsor">Sponsor one month of hosting — $7</a>.</p>
@@ -126,10 +129,11 @@
             <tbody>
               <tr><td class="mono">2026-10 <span class="muted">(from 19 Oct)</span></td><td class="mono">0</td><td class="mono">0</td><td class="mono">0</td><td class="muted">2026-11-10</td></tr>
               <tr><td class="mono">2026-11 <span class="muted">(to 10 Nov)</span></td><td class="mono">0</td><td class="mono">0</td><td class="mono">0</td><td class="muted">2026-11-10</td></tr>
+              <tr><td class="mono">2026-11 <span class="muted">(11–19 Nov)</span></td><td class="mono">2</td><td class="mono">0</td><td class="mono">0</td><td class="muted">2026-11-19</td></tr>
             </tbody>
           </table>
         </div>
-        <p class="small muted" style="margin-top:12px">First published 10 November 2026, after the 1 November date first promised in public. The free instance keeps no durable settlement store, so this table is maintained from the operator's records, not read from a database. When the first external payment lands, its transaction is added here the same day.</p>
+        <p class="small muted" style="margin-top:12px">First published 10 November 2026, after the 1 November date first promised in public. The first outside payments landed on 19 November 2026; both transactions are above. This table is maintained from reviewed settlement records, not read from a dashboard, so a zero month stays visible.</p>
       </article>
 
       <article id="recompute">
@@ -189,7 +193,7 @@
       <a href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener">npm package</a>
     </div>
   </div>
-  <p class="foot-legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data; demo payments are testnet. The only settlements are the operator's own — two 0.03 USDC end-to-end tests on Base mainnet (2026-11-18) plus testnet demos. No external buyer yet. Prices are per call, paid in testnet USDC over x402.</p>
+  <p class="foot-legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data; demo payments are testnet. Testnet settlements on this demo are the operator's own. Mainnet receipts: vex402.online/proof. Prices are per call, paid in testnet USDC over x402.</p>
 </footer>
 
 <script src="/assets/site.js"></script>

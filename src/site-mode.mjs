@@ -15,20 +15,20 @@ import { fileURLToPath } from "url";
 
 const FOOTER_PAIRS = [
   [
-    "Analysis reads mainnet chain data; public demo payments are Base Sepolia testnet USDC. The only settlements recorded are the operator’s own testnet transactions. No external buyer yet.",
-    "Analysis reads mainnet chain data. This instance settles real USDC on Base mainnet / Solana mainnet over x402. The only settlements recorded are the operator’s own two mainnet tests (2026-11-18). No external buyer yet.",
+    "Analysis reads mainnet chain data; public demo payments are Base Sepolia testnet USDC. Testnet settlements on this demo are the operator’s own. Mainnet receipts: vex402.online/proof.",
+    "Analysis reads mainnet chain data. This instance settles real USDC on Base mainnet / Solana mainnet over x402. Eight paid calls have settled on Base: six operator tests and two outside payments of 0.03 USDC each (2026-11-19). No human customer yet.",
   ],
   [
-    "Analysis reads mainnet chain data; public demo payments are Base Sepolia testnet USDC. The only settlements are the operator's own — two 0.03 USDC end-to-end tests on Base mainnet (2026-11-18) plus testnet demos. No external buyer or sponsor yet.",
-    "Analysis reads mainnet chain data. This instance settles real USDC on Base mainnet / Solana mainnet over x402. The only settlements so far are the operator's own — two 0.03 USDC end-to-end tests (2026-11-18). No external buyer or sponsor yet.",
+    "Analysis reads mainnet chain data; public demo payments are Base Sepolia testnet USDC. Testnet settlements on this demo are the operator's own. Mainnet receipts: vex402.online/proof. No sponsor yet.",
+    "Analysis reads mainnet chain data. This instance settles real USDC on Base mainnet / Solana mainnet over x402. Six operator tests and two outside payments of 0.03 USDC each (2026-11-19) have settled on Base mainnet. No human customer or sponsor yet.",
   ],
   [
-    "Analysis reads mainnet chain data; demo payments are testnet. The only settlements are the operator's own — two 0.03 USDC end-to-end tests on Base mainnet (2026-11-18) plus testnet demos. No external buyer yet. Donations are voluntary",
-    "Analysis reads mainnet chain data. This instance settles real USDC on Base mainnet / Solana mainnet over x402. The only settlements so far are the operator's own — two 0.03 USDC end-to-end tests (2026-11-18). No external buyer yet. Donations are voluntary",
+    "Analysis reads mainnet chain data; demo payments are testnet. Testnet settlements on this demo are the operator's own. Mainnet receipts: vex402.online/proof. Donations are voluntary",
+    "Analysis reads mainnet chain data. This instance settles real USDC on Base mainnet / Solana mainnet over x402. Six operator tests and two outside payments of 0.03 USDC each (2026-11-19) have settled on Base mainnet. No human customer yet. Donations are voluntary",
   ],
   [
-    "Analysis reads mainnet chain data; demo payments are testnet. The only settlements are the operator's own — two 0.03 USDC end-to-end tests on Base mainnet (2026-11-18) plus testnet demos. No external buyer yet. Prices are per call, paid in testnet USDC over x402",
-    "Analysis reads mainnet chain data. This instance settles real USDC on Base mainnet / Solana mainnet over x402. The only settlements so far are the operator's own — two 0.03 USDC end-to-end tests (2026-11-18). No external buyer yet. Prices are per call, paid in USDC over x402",
+    "Analysis reads mainnet chain data; demo payments are testnet. Testnet settlements on this demo are the operator's own. Mainnet receipts: vex402.online/proof. Prices are per call, paid in testnet USDC over x402",
+    "Analysis reads mainnet chain data. This instance settles real USDC on Base mainnet / Solana mainnet over x402. Six operator tests and two outside payments of 0.03 USDC each (2026-11-19) have settled on Base mainnet. No human customer yet. Prices are per call, paid in USDC over x402",
   ],
 ];
 
@@ -56,7 +56,7 @@ const PAGE_PAIRS = [
   ],
   [
     "Public demo payments are Base Sepolia testnet USDC. No mainnet payment service is being offered here, and no result is a profit forecast.",
-    "Yes — this instance settles real USDC on Base mainnet and Solana mainnet through the Coinbase CDP facilitator. It is operator-tested end to end; no external buyer has paid yet. No result is a profit forecast.",
+    "Yes — this instance settles real USDC on Base mainnet and Solana mainnet through the Coinbase CDP facilitator. It is operator-tested end to end, and two outside x402 agents have paid 0.03 USDC each; no human customer yet. No result is a profit forecast.",
   ],
 
   // ---- checks ----
@@ -153,8 +153,8 @@ const PAGE_PAIRS = [
     "Paid calls on this instance settle in USDC over x402 on Base mainnet and Solana mainnet through the Coinbase CDP facilitator. The npm package defaults here: VERIFY402_URL=https://vex402.online and VERIFY402_NETWORKS=eip155:8453. The Base Sepolia testnet demo is explicit opt-in at https://verify402.onrender.com.",
   ],
   [
-    "This testnet demo's paid calls use Base Sepolia testnet USDC. The package itself now defaults to the live mainnet service at https://vex402.online (operator-tested end to end; no external buyer yet) — real USDC, with the same spend caps. Point the package here with VERIFY402_URL=https://verify402.onrender.com and VERIFY402_NETWORKS=eip155:84532 to use testnet instead.",
-    "Paid calls on this instance settle in USDC on Base mainnet (operator-tested end to end; no external buyer yet). The npm package defaults to this mainnet rail; the Base Sepolia testnet demo at https://verify402.onrender.com is explicit opt-in.",
+    "This testnet demo's paid calls use Base Sepolia testnet USDC. The package itself now defaults to the live mainnet service at https://vex402.online (operator-tested end to end; two outside x402 agents have paid 0.03 USDC each) — real USDC, with the same spend caps. Point the package here with VERIFY402_URL=https://verify402.onrender.com and VERIFY402_NETWORKS=eip155:84532 to use testnet instead.",
+    "Paid calls on this instance settle in USDC on Base mainnet (operator-tested end to end; two outside x402 agents have paid 0.03 USDC each, no human customer yet). The npm package defaults to this mainnet rail; the Base Sepolia testnet demo at https://verify402.onrender.com is explicit opt-in.",
   ],
   [
     'By default the bridge pays the live mainnet service: add a dedicated wallet holding a small amount of <strong>USDC on Base mainnet</strong> and leave <code class="inline">VERIFY402_NETWORKS=eip155:8453</code>.',

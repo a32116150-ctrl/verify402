@@ -96,7 +96,7 @@
     <ul>
       <li>The free gate contract. PASS / CAUTION / BLOCK, short-lived receipt, fail-closed.</li>
       <li>Any price. The five checks remain testnet USDC, the free gate and <code class="inline">/inspect</code> remain free.</li>
-      <li>The honesty problem: no external buyer has paid a call. The only settlements are the operator's own — two 0.03 USDC end-to-end tests on Base mainnet (2026-11-18) plus testnet demos.</li>
+      <li>The honesty problem at that release: nobody outside the operator had paid a call. The only settlements were the operator's own — two 0.03 USDC end-to-end tests on Base mainnet (2026-11-18) plus testnet demos. (Two outside payments arrived on 2026-11-19.)</li>
       <li>Durability of settlement state — the deployed instance is memory-only, and its recovery behavior says so at <code class="inline">/health</code>.</li>
       <li>The <code class="inline">notChecked</code> list. A longer list is not 1.1.0's point; a legible one is.</li>
     </ul>
@@ -160,7 +160,7 @@
       <a href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener">npm package</a>
     </div>
   </div>
-  <p class="foot-legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data; demo payments are testnet. The only settlements are the operator's own — two 0.03 USDC end-to-end tests on Base mainnet (2026-11-18) plus testnet demos. No external buyer yet. Prices are per call, paid in testnet USDC over x402; /preflight and /inspect are free.</p>
+  <p class="foot-legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data; demo payments are testnet. Testnet settlements on this demo are the operator's own. Mainnet receipts: vex402.online/proof. Prices are per call, paid in testnet USDC over x402; /preflight and /inspect are free.</p>
 </footer>
 
 <script src="/assets/site.js"></script>
