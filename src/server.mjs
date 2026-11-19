@@ -12,7 +12,7 @@
 
 import { readFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { renderSiteHtml } from "./site-mode.mjs";
+import { renderSiteHtml, withAssetFingerprint } from "./site-mode.mjs";
 const LANDING_HTML = readFileSync(new URL("./landing.html", import.meta.url), "utf8");
 const SITE_DIR = fileURLToPath(new URL("./site", import.meta.url));
 
@@ -1814,7 +1814,7 @@ app.get("/badge", async (req, res) => {
 // Express does not redirect to a directory listing that does not exist.
 app.get(["/blog", "/blog/"], (_req, res) => {
   res.set("Cache-Control", "no-store");
-  res.type("text/html").send(renderSiteHtml(readFileSync(`${SITE_DIR}/blog.html`, "utf8"), { mode: MODE, path: "/blog" }));
+  res.type("text/html").send(withAssetFingerprint(renderSiteHtml(readFileSync(`${SITE_DIR}/blog.html`, "utf8"), { mode: MODE, path: "/blog" })));
 });
 
 // Static pages for humans: /start, /checks, /live, /proof, /docs, /donate, /sponsor (+ /assets).
@@ -1838,7 +1838,7 @@ app.use((req, res, next) => {
     return next();
   }
   res.set("Cache-Control", "no-store");
-  res.type("text/html").send(renderSiteHtml(raw, { mode: MODE, path: urlPath }));
+  res.type("text/html").send(withAssetFingerprint(renderSiteHtml(raw, { mode: MODE, path: urlPath })));
 });
 
 app.use(express.static(SITE_DIR, {
@@ -1859,7 +1859,7 @@ app.get("/", (req, res) => {
   const wantsHtml = accept.includes("text/html") || isCrawler;
   if (wantsHtml) {
     res.set("Cache-Control", "no-store");
-    return res.type("text/html").send(renderSiteHtml(LANDING_HTML, { mode: MODE, path: "/" }));
+    return res.type("text/html").send(withAssetFingerprint(renderSiteHtml(LANDING_HTML, { mode: MODE, path: "/" })));
   }
   res.type("text/plain").send(
     [

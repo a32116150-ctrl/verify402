@@ -9,6 +9,10 @@
 // true when they were written. Only the site-wide legal footer is rewritten
 // there, because the footer describes the running service, not the post.
 
+import { readFileSync, readdirSync, statSync } from "fs";
+import { createHash } from "crypto";
+import { fileURLToPath } from "url";
+
 const FOOTER_PAIRS = [
   [
     "Analysis reads mainnet chain data; public demo payments are Base Sepolia testnet USDC. The only settlements recorded are the operator’s own testnet transactions. No external buyer yet.",
@@ -176,6 +180,35 @@ function applyPairs(html, pairs) {
     if (out.includes(from)) out = out.split(from).join(to);
   }
   return out;
+}
+
+// Fingerprint the shipped assets once per process. The HTML is no-store, so
+// every deploy immediately serves a new fingerprint next to each /assets/
+// URL — any edge or browser cache of the same URL is bypassed after a deploy.
+const ASSET_BUILD = (() => {
+  try {
+    const dir = fileURLToPath(new URL("./site/assets", import.meta.url));
+    const rows = [];
+    const walk = (d, rel) => {
+      for (const name of readdirSync(d)) {
+        const full = `${d}/${name}`;
+        const s = statSync(full);
+        if (s.isDirectory()) walk(full, `${rel}${name}/`);
+        else rows.push([`${rel}${name}`, readFileSync(full)]);
+      }
+    };
+    walk(dir, "");
+    rows.sort((a, b) => (a[0] < b[0] ? -1 : 1));
+    const hash = createHash("sha256");
+    for (const [rel, body] of rows) hash.update(rel).update(body);
+    return hash.digest("hex").slice(0, 10);
+  } catch {
+    return "dev";
+  }
+})();
+
+export function withAssetFingerprint(html) {
+  return html.replace(/((?:href|src)="\/assets\/[^"?]+)(")/g, `$1?v=${ASSET_BUILD}$2`);
 }
 
 export function renderSiteHtml(html, { mode = "testnet", path = "" } = {}) {
