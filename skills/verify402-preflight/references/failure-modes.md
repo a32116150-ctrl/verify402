@@ -89,7 +89,7 @@ or “the seller owns the payee.”
 - The tool returns `isError: true` with `preflight failed (...)`.
 - No receipt was issued. Stop; do not retry with a guessed verdict.
 - `preflight_gate` is free and does not need a wallet. If the bridge is in
-  free-only mode, the six paid tools are not registered; do not invent their
+  free-only installs see all tools, but paid tools refuse without a wallet; do not invent their
   results.
 - A paid tool error is different from a gate error. A paid `503` means no
   verdict and no settlement. Inspect before retrying; do not pay twice

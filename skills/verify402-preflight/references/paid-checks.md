@@ -9,8 +9,8 @@ subscription, and they do not sign or send a trade.
 settling real USDC on Base / Solana mainnet via the Coinbase CDP facilitator.
 Prices are fixed per call; no subscription, no minimum.
 
-**Free-only install:** without `EVM_PRIVATE_KEY`, only `preflight_gate` is
-registered. Do not promise paid results when the wallet is not configured.
+**Free-only install:** without `EVM_PRIVATE_KEY`, the paid tools refuse
+with a clear error; the free tools still work. Do not promise paid results when the wallet is not configured.
 
 ## Use order
 

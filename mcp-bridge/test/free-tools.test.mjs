@@ -18,14 +18,19 @@ const source = readFileSync(new URL("../index.mjs", import.meta.url), "utf8");
 
 const FREE_TOOLS = ["preflight_gate", "inspect_402", "directory_402"];
 
-test("every free tool is registered before the paid block", () => {
-  const paidBlock = source.indexOf("if (paidApi) {");
-  assert.ok(paidBlock > 0, "the paid block must exist");
-  for (const tool of FREE_TOOLS) {
+test("every tool is always registered, free and paid", () => {
+  const PAID_TOOLS = ["verify_arbitrage", "check_token_safety", "get_best_route", "verify_quote_fairness", "get_trade_depth", "get_assurance"];
+  for (const tool of [...FREE_TOOLS, ...PAID_TOOLS]) {
     const at = source.indexOf(`server.tool(\n    "${tool}"`);
     assert.ok(at > 0, `${tool} must be registered with server.tool`);
-    assert.ok(at < paidBlock, `${tool} must be registered without a wallet`);
   }
+});
+
+test("paid handlers refuse at call time without EVM_PRIVATE_KEY", () => {
+  assert.match(source, /async function ensurePaidApi\(\)/);
+  assert.match(source, /paid tools require EVM_PRIVATE_KEY/);
+  assert.match(source, /client: await ensurePaidApi\(\)/);
+  assert.doesNotMatch(source, /if \(paidApi\) \{/);
 });
 
 test("no free tool is bound to a paid route", () => {

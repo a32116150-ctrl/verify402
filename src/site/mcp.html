@@ -69,7 +69,7 @@
         </div>
         <p class="hero-note">
           <span><span class="dot"></span>Official MCP Registry: <a href="https://registry.modelcontextprotocol.io/" class="textlink" target="_blank" rel="noopener">see entry</a></span>
-          <span>npm: <a href="https://www.npmjs.com/package/verify402-mcp" class="textlink" target="_blank" rel="noopener">verify402-mcp v2.5.0</a></span>
+          <span>npm: <a href="https://www.npmjs.com/package/verify402-mcp" class="textlink" target="_blank" rel="noopener">verify402-mcp v2.6.0</a></span>
           <span>Mainnet live · <a href="https://vex402.online/info" class="textlink">vex402.online</a></span>
           <span>Free gate · no wallet</span>
         </p>
@@ -123,14 +123,14 @@
       <div class="sec-head">
         <p class="eyebrow">Install</p>
         <h2>Start with the free gate. Add the wallet later.</h2>
-        <p class="lead">The npm package is published to the public registry, so you can run it directly with <code class="inline">npx</code> without cloning or building. The published version is <strong>2.5.0</strong>. It ships <code class="inline">instructions</code> in the MCP initialize response — agents are told how to use the free and paid tools and what PASS / CAUTION / BLOCK mean. It builds on 1.1.6 (paid-call default moved to mainnet), 1.1.5 (<code class="inline">instructions</code> in initialize), 1.1.4 (stdio framing fix) and 1.1.3 (documented the live mainnet instance); 1.1.2 carried the challenge's <code class="inline">extensions.bazaar</code> into the payment payload, so a settlement can be cataloged. The public Base Sepolia testnet demo was retired on 2026-11-19. The package itself defaults to the live mainnet service at https://vex402.online (settled end to end; two outside x402 agents have paid 0.03 USDC each) — real USDC, with the same spend caps. </p>
+        <p class="lead">The npm package is published to the public registry, so you can run it directly with <code class="inline">npx</code> without cloning or building. The published version is <strong>2.6.0</strong>. It ships <code class="inline">instructions</code> in the MCP initialize response — agents are told how to use the free and paid tools and what PASS / CAUTION / BLOCK mean. It builds on 1.1.6 (paid-call default moved to mainnet), 1.1.5 (<code class="inline">instructions</code> in initialize), 1.1.4 (stdio framing fix) and 1.1.3 (documented the live mainnet instance); 1.1.2 carried the challenge's <code class="inline">extensions.bazaar</code> into the payment payload, so a settlement can be cataloged. The public Base Sepolia testnet demo was retired on 2026-11-19. The package itself defaults to the live mainnet service at https://vex402.online (settled end to end; two outside x402 agents have paid 0.03 USDC each) — real USDC, with the same spend caps. </p>
       </div>
 
       <div class="proof-grid" style="margin-top:40px">
         <div class="pcard2">
           <p class="tag"><span class="dot"></span>Mode 1 · no key</p>
           <h3>Free gate only.</h3>
-          <p>Omit <code class="inline">EVM_PRIVATE_KEY</code>. The server registers only the free tools (<code class="inline">preflight_gate</code>, <code class="inline">inspect_402</code>, <code class="inline">directory_402</code>), and nothing can be charged. This is the safest way to try it.</p>
+          <p>Omit <code class="inline">EVM_PRIVATE_KEY</code>. The server lists all nine tools; the three free ones work as before, and the six paid ones refuse with a clear error — nothing can be charged. This is the safest way to try it.</p>
         </div>
         <div class="pcard2">
           <p class="tag"><span class="dot"></span>Mode 2 · paid tools</p>
@@ -146,7 +146,7 @@
 
       <div class="callout good" style="margin-top:24px">
         <h3>Official MCP Registry &amp; npm Distribution</h3>
-        <p>Published on npm as <a class="textlink" href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener"><strong>verify402-mcp</strong></a> (version 2.5.0). The official Model Context Protocol Registry lists the published entry as active. The repository source matches the published 2.5.0 package. Machine agents can also fetch the machine-readable <a class="textlink" href="/.well-known/verify402.json">service manifest</a> and <a class="textlink" href="/openapi.json">OpenAPI 3.1 specification</a>.</p>
+        <p>Published on npm as <a class="textlink" href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener"><strong>verify402-mcp</strong></a> (version 2.6.0). The official Model Context Protocol Registry lists the published entry as active. The repository source matches the published 2.6.0 package. Machine agents can also fetch the machine-readable <a class="textlink" href="/.well-known/verify402.json">service manifest</a> and <a class="textlink" href="/openapi.json">OpenAPI 3.1 specification</a>.</p>
         <p style="margin-top:16px">
           <a href="https://mcprush.com/a32116150-ctrl/verify402-mcp">
             <img
@@ -214,7 +214,7 @@
 
       <div class="callout" style="margin-top:32px">
         <h3>Alternative install options</h3>
-        <p>If you prefer a pinned npm version: <code class="inline">npx -y verify402-mcp@2.5.0</code>. From source: <code class="inline">git clone https://github.com/a32116150-ctrl/verify402</code>, then <code class="inline">cd verify402/mcp-bridge &amp;&amp; npm ci</code>. The published npm tarball is <code class="inline">https://registry.npmjs.org/verify402-mcp/-/verify402-mcp-2.5.0.tgz</code>.</p>
+        <p>If you prefer a pinned npm version: <code class="inline">npx -y verify402-mcp@2.6.0</code>. From source: <code class="inline">git clone https://github.com/a32116150-ctrl/verify402</code>, then <code class="inline">cd verify402/mcp-bridge &amp;&amp; npm ci</code>. The published npm tarball is <code class="inline">https://registry.npmjs.org/verify402-mcp/-/verify402-mcp-2.6.0.tgz</code>.</p>
       </div>
     </div>
   </section>

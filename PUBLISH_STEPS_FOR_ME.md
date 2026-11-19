@@ -580,5 +580,26 @@ Update `src/version.mjs`, `PUBLISHED_VERSION`, and the MCP Registry entry only a
 ## Verify the actual 2.5.0 registry version
 Check the MCP Registry and npm for `2.5.0`.
 
+Deployed after the registry and npm versions were verified. Superseded by 2.6.0.
+
+## Release verify402-mcp 2.6.0 — for me
+
+Every install lists all nine tools; paid tools refuse without EVM_PRIVATE_KEY.
+
+## Validate and inspect the release
+Run `npm run test:offline` and inspect the release metadata before changing anything.
+
+## Create and verify the npm 2.6.0 artifact
+Build and verify the npm tarball for `verify402-mcp@2.6.0`.
+
+## Publish npm 2.6.0
+Publish to npm with the authenticator code. This step runs only when the npm 2.6.0 artifact exists and is verified.
+
+## Transition the release metadata to published 2.6.0
+Update `src/version.mjs`, `PUBLISHED_VERSION`, and the MCP Registry entry only after npm succeeds.
+
+## Verify the actual 2.6.0 registry version
+Check the MCP Registry and npm for `2.6.0`.
+
 ## Deploy only after
 Deploy only after the registry and npm versions are verified.

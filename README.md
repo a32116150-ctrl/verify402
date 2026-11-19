@@ -71,7 +71,7 @@ It works with **Claude Desktop**, **Cursor**, **Windsurf**, **Cline**, **OpenCod
 ### Step 1: Add the MCP Server to Your Agent
 
 #### Option A: Free Mode (Zero Config, No Wallet, No Key)
-Gives your AI agent three free tools: **`preflight_gate`** (check payment challenges, token approvals, payee/amount, and transaction calldata at a fresh block before signing), **`inspect_402`** (read a 402 challenge before paying it), and **`directory_402`** (the watched list of public x402 endpoints). The paid `check_token_safety` check adds a quote-based sellability check; it does not execute a transfer and is not a honeypot guarantee.
+Gives your AI agent the three free tools immediately — all nine tools are listed, but the six paid ones refuse until you add a wallet: **`preflight_gate`** (check payment challenges, token approvals, payee/amount, and transaction calldata at a fresh block before signing), **`inspect_402`** (read a 402 challenge before paying it), and **`directory_402`** (the watched list of public x402 endpoints). The paid `check_token_safety` check adds a quote-based sellability check; it does not execute a transfer and is not a honeypot guarantee.
 
 Paste this into your client config file:
 - **Claude Desktop**: `~/Library/Application Support/Claude/claude_desktop_config.json` (Mac) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows)
@@ -492,8 +492,9 @@ pre-signing gate (`preflight_gate`), the 402 inspector and directory, and the si
 `verify_quote_fairness`, `get_trade_depth`, `get_assurance`) to Claude Desktop, Cursor, OpenCode,
 or any MCP client.
 
-- **Free gate only:** omit `EVM_PRIVATE_KEY`; the server registers only
-  `preflight_gate`, `inspect_402`, and `directory_402`, and nothing can be charged.
+- **Free gate:** omit `EVM_PRIVATE_KEY`; the server lists all nine tools, the
+  three free ones work as before, and the six paid ones refuse with a clear error.
+  Nothing can be charged.
 - **Paid tools:** add a dedicated hot wallet with a small amount of USDC on
   Base mainnet at https://vex402.online (the public testnet demo was retired on 2026-11-19). The bridge signs the x402
   payment only — never a trade — and enforces `MAX_PAYMENT_USD` (default $0.25)
@@ -514,13 +515,13 @@ or any MCP client.
   separate MCP bridge calls from generic HTTP. Labels are self-declared and
   spoofable, not identities.
 - **Install:** `npx -y verify402-mcp@latest` from the public npm registry
-  (currently `2.5.0`). For a pinned install of the published package, use
-  `npx -y verify402-mcp@2.5.0`; its npm tarball is
-  `https://registry.npmjs.org/verify402-mcp/-/verify402-mcp-2.5.0.tgz`. `1.1.6`
+  (currently `2.6.0`). For a pinned install of the published package, use
+  `npx -y verify402-mcp@2.6.0`; its npm tarball is
+  `https://registry.npmjs.org/verify402-mcp/-/verify402-mcp-2.6.0.tgz`. `1.1.6`
   moved the paid-call default to the live Base mainnet rail (`eip155:8453`,
   real USDC), with the same spend caps; the retired Base Sepolia testnet demo
   (`eip155:84532`) is an explicit opt-in via `VERIFY402_URL` and
-  `VERIFY402_NETWORKS`. `2.5.0` retires the testnet demo — paid calls are mainnet-only (real USDC); `2.0.0` added the paid assurance endpoint and the hash-bound evidence bundle; `1.1.7` was a metadata-only correction so the MCP
+  `VERIFY402_NETWORKS`. `2.6.0` lists all nine tools for every install — paid tools refuse without a wallet; `2.5.0` retired the testnet demo — paid calls are mainnet-only (real USDC); `2.0.0` added the paid assurance endpoint and the hash-bound evidence bundle; `1.1.7` was a metadata-only correction so the MCP
   Registry advertises that same mainnet default. No npm account is required to
   run the published package. Client configs, the exact OpenCode V2 shape, and
   the release command are at [`/mcp`](https://vex402.online/mcp). The immutable

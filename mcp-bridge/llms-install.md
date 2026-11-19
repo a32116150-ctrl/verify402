@@ -14,10 +14,10 @@ The first run downloads the MCP SDK and `viem`. Some clients kill a server that
 takes more than 30 seconds to start, so run this once first:
 
 ```bash
-npx -y verify402-mcp@2.5.0 --help
+npx -y verify402-mcp@2.6.0 --help
 ```
 
-This pins the published `2.5.0` package. Paid tools default to real USDC on Base mainnet at https://vex402.online; there is no public testnet endpoint (demo retired 2026-11-19).
+This pins the published `2.6.0` package. Paid tools default to real USDC on Base mainnet at https://vex402.online; there is no public testnet endpoint (demo retired 2026-11-19).
 
 Expected: a usage line listing the free tools (`preflight_gate`, `inspect_402`, `directory_402`) and the six paid tools.
 
@@ -32,7 +32,7 @@ Free gate only — no wallet, nothing can be charged:
       "command": "npx",
       "args": [
         "-y",
-        "verify402-mcp@2.5.0"
+        "verify402-mcp@2.6.0"
       ],
       "env": {
         "VERIFY402_URL": "https://vex402.online"
@@ -75,7 +75,7 @@ Then test the failure path: an unlimited USDC approve with
 Set a dedicated hot wallet that holds only a small amount of USDC on Base mainnet:
 
 ```
-EVM_PRIVATE_KEY=0x...           # omit for free-only
+EVM_PRIVATE_KEY=0x...           # omit and the paid tools refuse with a clear error; the free tools still work
 MAX_PAYMENT_USD=0.25            # hard cap on one payment, enforced before signing
 MAX_DAILY_USD=0.50              # optional UTC-day cap
 VERIFY402_NETWORKS=eip155:8453  # default: Base mainnet, real USDC

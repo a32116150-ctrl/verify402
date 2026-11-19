@@ -82,10 +82,10 @@ export function pingUsage(tool, ok, deps = {}) {
 // by a caller.
 const MAX_PAYMENT_USD = Number(process.env.MAX_PAYMENT_USD || 0.25);
 
-// Free-only mode is deliberate: an agent can install the bridge and call the
-// free preflight gate without handing it a private key. The paid tools are
-// registered only when a wallet is configured.
-const PAID_ENABLED = Boolean(EVM_PRIVATE_KEY);
+// Free-only installs are first-class: an agent can install the bridge and call
+// the free preflight gate without handing it a private key. The paid tools are
+// ALWAYS registered so listings and inspectors see the full surface; they
+// require EVM_PRIVATE_KEY at call time and refuse with a clear error otherwise.
 
 // Each paid MCP tool is bound to exactly one paid API route. This map is local,
 // trusted configuration: a 402 challenge can never choose which resource a tool
@@ -129,7 +129,7 @@ Usage:
 
 Environment:
   VERIFY402_URL     verify402 base URL (default https://vex402.online)
-  EVM_PRIVATE_KEY   optional; omit for the free preflight_gate only
+  EVM_PRIVATE_KEY   optional; omit and the paid tools refuse with a clear error — the free tools still work
   MAX_PAYMENT_USD   cap on one x402 payment (default 0.25; enforced before signing)
   MAX_DAILY_USD     optional cap for the UTC day, persisted in a small ledger
   SPEND_LEDGER_PATH optional ledger path (default .spend-ledger.json)
@@ -140,7 +140,7 @@ Environment:
   VERIFY402_RESOURCE_PREFIX  resource origin/prefix the 402 must match (default VERIFY402_URL)
 
 The free tools are preflight_gate, inspect_402 and directory_402. The paid tools are verify_arbitrage, check_token_safety, get_best_route, verify_quote_fairness, get_trade_depth and
-get_assurance.
+get_assurance. All nine tools are always listed; without EVM_PRIVATE_KEY the paid tools return a clear error and the free tools still work.
 The bridge signs x402 payments only; it never signs or sends a trade.
 `);
   process.exit(0);
@@ -298,6 +298,8 @@ Free tools (no wallet needed, nothing can be charged):
 Paid tools (each costs a small fixed USDC price via x402):
 - verify_arbitrage ($0.05), check_token_safety ($0.10), get_best_route ($0.03), verify_quote_fairness ($0.05), get_trade_depth ($0.05), get_assurance ($0.19).
 
+Paid tools are always listed. Without EVM_PRIVATE_KEY they return a clear error and never move money; the free tools still work.
+
 How to call them safely:
 1. Never sign a payment or transaction without preflight_gate. If it returns BLOCK, do not sign; fix the intent.
 2. A PASS is not a guarantee: it means the listed checks passed at one pinned block.
@@ -306,7 +308,18 @@ How to call them safely:
 5. The paid analysis calls the chain for you; unconfigured venues and off-chain promises are not checked and are named in notChecked.`;
 
 async function main() {
-  const paidApi = PAID_ENABLED ? await createBridgePaidClient() : null;
+  let paidApi = null;
+  let paidApiPromise = null;
+  async function ensurePaidApi() {
+    if (!EVM_PRIVATE_KEY) {
+      throw new Error(
+        "paid tools require EVM_PRIVATE_KEY (a dedicated hot wallet holding a small amount of USDC). The free tools — preflight_gate, inspect_402 and directory_402 — still work without it.",
+      );
+    }
+    if (!paidApiPromise) paidApiPromise = createBridgePaidClient();
+    paidApi ??= await paidApiPromise;
+    return paidApi;
+  }
 
   const server = new McpServer({ name: "verify402", version: VERSION }, { instructions: INSTRUCTIONS });
 
@@ -459,9 +472,8 @@ async function main() {
     },
   );
 
-  // Paid tools require a wallet. Without EVM_PRIVATE_KEY the server still
-  // exposes the free gate, so "install it and try it" never asks for a key.
-  if (paidApi) {
+  // Paid tools are always registered. Without EVM_PRIVATE_KEY they refuse at
+  // call time with a clear message; the free gate works without a wallet.
   server.tool(
     "verify_arbitrage",
     DESCRIPTIONS.verify_arbitrage,
@@ -476,7 +488,7 @@ async function main() {
       try {
         res = await runPaidTool({
         tool: "verify_arbitrage",
-        client: paidApi,
+        client: await ensurePaidApi(),
         body: {
           chainId: args.chainId,
           target: String(args.target ?? "WETH").toUpperCase(),
@@ -507,7 +519,7 @@ async function main() {
       try {
         res = await runPaidTool({
         tool: "check_token_safety",
-        client: paidApi,
+        client: await ensurePaidApi(),
         body: {
           chainId: args.chainId,
           tokenAddress: String(args.tokenAddress ?? "").trim(),
@@ -538,7 +550,7 @@ async function main() {
       try {
         res = await runPaidTool({
         tool: "get_best_route",
-        client: paidApi,
+        client: await ensurePaidApi(),
         body: {
           chainId: args.chainId,
           tokenIn: args.tokenIn,
@@ -571,7 +583,7 @@ async function main() {
       try {
         res = await runPaidTool({
         tool: "verify_quote_fairness",
-        client: paidApi,
+        client: await ensurePaidApi(),
         body: {
           chainId: args.chainId,
           tokenIn: args.tokenIn,
@@ -605,7 +617,7 @@ async function main() {
       try {
         res = await runPaidTool({
         tool: "get_trade_depth",
-        client: paidApi,
+        client: await ensurePaidApi(),
         body: {
           chainId: args.chainId,
           tokenAddress: args.tokenAddress,
@@ -658,7 +670,7 @@ async function main() {
       try {
         res = await runPaidTool({
           tool: "get_assurance",
-          client: paidApi,
+          client: await ensurePaidApi(),
           body: {
             chainId: args.chainId,
             safety: args.safety ?? null,
@@ -675,14 +687,13 @@ async function main() {
       return { content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }] };
     },
   );
-  } // end paid tools
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
   logInfo(
-    paidApi
+    EVM_PRIVATE_KEY
       ? `verify402 MCP bridge connected -> ${SERVER_URL} (paid tools on, max payment $${MAX_PAYMENT_USD})`
-      : `verify402 MCP bridge connected -> ${SERVER_URL} (free preflight_gate only; set EVM_PRIVATE_KEY for paid tools)`,
+      : `verify402 MCP bridge connected -> ${SERVER_URL} (all nine tools listed; paid tools need EVM_PRIVATE_KEY to run)`,
   );
 }
 

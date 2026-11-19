@@ -3,6 +3,20 @@
 All notable changes to verify402. This file records repository changes; it does
 not imply a deploy or an npm publish.
 
+## 2.6.0 — 2026-11-19
+
+Every install now lists all nine MCP tools. The paid tools are no longer
+registered only when a wallet is configured; they are always registered and
+refuse at call time with a clear error unless EVM_PRIVATE_KEY is set — no
+402 challenge is ever issued and no payment ever happens without a wallet.
+
+- Why: listings and registries (Glama, MCP Registry, npm) launch the bridge
+  without a wallet, so they saw only the three free tools and scored them.
+  The full surface must be visible for the product to be discoverable.
+- The free tools are unchanged: no wallet needed, nothing can be charged.
+Published as `verify402-mcp@2.6.0`; the live service, npm and the registry
+will be updated to the same identity.
+
 ## 2.5.0 — 2026-11-19
 
 The mainnet-only release. The public Base Sepolia testnet demo is gone — it

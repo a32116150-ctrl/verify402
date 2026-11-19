@@ -138,15 +138,15 @@ and `requestBound:false`; require both when a signature is at stake.
 Receipts expire after 90 seconds by default (15–300 configurable via
 `ttlSeconds`). Re-call the gate instead of reusing an expired one.
 
-## 4. Use it as an MCP tool (free-only mode needs no wallet)
+## 4. Use it as an MCP tool (no wallet needed for the free tools)
 
 Warm the `npx` cache once:
 
 ```bash
-npx -y verify402-mcp@2.5.0 --help
+npx -y verify402-mcp@2.6.0 --help
 ```
 
-This pins the published `2.5.0` package. Paid tools default to real USDC on Base mainnet at https://vex402.online; the public testnet demo was retired on 2026-11-19.
+This pins the published `2.6.0` package. Paid tools default to real USDC on Base mainnet at https://vex402.online; the public testnet demo was retired on 2026-11-19.
 
 Then add it to Claude Desktop / Cursor (`.cursor/mcp.json`):
 
@@ -155,14 +155,16 @@ Then add it to Claude Desktop / Cursor (`.cursor/mcp.json`):
   "mcpServers": {
     "verify402": {
       "command": "npx",
-      "args": ["-y", "verify402-mcp@2.5.0"],
+      "args": ["-y", "verify402-mcp@2.6.0"],
       "env": { "VERIFY402_URL": "https://vex402.online" }
     }
   }
 }
 ```
 
-With no `EVM_PRIVATE_KEY`, the server registers only `preflight_gate`. Nothing
+With no `EVM_PRIVATE_KEY`, the server lists all nine tools; the three free ones
+(`preflight_gate`, `inspect_402`, `directory_402`) work as before and the six
+paid ones refuse with a clear error. Nothing
 can be charged. The six paid checks stay off.
 
 ## 5. Enforce it where the signing happens

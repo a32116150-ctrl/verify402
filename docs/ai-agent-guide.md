@@ -21,8 +21,8 @@ npx -y verify402-mcp --help
 | **Requires Wallet?** | ❌ No | ✅ Yes (Dedicated hot wallet) |
 | **Requires Private Key?** | ❌ No | ✅ Yes (`EVM_PRIVATE_KEY`) |
 | **Requires Crypto / Gas?** | ❌ No | ✅ Yes (a little USDC + ETH on Base mainnet) |
-| **Tools Included** | `preflight_gate` | `preflight_gate`, `verify_arbitrage`, `check_token_safety`, `get_best_route`, `verify_quote_fairness`, `get_trade_depth` |
-| **Cost** | **$0.00** | $0.03 – $0.10 per call via x402 |
+| **Tools Included** | All nine listed; the three free ones work (`preflight_gate`, `inspect_402`, `directory_402`); paid tools refuse clearly | All nine (`preflight_gate`, `verify_arbitrage`, `check_token_safety`, `get_best_route`, `verify_quote_fairness`, `get_trade_depth`, `get_assurance`) |
+| **Cost** | **$0.00** | $0.03 – $0.19 per call via x402 |
 
 ---
 

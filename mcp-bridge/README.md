@@ -12,11 +12,12 @@ wallet. The analysis reads mainnet chain data. The public Base Sepolia testnet d
 retired on 2026-11-19 — the live service at https://vex402.online is the only
 public endpoint. The bridge never signs or sends a trade.
 
-> **Published package note:** `verify402-mcp@2.5.0` is published to npm and
-> paid calls default to Base mainnet (`eip155:8453`) — real USDC. The public
-> testnet demo was retired on 2026-11-19; the live service is the only
-> endpoint. 2.5.0 is the mainnet-only release. All published versions are
-> immutable. Do not republish or overwrite any published version.
+> **Published package note:** `verify402-mcp@2.6.0` is published to npm. The
+> full tool surface is listed for every install (free tools work immediately;
+> the six paid tools refuse with a clear error until `EVM_PRIVATE_KEY` is
+> set). The public testnet demo was retired on 2026-11-19; the live service is
+> the only endpoint. All published versions are immutable. Do not republish or
+> overwrite any published version.
 
 ## Anonymous usage telemetry (opt-in)
 
@@ -107,7 +108,7 @@ node index.mjs --help
 ## AI Agent Integration (Step-by-Step)
 
 ### Step 1: Free Mode (Zero Config, No Wallet)
-To give your AI agent the free **`preflight_gate`** (checks transaction calldata, payment challenges, payee/amount, approvals, and block freshness before signing), paste this into your client configuration. The paid `check_token_safety` check adds a quote-based sellability check; it does not execute a transfer and is not a honeypot guarantee.
+The bridge lists all nine tools. With no wallet, the free **`preflight_gate`** works immediately (checks transaction calldata, payment challenges, payee/amount, approvals, and block freshness before signing) and the six paid tools refuse with a clear error. Paste this into your client configuration. The paid `check_token_safety` check adds a quote-based sellability check; it does not execute a transfer and is not a honeypot guarantee.
 
 **Claude Desktop** (`claude_desktop_config.json`) or **Cursor** (`.cursor/mcp.json`):
 ```json

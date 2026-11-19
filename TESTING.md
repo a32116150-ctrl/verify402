@@ -74,7 +74,7 @@ Expected: `BLOCK` with `unlimited_approval`. No payment is made.
 
 ## 3. Optional: use the MCP tool
 
-Free-only mode needs no wallet. Add this to your MCP client:
+The free tools need no wallet. All nine tools are listed; the six paid ones refuse clearly without one. Add this to your MCP client:
 
 ```json
 {
