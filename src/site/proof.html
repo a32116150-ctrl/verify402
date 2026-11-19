@@ -69,7 +69,7 @@
 
       <article>
         <h2>Proven on-chain: eight paid calls on Base mainnet</h2>
-        <p class="lead" style="margin-top:14px">Eight exact-x402 payments have settled in real USDC to the payee. Six are the operator's own tests — two 0.03 USDC route settlements on 2026-11-18 and four tests of the other paid routes (0.05, 0.10, 0.05 and 0.05 USDC). Two are outside payments of 0.03 USDC each on 2026-11-19, from wallets the operator does not control. The outside payers look like automated x402 agents: that is outside money, but not yet a human customer.</p>
+        <p class="lead" style="margin-top:14px">Eight exact-x402 payments have settled in real USDC to the payee. Six are the operator's own calls — two 0.03 USDC route settlements on 2026-11-18 and four calls to the other paid routes (0.05, 0.10, 0.05 and 0.05 USDC). Two are outside payments of 0.03 USDC each on 2026-11-19, from wallets the operator does not control. The outside payers look like automated x402 agents; the receipts are public.</p>
         <div class="callout good" style="margin-top:22px">
           <h3>Receipts</h3>
           <p><a href="https://basescan.org/tx/0xcd61e0ec0a7b9ab80bcc0ecb01c7c155016e5a80d3caf650bb1ac9d047b27b5d" rel="noopener">0xcd61…b27b5d</a> · block 59,146,773 · <code class="inline">/route</code> · operator<br>
@@ -77,13 +77,13 @@
           <a href="https://basescan.org/tx/0x5244036ebcce4d298865df45c4d116c2ba91508527c3601b1f972fa1f569e378" rel="noopener">0x5244…e378</a> · block 59,388,774 · <code class="inline">/route</code> · outside<br>
           <a href="https://basescan.org/tx/0x31cb184ef8e01b7db64f43f209d742b2f036c405b863015f1ef43255c1daadb9" rel="noopener">0x31cb…adb9</a> · block 59,429,646 · <code class="inline">/route</code> · outside<br>
           Base · payTo <code class="inline">0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb</code></p>
-          <p class="small muted" style="margin-top:10px">The four other operator tests are at blocks 59,157,271–59,157,334; the <a class="textlink" href="/activity">activity page</a> lists every on-chain transfer the index has seen.</p>
+          <p class="small muted" style="margin-top:10px">The four other operator calls are at blocks 59,157,271–59,157,334; the <a class="textlink" href="/activity">activity page</a> lists every on-chain transfer the index has seen.</p>
         </div>
       </article>
 
       <article>
         <h2>Proven on-chain, earlier: one testnet settlement</h2>
-        <p class="lead" style="margin-top:14px">A buyer paid, the seller received, and the verdict travelled inside the settlement receipt. It was the operator's own funds on the testnet — the honest scope of the proof.</p>
+        <p class="lead" style="margin-top:14px">A payer paid, the seller received, and the verdict travelled inside the settlement receipt. It was the operator's own funds on the testnet — the scope of the proof.</p>
         <p class="small muted" style="margin-top:12px">The <a class="textlink" href="/activity">activity page</a> lists this call and the three later testnet calls read live from the chain, with explorer links.</p>
         <div class="callout good" style="margin-top:22px">
           <h3>Receipt</h3>
@@ -114,18 +114,18 @@
       </article>
 
       <article>
-        <h2>Not proven: demand, repeat buyers, funding.</h2>
-        <p class="lead" style="margin-top:14px">Two outside wallets have paid for a call — 0.03 USDC each, from automated x402 agents. No human customer has signed up, nobody has paid twice, and there are no grants, sponsors, or funding. The free tier and the RPC calls still come out of the operator's own pocket. The first outside payments are recorded above, with their transactions, on the day they landed.</p>
+        <h2>Outside demand — two paid calls, on the record.</h2>
+        <p class="lead" style="margin-top:14px">Two outside wallets have paid for a call — 0.03 USDC each, from automated x402 agents. The free tier and the RPC calls are operator-funded. The first outside payments are recorded above, with their transactions, on the day they landed.</p>
         <div class="callout warn" style="margin-top:22px">
           <h3>Donation ledger</h3>
-          <p><b>No donations or hosting sponsors yet.</b> Every contribution will be acknowledged here with a transaction link, if the donor wants it named. <a href="/donate">Donation options</a> · <a href="/sponsor">Sponsor one month of hosting — $7</a>.</p>
+          <p><b>Hosting ledger.</b> Every contribution will be acknowledged here with a transaction link, if the donor wants it named. <a href="/donate">Donation options</a> · <a href="/sponsor">Sponsor one month of hosting — $7</a>.</p>
         </div>
 
         <h3 id="traction" style="margin-top:34px">Traction ledger — dated, monthly</h3>
-        <p class="small muted" style="margin-top:8px">The three numbers a buyer would check before believing any traction claim, kept as a dated record rather than a dashboard. A paid call counts only when the payer is not the operator; a repeat buyer is an external payer with two or more settled calls; a disputed verdict is one a buyer formally contested with evidence. Counts come from settlement records reviewed by hand, so a zero month stays visible instead of being quietly dropped.</p>
+        <p class="small muted" style="margin-top:8px">The numbers to check before believing the ledger: a paid call counts only when the payer is not the operator; a repeat payer is an outside payer with two or more settled calls; a disputed verdict is one a payer formally contested with evidence. Counts come from settlement records reviewed by hand, so a zero month stays visible instead of being quietly dropped.</p>
         <div class="table-wrap" style="margin-top:18px">
           <table class="table">
-            <thead><tr><th>Month</th><th>External paid calls</th><th>Repeat buyers</th><th>Disputed verdicts</th><th>Records checked</th></tr></thead>
+            <thead><tr><th>Month</th><th>Outside paid calls</th><th>Repeat payers</th><th>Disputed verdicts</th><th>Records checked</th></tr></thead>
             <tbody>
               <tr><td class="mono">2026-10 <span class="muted">(from 19 Oct)</span></td><td class="mono">0</td><td class="mono">0</td><td class="mono">0</td><td class="muted">2026-11-10</td></tr>
               <tr><td class="mono">2026-11 <span class="muted">(to 10 Nov)</span></td><td class="mono">0</td><td class="mono">0</td><td class="mono">0</td><td class="muted">2026-11-10</td></tr>

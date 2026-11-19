@@ -209,7 +209,7 @@ export function buildExplorerPayload({
       "the list is not a claim about unique buyers. " +
       (mode === "mainnet"
         ? "Mainnet rows are the operator's own settlements so far."
-        : "Testnet rows are the operator's own tests."),
+        : "Testnet rows are the operator's own calls."),
   };
 }
 

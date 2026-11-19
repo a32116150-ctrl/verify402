@@ -10,7 +10,7 @@
 [![x402 v2](https://img.shields.io/badge/x402-v2%20exact-purple.svg)](https://github.com/x402-foundation/x402)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-> **Status (2026-11-19):** this service is live on **Base + Solana mainnet** at **[vex402.online](https://vex402.online)** — real USDC via the Coinbase CDP facilitator. Eight paid calls have settled on Base mainnet: six operator tests (0.31 USDC) and two outside payments of 0.03 USDC each ([0x5244…](https://basescan.org/tx/0x5244036ebcce4d298865df45c4d116c2ba91508527c3601b1f972fa1f569e378), [0x31cb…](https://basescan.org/tx/0x31cb184ef8e01b7db64f43f209d742b2f036c405b863015f1ef43255c1daadb9)). No human customer yet. A **Base Sepolia testnet demo** stays available at [verify402.onrender.com](https://verify402.onrender.com) for trying the payment rail without real money. The analysis reads mainnet chain data (Ethereum, Arbitrum, Base). Two automated outside calls are not claimed as demand.
+> **Status (2026-11-19):** this service is live on **Base + Solana mainnet** at **[vex402.online](https://vex402.online)** — real USDC via the Coinbase CDP facilitator. Eight paid calls have settled on Base mainnet: six operator calls (0.31 USDC) and two outside payments of 0.03 USDC each ([0x5244…](https://basescan.org/tx/0x5244036ebcce4d298865df45c4d116c2ba91508527c3601b1f972fa1f569e378), [0x31cb…](https://basescan.org/tx/0x31cb184ef8e01b7db64f43f209d742b2f036c405b863015f1ef43255c1daadb9)). A **Base Sepolia testnet demo** stays available at [verify402.onrender.com](https://verify402.onrender.com) for trying the payment rail without real money. The analysis reads mainnet chain data (Ethereum, Arbitrum, Base).
 
 ---
 

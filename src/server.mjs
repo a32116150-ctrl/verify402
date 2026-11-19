@@ -198,6 +198,7 @@ const ROUTE_PRICE = process.env.ROUTE_PRICE || PRICE_DEFAULTS.route;
 const QUOTECHECK_PRICE = process.env.QUOTECHECK_PRICE || PRICE_DEFAULTS.quotecheck;
 // Sizing: the decision that happens BEFORE every trade after a route is known.
 const DEPTH_PRICE = process.env.DEPTH_PRICE || PRICE_DEFAULTS.depth;
+const ASSURE_PRICE = process.env.ASSURE_PRICE || PRICE_DEFAULTS.safety;
 
 // Live paid-usage counters. Mainnet keeps a small persisted index of USDC
 // transfers to the payee and extends it from the launch block; testnet is read
@@ -964,6 +965,22 @@ if (!BYPASS_PAYMENT) app.use(
           }),
         },
       },
+      "POST /assure": {
+        accepts: accepts(ASSURE_PRICE),
+        iconUrl: "https://vex402.online/logo-400.png",
+        description:
+          "Paid assurance over a pre-signing gate. Runs the free preflight and returns the verdict with a longer-lived, hash-bound evidence bundle, the chain block, checked and notChecked lists, and a signed receipt. Use this when a pre-signing verdict must be retained or audited; the free /preflight remains the discovery tool.",
+        mimeType: "application/json",
+        extensions: {
+          ...declareDiscoveryExtension({
+            method: "POST",
+            bodyType: "json",
+            input: { kind: "payment", payment: { chainId: 8453, scheme: "exact", amount: "30000", asset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", payTo: "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb", resource: "https://vex402.online/route" } },
+            output: { example: { verdict: "PASS", receipt: { spec: "verify402/preflight-receipt@1", expiresAt: "2026-11-19T12:00:00.000Z" }, assurance: { spec: "verify402/assurance@1", evidenceHash: "sha256:..." } } },
+            inputSchema: { properties: { kind: { type: "string", enum: ["payment", "transaction"] } }, required: [] },
+          }),
+        },
+      },
       "POST /quotecheck": {
         accepts: accepts(QUOTECHECK_PRICE),
         iconUrl: "https://vex402.online/logo-400.png",
@@ -1186,6 +1203,7 @@ app.get("/.well-known/verify402.json", (_req, res) => {
         route: ROUTE_PRICE,
         quotecheck: QUOTECHECK_PRICE,
         depth: DEPTH_PRICE,
+        assure: ASSURE_PRICE,
       },
       payTo: {
         evm: PAY_TO_EVM,
@@ -1739,7 +1757,7 @@ async function refreshStats() {
     mainnet,
     testnet,
     freeCalls: usageSnapshot().total,
-    note: "Counts are on-chain USDC transfers to the service address. A paid call is not a unique agent; operator tests are counted separately from outside payers. Testnet amounts are testnet USDC.",
+    note: "Counts are on-chain USDC transfers to the service address. A paid call is not a unique agent; operator calls are counted separately from outside payers. Testnet amounts are testnet USDC.",
   };
 }
 
@@ -2045,6 +2063,7 @@ app.get("/", (req, res) => {
       `  POST /route    ${ROUTE_PRICE} per call        what would the chain actually pay for this swap?`,
       `  POST /quotecheck ${QUOTECHECK_PRICE} per call      audit a quote someone else gave you`,
       `  POST /depth    ${DEPTH_PRICE} per call        how big can I trade before cost eats me?`,
+      `  POST /assure   ${ASSURE_PRICE} per call       pre-signing assurance with a hash-bound evidence bundle`,
       "  GET  /findings free                 live verdicts on Ethereum majors, free",
       "  GET  /usage    free                 anonymous free-gate call counts (process-local)",
       "  GET  /usage/site free               aggregate page views of the human site (no cookies, no IP)",
@@ -2117,6 +2136,7 @@ app.get("/info", (_req, res) => {
       route: ROUTE_PRICE,
       quotecheck: QUOTECHECK_PRICE,
       depth: DEPTH_PRICE,
+      assure: ASSURE_PRICE,
     },
     usage: {
       path: "/usage",
@@ -2693,6 +2713,49 @@ app.post("/depth", async (req, res) => {
 // an HTML page with a stack trace and the server's file paths. Every endpoint
 // here speaks JSON, so those failures answer in the same envelope as the rest:
 // a stable code plus the request id, and nothing about the process.
+app.post("/assure", async (req, res) => {
+  const started = Date.now();
+  try {
+    const body = req.body || {};
+    const ttlSeconds = body.ttlSeconds != null
+      ? numberField(body.ttlSeconds, "ttlSeconds", { min: MIN_TTL_SECONDS, max: MAX_TTL_SECONDS })
+      : 300;
+    const assuredBody = { ...body, ttlSeconds };
+    const result = await preflight(assuredBody, { now: Date.now() });
+    const evidenceHash = sha256Hex(canonicalStable({
+      spec: result.spec,
+      verdict: result.verdict,
+      reasons: result.reasons,
+      checked: result.checked,
+      notChecked: result.notChecked,
+      receipt: result.receipt
+        ? { spec: result.receipt.spec, expiresAt: result.receipt.expiresAt, intentHash: result.receipt.intentHash }
+        : null,
+    }));
+    const assurance = {
+      spec: "verify402/assurance@1",
+      checkedAt: new Date().toISOString(),
+      ttlSeconds,
+      expiresAt: result.receipt?.expiresAt ?? null,
+      evidenceHash: `sha256:${evidenceHash}`,
+      notChecked: result.notChecked,
+      verdict: result.verdict,
+    };
+    emitPaid(req, res, {
+      ...result,
+      assurance,
+      cache: { hit: false, pinnedBlock: null },
+      elapsedMs: Date.now() - started,
+    });
+  } catch (e) {
+    if (e instanceof PreflightError) {
+      if (e.status >= 400 && e.status < 500) return badRequest(req, res, e.code, e.message);
+      return paidFail(req, res, e.status, e.code, e.message);
+    }
+    return paidCatch(req, res, e);
+  }
+});
+
 app.use((err, req, res, next) => {
   if (res.headersSent) return next(err);
   const requestId = req.requestId || randomUUID();

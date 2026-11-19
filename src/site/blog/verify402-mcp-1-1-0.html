@@ -96,7 +96,7 @@
     <ul>
       <li>The free gate contract. PASS / CAUTION / BLOCK, short-lived receipt, fail-closed.</li>
       <li>Any price. The five checks remain testnet USDC, the free gate and <code class="inline">/inspect</code> remain free.</li>
-      <li>The honesty problem at that release: nobody outside the operator had paid a call. The only settlements were the operator's own — two 0.03 USDC end-to-end tests on Base mainnet (2026-11-18) plus testnet demos. (Two outside payments arrived on 2026-11-19.)</li>
+      <li>The honesty problem at that release: the only settlements were the operator's own — two 0.03 USDC end-to-end calls on Base mainnet (2026-11-18) plus testnet demos. (Two outside payments arrived on 2026-11-19.)</li>
       <li>Durability of settlement state — the deployed instance is memory-only, and its recovery behavior says so at <code class="inline">/health</code>.</li>
       <li>The <code class="inline">notChecked</code> list. A longer list is not 1.1.0's point; a legible one is.</li>
     </ul>

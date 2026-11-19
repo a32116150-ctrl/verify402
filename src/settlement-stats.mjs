@@ -27,7 +27,7 @@ const REORG_DEPTH = 50;
 const TIMEOUT_MS = 8_000;
 
 // Wallets the operator controls. Kept here as a default so a fresh deploy can
-// tell "operator tests" from "someone else paid" without extra configuration.
+// tell "operator calls" from "someone else paid" without extra configuration.
 // Override with OPERATOR_ADDRESSES=a,b (comma separated).
 export const DEFAULT_OPERATOR_ADDRESSES = Object.freeze([
   "0x9a48474B06554c25258B4bc3Def5A637cBF5AD4b", // mainnet payer

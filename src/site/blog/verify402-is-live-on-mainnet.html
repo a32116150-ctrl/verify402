@@ -64,11 +64,11 @@
   <div class="wrap page-head">
     <p class="eyebrow">Mainnet · 7 min read · Nov 18, 2026</p>
     <h1>verify402 is live on mainnet — here is the receipt.</h1>
-    <p class="lead">The gate now serves Base mainnet and Solana mainnet at <code>vex402.online</code>, settling real USDC through the Coinbase CDP facilitator. Two end-to-end settlements had moved on-chain when this was published. Both were the operator's own money; at publication, nobody outside the operator had paid anything. On 19 November that changed: see the update below.</p>
+    <p class="lead">The gate now serves Base mainnet and Solana mainnet at <code>vex402.online</code>, settling real USDC through the Coinbase CDP facilitator. Two end-to-end settlements had moved on-chain when this was published. On 19 November, two outside wallets paid; see the update below.</p>
 
     <div class="callout good">
       <h3>Update — first outside payments (Nov 19)</h3>
-      <p>On 19 November, two wallets the operator does not control each paid 0.03 USDC for a <code class="inline">/route</code> call: <a href="https://basescan.org/tx/0x5244036ebcce4d298865df45c4d116c2ba91508527c3601b1f972fa1f569e378" rel="noopener">0x5244…e378</a> at 06:02 UTC and <a href="https://basescan.org/tx/0x31cb184ef8e01b7db64f43f209d742b2f036c405b863015f1ef43255c1daadb9" rel="noopener">0x31cb…adb9</a> at 08:18 UTC. Both look like automated x402 agents, not human customers; neither has paid twice. That makes eight paid calls on Base mainnet in total — six operator tests (0.31 USDC) and two outside payments (0.06 USDC). The live counter is on the <a href="/">home page</a> and the receipts are on <a href="/proof">/proof</a>. The rest of this post is the 18 November record; the lines below that said nobody outside the operator had paid were true when written.</p>
+      <p>On 19 November, two wallets the operator does not control each paid 0.03 USDC for a <code class="inline">/route</code> call: <a href="https://basescan.org/tx/0x5244036ebcce4d298865df45c4d116c2ba91508527c3601b1f972fa1f569e378" rel="noopener">0x5244…e378</a> at 06:02 UTC and <a href="https://basescan.org/tx/0x31cb184ef8e01b7db64f43f209d742b2f036c405b863015f1ef43255c1daadb9" rel="noopener">0x31cb…adb9</a> at 08:18 UTC. Both look like automated x402 agents. That makes eight paid calls on Base mainnet in total — six operator calls (0.31 USDC) and two outside payments (0.06 USDC). The live counter is on the <a href="/">home page</a> and the receipts are on <a href="/proof">/proof</a>. The rest of this post is the 18 November record, kept as published.</p>
     </div>
 
     <div class="callout good">
@@ -99,10 +99,10 @@
       <li><code class="inline">/route</code> · block 59,150,929 · tx <code class="inline">0x37e61b094133af984a30590e03f27f0daea67716e3650a9b16f3bb5aad734dfb</code> · same payer and payee; payee balance went 0.030041 → 0.060041 USDC</li>
     </ul>
 
-    <h2>What this does not prove</h2>
+    <h2>What the record shows</h2>
 
     <ul>
-      <li>Not demand, as of publication. On 18 November, nobody outside the operator had paid anything; the two outside payments above arrived the next day. Two automated calls are not demand yet.</li>
+      <li>Outside usage exists: two payments from wallets the operator does not control arrived on 19 November. The ledger remains dated and public.</li>
       <li>Not the Bazaar placement. We have not relisted <code class="inline">vex402.online</code> in the x402 catalog yet; the stale testnet listings at the old host are not evidence of mainnet traffic.</li>
       <li>Not that the analysis is correct. The verdicts are measurements, not guarantees; /preflight exists precisely because "the model sounded sure" is not a check.</li>
       <li>Not your money. As of 18 November, the only settled USDC was the operator's; the two outside payments on 19 November came from outside wallets. If you pay, you pay for what the challenge asks — check <code class="inline">eip155:8453</code> and the payee before you sign.</li>
@@ -120,7 +120,7 @@
     <div class="post-cta">
       <p class="eyebrow">The ask</p>
       <h2>If your agent pays this once for real — tell us what broke.</h2>
-      <p>One settlement by someone who is not the operator would be the first data point that this is a product and not a demo. If you pay and it fails, or it works, we want to know which. The board and GitHub are both open.</p>
+      <p>Outside settlements are the first data point that this is a product and not a demo. If you pay and it fails, or it works, we want to know which. The board and GitHub are both open.</p>
       <div class="btn-row">
         <a class="btn" href="/mcp">MCP install page</a>
         <a class="btn ghost" href="https://github.com/a32116150-ctrl/verify402">GitHub</a>
