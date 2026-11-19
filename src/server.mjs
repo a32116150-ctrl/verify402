@@ -2452,9 +2452,9 @@ app.get("/info", (_req, res) => {
       transport: "stdio",
       install: `${PUBLIC_BASE_URL}/mcp`,
       freeTool: "preflight_gate",
-      paidTools: ["verify_arbitrage", "check_token_safety", "get_best_route", "verify_quote_fairness", "get_trade_depth"],
-      freeOnlyWithoutWallet: true,
-      note: "Start with no EVM_PRIVATE_KEY to expose only the free gate. Paid tools use a dedicated hot wallet, cap each payment at MAX_PAYMENT_USD, and only pay an allowlisted network/payee. The bridge signs x402 payments only, never a trade.",
+      paidTools: ["verify_arbitrage", "check_token_safety", "get_best_route", "verify_quote_fairness", "get_trade_depth", "get_assurance"],
+      freeOnlyWithoutWallet: false,
+      note: "All nine tools are listed for every install. The three free tools work with no wallet; the six paid tools refuse with a clear error unless EVM_PRIVATE_KEY is configured. The bridge caps each payment at MAX_PAYMENT_USD and only pays an allowlisted network, payee and resource. It signs x402 payments only, never a trade.",
     },
     recovery: {
       header: "x-idempotency-key",
