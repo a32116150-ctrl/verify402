@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-import { renderSiteHtml } from "../src/site-mode.mjs";
+import { renderSiteHtml, withCanonical } from "../src/site-mode.mjs";
 
 const read = (name) => readFileSync(new URL(`../src/site/${name}`, import.meta.url), "utf8");
 
@@ -44,4 +44,18 @@ test("blog bodies keep their historical rail; only their footer is rewritten", (
   assert.ok(out.includes("testnet USDC"), "the historical post must still describe its testnet settlement");
   assert.ok(!out.includes("Analysis reads mainnet chain data; demo payments are testnet."));
   assert.ok(out.includes("This instance settles real USDC on Base mainnet / Solana mainnet over x402."));
+});
+
+test("withCanonical pins public pages to the mainnet origin without duplicating a canonical", () => {
+  const plain = read("start.html");
+  const out = withCanonical(plain, "/start");
+  assert.equal((out.match(/rel="canonical"/g) || []).length, 1);
+  assert.ok(out.includes('<link rel="canonical" href="https://vex402.online/start">'));
+
+  const already = withCanonical(read("blog/what-public-402s-look-like.html"), "/blog/what-public-402s-look-like");
+  assert.equal((already.match(/rel="canonical"/g) || []).length, 1);
+  assert.ok(already.includes('<link rel="canonical" href="https://vex402.online/blog/what-public-402s-look-like">'));
+
+  const htmlExtension = withCanonical(plain, "/start.html");
+  assert.ok(htmlExtension.includes('<link rel="canonical" href="https://vex402.online/start">'));
 });

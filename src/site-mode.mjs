@@ -211,6 +211,21 @@ export function withAssetFingerprint(html) {
   return html.replace(/((?:href|src)="\/assets\/[^"?]+)(")/g, `$1?v=${ASSET_BUILD}$2`);
 }
 
+// Google Search Console gets one sitemap at the mainnet origin. Pin every
+// served HTML page to that origin so the old Render host cannot split ranking
+// signals; pages that already declare a canonical keep their own value.
+const CANONICAL_ORIGIN = "https://vex402.online";
+export function withCanonical(html, path = "/") {
+  if (/<link\s+[^>]*rel=["']canonical["'][^>]*>/i.test(html)) return html;
+  const headClose = html.indexOf("</head>");
+  if (headClose < 0) return html;
+  let clean = String(path || "/").split(/[?#]/, 1)[0];
+  if (!clean.startsWith("/")) clean = `/${clean}`;
+  if (clean.length > 1) clean = clean.replace(/\/+$/, "");
+  if (clean.endsWith(".html")) clean = clean.slice(0, -5) || "/";
+  return `${html.slice(0, headClose)}  <link rel="canonical" href="${CANONICAL_ORIGIN}${clean}">\n${html.slice(headClose)}`;
+}
+
 export function renderSiteHtml(html, { mode = "testnet", path = "" } = {}) {
   if (mode !== "mainnet") return html;
   const isBlogPost = path.startsWith("/blog/");

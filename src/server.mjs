@@ -13,7 +13,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { renderSiteHtml, withAssetFingerprint } from "./site-mode.mjs";
+import { renderSiteHtml, withAssetFingerprint, withCanonical } from "./site-mode.mjs";
 const LANDING_HTML = readFileSync(new URL("./landing.html", import.meta.url), "utf8");
 const SITE_DIR = fileURLToPath(new URL("./site", import.meta.url));
 
@@ -1280,6 +1280,12 @@ app.get("/sitemap.xml", (_req, res) => {
   <url><loc>https://vex402.online/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
   <url><loc>https://vex402.online/start</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
   <url><loc>https://vex402.online/docs</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://vex402.online/ai-agent-payment-security</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://vex402.online/x402-endpoint-checker</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://vex402.online/verify-usdc-payment-request</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://vex402.online/token-approval-checker</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://vex402.online/agent-payment-receipt</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://vex402.online/crypto-arbitrage-verification</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://vex402.online/mcp</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
   <url><loc>https://vex402.online/preflight</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://vex402.online/inspect</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
@@ -1295,6 +1301,8 @@ app.get("/sitemap.xml", (_req, res) => {
   <url><loc>https://vex402.online/blog/check-an-x402-endpoint-before-you-pay</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://vex402.online/blog/pre-signing-gate-in-an-mcp-agent</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://vex402.online/blog/verify402-mcp-1-1-0</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://vex402.online/blog/verify402-mcp-1-1-1</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://vex402.online/blog/verify402-cdp-facilitator-testnet</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://vex402.online/blog/what-public-402s-look-like</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://vex402.online/checks</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://vex402.online/proof</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
@@ -2141,7 +2149,7 @@ app.get("/finding/:target", perIpRateLimit({ max: FINDINGS_RATE_PER_MIN, label: 
     const row = await measureFindingPair(target);
     res.set("Cache-Control", "public, max-age=60");
     res.type("html").send(
-      renderFindingPage(row, { origin: "https://vex402.online", measuredAt: findingsSnap?.payload?.measuredAt ?? null }),
+      withCanonical(renderFindingPage(row, { origin: "https://vex402.online", measuredAt: findingsSnap?.payload?.measuredAt ?? null }), req.path),
     );
   } catch (e) {
     logError("[finding] render failed", e);
@@ -2159,7 +2167,7 @@ app.get(["/board", "/board/"], async (req, res) => {
     // Never let a cold instance's empty cache be served — or cached — as the board.
     if (!board.rows.length) return boardWarming(res, "html");
     res.set("Cache-Control", "public, max-age=300");
-    res.type("html").send(renderBoardPage(board));
+    res.type("html").send(withCanonical(renderBoardPage(board), req.path));
   } catch (e) {
     logError("[board] render failed", e);
     res.status(503).type("text").send("board unavailable; retry shortly");
@@ -2197,7 +2205,7 @@ app.get("/badge", async (req, res) => {
 // Express does not redirect to a directory listing that does not exist.
 app.get(["/blog", "/blog/"], (_req, res) => {
   res.set("Cache-Control", "no-store");
-  res.type("text/html").send(withAssetFingerprint(renderSiteHtml(readFileSync(`${SITE_DIR}/blog.html`, "utf8"), { mode: MODE, path: "/blog" })));
+  res.type("text/html").send(withCanonical(withAssetFingerprint(renderSiteHtml(readFileSync(`${SITE_DIR}/blog.html`, "utf8"), { mode: MODE, path: "/blog" })), "/blog"));
 });
 
 // Static pages for humans: /start, /checks, /live, /proof, /docs, /donate, /sponsor (+ /assets).
@@ -2221,7 +2229,7 @@ app.use((req, res, next) => {
     return next();
   }
   res.set("Cache-Control", "no-store");
-  res.type("text/html").send(withAssetFingerprint(renderSiteHtml(raw, { mode: MODE, path: urlPath })));
+  res.type("text/html").send(withCanonical(withAssetFingerprint(renderSiteHtml(raw, { mode: MODE, path: urlPath })), urlPath));
 });
 
 app.use(express.static(SITE_DIR, {
@@ -2242,7 +2250,7 @@ app.get("/", (req, res) => {
   const wantsHtml = accept.includes("text/html") || isCrawler;
   if (wantsHtml) {
     res.set("Cache-Control", "no-store");
-    return res.type("text/html").send(withAssetFingerprint(renderSiteHtml(LANDING_HTML, { mode: MODE, path: "/" })));
+    return res.type("text/html").send(withCanonical(withAssetFingerprint(renderSiteHtml(LANDING_HTML, { mode: MODE, path: "/" })), "/"));
   }
   res.type("text/plain").send(
     [

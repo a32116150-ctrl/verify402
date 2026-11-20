@@ -264,6 +264,12 @@ test("discovery: google site verification meta tag and file are present for Sear
     path.join(ROOT, "src", "site", "donate.html"),
     path.join(ROOT, "src", "site", "sponsor.html"),
     path.join(ROOT, "src", "site", "mcp.html"),
+    path.join(ROOT, "src", "site", "ai-agent-payment-security.html"),
+    path.join(ROOT, "src", "site", "x402-endpoint-checker.html"),
+    path.join(ROOT, "src", "site", "verify-usdc-payment-request.html"),
+    path.join(ROOT, "src", "site", "token-approval-checker.html"),
+    path.join(ROOT, "src", "site", "agent-payment-receipt.html"),
+    path.join(ROOT, "src", "site", "crypto-arbitrage-verification.html"),
   ];
 
   for (const f of htmlFiles) {
@@ -277,6 +283,75 @@ test("discovery: google site verification meta tag and file are present for Sear
     assert.ok(fs.existsSync(vf), `Google verification file google${t}.html must exist`);
     const fc = fs.readFileSync(vf, "utf8");
     assert.ok(fc.includes(`google-site-verification: google${t}.html`));
+  }
+});
+
+test("discovery: sitemap lists every public blog post", () => {
+  const server = fs.readFileSync(path.join(ROOT, "src", "server.mjs"), "utf8");
+  const posts = fs.readdirSync(path.join(ROOT, "src", "site", "blog"))
+    .filter((name) => name.endsWith(".html"))
+    .map((name) => `/blog/${name.replace(/\.html$/, "")}`);
+  for (const post of posts) {
+    assert.ok(server.includes(`https://vex402.online${post}</loc>`), `sitemap must list ${post}`);
+  }
+});
+
+test("discovery: landing structured data is valid and matches the visible FAQ", () => {
+  const landing = fs.readFileSync(path.join(ROOT, "src", "landing.html"), "utf8");
+  const blocks = [...landing.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)]
+    .map((match) => JSON.parse(match[1]));
+  assert.equal(blocks.length, 1);
+  const types = blocks[0]["@graph"].map((node) => node["@type"]);
+  for (const type of ["WebSite", "Organization", "SoftwareApplication", "FAQPage"]) {
+    assert.ok(types.includes(type), `structured data must include ${type}`);
+  }
+  const faq = blocks[0]["@graph"].find((node) => node["@type"] === "FAQPage");
+  assert.equal(faq.mainEntity.length, 6);
+  assert.ok(faq.mainEntity.every((q) => q.name && q.acceptedAnswer?.text));
+  assert.match(landing, /<link rel="canonical" href="https:\/\/vex402\.online\/">/);
+});
+
+test("discovery: long-tail guides are canonical, structured, and linked from hub pages", () => {
+  const guides = [
+    ["/ai-agent-payment-security", "ai-agent-payment-security.html", "AI agent payment security"],
+    ["/x402-endpoint-checker", "x402-endpoint-checker.html", "x402 endpoint checker"],
+    ["/verify-usdc-payment-request", "verify-usdc-payment-request.html", "Verify a USDC payment request"],
+    ["/token-approval-checker", "token-approval-checker.html", "Token approval checker"],
+    ["/agent-payment-receipt", "agent-payment-receipt.html", "Agent payment receipt"],
+    ["/crypto-arbitrage-verification", "crypto-arbitrage-verification.html", "Crypto arbitrage verification"],
+  ];
+  const server = fs.readFileSync(path.join(ROOT, "src", "server.mjs"), "utf8");
+  const llms = fs.readFileSync(path.join(ROOT, "src", "payment-mode.mjs"), "utf8");
+
+  for (const [slug, file, heading] of guides) {
+    const page = fs.readFileSync(path.join(ROOT, "src", "site", file), "utf8");
+    assert.match(page, new RegExp(`<title>[^<]*${heading.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&")}`, "i"), `${file} needs a descriptive title`);
+    assert.match(page, /<meta name="description" content="[^"]{80,}"/, `${file} needs a description`);
+    assert.match(page, /<h1[^>]*>[^<]+<\/h1>/, `${file} needs one H1`);
+    assert.equal((page.match(/<h1[^>]*>/g) || []).length, 1, `${file} must have exactly one H1`);
+    assert.equal(
+      page.includes(`<link rel="canonical" href="https://vex402.online${slug}">`),
+      true,
+      `${file} needs a canonical URL`,
+    );
+    assert.equal((page.match(/rel="canonical"/g) || []).length, 1, `${file} must not duplicate its canonical`);
+
+    const blocks = [...page.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)]
+      .map((match) => JSON.parse(match[1]));
+    assert.equal(blocks.length, 1, `${file} needs one structured-data block`);
+    assert.equal(blocks[0]["@type"], "WebPage", `${file} structured data must describe a WebPage`);
+    assert.equal(blocks[0].url, `https://vex402.online${slug}`);
+    assert.ok(blocks[0].name && blocks[0].description, `${file} structured data needs name and description`);
+
+    assert.ok(server.includes(`https://vex402.online${slug}</loc>`), `sitemap must list ${slug}`);
+    assert.ok(llms.includes(`Guide:` ) && llms.includes(slug), `llms.txt source must list ${slug}`);
+  }
+
+  for (const hub of ["checks.html", "preflight.html", "inspect.html", "docs.html"]) {
+    const page = fs.readFileSync(path.join(ROOT, "src", "site", hub), "utf8");
+    for (const [slug] of guides) {
+      assert.ok(page.includes(`href="${slug}"`), `${hub} must link ${slug}`);
+    }
   }
 });
 

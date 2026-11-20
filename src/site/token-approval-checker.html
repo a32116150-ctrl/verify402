@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Token approval checker before signing · verify402</title>
+<meta name="description" content="Check a token approval before you sign: paste a token and spender, see the decoded approval, spender policy and BLOCK verdict for an unlimited allowance. Free, no wallet.">
+<link rel="canonical" href="https://vex402.online/token-approval-checker">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Token approval checker before signing">
+<meta property="og:description" content="The free preflight gate builds an unlimited approve() from a token and spender, then shows the decoded calldata, typed reasons and verdict.">
+<meta property="og:url" content="https://vex402.online/token-approval-checker">
+<meta property="og:image" content="https://vex402.online/assets/logo-400.png">
+<meta name="twitter:card" content="summary">
+<meta name="google-site-verification" content="iGmI2QL110IkjnW0thU3DRZrdgQe_7mZsPWgkZVte7o">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/site.css">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebPage","name":"Token approval checker before signing","description":"A free token approval checker that decodes approve() calldata and flags unlimited allowances and unknown spenders before a signature.","url":"https://vex402.online/token-approval-checker","isPartOf":{"@type":"WebSite","name":"verify402","url":"https://vex402.online/"},"publisher":{"@type":"Organization","name":"verify402","url":"https://vex402.online/"}}</script>
+</head>
+<body>
+
+<header class="site-head">
+  <a class="brand" href="/" aria-label="verify402 home">verify<span>[</span>402<span>]</span></a>
+  <nav class="site-nav" aria-label="Primary">
+    <a href="/checks">Checks</a>
+    <a href="/preflight">Preflight</a>
+    <a href="/inspect">Inspect</a>
+    <a href="/directory">Directory</a>
+    <a href="/mcp">MCP</a>
+    <a href="/proof">Proof</a>
+    <a href="/activity">Activity</a>
+    <a href="/blog">Blog</a>
+    <a href="/board">Board</a>
+    <a href="/docs">Docs</a>
+  </nav>
+  <div class="site-actions">
+    <a class="site-status" href="/live"><span class="status-dot"></span><span data-block>snapshot · block —</span></a>
+    <a class="btn sm" href="/preflight#try">Check an approval</a>
+    <details class="site-menu">
+      <summary>Menu</summary>
+      <nav aria-label="Menu">
+        <p class="menu-label">Start</p>
+        <a href="/preflight">Free gate</a>
+        <a href="/checks">Paid checks &amp; prices</a>
+        <a href="/start">Quickstart</a>
+        <a href="/mcp">MCP server</a>
+        <p class="menu-label">Explore</p>
+        <a href="/inspect">402 inspector</a>
+        <a href="/directory">402 directory</a>
+        <a href="/live">Live findings</a>
+        <a href="/activity">Activity</a>
+        <p class="menu-label">Trust</p>
+        <a href="/proof">Proof &amp; receipts</a>
+        <a href="/board">Public board</a>
+        <a href="/audit">Payment review</a>
+        <a href="/testers">Tester kit</a>
+        <p class="menu-label">Project</p>
+        <a href="/blog">Blog</a>
+        <a href="/docs">Documentation</a>
+        <a href="/donate">Donate</a>
+        <a href="/sponsor">Sponsor hosting</a>
+        <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">GitHub</a>
+      </nav>
+    </details>
+  </div>
+</header>
+
+<main>
+  <div class="wrap page-head">
+    <p class="eyebrow">Free · no wallet · before the signature</p>
+    <h1>Check a token approval before you sign it.</h1>
+    <p class="lead">An approval lets another address move your tokens. The <a class="textlink" href="/preflight#try">free checker</a> builds the classic unlimited <code class="inline">approve(spender, max)</code> from a token address and spender, asks the pre-signing gate to decode it, and shows the verdict in plain language. Nothing is signed, sent or paid.</p>
+    <div class="btn-row" style="margin-top:24px">
+      <a class="btn" href="/preflight#try">Check an approval</a>
+      <a class="btn ghost" href="/blog/three-intents-never-sign-unchecked">Three intents to refuse</a>
+    </div>
+  </div>
+
+  <section>
+    <div class="wrap stack">
+      <article id="why">
+        <p class="eyebrow">01 · Why approvals matter</p>
+        <h2 style="margin-top:14px">“Approve” is not the same as “send”, but it can be as powerful.</h2>
+        <p class="lead" style="margin-top:14px">A wallet prompt usually shows a token and a spender. It rarely explains that an unlimited allowance lets that spender move the whole balance, now or later. If the spender is a new or unverified contract, the signature can outlive the trade you thought you were making.</p>
+        <p class="small muted" style="margin-top:14px">The checker does not connect to your wallet. Paste the token contract, the spender from the signature prompt, and the network. It constructs the approval calldata locally in the browser and sends that intent to the free gate.</p>
+      </article>
+
+      <article id="checks">
+        <p class="eyebrow">02 · What the gate reads</p>
+        <h2 style="margin-top:14px">Calldata, contract, spender, simulation, block.</h2>
+        <p class="lead" style="margin-top:14px">The transaction preflight decodes the call and reports the action, token, spender and amount. It checks the recipient, reads contract bytecode, applies the approval and spender policy, checks swap fields where present, runs an <code class="inline">eth_call</code> simulation when a <code class="inline">from</code> address is supplied, and reads a fresh block. Every response lists what ran and what did not.</p>
+        <div class="callout warn" style="margin-top:22px">
+          <h3>With the sample, expect a BLOCK</h3>
+          <p>The simple form builds an unlimited approval. With <code class="inline">forbidUnlimitedApproval</code> set, the gate returns <b>BLOCK</b> <code class="inline">unlimited_approval</code>. With an unknown spender you also get <code class="inline">approval_unverified_spender</code>; without a <code class="inline">from</code> address simulation is skipped and named as such. That is the gate telling the truth about its reach.</p>
+        </div>
+      </article>
+
+      <article id="verdict">
+        <p class="eyebrow">03 · Reading the result</p>
+        <h2 style="margin-top:14px">A PASS is narrow by design.</h2>
+        <p class="lead" style="margin-top:14px">PASS means the listed checks passed at that block. It does not mean the token is a good investment, the spender has a good reputation, or the allowance is appropriate for your workflow. CAUTION means a decision is still required. BLOCK means a hard rule failed and an executor should refuse the signature.</p>
+        <p class="small muted" style="margin-top:14px">If you want a separate pre-trade judgment on the token itself, the paid <a class="textlink" href="/checks#safety">/safety</a> check charges $0.10 and returns TRUST, CAUTION or AVOID from a quote-based sellability check. Transfer restrictions stay in <code class="inline">notChecked</code>.</p>
+      </article>
+
+      <article id="habit">
+        <p class="eyebrow">04 · A safer habit</p>
+        <h2 style="margin-top:14px">Prefer a bounded allowance you can explain.</h2>
+        <p class="lead" style="margin-top:14px">Use the smallest allowance that supports the task, verify the spender's contract address from a trusted source, and review old approvals in your wallet or a reputable revocation tool. verify402 does not revoke approvals and does not hold keys. It gives your executor a checkable answer before the signature is made.</p>
+        <p class="small muted" style="margin-top:14px">For the raw request shape and a curl example, see <a class="textlink" href="/docs#preflight">the preflight section of the docs</a>. For an agent-safe enforcement pattern, see <a class="textlink" href="/ai-agent-payment-security">AI agent payment security</a>.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="soft">
+    <div class="wrap">
+      <div class="sec-head">
+        <p class="eyebrow">Try it</p>
+        <h2>One token. One spender. One honest answer.</h2>
+        <p class="lead">The browser form needs no account, no API key and no wallet. The Base USDC sample returns a BLOCK so you can see the reason codes immediately.</p>
+      </div>
+      <div class="btn-row" style="margin-top:28px">
+        <a class="btn" href="/preflight#try">Check an approval</a>
+        <a class="btn ghost" href="/agent-payment-receipt">Verify the receipt</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-foot">
+  <div class="foot-mark" aria-hidden="true">verify<span>[402]</span></div>
+  <div class="foot-links">
+    <div>
+      <h2>Product</h2>
+      <a href="/inspect">402 inspector</a>
+      <a href="/directory">402 directory</a>
+      <a href="/preflight">Preflight gate</a>
+      <a href="/checks">The six checks</a>
+      <a href="/mcp">MCP server</a>
+      <a href="/live">Live findings</a>
+      <a href="/activity">Activity</a>
+      <a href="/testers">Tester kit</a>
+      <a href="/blog">Blog</a>
+      <a href="/start">Quickstart</a>
+    </div>
+    <div>
+      <h2>Project</h2>
+      <a href="/proof">Proof &amp; receipts</a>
+      <a href="/docs">Documentation</a>
+      <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">Source code</a>
+      <a href="https://github.com/x402-foundation/x402/issues/3847" rel="noopener">x402 proposal</a>
+    </div>
+    <div>
+      <h2>For machines</h2>
+      <a href="/.well-known/verify402.json">Service manifest</a>
+      <a href="/openapi.json">OpenAPI 3.1</a>
+      <a href="/llms.txt">llms.txt</a>
+      <a href="/findings">/findings</a>
+      <a href="/blog/rss.xml">RSS</a>
+    </div>
+    <div>
+      <h2>For teams</h2>
+      <p class="foot-note">Embedding a pre-signing check in a wallet, agent, or treasury workflow?</p>
+      <a href="mailto:a32116150@gmail.com?subject=verify402%20walkthrough">Talk to the builder</a>
+      <a href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener">npm package</a>
+    </div>
+  </div>
+  <p class="foot-legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data. The mainnet service is at vex402.online. Prices are per call, paid in USDC over x402; /preflight and /inspect are free.</p>
+</footer>
+
+<script src="/assets/site.js"></script>
+</body>
+</html>

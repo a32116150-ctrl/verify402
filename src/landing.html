@@ -5,7 +5,93 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>verify402 — don’t sign blind</title>
 <meta name="description" content="verify402 checks the payment, calldata, and chain before an AI agent signs. A free preflight gate, six fixed-price paid checks, typed reasons, and a receipt you can verify. The mainnet service is live at vex402.online, settled end to end in real USDC, including payments from outside agents.">
+<link rel="canonical" href="https://vex402.online/">
 <meta name="google-site-verification" content="iGmI2QL110IkjnW0thU3DRZrdgQe_7mZsPWgkZVte7o">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://vex402.online/#website",
+      "url": "https://vex402.online/",
+      "name": "verify402",
+      "description": "Pre-signing checks for AI agent payments: a free gate, paid checks, typed reasons, and verifiable receipts.",
+      "publisher": { "@id": "https://vex402.online/#organization" }
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://vex402.online/#organization",
+      "name": "verify402",
+      "url": "https://vex402.online"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://vex402.online/#software",
+      "name": "verify402",
+      "applicationCategory": "SecurityApplication",
+      "operatingSystem": "Web",
+      "url": "https://vex402.online/",
+      "description": "Checks payment, calldata, and chain state before an AI agent signs. The free gate needs no account or wallet; paid checks settle in USDC over x402.",
+      "provider": { "@id": "https://vex402.online/#organization" }
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://vex402.online/#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Does PASS mean the transaction is safe?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No. PASS means the listed checks passed at that block. Read notChecked for what the gate did not verify, including counterparty reputation, sanctions, settlement, and off-chain promises. A PASS is a measurement, not a guarantee."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What does it cost?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "The preflight gate and the live findings are free. Five individual checks cost $0.03–$0.10 each; the /assure bundle costs $0.19. Paid calls settle in USDC on Base mainnet."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Do I need a wallet?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Not for the free gate or the browser demo. No account and no API key. A wallet is only needed if you choose to call the paid checks; the MCP bridge caps what it can authorize."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does it sign or send a trade?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No. verify402 returns a verdict and a receipt. The executor and its signer decide what to do. The MCP bridge signs the x402 payment only; it never signs or sends a trade."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I use it with my own agent?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Use the free MCP server for preflight_gate, or call the HTTP endpoint from any runtime. The skill and references cover the exact payment and transaction payloads."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is this mainnet?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "The analysis reads mainnet chain data. This instance settles real USDC on Base mainnet and Solana mainnet through the Coinbase CDP facilitator. No result is a profit forecast."
+          }
+        }
+      ]
+    }
+  ]
+}
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
