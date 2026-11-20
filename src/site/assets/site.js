@@ -110,6 +110,7 @@
   }
 
   function offline() {
+    statuses.forEach(function (s) { s.textContent = "snapshot unavailable"; });
     lists.forEach(function (list) {
       list.innerHTML = '<div class="vrow"><span class="pair">status</span>' +
         '<span class="verdict warn">cold start</span>' +

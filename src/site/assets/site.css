@@ -532,13 +532,25 @@ body:not(.home) .site-head { position: sticky; top: 0; }
   right: 0;
   top: calc(100% + 10px);
   min-width: 240px;
+  max-height: calc(100svh - 90px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 8px;
-  background: var(--ink);
-  color: var(--paper);
   background: #1b1c17;
+  color: var(--paper);
 }
 .site-menu nav a { display: block; padding: 12px; color: var(--paper); text-decoration: none; font-size: 15px; }
 .site-menu nav a:hover { background: var(--accent); color: var(--ink); }
+.site-menu .menu-label {
+  margin: 14px 12px 4px;
+  color: rgba(239, 239, 236, .48);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+.site-menu .menu-label:first-child { margin-top: 4px; }
+@media (max-width: 1120px) { .site-status { display: none; } }
 @media (max-width: 900px) {
   .site-nav, .site-status { display: none; }
   .site-menu { display: block; }

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>verify402 — don’t sign blind</title>
-<meta name="description" content="verify402 checks the payment, calldata, and chain before an AI agent signs. A free preflight gate, six fixed-price paid checks, typed reasons, and a receipt you can verify. The mainnet service is live at vex402.online (settled end to end; two outside x402 agents have paid). Paid calls settle in real USDC on Base mainnet.">
+<meta name="description" content="verify402 checks the payment, calldata, and chain before an AI agent signs. A free preflight gate, six fixed-price paid checks, typed reasons, and a receipt you can verify. The mainnet service is live at vex402.online, settled end to end in real USDC, including payments from outside agents.">
 <meta name="google-site-verification" content="iGmI2QL110IkjnW0thU3DRZrdgQe_7mZsPWgkZVte7o">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -22,14 +22,9 @@
   <a class="brand" href="/" aria-label="verify402 home">verify<span>[</span>402<span>]</span></a>
   <nav class="site-nav" aria-label="Primary">
     <a href="/checks">Checks</a>
-    <a href="/preflight">Preflight</a>
+    <a href="/preflight">Free gate</a>
     <a href="/inspect">Inspect</a>
-    <a href="/directory">Directory</a>
-    <a href="/mcp">MCP</a>
     <a href="/proof">Proof</a>
-    <a href="/activity">Activity</a>
-    <a href="/blog">Blog</a>
-    <a href="/board">Board</a>
     <a href="/docs">Docs</a>
   </nav>
   <div class="site-actions">
@@ -38,20 +33,26 @@
     <details class="site-menu">
       <summary>Menu</summary>
       <nav aria-label="Menu">
-        <a href="/checks">Checks</a>
-        <a href="/preflight">Preflight</a>
-    <a href="/inspect">Inspect</a>
-    <a href="/directory">Directory</a>
+        <p class="menu-label">Start</p>
+        <a href="/preflight">Free gate</a>
+        <a href="/checks">Paid checks &amp; prices</a>
+        <a href="/start">Quickstart</a>
         <a href="/mcp">MCP server</a>
+        <p class="menu-label">Explore</p>
+        <a href="/inspect">402 inspector</a>
+        <a href="/directory">402 directory</a>
         <a href="/live">Live findings</a>
         <a href="/activity">Activity</a>
+        <p class="menu-label">Trust</p>
         <a href="/proof">Proof &amp; receipts</a>
-        <a href="/blog">Blog</a>
         <a href="/board">Public board</a>
-        <a href="/testers">Test the gate</a>
         <a href="/audit">Payment review</a>
-        <a href="/docs">Docs</a>
-        <a href="/start">Quickstart</a>
+        <a href="/testers">Tester kit</a>
+        <p class="menu-label">Project</p>
+        <a href="/blog">Blog</a>
+        <a href="/docs">Documentation</a>
+        <a href="/donate">Donate</a>
+        <a href="/sponsor">Sponsor hosting</a>
         <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">GitHub</a>
       </nav>
     </details>
@@ -61,7 +62,7 @@
 <main id="main">
 
   <div role="status" style="background:#0f2a1d;color:#b8f5cf;border-bottom:1px solid #1f5a37;padding:10px 18px;text-align:center;font-size:.92rem;line-height:1.6">
-    <strong>Live on mainnet.</strong> USDC via Coinbase CDP at <a href="https://vex402.online/info" style="color:#7ef0b4">vex402.online</a>. Paid calls have settled on-chain; two came from outside agents. <a href="/blog/verify402-is-live-on-mainnet" style="color:#7ef0b4">What that means →</a>
+    <strong>Live on mainnet.</strong> USDC via Coinbase CDP at <a href="https://vex402.online/info" style="color:#7ef0b4">vex402.online</a>. Paid calls have settled on-chain, including payments from outside agents. <a href="/blog/verify402-is-live-on-mainnet" style="color:#7ef0b4">What that means →</a>
   </div>
 
   <section class="hero">
@@ -74,9 +75,7 @@
       <div class="hero-actions">
         <a class="btn" href="/preflight#try">Run a free preflight</a>
         <a class="hero-link" href="/inspect">Inspect a 402 before paying →</a>
-        <a class="hero-link" href="/directory">Watch known 402s →</a>
-        <a class="hero-link" href="#checks">See the six checks</a>
-        <a class="hero-link" href="/blog">Read the field notes →</a>
+        <a class="hero-link" href="#checks">See the paid checks</a>
       </div>
       <ul class="hero-facts">
         <li>No wallet for the gate</li>
@@ -142,8 +141,8 @@
   <section class="checks" id="checks">
     <div class="wrap">
       <div class="checks-head">
-        <h2 data-reveal>Six questions<br>agents must not guess.</h2>
-        <p data-reveal>Each answer is measured at a pinned block and returned with evidence. The gate is free; the deep checks are paid per call. No subscription.</p>
+        <h2 data-reveal>One free gate.<br>Six paid checks.</h2>
+        <p data-reveal>Start with the free gate. Each paid check measures one claim at a pinned block and returns evidence you can recompute. No subscription.</p>
       </div>
       <div class="check-list" data-ui>
         <a class="check-row is-free" href="/preflight">
@@ -176,9 +175,14 @@
           <span class="check-q">How big can this trade be?</span>
           <span class="check-price">$0.05</span>
         </a>
+        <a class="check-row" href="/checks#assure">
+          <span class="check-name">/assure</span>
+          <span class="check-q">One evidence bundle at a single pinned block</span>
+          <span class="check-price">$0.19</span>
+        </a>
       </div>
       <div class="checks-foot">
-        <span>The free gate runs before every signature. The six checks are the deep measurement behind it.</span>
+        <span>The free gate runs before every signature. The six paid checks are the deeper measurement behind it.</span>
         <a class="textlink" href="/checks">See how each check works</a>
       </div>
     </div>
@@ -252,7 +256,7 @@
     <div class="wrap">
       <p class="pricing-line" data-reveal><span>Free to check.</span><span>From <span class="price-block">$0.03</span>.</span></p>
       <div class="pricing-foot">
-        <p data-reveal>The gate costs nothing. The six paid checks are $0.03–$0.10 per call. One bundle of the paid checks at a pinned block is $0.19. Paid in USDC on Base mainnet. No subscription, no minimum, no account.</p>
+        <p data-reveal>The gate costs nothing. Five individual checks are $0.03–$0.10 each; /assure bundles supplied checks at one pinned block for $0.19. Paid in USDC on Base mainnet. No subscription, no minimum, no account.</p>
         <a class="btn" href="/checks" data-reveal>See all prices</a>
       </div>
     </div>
@@ -280,7 +284,7 @@
         </details>
         <details class="faq-item" data-reveal>
           <summary>What does it cost?</summary>
-          <p>The preflight gate and the live findings are free. The six paid checks are fixed price, from $0.03 to $0.10 per call. Paid calls settle in USDC on Base mainnet.</p>
+          <p>The preflight gate and the live findings are free. Five individual checks cost $0.03–$0.10 each; the /assure bundle costs $0.19. Paid calls settle in USDC on Base mainnet.</p>
         </details>
         <details class="faq-item" data-reveal>
           <summary>Do I need a wallet?</summary>
