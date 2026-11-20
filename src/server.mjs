@@ -202,6 +202,72 @@ const QUOTECHECK_PRICE = process.env.QUOTECHECK_PRICE || PRICE_DEFAULTS.quoteche
 const DEPTH_PRICE = process.env.DEPTH_PRICE || PRICE_DEFAULTS.depth;
 const ASSURE_PRICE = process.env.ASSURE_PRICE || "$0.19";
 
+// `/assure` is only honest when the bundle costs no more than buying its checks
+// one by one. These parse the same constants the rest of the file uses, so a
+// price change cannot silently reintroduce the old "$0.19 for one $0.03 check"
+// overcharge. The gate runs before any chain work; because the x402 middleware
+// cancels settlement on a >=400 response, a rejected bundle is never charged.
+const usdNumber = (price) => Number(String(price).replace(/[^0-9.]/g, ""));
+const CHECK_STANDALONE_USD = Object.freeze({
+  safety: usdNumber(SAFETY_PRICE),
+  route: usdNumber(ROUTE_PRICE),
+  quotecheck: usdNumber(QUOTECHECK_PRICE),
+  depth: usdNumber(DEPTH_PRICE),
+});
+const ASSURE_PRICE_USD = usdNumber(ASSURE_PRICE);
+const CHECK_KEYS = Object.freeze(["safety", "route", "quotecheck", "depth"]);
+const ASSURANCE_SPEC = "verify402/assurance@1";
+const ASSURANCE_RECOMPUTE =
+  "sha256 (hex, prefixed with 'sha256:') of the canonical JSON of {spec, chainId, chainName, blockNumber, checked, notChecked, sections, verdict}; canonical = keys sorted recursively, no whitespace";
+
+// Shared by the pre-paywall guard and the handler so the two cannot drift:
+// null when the bundle is worth at least its own price, otherwise the typed
+// 400 to send. Kept pure so it can run before any chain or payment work.
+function assurePriceProblem(body, { requireChecks = true } = {}) {
+  const requestedChecks = CHECK_KEYS.filter((k) => body && body[k] && typeof body[k] === "object");
+  if (!requestedChecks.length) {
+    // Discovery probes (CDP Bazaar, bazaar-health) POST an empty body and must
+    // still receive the 402 challenge. Only the handler, after payment, treats
+    // an empty bundle as a typed 400; settlement is cancelled, so it is free.
+    if (!requireChecks) return null;
+    return {
+      code: "no_paid_checks",
+      message: "at least one of safety, route, quotecheck, or depth must be supplied",
+      extra: { standalonePricesUsd: CHECK_STANDALONE_USD, assurePriceUsd: ASSURE_PRICE_USD },
+    };
+  }
+  const separateUsd = requestedChecks.reduce((sum, k) => sum + CHECK_STANDALONE_USD[k], 0);
+  if (separateUsd + 1e-9 >= ASSURE_PRICE_USD) return null;
+  return {
+    code: "insufficient_checks",
+    message: `/assure costs $${ASSURE_PRICE_USD.toFixed(2)}, but the checks you supplied cost $${separateUsd.toFixed(2)} separately. Add checks until the bundle is worth at least $${ASSURE_PRICE_USD.toFixed(2)}, or call the checks directly and pay less.`,
+    extra: {
+      supplied: requestedChecks,
+      suppliedSeparateUsd: Number(separateUsd.toFixed(2)),
+      assurePriceUsd: ASSURE_PRICE_USD,
+      standalonePricesUsd: CHECK_STANDALONE_USD,
+    },
+  };
+}
+
+// JSON-safe deep copy used only for hashing: BigInt becomes its decimal string
+// (the wire form) and undefined object keys are dropped, exactly like
+// JSON.stringify. Canonical hashing over this mirrors the JSON a caller
+// receives, so `assurance.evidenceHash` can be recomputed from the response.
+function toJsonSafe(value) {
+  if (typeof value === "bigint") return value.toString();
+  if (Array.isArray(value)) return value.map((v) => (v === undefined ? null : toJsonSafe(v)));
+  if (value && typeof value === "object") {
+    const out = {};
+    for (const [k, v] of Object.entries(value)) {
+      if (v === undefined || typeof v === "function" || typeof v === "symbol") continue;
+      out[k] = toJsonSafe(v);
+    }
+    return out;
+  }
+  return typeof value === "function" || typeof value === "symbol" ? undefined : value;
+}
+
 // Live paid-usage counters. Mainnet keeps a small persisted index of USDC
 // transfers to the payee and extends it from the launch block; testnet is read
 // from public Blockscout. The operator list is what lets the counter separate
@@ -827,6 +893,22 @@ function paidCatch(req, res, e) {
   return paidFail(req, res, c.status, c.code, c.message, { kind, log: e });
 }
 
+// Reject an under-valued /assure bundle BEFORE the payment wall, so a caller
+// never signs a $0.19 payment for a request the handler will refuse. An empty
+// body is left to the paywall: discovery probes must still see the 402.
+// A 400 cancels settlement anyway, but refusing before the 402 is the honest
+// order: no challenge, no signature, no charge. Same pure helper as the
+// handler, so the two cannot drift. Trailing slashes are normalised because
+// Express routing is non-strict.
+app.use((req, res, next) => {
+  if (req.method !== "POST") return next();
+  const path = req.path.length > 1 ? req.path.replace(/\/+$/, "") : req.path;
+  if (path !== "/assure") return next();
+  const problem = assurePriceProblem(req.body, { requireChecks: false });
+  if (!problem) return next();
+  return badRequest(req, res, problem.code, problem.message, problem.extra);
+});
+
 // Middleware stays compiled but UNMOUNTED in bypass mode: one loud warning,
 // no protection, and no possibility of the two configs disagreeing.
 if (!BYPASS_PAYMENT) app.use(
@@ -993,7 +1075,7 @@ if (!BYPASS_PAYMENT) app.use(
         accepts: accepts(ASSURE_PRICE),
         iconUrl: "https://vex402.online/logo-400.png",
         description:
-          "One evidence bundle at one pinned block: run whichever paid checks you supply (safety, route, quotecheck, depth) together and get a single evidence record. Cheaper than buying the checks separately; unsupplied checks are reported as notChecked, never guessed.",
+          "One evidence bundle at one pinned block: run whichever paid checks you supply (safety, route, quotecheck, depth) together and get a single evidence record with a recomputable sha256. Accepted only when the supplied checks cost at least $0.19 separately, so the bundle is never more expensive than buying them one by one (otherwise 400 insufficient_checks, before payment). Unsupplied checks are reported as notChecked, never guessed.",
         mimeType: "application/json",
         extensions: {
           ...declareDiscoveryExtension({
@@ -1003,16 +1085,21 @@ if (!BYPASS_PAYMENT) app.use(
               chainId: 8453,
               safety: { tokenAddress: "0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE", intendedUsd: 500 },
               route: { tokenIn: "USDC", tokenOut: "WETH", amountIn: "500000000" },
+              quotecheck: { tokenIn: "USDC", tokenOut: "WETH", amountIn: "500000000", quotedOut: "150000000000000000" },
+              depth: { tokenAddress: "0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE", sizesUsd: [100, 500, 1000] },
             },
             output: {
               example: {
                 ok: true,
-                verdict: "CAUTION",
+                spec: "verify402/assurance@1",
+                chainId: 8453,
+                chainName: "Base",
                 blockNumber: 21000000,
-                sections: { safety: { verdict: "CAUTION" }, route: { summary: "2 venues quoted" } },
-                checked: ["target token facts", "entry via best route"],
-                notChecked: ["quote fairness (not supplied)", "capacity ladder (not supplied)"],
-                assurance: { spec: "verify402/assurance@1", evidenceHash: "sha256:..." },
+                verdict: "CAUTION",
+                sections: { safety: { verdict: "CAUTION" }, route: { quote_status: "ok" } },
+                checked: ["safety:...", "route:book", "quotecheck:fairness", "depth:capacity"],
+                notChecked: ["route: venues not configured on this chain"],
+                assurance: { spec: "verify402/assurance@1", evidenceHash: "sha256:...", recompute: "..." },
               },
             },
             inputSchema: {
@@ -2828,6 +2915,15 @@ app.post("/assure", async (req, res) => {
   try {
     const body = req.body || {};
     const chainId = requireChainId(body);
+
+    // Price-worthiness gate (also mounted before the paywall, below): never
+    // charge $0.19 for a bundle that costs less bought separately. Kept here as
+    // defence in depth so a future mount change cannot reopen the overcharge.
+    const priceProblem = assurePriceProblem(body);
+    if (priceProblem) {
+      return badRequest(req, res, priceProblem.code, priceProblem.message, priceProblem.extra);
+    }
+
     const client = clientFor(chainId);
     const sections = {};
     const checked = [];
@@ -3010,21 +3106,35 @@ app.post("/assure", async (req, res) => {
       return badRequest(req, res, "no_paid_checks", "at least one of safety, route, quotecheck, or depth must be supplied");
     }
 
-    const result = {
-      ok: Object.values(sections).every((section) => section?.ok !== false),
-      spec: "verify402/assurance@1",
+    const verdict = Object.values(sections).some((section) => section?.verdict === "AVOID" || section?.verdict === "too_good_to_be_true")
+      ? "AVOID"
+      : Object.values(sections).some((section) => section?.verdict === "CAUTION" || section?.verdict === "overpaying")
+        ? "CAUTION"
+        : "PASS";
+    // Merge the route's declared honesty limits here — emitPaid merges the same
+    // list — so the hash covers exactly the arrays the caller receives and
+    // `assurance.evidenceHash` is recomputable from the response body.
+    const honesty = paidHonesty("/assure", { checked, notChecked: [...notChecked] });
+    const evidence = {
+      spec: ASSURANCE_SPEC,
       chainId,
       chainName: CHAINS[chainId].name,
       blockNumber: Number(blockNumber),
-      checked,
-      notChecked: [...notChecked],
+      checked: honesty.checked,
+      notChecked: honesty.notChecked,
       sections,
-      verdict: Object.values(sections).some((section) => section?.verdict === "AVOID" || section?.verdict === "too_good_to_be_true")
-        ? "AVOID"
-        : Object.values(sections).some((section) => section?.verdict === "CAUTION" || section?.verdict === "overpaying")
-          ? "CAUTION"
-          : "PASS",
-      summary: "Paid checks ran at one pinned block. Read notChecked before acting.",
+      verdict,
+    };
+    const evidenceHash = `sha256:${sha256Hex(canonicalStable(toJsonSafe(evidence)))}`;
+    const result = {
+      ok: Object.values(sections).every((section) => section?.ok !== false),
+      ...evidence,
+      assurance: {
+        spec: ASSURANCE_SPEC,
+        evidenceHash,
+        recompute: ASSURANCE_RECOMPUTE,
+      },
+      summary: "Paid checks ran at one pinned block. Read notChecked before acting. Recompute assurance.evidenceHash from this response to prove it was not altered.",
     };
 
     const key = `assure:${chainId}:${JSON.stringify(body)}:${blockNumber}`;

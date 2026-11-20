@@ -896,7 +896,7 @@ export function buildOpenapi(prices, { mode = "testnet", baseUrl = DEMO_BASE_URL
           summary: "Bundle of paid checks at one pinned block",
           tag: "Truth",
           guidance:
-            "Runs the paid checks whose inputs are supplied (safety, route, quotecheck, depth) at one pinned block and returns one evidence record. Price is below buying the same checks separately. It does not run sanctions, reputation, or honeypot checks that are outside the service scope.",
+            "Runs the paid checks whose inputs are supplied (safety, route, quotecheck, depth) at one pinned block and returns one evidence record with a recomputable sha256. A request is accepted only when the supplied checks cost at least $0.19 separately, so the bundle is never more expensive than buying them one by one; otherwise it returns 400 insufficient_checks before payment. It does not run sanctions, reputation, or honeypot checks that are outside the service scope.",
           inputSchema: {
             type: "object",
             required: ["chainId"],
@@ -909,7 +909,13 @@ export function buildOpenapi(prices, { mode = "testnet", baseUrl = DEMO_BASE_URL
             },
             additionalProperties: true,
           },
-          exampleRequest: { chainId: 1, safety: { tokenAddress: "WETH", intendedUsd: 500 }, route: { tokenIn: "USDC", tokenOut: "WETH", amountIn: "1000000" } },
+          exampleRequest: {
+            chainId: 1,
+            safety: { tokenAddress: "WETH", intendedUsd: 500 },
+            route: { tokenIn: "USDC", tokenOut: "WETH", amountIn: "1000000" },
+            quotecheck: { tokenIn: "USDC", tokenOut: "WETH", amountIn: "1000000", quotedOut: "326000000000000000" },
+            depth: { tokenAddress: "WETH", sizesUsd: [100, 1000] },
+          },
         }),
       },
       "/depth": {

@@ -181,7 +181,7 @@ export function buildServiceManifest({
             name: "get_assurance",
             type: "paid",
             priceUsd: numPrice(prices.assure ?? "$0.19"),
-            description: "Runs the supplied paid checks at one pinned block and returns one evidence bundle. Price is below buying the same checks separately.",
+            description: "Runs the supplied paid checks at one pinned block and returns one evidence bundle with a recomputable sha256. Accepted only when the supplied checks cost at least $0.19 separately, so the bundle is never more expensive than buying them one by one.",
           },
         ],
         environmentVariables: [
