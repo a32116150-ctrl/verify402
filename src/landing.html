@@ -211,21 +211,53 @@
     </div>
   </div>
 
-  <section class="statement">
-    <div class="wrap statement-grid">
-      <div>
-        <p class="statement-line" data-reveal>Most agent failures look like a signature.</p>
-        <p class="statement-copy" data-reveal>A model can be right about the trade and wrong about the transaction. verify402 is the check between the intent and the signature: what the payment says, what the calldata does, and what the chain will actually allow.</p>
-        <p class="statement-copy" data-reveal>It is not a guarantee. It is a measurement, with the gaps written down.</p>
+  <section class="film" id="film">
+    <div class="wrap film-grid">
+      <div class="film-copy">
+        <p class="film-eyebrow" data-reveal>22 seconds · launch film</p>
+        <h2 class="film-title" data-reveal>Don’t sign blind.</h2>
+        <p data-reveal>Your agent can sign in milliseconds. verify402 is the check before it does: a free gate, typed reasons, and a receipt you can verify. The film shows a real BLOCK verdict and live Base numbers.</p>
+        <a class="film-link" href="/proof" data-reveal>Read the receipts →</a>
       </div>
-      <ul class="ledger" aria-label="What the project can and cannot prove">
-        <li data-reveal><b>1</b><span>independent agent audit, run against the source</span></li>
-        <li data-reveal><b>2</b><span>real defects found, fixed, and covered by regression tests</span></li>
-        <li data-reveal><b data-stat="mainnet-paid">—</b><span>paid calls on Base mainnet — <span data-stat="mainnet-usdc">—</span> USDC settled, chain-verifiable</span></li>
-        <li data-reveal><b data-stat="testnet-paid">—</b><span>settlements on the retired testnet demo (historical)</span></li>
-        <li data-reveal><b data-stat="outside-payers">—</b><span>outside payers on mainnet — <span data-stat="outside-usdc">—</span> USDC from wallets the operator does not control</span></li>
-        <li class="ledger-note" data-reveal>Live from the chain · updated <span data-stat-updated>—</span> · <span data-stat="total-paid">—</span> paid calls across both networks · free gate <span data-stat="free-calls">—</span> checks on this instance. <a href="/proof">Read the receipts</a>.</li>
-      </ul>
+      <div class="film-player" data-reveal>
+        <video controls preload="metadata" playsinline poster="/assets/verify402-film.jpg" aria-label="verify402 launch film">
+          <source src="/assets/verify402-film.mp4" type="video/mp4">
+          Your browser does not support HTML video. <a href="/assets/verify402-film.mp4">Download the MP4</a>.
+        </video>
+        <div class="film-meta"><span>22 sec · 1920×1080</span><span>Sound on</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="statement">
+    <div class="wrap statement-stack">
+      <p class="statement-line" data-reveal>Most agent failures look like a signature.</p>
+      <p class="statement-copy statement-lead" data-reveal>A model can be right about the trade and wrong about the transaction. verify402 is the check between the intent and the signature.</p>
+      <p class="statement-copy statement-note" data-reveal>It is not a guarantee. It is a measurement, with the gaps written down.</p>
+
+      <div class="statement-metrics" aria-label="verify402 proof numbers" data-reveal>
+        <div class="metric">
+          <b data-stat="mainnet-paid">—</b>
+          <span>paid calls on Base mainnet</span>
+          <small><span data-stat="mainnet-usdc">—</span> USDC settled · chain-verifiable</small>
+        </div>
+        <div class="metric">
+          <b data-stat="outside-payers">—</b>
+          <span>outside payers</span>
+          <small><span data-stat="outside-usdc">—</span> USDC from wallets the operator does not control</small>
+        </div>
+        <div class="metric">
+          <b data-stat="testnet-paid">—</b>
+          <span>testnet settlements</span>
+          <small>retired demo · historical</small>
+        </div>
+      </div>
+
+      <div class="statement-proof" data-reveal>
+        <span><b>1</b> independent agent audit, run against the source</span>
+        <span><b>2</b> real defects found, fixed, and covered by regression tests</span>
+        <span class="statement-source">Live from the chain · updated <span data-stat-updated>—</span> · <span data-stat="total-paid">—</span> calls across both networks · free gate <span data-stat="free-calls">—</span> checks on this instance. <a href="/proof">Read the receipts</a>.</span>
+      </div>
     </div>
   </section>
 
