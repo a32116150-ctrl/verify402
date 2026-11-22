@@ -128,8 +128,9 @@ This checklist tracks official and third-party registry listings for Verify402. 
 
 ## 7. Cursor Directory & Awesome Lists
 
-- **Status:** **PREPARED**
+- **Status:** **SUBMITTED**
 - **Target:** Cursor Directory (`cursor.directory`) / `awesome-mcp-servers`
+- **PR:** [punkpeye/awesome-mcp-servers#19965](https://github.com/punkpeye/awesome-mcp-servers/pull/19965) — open
 - **Snippet:**
   ```json
   {

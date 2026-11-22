@@ -102,16 +102,22 @@ and re-check later. The `awesome-mcp-servers` entry below is independent.
 ## Optional: `punkpeye/awesome-mcp-servers`
 
 The list carries X402-adjacent servers already (e.g. 402signal), and a PR is a
-legitimate, free submission. Proposed entry for the **Finance & Fintech**
-section, matching the list's existing line format:
+legitimate, free submission.
+
+Submitted: PR
+[#19965](https://github.com/punkpeye/awesome-mcp-servers/pull/19965) —
+`Add verify402 — onchain truth checks for AI agents via x402 🤖🤖🤖`.
+
+Proposed entry for the **Finance & Fintech** section, matching the list's
+existing line format:
 
 ```markdown
 - [a32116150-ctrl/verify402](https://github.com/a32116150-ctrl/verify402) 📇 🏠 - Free, fail-closed preflight gate for agent payments: PASS / CAUTION / BLOCK with a short-lived receipt before the signature; reads any public x402 endpoint and a watched directory of live 402s; six paid x402 checks in testnet USDC.
 ```
 
-Notes: no Glama badge until Glama indexes us. The repo has 0 stars today; the
-PR may be rejected on that basis — that costs nothing, do not chase the
-maintainer.
+Notes: Glama requested a quality-score check; the PR author reported the
+Glama evaluation is complete. The repo has 0 stars today; the PR may be
+rejected on that basis — that costs nothing, do not chase the maintainer.
 
 ## After each submission
 
