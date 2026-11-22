@@ -23,8 +23,10 @@
 import { chain, resolveToken } from "./config.mjs";
 import { clientFor, quoteAllVenues, classifyQuoteError } from "./measure.mjs";
 import { paidHonesty, unconfiguredVenues } from "./honesty.mjs";
+import { requirePaidLicense } from "./license.mjs";
 
 export async function bestRouteBook(client, chainId, { tokenIn, tokenOut, amountIn, blockNumber }) {
+  requirePaidLicense("route");
   return quoteAllVenues(client, chainId, {
     tokenIn, tokenOut, amountIn, blockNumber,
     intermediates: ["WETH"],
@@ -97,6 +99,7 @@ export async function fairQuoteCheck(chainId, {
   chainIn = null, // optional: claimed network the quote came from, for the report
   blockNumber = null,
 } = {}, { clientFactory = clientFor } = {}) {
+  requirePaidLicense("quotecheck");
   const c = chain(chainId);
   const notes = [];
   const checked = [];

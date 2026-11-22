@@ -28,6 +28,7 @@ import { chain, resolveToken } from "./config.mjs";
 import { clientFor, quoteAllVenues, classifyQuoteError, isHardQuoteFailure } from "./measure.mjs";
 import { dexscreenerPair as realDexscreenerPair, scamSignals } from "./dexscreener.mjs";
 import { paidHonesty, unconfiguredVenues } from "./honesty.mjs";
+import { requirePaidLicense } from "./license.mjs";
 
 const ERC20_ABI = [
   {
@@ -217,6 +218,7 @@ export async function preTradeCheck(chainId, {
   probeUsd = 25,
   blockNumber = null,
 } = {}, { clientFactory = clientFor, dexscreenerPair = realDexscreenerPair } = {}) {
+  requirePaidLicense("safety");
   const c = chain(chainId);
   const started = Date.now();
 

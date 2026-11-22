@@ -28,6 +28,7 @@ import { clientFor, quoteAllVenues, classifyQuoteError } from "./measure.mjs";
 import { tokenFacts } from "./safety.mjs";
 import { dexscreenerPair as realDexscreenerPair } from "./dexscreener.mjs";
 import { paidHonesty, unconfiguredVenues } from "./honesty.mjs";
+import { requirePaidLicense } from "./license.mjs";
 
 // Local helper so the human "gotTokens" figures are right without duplicating
 // the chain config here. The token's real decimals come from tokenFacts()
@@ -78,6 +79,7 @@ export async function depthProfile(chainId, {
   maxRoundTripBps = null,
   blockNumber = null,
 } = {}, { clientFactory = clientFor, dexscreenerPair = realDexscreenerPair } = {}) {
+  requirePaidLicense("depth");
   const started = Date.now();
   const notes = [];
   const checked = [];

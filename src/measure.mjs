@@ -30,6 +30,7 @@
 import { createPublicClient, http, fallback, decodeFunctionResult, encodeFunctionData } from "viem";
 import * as viemChains from "viem/chains";
 import { chain, readinessChain, resolveToken, DEFAULT_GAS_UNITS } from "./config.mjs";
+import { requirePaidLicense } from "./license.mjs";
 
 export const QUOTER_V2_ABI = [
   {
@@ -476,6 +477,7 @@ export async function measureRoundTrip(chainId, {
   venues = null,
   blockNumber: pinnedBlock = null,
 } = {}, { clientFactory = clientFor } = {}) {
+  requirePaidLicense("verify");
   const c = chain(chainId);
   const base = resolveToken(chainId, baseSymbol);
   const target = resolveToken(chainId, targetSymbol);

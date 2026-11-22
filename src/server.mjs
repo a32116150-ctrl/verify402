@@ -28,6 +28,7 @@ import { measureRoundTrip, clientFor, readinessProbe, readinessClientFor, isHard
 import { preTradeCheck } from "./safety.mjs";
 import { fairQuoteCheck, bestRouteBook, parseRawPositive } from "./quotecheck.mjs";
 import { depthProfile } from "./depth.mjs";
+import { enableHostedMode } from "./license.mjs";
 import { CHAINS, DEFAULT_SIZE, chain, readinessChain, resolveToken, requireChainId } from "./config.mjs";
 import {
   PRICE_DEFAULTS,
@@ -474,6 +475,10 @@ if (BYPASS_PAYMENT && MODE === "mainnet") {
   logError("REFUSING TO START: BYPASS_PAYMENT=1 is local-only and cannot be used with X402_MODE=mainnet.");
   process.exit(1);
 }
+
+// This process is the hosted service: its paid calls pass the x402 paywall at
+// the HTTP boundary, so the local-engine license gate does not apply here.
+enableHostedMode();
 
 // ---------------------------------------------------------------- recovery --
 // The recovery contract (see src/recovery.mjs): a caller that sends
