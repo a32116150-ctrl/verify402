@@ -49,7 +49,7 @@ export function paymentRail(mode) {
       : "This instance is configured for Base mainnet (`eip155:8453`); verify mainnet readiness separately before paying.",
     agentDescription: testnet
       ? "Token safety check for AI agents before they swap: quote-based sellability, round-trip cost, TRUST / CAUTION / AVOID. $0.02 per call, free pre-signing gate included. Supporting checks cover arbitrage reality, execution book, quote fairness and trade capacity. POST /preflight is the free pre-signing " +
-        "gate: validate an x402 payment request or a chain transaction and get PASS / CAUTION / " +
+        "gate: validate an x402 payment request, a chain transaction, or a sign-in message and get PASS / CAUTION / " +
         "BLOCK with a short-lived receipt bound to the exact intent. POST /verify measures whether a claimed " +
         "cross-venue arbitrage is real (pinned-block quotes from Uniswap QuoterV2 and each " +
         "router's own math; the honest answer is usually no_edge). POST /safety is a pre-trade " +
@@ -61,7 +61,7 @@ export function paymentRail(mode) {
         "An MCP server (verify402-mcp, stdio) exposes the free gate and all six checks to any " +
         "MCP client; install at /mcp. No profitability is ever promised; the service reports what it measured."
       : "Token safety check for AI agents before they swap: quote-based sellability, round-trip cost, TRUST / CAUTION / AVOID. $0.02 per call, free pre-signing gate included. Supporting checks cover arbitrage reality, execution book, quote fairness and trade capacity. POST /preflight is the free pre-signing " +
-        "gate: validate an x402 payment request or a chain transaction and get PASS / CAUTION / " +
+        "gate: validate an x402 payment request, a chain transaction, or a sign-in message and get PASS / CAUTION / " +
         "BLOCK with a short-lived receipt bound to the exact intent. POST /verify measures whether a claimed " +
         "cross-venue arbitrage is real (pinned-block quotes from Uniswap QuoterV2 and each " +
         "router's own math; the honest answer is usually no_edge). POST /safety is a pre-trade " +
@@ -187,9 +187,14 @@ export function buildLlmsText({
     "",
     "## Free, no key, no wallet",
     "",
-    "- POST /preflight — PASS / CAUTION / BLOCK for a payment or a chain",
-    "  transaction, with typed reasons, the checks that ran, the checks that",
-    "  did not, and a short-lived HMAC receipt (90s default).",
+    "- POST /preflight — PASS / CAUTION / BLOCK for a payment, a chain",
+    "  transaction, or a sign-in message, with typed reasons, the checks that",
+    "  ran, the checks that did not, and a short-lived HMAC receipt (90s default).",
+    "- kind=sign-in — checks an EIP-4361 / CAIP-122 message (or structured",
+    "  fields) against expected.host / chainId / address. It flags domain, URI",
+    "  origin, nonce, freshness, chain and address mismatches. It does not check",
+    "  whether the site is legitimate, whether the nonce came from the server,",
+    "  replay state, or what the login grants.",
     "- POST /preflight/verify — recompute a receipt. Tampered or expired",
     "  receipts return valid: false.",
     "- POST /inspect — fetch an x402 402 challenge (or accept one pasted) and",

@@ -56,6 +56,11 @@ const UNLIMITED_THRESHOLD = 2n ** 255n;
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 const DEAD_ADDRESS = "0x000000000000000000000000000000000000dead";
 const MS = 1000;
+// Additive default: only applies when the caller supplies neither an explicit
+// maxAmountUsd nor a seller terms manifest. It is a caution, not a new BLOCK.
+const DEFAULT_PAYMENT_CAP_USD = 1;
+const SIWX_MIN_NONCE_LENGTH = 8;
+const SIWX_MAX_WINDOW_MS = 24 * 60 * 60 * MS;
 
 // Seller payout provenance. A caller-supplied address list is an allowlist,
 // not a binding. A binding requires a seller-signed manifest fetched from a
@@ -680,6 +685,9 @@ function ttlOf(body) {
 function normalizeKind(body) {
   const k = String(body?.kind ?? "").trim().toLowerCase();
   if (k) return k;
+  if (body?.signIn && typeof body.signIn === "object") return "sign-in";
+  if (typeof body?.message === "string" && /wants you to sign in/i.test(body.message)) return "sign-in";
+  if (body?.domain != null || body?.nonce != null || body?.expected?.host != null) return "sign-in";
   if (body?.payment && typeof body.payment === "object") return "payment";
   if (body?.transaction && typeof body.transaction === "object") return "transaction";
   if (body?.to != null || body?.data != null || body?.value != null) return "transaction";
@@ -1645,6 +1653,269 @@ async function verifySellerTermsManifest(manifestPolicy, { net, now, fetchImpl, 
   };
 }
 
+// --------------------------------------------------------------- sign-in ---
+
+const SIWX_FIELD_LABELS = {
+  uri: "uri",
+  version: "version",
+  "chain id": "chainId",
+  chainid: "chainId",
+  nonce: "nonce",
+  "issued at": "issuedAt",
+  issuedat: "issuedAt",
+  "expiration time": "expirationTime",
+  expirationtime: "expirationTime",
+  resources: "resources",
+};
+
+const SIWX_FIELDS = [
+  "domain", "address", "statement", "uri", "version",
+  "chainId", "nonce", "issuedAt", "expirationTime", "resources",
+];
+
+function parseSiwxMessage(text) {
+  if (typeof text !== "string" || !text.trim()) return null;
+  const lines = text.replace(/\r\n?/g, "\n").split("\n");
+  let i = 0;
+  while (i < lines.length && !lines[i].trim()) i += 1;
+  const header = lines[i]?.trim().match(/^(.+?)\s+wants you to sign in with your (?:[A-Za-z0-9_-]+\s+)?account:\s*$/i);
+  if (!header) return null;
+  const domain = header[1].trim();
+  i += 1;
+  while (i < lines.length && !lines[i].trim()) i += 1;
+  const address = lines[i]?.trim() || null;
+  i += 1;
+
+  const fields = {};
+  const statement = [];
+  for (; i < lines.length; i += 1) {
+    const line = lines[i].trimEnd();
+    if (!line.trim()) {
+      if (Object.keys(fields).length === 0) statement.push("");
+      continue;
+    }
+    const match = line.trim().match(/^([^:]+):\s*(.*)$/);
+    const label = match ? SIWX_FIELD_LABELS[match[1].trim().toLowerCase()] : null;
+    if (label) fields[label] = match[2].trim();
+    else if (Object.keys(fields).length === 0) statement.push(line.trim());
+  }
+  return {
+    domain,
+    address,
+    statement: statement.join("\n").trim() || null,
+    ...fields,
+  };
+}
+
+function normalizeSignInInput(body) {
+  const fromEnvelope = body?.signIn && typeof body.signIn === "object" && !Array.isArray(body.signIn)
+    ? body.signIn
+    : body;
+  const expectedRaw = body?.expected ?? fromEnvelope?.expected ?? {};
+  if (expectedRaw != null && (typeof expectedRaw !== "object" || Array.isArray(expectedRaw))) {
+    throw new PreflightError(400, "invalid_sign_in", "expected must be an object");
+  }
+  const expected = {
+    host: expectedRaw.host ?? null,
+    chainId: expectedRaw.chainId ?? null,
+    address: expectedRaw.address ?? null,
+  };
+
+  const message = fromEnvelope?.message ?? body?.message;
+  const parsed = typeof message === "string" ? parseSiwxMessage(message) : null;
+  if (typeof message === "string" && !parsed && !fromEnvelope?.domain && !fromEnvelope?.address && !fromEnvelope?.nonce) {
+    throw new PreflightError(400, "invalid_sign_in", "sign-in message is not a recognized EIP-4361 / CAIP-122 message");
+  }
+
+  const fields = {};
+  for (const field of SIWX_FIELDS) {
+    const parsedValue = parsed?.[field];
+    const structuredValue = fromEnvelope?.[field];
+    fields[field] = parsedValue != null && String(parsedValue).trim()
+      ? parsedValue
+      : (structuredValue ?? null);
+  }
+  if (!fields.domain && !fields.address && !fields.nonce && !fields.uri) {
+    throw new PreflightError(400, "invalid_sign_in", "supply signIn.message or structured sign-in fields");
+  }
+  return { fields, expected, source: parsed ? "message" : "structured" };
+}
+
+function normalizeHost(value) {
+  if (value == null) return null;
+  let s = String(value).trim();
+  if (!s) return null;
+  if (s.includes("://")) {
+    try {
+      return new URL(s).hostname.toLowerCase().replace(/\.$/, "") || null;
+    } catch {
+      return null;
+    }
+  }
+  s = s.replace(/^.*@/, "").split(/[/?#]/)[0].toLowerCase();
+  if (s.startsWith("[")) {
+    const end = s.indexOf("]");
+    return end >= 0 ? s.slice(0, end + 1) : null;
+  }
+  s = s.replace(/:\d+$/, "").replace(/\.$/, "");
+  return s || null;
+}
+
+function hostFromUri(value) {
+  if (value == null) return null;
+  try {
+    const url = new URL(String(value).trim());
+    if (!["http:", "https:"].includes(url.protocol)) return null;
+    return url.hostname.toLowerCase().replace(/\.$/, "") || null;
+  } catch {
+    return null;
+  }
+}
+
+function normalizeChainRef(value) {
+  if (value == null) return null;
+  const s = String(value).trim();
+  if (!s) return null;
+  const parts = s.split(":");
+  return parts.length > 1 ? (parts[parts.length - 1].trim() || null) : s;
+}
+
+function normalizeAccountAddress(value) {
+  if (value == null) return null;
+  let s = String(value).trim();
+  if (!s) return null;
+  if (s.includes(":")) {
+    const last = s.split(":").pop();
+    s = /^0x/i.test(last) ? last : "";
+  }
+  if (!s) return null;
+  return normalizeEvmAddress(s) ?? s.toLowerCase();
+}
+
+function parseTimeMs(value) {
+  if (value == null) return null;
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) return null;
+    return Math.abs(value) < 1e12 ? value * MS : value;
+  }
+  const s = String(value).trim();
+  if (!s) return null;
+  if (/^\d+(?:\.\d+)?$/.test(s)) {
+    const n = Number(s);
+    return Math.abs(n) < 1e12 ? n * MS : n;
+  }
+  const t = Date.parse(s);
+  return Number.isFinite(t) ? t : null;
+}
+
+async function signInPreflight(body, { now }) {
+  const { fields, expected, source } = normalizeSignInInput(body);
+  const reasons = [];
+  const checked = [];
+  const notChecked = [
+    "whether the site is legitimate",
+    "whether the nonce was issued by the server",
+    "replay state",
+    "what the login grants",
+  ];
+
+  const domain = normalizeHost(fields.domain);
+  const uri = fields.uri == null ? null : String(fields.uri).trim();
+  const uriHost = hostFromUri(uri);
+  const address = normalizeAccountAddress(fields.address);
+  const chainId = normalizeChainRef(fields.chainId);
+  const nonce = fields.nonce == null ? null : String(fields.nonce).trim();
+  const issuedMs = parseTimeMs(fields.issuedAt);
+  const expiresMs = parseTimeMs(fields.expirationTime);
+
+  checked.push(source === "message" ? "sign-in message" : "sign-in fields");
+  if (domain) checked.push("domain");
+  if (address) checked.push("address");
+  if (uri) {
+    if (uriHost) checked.push("uri");
+    else reasons.push(block("siwx_uri_origin_mismatch", "the message URI is not a parseable http(s) URL, so its host cannot be compared with the domain"));
+  }
+
+  if (expected.host != null) {
+    const want = normalizeHost(expected.host);
+    if (want && domain && want === domain) {
+      checked.push("expected host");
+    } else {
+      reasons.push(block("siwx_domain_mismatch", `message domain "${domain ?? "missing"}" does not match expected.host "${want ?? String(expected.host)}"`));
+    }
+  } else {
+    reasons.push(caution("siwx_domain_unbound", "no expected host was supplied; the message domain cannot be bound to the site that sent the request"));
+  }
+
+  if (uriHost && domain) {
+    if (uriHost === domain) checked.push("uri origin");
+    else reasons.push(block("siwx_uri_origin_mismatch", `URI host "${uriHost}" does not match message domain "${domain}"`));
+  }
+
+  if (nonce && new RegExp(`^[A-Za-z0-9]{${SIWX_MIN_NONCE_LENGTH},}$`).test(nonce)) {
+    checked.push("nonce");
+  } else {
+    reasons.push(caution("siwx_nonce_missing_or_weak", `nonce is missing or weak; EIP-4361 needs at least ${SIWX_MIN_NONCE_LENGTH} alphanumeric characters`));
+  }
+
+  let freshnessProblem = null;
+  if (issuedMs == null || expiresMs == null) {
+    freshnessProblem = "Issued At or Expiration Time is missing or not parseable; message freshness was not checked";
+  } else {
+    checked.push("issuedAt");
+    checked.push("expirationTime");
+    if (issuedMs > now) freshnessProblem = "the sign-in message was issued in the future";
+    else if (expiresMs <= now) freshnessProblem = "the sign-in message has expired";
+    else if (expiresMs - issuedMs > SIWX_MAX_WINDOW_MS) freshnessProblem = "the sign-in message is valid for more than 24 hours after issue";
+    else checked.push("time window");
+  }
+  if (freshnessProblem) reasons.push(caution("siwx_expired_or_stale", freshnessProblem));
+
+  if (expected.chainId != null) {
+    const want = normalizeChainRef(expected.chainId);
+    if (chainId && want && chainId === want) checked.push("expected chainId");
+    else reasons.push(caution("siwx_chain_mismatch", `chain ID "${chainId ?? "missing"}" does not match expected.chainId "${want ?? String(expected.chainId)}"`));
+  }
+  if (expected.address != null) {
+    const want = normalizeAccountAddress(expected.address);
+    if (address && want && address === want) checked.push("expected address");
+    else reasons.push(caution("siwx_address_mismatch", `address "${address ?? "missing"}" does not match expected.address "${want ?? String(expected.address)}"`));
+  }
+
+  const asStringOrNull = (value) => value == null ? null : String(value);
+  const intent = {
+    kind: "sign-in",
+    signIn: {
+      domain: asStringOrNull(domain ?? fields.domain),
+      address: asStringOrNull(address ?? fields.address),
+      statement: asStringOrNull(fields.statement),
+      uri,
+      version: asStringOrNull(fields.version),
+      chainId: asStringOrNull(chainId ?? fields.chainId),
+      nonce,
+      issuedAt: issuedMs == null ? asStringOrNull(fields.issuedAt) : new Date(issuedMs).toISOString(),
+      expirationTime: expiresMs == null ? asStringOrNull(fields.expirationTime) : new Date(expiresMs).toISOString(),
+    },
+    expected: {
+      host: asStringOrNull(expected.host),
+      chainId: asStringOrNull(expected.chainId),
+      address: asStringOrNull(expected.address),
+    },
+    source,
+  };
+
+  return finish({
+    kind: "sign-in",
+    reasons,
+    checked,
+    notChecked,
+    intent,
+    request: body,
+    ttlSeconds: ttlOf(body),
+    now,
+  });
+}
+
 // ---------------------------------------------------------------- payment ---
 
 async function paymentPreflight(body, { clientFactory, now, fetchImpl = globalThis.fetch, resolveHost = resolveManifestHost }) {
@@ -1784,6 +2055,23 @@ async function paymentPreflight(body, { clientFactory, now, fetchImpl = globalTh
     }
   } else if (amount != null && policy.maxAmountUsd != null) {
     notChecked.push("amount cap");
+  }
+
+  // Additive default: only when the caller supplied neither an explicit cap
+  // nor a seller terms manifest. It never changes the existing BLOCK path.
+  if (amount != null && policy.maxAmountUsd == null && !policy.sellerTermsManifest && assetValid && net?.supported) {
+    const canon = canonicalUsdc(net);
+    const token = findToken(net, asset);
+    let usd = null;
+    if (canon && sameAsset(net, asset, canon)) {
+      const decimals = canonicalUsdcDecimals(net);
+      if (decimals != null) usd = Number(amount) / 10 ** decimals;
+    } else if (token && token.kind === STABLE) {
+      usd = Number(amount) / 10 ** token.decimals;
+    }
+    if (usd != null && usd > DEFAULT_PAYMENT_CAP_USD) {
+      reasons.push(caution("amount_above_default_cap", "no price cap supplied; amount exceeds the x402 SDK default per-payment cap of $1; set policy.maxAmountUsd to override"));
+    }
   }
 
   let payTo = null;
@@ -2438,5 +2726,6 @@ export async function preflight(input, opts = {}) {
 
   if (kind === "payment") return paymentPreflight(body, { ...opts, now });
   if (kind === "transaction") return transactionPreflight(body, { ...opts, now });
+  if (kind === "sign-in") return signInPreflight(body, { ...opts, now });
   throw new PreflightError(400, "invalid_kind", "kind must be 'payment' or 'transaction' (or supply payment / transaction / to)");
 }

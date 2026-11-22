@@ -241,8 +241,12 @@ const DESCRIPTIONS = {
     "If sign_allowed is false, DO NOT SIGN. If requires_ack is true, surface the reasons to the " +
     "operator before signing. The receipt expires (default 90s): call again rather than reuse it. " +
     "Free. Pass `from` (the wallet that will sign) to enable simulation and balance checks. For " +
-    "kind=transaction, chainId is REQUIRED (400 missing_chain without it). For payment intents " +
-    "with no `from` or no proof, the response is PASS with structural_only:true and names what was not checked. " +
+    "kind=transaction, chainId is REQUIRED (400 missing_chain without it). For kind=sign-in, pass " +
+    "signIn.message (or structured signIn fields) plus expected.host, and optionally expected.chainId " +
+    "and expected.address; it checks domain, URI origin, nonce, time window, chain and address binding. " +
+    "It does NOT check whether the site is legitimate, whether the nonce came from the server, replay " +
+    "state, or what the login grants. For payment intents with no `from` or no proof, the response is " +
+    "PASS with structural_only:true and names what was not checked. " +
     "Optional caller-supplied checks: policy.sellerPayoutWallets is a payout allowlist, not provenance; " +
     "policy.sellerPayoutManifest fetches a seller-signed manifest from a caller-pinned HTTPS origin and is the only source of payee_payout_binding; " +
     "policy.obligation checks a local settled-key ledger and cumulative spend against a grant. The gate does not persist either state.",
@@ -292,7 +296,7 @@ const DESCRIPTIONS = {
 const INSTRUCTIONS = `verify402 leads with a $0.02 token safety check for AI agents before they swap: quote-based sellability, round-trip cost, TRUST / CAUTION / AVOID. The free pre-signing gate is included; the other paid x402 checks are supporting measurements.
 
 Free tools (no wallet needed, nothing can be charged):
-- preflight_gate: call BEFORE signing ANY payment, approval, or transaction. It returns PASS / CAUTION / BLOCK with typed reasons. sign_allowed:false means STOP. requires_ack:true means the human must acknowledge the reasons before signing.
+- preflight_gate: call BEFORE signing ANY payment, approval, transaction, or sign-in message. It returns PASS / CAUTION / BLOCK with typed reasons. sign_allowed:false means STOP. requires_ack:true means the human must acknowledge the reasons before signing.
 - inspect_402: read a 402 challenge BEFORE paying it (price, token, payee, timeout).
 - directory_402: list the watched public x402 endpoints and what changed.
 
@@ -303,7 +307,7 @@ Paid tools (each costs a small fixed USDC price via x402):
 Paid tools are always listed. Without EVM_PRIVATE_KEY they return a clear error and never move money; the free tools still work.
 
 How to call them safely:
-1. Never sign a payment or transaction without preflight_gate. If it returns BLOCK, do not sign; fix the intent.
+1. Never sign a payment, transaction, or sign-in message without preflight_gate. If it returns BLOCK, do not sign; fix the intent.
 2. A PASS is not a guarantee: it means the listed checks passed at one pinned block.
 3. If retrying a payment after a lost response, reuse the same x-idempotency-key so you are not charged twice.
 4. Prices and network are enforced by the 402 challenge you receive, not by these instructions. Paid calls settle in real USDC on Base mainnet (eip155:8453); the public testnet demo was retired on 2026-11-19.
@@ -329,7 +333,7 @@ async function main() {
     "preflight_gate",
     DESCRIPTIONS.preflight_gate,
     {
-      kind: z.enum(["payment", "transaction"]).describe("payment = an x402 402 challenge; transaction = a chain transaction"),
+      kind: z.enum(["payment", "transaction", "sign-in"]).describe("payment = an x402 402 challenge; transaction = a chain transaction; sign-in = an EIP-4361 / CAIP-122 message"),
       chainId: z.number().optional().describe("EVM chain id: 1 Ethereum, 42161 Arbitrum, 8453 Base. For payment, cross-checks the network."),
       from: z.string().optional().describe("The wallet that will sign. Strongly recommended: enables simulation and balance checks."),
       payment: z.object({
@@ -347,6 +351,23 @@ async function main() {
           facilitator: z.string().optional(),
         }).optional().describe("x402 extra fields: validAfter / validBefore / facilitator"),
       }).optional().describe("Required when kind=payment"),
+      signIn: z.object({
+        message: z.string().optional().describe("Raw EIP-4361 / CAIP-122 message text"),
+        domain: z.string().optional().describe("Domain claimed by the message (structured form)"),
+        address: z.string().optional().describe("Address the message says will sign in (structured form)"),
+        statement: z.string().optional().describe("Optional human-readable statement"),
+        uri: z.string().optional().describe("URI whose host must match the message domain"),
+        version: z.string().optional().describe("SIWX version, normally 1"),
+        chainId: z.union([z.string(), z.number()]).optional().describe("Chain ID, e.g. 1 or eip155:1"),
+        nonce: z.string().optional().describe("Nonce; at least 8 alphanumeric characters"),
+        issuedAt: z.string().optional().describe("ISO-8601 time or unix timestamp when issued"),
+        expirationTime: z.string().optional().describe("ISO-8601 time or unix timestamp when it expires"),
+      }).optional().describe("Required when kind=sign-in unless top-level sign-in fields are supplied"),
+      expected: z.object({
+        host: z.string().optional().describe("Host that sent the request; binds the message domain"),
+        chainId: z.union([z.string(), z.number()]).optional().describe("Chain ID the signer expects"),
+        address: z.string().optional().describe("Address the signer expects"),
+      }).optional().describe("Caller-supplied binding for kind=sign-in"),
       to: z.string().optional().describe("Transaction target (required when kind=transaction)"),
       data: z.string().optional().describe("0x calldata for the transaction"),
       value: z.string().optional().describe("Native value in wei, as a decimal string"),
@@ -383,6 +404,8 @@ async function main() {
         chainId: args.chainId,
         from: args.from,
         payment: args.payment,
+        signIn: args.signIn,
+        expected: args.expected,
         to: args.to,
         data: args.data,
         value: args.value,

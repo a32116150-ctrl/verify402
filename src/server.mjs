@@ -1901,6 +1901,8 @@ app.post("/preflight", preflightRateLimit, preflightConcurrency, async (req, res
           baseUrl: PUBLIC_BASE_URL,
         });
         extra.docs = "/start";
+        extra.validKinds = ["payment", "transaction", "sign-in"];
+        extra.hint = "valid kinds: payment, transaction, sign-in";
       }
       return sendPublicError(req, res, e.status, e.code, e.message, { extra });
     }

@@ -502,11 +502,11 @@ export function buildOpenapi(prices, { mode = "testnet", baseUrl = DEMO_BASE_URL
         post: {
           tags: ["Gate"],
           operationId: "preflightGate",
-          summary: "Free PASS / CAUTION / BLOCK before signing a payment or transaction",
+          summary: "Free PASS / CAUTION / BLOCK before signing a payment, transaction, or sign-in message",
           security: [],
           description: [
-            "Accepts an x402 payment challenge (kind=payment) or raw transaction calldata (kind=transaction).",
-            "Evaluates structural validity, recipient allowlists, spend caps, approval limits, revert simulation, and block freshness.",
+            "Accepts an x402 payment challenge (kind=payment), raw transaction calldata (kind=transaction), or an EIP-4361 / CAIP-122 sign-in message (kind=sign-in).",
+            "Evaluates structural validity, recipient allowlists, spend caps, approval limits, revert simulation, block freshness, and sign-in domain / URI / nonce / time / chain / address binding.",
             "Optional caller-supplied checks: policy.sellerPayoutWallets is a payout allowlist (not a binding); policy.sellerPayoutManifest fetches a seller-signed manifest from a caller-pinned HTTPS origin and is the only source of payee_payout_binding; policy.obligation checks a local settled-key ledger and cumulative spend against a grant. The gate does not persist either state.",
             "Returns PASS / CAUTION / BLOCK with typed reasons, checked/notChecked lists, pinned block number, and an HMAC receipt (valid for 90s).",
             "\n**Security disclaimer:** A PASS indicates that the specific checks in `checked` passed. It is not an audit, does not screen sanctions, does not audit the counterparty, does not scan tool descriptions or responses for prompt injection, and does not guarantee the intent is safe. Always inspect `notChecked`.",
@@ -520,7 +520,7 @@ export function buildOpenapi(prices, { mode = "testnet", baseUrl = DEMO_BASE_URL
                   type: "object",
                   required: ["kind"],
                   properties: {
-                    kind: { type: "string", enum: ["payment", "transaction"], description: "Whether evaluating an x402 payment challenge or a raw chain transaction." },
+                    kind: { type: "string", enum: ["payment", "transaction", "sign-in"], description: "Whether evaluating an x402 payment challenge, a raw chain transaction, or an EIP-4361 / CAIP-122 sign-in message." },
                     payment: {
                       type: "object",
                       description: "Payment challenge object (required when kind=payment).",
@@ -536,6 +536,33 @@ export function buildOpenapi(prices, { mode = "testnet", baseUrl = DEMO_BASE_URL
                       },
                       required: ["network", "asset", "amount", "payTo"],
                       additionalProperties: true,
+                    },
+                    signIn: {
+                      type: "object",
+                      description: "Sign-in intent for kind=sign-in. Supply `message` (raw EIP-4361 / CAIP-122 text) or structured fields; parsed message fields take precedence.",
+                      properties: {
+                        message: { type: "string", description: "Raw message beginning '<domain> wants you to sign in with your ... account:'." },
+                        domain: { type: "string", description: "Domain claimed by the message (structured form)." },
+                        address: { type: "string", description: "Address the message says will sign in (structured form)." },
+                        statement: { type: "string", description: "Optional human-readable statement." },
+                        uri: { type: "string", format: "uri", description: "URI whose host must match the message domain." },
+                        version: { type: "string", description: "SIWX version, normally 1." },
+                        chainId: { type: ["string", "integer"], description: "Chain ID, e.g. 1 or eip155:1." },
+                        nonce: { type: "string", description: "Nonce; EIP-4361 needs at least 8 alphanumeric characters." },
+                        issuedAt: { type: "string", description: "ISO-8601 time or unix timestamp when the message was issued." },
+                        expirationTime: { type: "string", description: "ISO-8601 time or unix timestamp when the message expires." },
+                      },
+                      additionalProperties: true,
+                    },
+                    expected: {
+                      type: "object",
+                      description: "Caller-supplied binding for kind=sign-in. host binds the message domain; chainId and address are compared only when supplied.",
+                      properties: {
+                        host: { type: "string", description: "Host that sent the request (bare host or URL)." },
+                        chainId: { type: ["string", "integer"], description: "Chain ID the signer expects." },
+                        address: { type: "string", description: "Address the signer expects." },
+                      },
+                      additionalProperties: false,
                     },
                     chainId,
                     to: { type: "string", description: "Target contract address (required when kind=transaction)." },
@@ -668,7 +695,7 @@ export function buildOpenapi(prices, { mode = "testnet", baseUrl = DEMO_BASE_URL
                         properties: {
                           spec: { type: "string", const: RECEIPT_SPEC },
                           id: { type: "string" },
-                          kind: { type: "string", enum: ["payment", "transaction"] },
+                          kind: { type: "string", enum: ["payment", "transaction", "sign-in"] },
                           verdict: { type: "string", enum: ["PASS", "CAUTION", "BLOCK"] },
                           intentHash: { type: "string", description: "HMAC-signed SHA-256 of the canonical normalized intent." },
                           requestHash: { type: "string", description: "HMAC-signed SHA-256 of the exact JSON request body sent to /preflight. This field is additive within @1; older receipts lack it." },
@@ -700,7 +727,7 @@ export function buildOpenapi(prices, { mode = "testnet", baseUrl = DEMO_BASE_URL
               },
             },
             400: {
-              description: "Invalid intent format or malformed policy. Transaction intents require an integer chainId: 400 missing_chain / invalid_chain / unsupported_chain.",
+              description: "Invalid intent format or malformed policy. Transaction intents require an integer chainId: 400 missing_chain / invalid_chain / unsupported_chain. Sign-in intents require signIn.message or structured fields: 400 invalid_sign_in.",
               content: { "application/json": { schema: ERROR_SCHEMA } },
             },
             429: {
