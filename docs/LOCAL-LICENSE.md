@@ -1,16 +1,19 @@
-# Local licenses for the paid engines
+# Paid engines and the local license gate
 
 The hosted service charges for paid checks with x402 at the HTTP boundary.
-The same engines can also be imported directly from a clone of this repository,
-which never reaches that paywall. This document describes the local license
-requirement added for that path.
+Copies of this public repository never reach that paywall, so the five paid
+engines are no longer implemented here: they live in the private
+`verify402-engine` service and are called over a token-gated internal endpoint.
+This document describes the thin public clients and the signed-license gate
+that still guards direct imports.
 
 ## What changed
 
-The five paid engines now check for a signed license when called outside the
-hosted service:
+Each public engine module is now a thin proxy. It first requires a signed local
+license, then forwards the call to the private service when configured, and
+fails closed when that service is absent:
 
-| Engine | Module |
+| Engine | Public proxy |
 | --- | --- |
 | `verify` (`measureRoundTrip`) | `src/measure.mjs` |
 | `safety` (`preTradeCheck`) | `src/safety.mjs` |
@@ -18,8 +21,8 @@ hosted service:
 | `quotecheck` (`fairQuoteCheck`) | `src/quotecheck.mjs` |
 | `depth` (`depthProfile`) | `src/depth.mjs` |
 
-Without a valid license they throw `LicenseRequiredError` before doing any
-chain work. The hosted server calls `enableHostedMode()` at startup, so hosted
+Without a valid license they throw `LicenseRequiredError` before any chain or
+network work. The hosted server calls `enableHostedMode()` at startup, so hosted
 paid calls (including `/assure`, which composes several engines) are unaffected.
 Free `/preflight`, payment, recovery, receipt and sign-in behavior are unchanged.
 
@@ -38,10 +41,13 @@ signing-key path). The token format is
 `v1.<base64url payload>.<base64url signature>`; the payload carries `id`,
 `iat`, `exp`, and a fixed `kind` so tokens cannot be reused for another purpose.
 
-Set the token in the environment of the process that runs the engines:
+Set the token in the environment of the process that imports the proxy, and
+point it at the private service:
 
 ```bash
 export VERIFY402_LICENSE_KEY="$(cat /path/to/license.txt)"
+export VERIFY402_ENGINE_URL="https://engine.example.internal"
+export VERIFY402_ENGINE_TOKEN="..."
 ```
 
 The signing key lives at `~/.config/verify402/license-private.pem` (mode 600).
@@ -50,15 +56,15 @@ contains no secret. Never commit or print the signing key.
 
 ## Test harness
 
-The offline suite uses `VERIFY402_LICENSE_BYPASS=1` so the engine tests can run
-without a license. The bypass is refused when `X402_MODE=mainnet`. It is a test
-convenience, not a supported way to run paid checks in production.
+The offline suite uses `VERIFY402_LICENSE_BYPASS=1` so the route, payment and
+free-tool tests can run without a license. The bypass is refused when
+`X402_MODE=mainnet`. Engine-internal and RPC tests now live in the private
+repository next to the implementation.
 
-## Honest limitation
+## Enforcement
 
-This is a barrier against casual or accidental local use, not a technical lock:
-the code is Apache-2.0 and public, so anyone can edit or remove the checks, and
-copies or npm mirrors already in circulation cannot be recalled. A signed
-license makes "just import the engine" stop working and gives the project a
-clear commercial path, but the real enforcement is moving the paid computation
-private/server-side and leaving only free tools in the public package.
+The signed license remains useful defense in depth, but the real enforcement
+is architectural: the public package contains no venue/quoter logic, token
+facts, ladder arithmetic or verdict code. A clone cannot produce a paid result
+without the private service, and the hosted HTTP boundary still requires x402
+payment before any result is returned.

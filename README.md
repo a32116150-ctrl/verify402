@@ -247,8 +247,10 @@ header. In testnet/local mode the card falls back to a Host allowlist
 (`TRUSTED_HOSTS`, plus `localhost` / `127.0.0.1`); an unlisted Host gets
 `400 untrusted_host` instead of being reflected.
 
-Direct imports of the paid engines from a clone need a signed
-`VERIFY402_LICENSE_KEY`. Hosted paid endpoints, free `/preflight`, payment,
+Paid checks are computed only by the private `verify402-engine` service. The
+public modules are thin, license-gated clients: direct imports from a clone
+need a signed `VERIFY402_LICENSE_KEY` and a configured private service, and
+fail closed otherwise. Hosted paid endpoints, free `/preflight`, payment,
 recovery and receipts are unchanged. See `docs/LOCAL-LICENSE.md`.
 
 ## Endpoints
