@@ -9,7 +9,7 @@ import { statePersistence } from "./recovery-persistence.mjs";
 import { DEFAULT_TTL_SECONDS, MAX_TTL_SECONDS, MIN_TTL_SECONDS, RECEIPT_SPEC } from "./preflight.mjs";
 import { DEFAULT_SIZE } from "./config.mjs";
 import { RELEASE_VERSION } from "./version.mjs";
-import { DEMO_BASE_URL, paymentRail } from "./payment-mode.mjs";
+import { buildPreflightRequestExample, DEMO_BASE_URL, paymentRail } from "./payment-mode.mjs";
 import {
   HEALTH_OK_KEYS,
   READY_OK_KEYS,
@@ -595,18 +595,7 @@ export function buildOpenapi(prices, { mode = "testnet", baseUrl = DEMO_BASE_URL
                     },
                   ],
                 },
-                example: {
-                  kind: "payment",
-                  payment: {
-                    scheme: "exact",
-                    network: rail.evmNetwork,
-                    asset: rail.evmAsset,
-                    amount: "10000",
-                    payTo: "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb",
-                    resource: `${baseUrl}/verify`,
-                  },
-                  policy: { maxAmountUsd: 0.25, allowedResourceHosts: [new URL(baseUrl).hostname] },
-                },
+                example: buildPreflightRequestExample({ mode, baseUrl }),
               },
             },
           },

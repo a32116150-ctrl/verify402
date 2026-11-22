@@ -81,6 +81,7 @@ import {
   buildLlmsText,
   buildPreflightPaymentExample,
   buildPreflightPaymentNetworks,
+  buildPreflightRequestExample,
   DEMO_BASE_URL,
   paymentRail,
 } from "./payment-mode.mjs";
@@ -1893,7 +1894,15 @@ app.post("/preflight", preflightRateLimit, preflightConcurrency, async (req, res
           extra: { code: e.code },
         });
       }
-      return sendPublicError(req, res, e.status, e.code, e.message, { extra: { code: e.code } });
+      const extra = { code: e.code };
+      if (e.code === "invalid_kind") {
+        extra.example = buildPreflightRequestExample({
+          mode: MODE,
+          baseUrl: PUBLIC_BASE_URL,
+        });
+        extra.docs = "/start";
+      }
+      return sendPublicError(req, res, e.status, e.code, e.message, { extra });
     }
     recordPreflight({ req, result: null, status: 503, ms, code: "preflight_unavailable" });
     // Fail closed: no receipt means an executor must refuse to sign. A 200

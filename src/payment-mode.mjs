@@ -93,6 +93,28 @@ export function buildPreflightPaymentExample({ mode = "testnet", baseUrl = DEMO_
   };
 }
 
+// Smallest copy-paste body that works as-is. OpenAPI, the invalid_kind hint,
+// and /llms.txt all use this shape so the docs and the running gate agree.
+export function buildPreflightRequestExample({
+  mode = "testnet",
+  baseUrl = DEMO_BASE_URL,
+  payTo = "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb",
+} = {}) {
+  const rail = paymentRail(mode);
+  return {
+    kind: "payment",
+    payment: {
+      scheme: "exact",
+      network: rail.evmNetwork,
+      asset: rail.evmAsset,
+      amount: "10000",
+      payTo,
+      resource: `${baseUrl}/verify`,
+    },
+    policy: { maxAmountUsd: 0.25, allowedResourceHosts: [new URL(baseUrl).hostname] },
+  };
+}
+
 export function buildInfoHosting(mode = "testnet") {
   const rail = paymentRail(mode);
   if (rail.testnet) {
@@ -132,6 +154,10 @@ export function buildLlmsText({
     : `  Mainnet: set VERIFY402_NETWORKS=${rail.evmNetwork} explicitly; omit EVM_PRIVATE_KEY`;
   // Public install text references the published artifact.
   const installVersion = `@${publishedVersion}`;
+  const preflightJson = JSON.stringify(buildPreflightRequestExample({ mode, baseUrl }), null, 2)
+    .split("\n")
+    .map((line) => `  ${line}`)
+    .join("\n");
 
   return [
     "# verify402",
@@ -175,6 +201,14 @@ export function buildLlmsText({
     "- GET /npm-stats — npm download counters for the MCP package.",
     "- GET /health — liveness and network configuration.",
     "- GET /info — JSON capabilities and pricing.",
+    "",
+    "## Copy-paste free preflight",
+    "",
+    "```sh",
+    `curl -sS -X POST ${baseUrl}/preflight \\`,
+    '  -H "Content-Type: application/json" \\',
+    `  -d '${preflightJson}'`,
+    "```",
     "",
     rail.heading,
     "",

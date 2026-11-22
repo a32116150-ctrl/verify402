@@ -291,6 +291,12 @@ test("runtime metadata follows the configured mode instead of hardcoding the dem
   assert.doesNotMatch(mainnetLlms, /testnet USDC/);
   assert.doesNotMatch(mainnetLlms, /eip155:84532/);
   assert.match(mainnetLlms, /https:\/\/mainnet\.example/);
+  assert.match(testnetLlms, /curl -sS -X POST https:\/\/testnet\.example\/preflight \\/);
+  assert.match(testnetLlms, /"network": "eip155:84532"/);
+  assert.match(mainnetLlms, /curl -sS -X POST https:\/\/mainnet\.example\/preflight \\/);
+  assert.match(mainnetLlms, /"network": "eip155:8453"/);
+  assert.doesNotMatch(testnetLlms, /0xYourWallet/);
+  assert.doesNotMatch(mainnetLlms, /0xYourWallet/);
 
   assert.equal(
     buildPreflightPaymentExample({

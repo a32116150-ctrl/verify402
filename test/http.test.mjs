@@ -173,6 +173,26 @@ await check("400: every paid route requires an integer chainId (missing_chain)",
   }
 });
 
+await check("400: invalid_kind teaches a working request and links to /start", async () => {
+  const bad = await post("/preflight", { kind: "not-a-kind" });
+  assert.equal(bad.status, 400);
+  assert.equal(bad.body.error, "invalid_kind");
+  assert.equal(bad.body.code, "invalid_kind");
+  assert.equal(bad.body.message, "kind must be 'payment' or 'transaction' (or supply payment / transaction / to)");
+  assert.equal(typeof bad.body.requestId, "string");
+  assert.equal(bad.body.docs, "/start");
+  const openapiRes = await fetch(`${base}/openapi.json`);
+  assert.equal(openapiRes.status, 200);
+  const openapi = await openapiRes.json();
+  const expected = openapi.paths["/preflight"].post.requestBody.content["application/json"].example;
+  assert.deepEqual(bad.body.example, expected);
+
+  const worked = await post("/preflight", bad.body.example);
+  assert.equal(worked.status, 200);
+  assert.deepEqual(bannedClaimHits(worked.body), []);
+  honesty(worked.body);
+});
+
 await check("400: numeric-string chainId is invalid_chain, not coerced", async () => {
   const r = await post("/verify", { chainId: "1", target: "WETH" });
   errorShape(r, 400, "invalid_chain");
