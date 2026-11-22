@@ -4,11 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Agent payment receipt — verify before you trust it · verify402</title>
-<meta name="description" content="What an agent payment receipt proves: an HMAC-signed preflight receipt bound to the exact intent, request and block, plus response hashes for paid checks. Verify it before acting.">
+<meta name="description" content="What an agent payment receipt proves: an HMAC-signed preflight receipt bound to the exact intent, request and block. Recompute hashes locally; validate the signature through POST /preflight/verify or the shared secret.">
 <link rel="canonical" href="https://vex402.online/agent-payment-receipt">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Agent payment receipt — verify before you trust it">
-<meta property="og:description" content="A receipt is a falsifiable record, not a guarantee. Recompute the signature, expiry and request binding before an agent signs.">
+<meta property="og:description" content="A receipt is a falsifiable record, not a guarantee. Recompute hashes locally; validate the signature through POST /preflight/verify or the shared secret.">
 <meta property="og:url" content="https://vex402.online/agent-payment-receipt">
 <meta property="og:image" content="https://vex402.online/assets/logo-400.png">
 <meta name="twitter:card" content="summary">
@@ -18,7 +18,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/assets/site.css">
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebPage","name":"Agent payment receipt — verify before you trust it","description":"How verify402 receipts bind a verdict to the exact agent intent, request body and pinned block, and how to verify them locally.","url":"https://vex402.online/agent-payment-receipt","isPartOf":{"@type":"WebSite","name":"verify402","url":"https://vex402.online/"},"publisher":{"@type":"Organization","name":"verify402","url":"https://vex402.online/"}}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebPage","name":"Agent payment receipt — verify before you trust it","description":"How verify402 receipts bind a verdict to the exact agent intent, request body and pinned block, how to recompute hashes locally, and how to validate signatures through POST /preflight/verify or the shared secret.","url":"https://vex402.online/agent-payment-receipt","isPartOf":{"@type":"WebSite","name":"verify402","url":"https://vex402.online/"},"publisher":{"@type":"Organization","name":"verify402","url":"https://vex402.online/"}}</script>
 </head>
 <body>
 
@@ -89,9 +89,9 @@
       </article>
 
       <article id="verify">
-        <p class="eyebrow">02 · Local verification</p>
-        <h2 style="margin-top:14px">No chain call. No trust in a dashboard.</h2>
-        <p class="lead" style="margin-top:14px"><code class="inline">POST /preflight/verify</code> with the receipt, your original <code class="inline">request</code> and the normalized <code class="inline">intent</code> recomputes the HMAC, checks expiry, and re-hashes what you sent. A tampered signature returns <code class="inline">bad_signature</code>; an altered request returns <code class="inline">request_mismatch</code>. Require both <code class="inline">intentBound</code> and <code class="inline">requestBound</code> before your signer moves.</p>
+        <p class="eyebrow">02 · Verification boundary</p>
+        <h2 style="margin-top:14px">Recompute hashes locally. Validate the signature at the issuer.</h2>
+        <p class="lead" style="margin-top:14px">You can recompute <code class="inline">intentHash</code> and <code class="inline">requestHash</code> locally from the exact intent and request. Signature validation needs the issuer's <code class="inline">POST /preflight/verify</code> or the shared <code class="inline">PREFLIGHT_SECRET</code>. That endpoint checks expiry, re-hashes what you sent, and returns <code class="inline">bad_signature</code> for a tampered signature or <code class="inline">request_mismatch</code> for an altered request. Require both <code class="inline">intentBound</code> and <code class="inline">requestBound</code> before your signer moves.</p>
         <div class="callout good" style="margin-top:22px">
           <h3>Executor rule</h3>
           <p>Refuse on BLOCK. Refuse on a missing, expired or unverifiable receipt. Treat CAUTION as an explicit decision, not a pass. The <a class="textlink" href="https://github.com/a32116150-ctrl/verify402/blob/master/examples/preflight-guard.mjs" rel="noopener">reference guard</a> implements that order and holds no key.</p>

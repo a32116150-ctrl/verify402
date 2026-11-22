@@ -28,11 +28,11 @@ Do not call the signer between steps 1 and 6.
   "checked": ["..."],
   "notChecked": ["..."],
   "expiresAt": "2026-10-24T12:00:00.000Z",
-  "signature": "0x..."
+  "signature": "<64 hex characters, no 0x prefix>"
 }
 ```
 
-The HMAC covers the canonical receipt payload. The two hashes bind:
+The signature is a bare 64-hex string with no `0x` prefix. The HMAC covers the canonical receipt payload. The two hashes bind:
 
 - `intentHash` — the normalized intent (the thing the gate evaluated).
 - `requestHash` — the exact request body sent to `/preflight` (the bytes the

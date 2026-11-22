@@ -79,7 +79,7 @@
   <article class="wrap prose">
     <p>Most payment systems record what happened. A pre-signing gate records what it saw <i>before</i> anything happened. That difference is the whole value of a receipt: it moves the evidence to the moment of the decision.</p>
 
-    <p>But "receipt" is an overloaded word. A screenshot is not a receipt. A log line is not a receipt. A JSON blob with a green checkmark is not a receipt unless it is bound to the exact thing that was signed and can be checked by someone who does not trust the issuer.</p>
+    <p>But "receipt" is an overloaded word. A screenshot is not a receipt. A log line is not a receipt. A JSON blob with a green checkmark is not a receipt unless it is bound to the exact thing that was signed. Hashes can be recomputed by someone who does not trust the issuer; signature validation needs the issuer's POST /preflight/verify or the shared secret.</p>
 
     <h2>What is inside the receipt</h2>
 
@@ -91,7 +91,7 @@
       <li><b>The block.</b> The pinned block where the chain state was read. A verdict is only meaningful at a block.</li>
       <li><b>The expiry.</b> Receipts are short-lived by default. A check from ten minutes ago is not a check of the chain now.</li>
       <li><b>The verdict and reasons.</b> PASS, CAUTION, or BLOCK, plus typed reason codes. Not a paragraph the model has to interpret.</li>
-      <li><b>The signature.</b> An HMAC over the receipt payload, so a verifier can detect tampering without calling the issuer's database.</li>
+      <li><b>The signature.</b> An HMAC over the receipt payload. A verifier with the shared secret can detect tampering locally; otherwise validation goes through the issuer's POST /preflight/verify.</li>
     </ul>
 
     <p>The response also carries <code>checked</code> and <code>notChecked</code>. Those lists are part of the record, not decoration. They are how a reader knows whether the gate looked at the thing they care about.</p>
@@ -107,7 +107,7 @@
       <li>it has not expired, if the verifier checks the clock.</li>
     </ul>
 
-    <p>That is enough to make the decision auditable. An executor can require a valid receipt before it calls the signer. A treasury can keep the receipt next to the transaction. A counterparty can ask for it and verify it without trusting a dashboard.</p>
+    <p>That is enough to make the decision auditable. An executor can require a valid receipt before it calls the signer. A treasury can keep the receipt next to the transaction. A counterparty can ask for it, recompute the hashes locally, and validate the signature through POST /preflight/verify or the shared secret, without trusting a dashboard.</p>
 
     <h2>What it does not prove</h2>
 

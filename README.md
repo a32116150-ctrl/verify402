@@ -10,7 +10,7 @@
 [![x402 v2](https://img.shields.io/badge/x402-v2%20exact-purple.svg)](https://github.com/x402-foundation/x402)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-> **Status (2026-11-19):** this service is live on **Base + Solana mainnet** at **[vex402.online](https://vex402.online)** — real USDC via the Coinbase CDP facilitator. Eight paid calls have settled on Base mainnet: six operator calls (0.31 USDC) and two outside payments of 0.03 USDC each ([0x5244…](https://basescan.org/tx/0x5244036ebcce4d298865df45c4d116c2ba91508527c3601b1f972fa1f569e378), [0x31cb…](https://basescan.org/tx/0x31cb184ef8e01b7db64f43f209d742b2f036c405b863015f1ef43255c1daadb9)). The public Base Sepolia testnet demo was retired on 2026-11-19 — the product is the mainnet service. The analysis reads mainnet chain data (Ethereum, Arbitrum, Base).
+> **Status (2026-11-22):** this service is live on **Base + Solana mainnet** at **[vex402.online](https://vex402.online)** — real USDC via the Coinbase CDP facilitator. Current paid-call volume, USDC total and outside-payer counts are published at [vex402.online/stats](https://vex402.online/stats); receipts are at [vex402.online/proof](https://vex402.online/proof). The public Base Sepolia testnet demo was retired on 2026-11-19 — the product is the mainnet service. The analysis reads mainnet chain data (Ethereum, Arbitrum, Base).
 
 ---
 
@@ -95,7 +95,7 @@ Paste this into your client config file:
 }
 ```
 
-#### Option B: Paid Mode (Unlocks 5 Deep Truth Checks)
+#### Option B: Paid Mode (Unlocks 6 Deep Truth Checks)
 Unlocks the six paid x402 checks (`verify_arbitrage`, `check_token_safety`, `get_best_route`, `verify_quote_fairness`, `get_trade_depth`, `get_assurance`). The agent pays per call via x402 in **real USDC on Base mainnet** — $0.03 to $0.10 per call, or $0.19 for the assurance bundle, capped by `MAX_PAYMENT_USD`. The analysis reads mainnet chain data.
 
 ```json
@@ -539,7 +539,7 @@ or any MCP client.
 > survive a restart, a redeploy, or a SIGKILL, and a caller retrying after a lost response
 > is not charged again. Without the variable the service keeps the historical memory-only
 > behavior: a restart loses the records, and a previously settled key may be charged again.
-> `/usage` counters are process-local in both modes. The store is **single-instance by
+> `/usage` counters are process-local unless `VERIFY402_USAGE_PATH` is set, or `RECOVERY_DB_PATH` is set and a `usage.json` sits beside it; then they are durable file counters. The store is **single-instance by
 > construction**: one server process per database file (see `DEPLOY.md` §3.1).
 
 - **Delivery:** the verdict is returned inside the settlement response — the paid answer
