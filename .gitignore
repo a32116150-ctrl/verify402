@@ -13,3 +13,6 @@ renders/
 *.mp4
 
 scripts/.moltbook-key
+brag-output-*/
+pitch-deck/
+tools-list-2.6.0.jsonl

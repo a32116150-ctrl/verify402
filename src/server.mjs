@@ -1366,6 +1366,7 @@ app.get("/openapi.json", (_req, res) => {
     route: ROUTE_PRICE,
     quotecheck: QUOTECHECK_PRICE,
     depth: DEPTH_PRICE,
+    assure: ASSURE_PRICE,
   }, {
     mode: MODE,
     baseUrl: PUBLIC_BASE_URL,
@@ -1414,6 +1415,12 @@ app.get("/.well-known/x402", (_req, res) => {
         method: "POST",
         description:
           "Largest size that still clears your cost tolerance: per-size entry and exit quotes, impact, round-trip cost, and capacityUsd.",
+      },
+      {
+        url: `${PUBLIC_BASE_URL}/assure`,
+        method: "POST",
+        description:
+          "One pinned-block assurance bundle from the paid checks you supply, with a recomputable sha256 evidence hash. Supplied checks must total at least the bundle price.",
       },
     ],
     attestation: { type: "none" },

@@ -33,6 +33,8 @@ const {
   bannedClaimHits,
 } = await import("../src/contract.mjs");
 const { PAID_ROUTES } = await import("../src/honesty.mjs");
+const { DEFAULT_PAID_ROUTES } = await import("../mcp-bridge/payment-policy.mjs");
+const { PAID_TOOL_ROUTES } = await import("../mcp-bridge/index.mjs");
 const {
   recordSettlement, requestHash, lookupRecovery, reserveRecovery, releaseRecovery,
   IDEMPOTENCY_TTL_MS, IDEMPOTENCY_MAX_REPLAYS, IDEMPOTENCY_STAGE_TTL_MS,
@@ -622,6 +624,27 @@ await check("discovery: OpenAPI, manifest, /info, and runtime agree on TTL, limi
   // The same banned-claims list covers runtime /info, both machine contracts, and llms.txt.
   assert.deepEqual(bannedClaimHits(JSON.stringify({ info, manifest, openapi })), []);
   assert.deepEqual(bannedClaimHits(llms), []);
+});
+
+await check("discovery: all six paid routes appear in x402, OpenAPI prices, and bridge policy", async () => {
+  const [x402Res, openapiRes] = await Promise.all([
+    fetch(`${base}/.well-known/x402`),
+    fetch(`${base}/openapi.json`),
+  ]);
+  assert.equal(x402Res.status, 200);
+  assert.equal(openapiRes.status, 200);
+  const x402 = await x402Res.json();
+  const openapi = await openapiRes.json();
+  const x402Routes = new Set(x402.resources.map((r) => r.url.slice(r.url.lastIndexOf("/") + 1)));
+  const toolRoutes = new Set(Object.values(PAID_TOOL_ROUTES));
+
+  for (const route of ["/verify", "/safety", "/route", "/quotecheck", "/depth", "/assure"]) {
+    assert.ok(x402Routes.has(route.slice(1)), `${route} missing from /.well-known/x402`);
+    assert.ok(openapi.paths[route], `${route} missing from OpenAPI`);
+    assert.ok(openapi.paths[route].post["x-payment-info"]?.price?.amount, `${route} missing OpenAPI price`);
+    assert.ok(DEFAULT_PAID_ROUTES.includes(route), `${route} missing from bridge paid routes`);
+    assert.ok(toolRoutes.has(route), `${route} missing from bridge tool map`);
+  }
 });
 
 await check("agent card rejects a forged Host and never reflects it", async () => {

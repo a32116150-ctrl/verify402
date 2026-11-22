@@ -27,7 +27,7 @@ export const DEMO_NETWORK = "eip155:84532";
 export const MAINNET_NETWORK = "eip155:8453";
 export const DEFAULT_NETWORKS = [MAINNET_NETWORK];
 export const DEFAULT_PAY_TO = "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb";
-export const DEFAULT_PAID_ROUTES = ["/verify", "/safety", "/route", "/quotecheck", "/depth"];
+export const DEFAULT_PAID_ROUTES = ["/verify", "/safety", "/route", "/quotecheck", "/depth", "/assure"];
 
 // Hard upper bound for a single EIP-3009 authorization. The exact-EVM payer
 // signs `validBefore = now + maxTimeoutSeconds`; an unbounded value hands the
