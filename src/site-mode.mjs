@@ -16,11 +16,11 @@ import { fileURLToPath } from "url";
 const FOOTER_PAIRS = [
   [
     "Analysis reads mainnet chain data; public demo payments are Base Sepolia testnet USDC. Testnet settlements on this demo are the operator’s own. Mainnet receipts: vex402.online/proof.",
-    "Analysis reads mainnet chain data. This instance settles real USDC on Base mainnet / Solana mainnet over x402. Eight paid calls have settled on Base: six operator calls and two outside payments of 0.03 USDC each (2026-11-19).",
+    "Analysis reads mainnet chain data. This instance settles real USDC on Base mainnet / Solana mainnet over x402. Live settlement counts and USDC volume: vex402.online/stats.",
   ],
   [
     "Analysis reads mainnet chain data; public demo payments are Base Sepolia testnet USDC. Testnet settlements on this demo are the operator's own. Mainnet receipts: vex402.online/proof. No sponsor yet.",
-    "Analysis reads mainnet chain data. This instance settles real USDC on Base mainnet / Solana mainnet over x402. Six operator calls and two outside payments of 0.03 USDC each (2026-11-19) have settled on Base mainnet.",
+    "Analysis reads mainnet chain data. This instance settles real USDC on Base mainnet / Solana mainnet over x402. Live settlement counts and USDC volume: vex402.online/stats.",
   ],
   [
     "Analysis reads mainnet chain data; demo payments are testnet. Testnet settlements on this demo are the operator's own. Mainnet receipts: vex402.online/proof. Donations are voluntary",

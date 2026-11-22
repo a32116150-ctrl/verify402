@@ -131,7 +131,7 @@ In your MCP config `env` block, add:
 - **USDC-Only Default**: Rejects payment requests in unknown or non-standard tokens.
 - **Payee Whitelist**: Refuses payments to addresses other than `VERIFY402_PAY_TO`.
 
-> **Mainnet is the default:** the live service at https://vex402.online settles real USDC on Base + Solana mainnet via Coinbase CDP. Eight paid calls have settled — six operator calls (0.31 USDC) and two outside x402 agents at 0.03 USDC each (2026-11-19). The bridge defaults to `VERIFY402_URL=https://vex402.online` and `VERIFY402_NETWORKS=eip155:8453`, with a dedicated hot wallet funded with a little USDC on Base. The public Base Sepolia testnet demo was retired on 2026-11-19; the only public endpoint is the mainnet service.
+> **Mainnet is the default:** the live service at https://vex402.online settles real USDC on Base + Solana mainnet via Coinbase CDP. Live settlement counts, USDC volume and outside-payer totals are at https://vex402.online/stats. The bridge defaults to `VERIFY402_URL=https://vex402.online` and `VERIFY402_NETWORKS=eip155:8453`, with a dedicated hot wallet funded with a little USDC on Base. The public Base Sepolia testnet demo was retired on 2026-11-19; the only public endpoint is the mainnet service.
 
 ---
 
