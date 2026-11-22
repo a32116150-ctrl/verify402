@@ -3,7 +3,7 @@
 
 import test from "node:test";
 import assert from "node:assert/strict";
-import { generateKeyPairSync, sign } from "node:crypto";
+import { createPrivateKey, createPublicKey, sign } from "node:crypto";
 import { spawnSync } from "node:child_process";
 
 import {
@@ -13,8 +13,30 @@ import {
   verifyLicenseToken,
 } from "../src/license.mjs";
 
-const { publicKey, privateKey } = generateKeyPairSync("ed25519");
+// Fixed RFC 8032 test-vector keys keep this test deterministic. These are
+// published vectors, not the project's signing key.
+const FIXED_SEED_HEX = "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60";
+const FIXED_PUBLIC_HEX = "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a";
+const OTHER_SEED_HEX = "4ccd089b28ff96da9db6c346ec114e0f5b8a319f35aba624da8cf6ed4fb8a6fb";
+const OTHER_PUBLIC_HEX = "3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c";
+
+function fixedPrivateKey(seedHex, publicHex) {
+  return createPrivateKey({
+    key: {
+      kty: "OKP",
+      crv: "Ed25519",
+      d: Buffer.from(seedHex, "hex").toString("base64url"),
+      x: Buffer.from(publicHex, "hex").toString("base64url"),
+    },
+    format: "jwk",
+  });
+}
+
+const privateKey = fixedPrivateKey(FIXED_SEED_HEX, FIXED_PUBLIC_HEX);
+const publicKey = createPublicKey(privateKey);
 const publicKeyBase64 = publicKey.export({ type: "spki", format: "der" }).toString("base64");
+const otherPublicKeyBase64 = createPublicKey(fixedPrivateKey(OTHER_SEED_HEX, OTHER_PUBLIC_HEX))
+  .export({ type: "spki", format: "der" }).toString("base64");
 
 function mint({ exp, iat, kind = "verify402-local-license", body } = {}) {
   const now = Math.floor(Date.now() / 1000);
@@ -62,11 +84,12 @@ test("rejects missing and malformed tokens", () => {
 });
 
 test("rejects a different signing key and a tampered signature", () => {
-  const other = generateKeyPairSync("ed25519").publicKey
-    .export({ type: "spki", format: "der" }).toString("base64");
   const token = mint();
-  assert.equal(verifyLicenseToken(token, { publicKey: other }).reason, "bad_signature");
-  const tampered = token.slice(0, -1) + (token.endsWith("A") ? "B" : "A");
+  assert.equal(verifyLicenseToken(token, { publicKey: otherPublicKeyBase64 }).reason, "bad_signature");
+  const parts = token.split(".");
+  const signature = parts[2];
+  parts[2] = (signature[0] === "A" ? "B" : "A") + signature.slice(1);
+  const tampered = parts.join(".");
   assert.equal(verifyLicenseToken(tampered, { publicKey: publicKeyBase64 }).reason, "bad_signature");
 });
 
