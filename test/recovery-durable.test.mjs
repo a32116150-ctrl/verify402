@@ -287,6 +287,48 @@ assert.equal(process.env.RECOVERY_DB_PATH, undefined, "driver must run without R
   });
 }
 
+// Legacy durable rows have no settleOutcome field. Only the dispatch-without-
+// result shape (state `settling` + `settlingAt`) may be treated as unknown; a
+// plain staged row must stay fail-closed.
+{
+  const body = JSON.stringify({ target: "WETH", base: "USDC", size: 1000 });
+  const validBefore = String(Math.floor(Date.now() / 1000) + 300);
+
+  const dispatchDir = freshDir("legacy-dispatch");
+  const dispatchDb = join(dispatchDir, "recovery.sqlite");
+  const staged = runFixture(dispatchDir, "stage-only", ["legacy-dispatch-key", validBefore]);
+  assert.equal(staged.status, 0, staged.stderr);
+  const dispatchEntry = dbEntry(dispatchDb, "legacy-dispatch-key").entry;
+  assert(dispatchEntry, "legacy dispatch row must exist");
+  closeRecoveryStore();
+  const legacyDispatch = { ...dispatchEntry, state: "settling", settlingAt: Date.now() };
+  delete legacyDispatch.settleOutcome;
+  const dw = new DatabaseSync(dispatchDb);
+  dw.prepare("UPDATE recovery_entry SET entry=? WHERE operation_id=?").run(JSON.stringify(legacyDispatch), legacyDispatch.operationId);
+  dw.close();
+  const dispatched = runFixture(dispatchDir, "lookup", ["legacy-dispatch-key", "/verify", body]);
+  check("LEGACY: dispatch-without-result row (no settleOutcome) replays as unknown", () => {
+    assert.ok(dispatched.result.result?.hit, "legacy settling row must be replayable when the rail is unreadable");
+  });
+
+  const stagedDir = freshDir("legacy-staged");
+  const stagedDb = join(stagedDir, "recovery.sqlite");
+  const plain = runFixture(stagedDir, "stage-only", ["legacy-staged-key", validBefore]);
+  assert.equal(plain.status, 0, plain.stderr);
+  const plainEntry = dbEntry(stagedDb, "legacy-staged-key").entry;
+  assert(plainEntry, "legacy staged row must exist");
+  closeRecoveryStore();
+  const legacyStaged = { ...plainEntry };
+  delete legacyStaged.settleOutcome;
+  const sw = new DatabaseSync(stagedDb);
+  sw.prepare("UPDATE recovery_entry SET entry=? WHERE operation_id=?").run(JSON.stringify(legacyStaged), legacyStaged.operationId);
+  sw.close();
+  const notDispatched = runFixture(stagedDir, "lookup", ["legacy-staged-key", "/verify", body]);
+  check("LEGACY: staged row without a dispatch marker stays fail-closed", () => {
+    assert.ok(notDispatched.result.result?.pending, "legacy staged row must not become a free replay");
+  });
+}
+
 // (f) Mainnet refuses to start without an explicit, openable RECOVERY_DB_PATH.
 {
   const mainnetEnv = {

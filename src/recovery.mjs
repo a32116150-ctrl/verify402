@@ -290,6 +290,10 @@ export function recordSettlement(key, payload, _companionKey = null, {
     // `settling` is written by the onBeforeSettle hook, before the facilitator
     // call; `stuck` means the outcome can be proven on neither side.
     state: settledNow ? "settled" : "staged",
+    // Filled in by the settle hooks: null before dispatch, "unknown" once the
+    // dispatch-without-result marker is written, then "success"/"failed" when
+    // the facilitator result is handled. Never inferred from caller headers.
+    settleOutcome: null,
     stagedAt: t,
     settledAt: settledNow ? t : null,
     replays: 0,
@@ -367,6 +371,10 @@ export function promoteSettlement(body, settlement) {
   if (matches.length !== 1) return 0;           // ambiguous or unknown: fail closed
   const e = matches[0];
   if (e.settled) return 0;
+  // The success hook may follow a normal "unknown" dispatch. It must never
+  // override a recorded failure or an unrecognized outcome.
+  if (e.settleOutcome === "failed"
+      || (e.settleOutcome != null && e.settleOutcome !== "unknown" && e.settleOutcome !== "success")) return 0;
   if (e.responseHash !== h) return 0;           // bytes changed since staging
 
   const payer = typeof settlement.payer === "string" && settlement.payer.trim()
@@ -380,6 +388,7 @@ export function promoteSettlement(body, settlement) {
   e.settledAt = t;
   e.verified_payer = payer;
   e.identity = payer ? "settlement_payer" : "settlement_only";
+  e.settleOutcome = "success";
   e.settlement = {
     transaction: settlement.transaction,
     network: settlement.network ?? null,
@@ -443,12 +452,28 @@ export function abandonSettlement(body) {
   let removed = 0;
   for (const [k, e] of settled) {
     if (e.operationId === opId && !e.settled) {
+      // Record the outcome before deleting. If the durable delete fails, the
+      // surviving row says "failed", so a restart can never replay it.
+      e.settleOutcome = "failed";
+      updateEntry(opId, e);
       dropEntryFromMemory(e);
       abandonEntry(opId); // durable mirror; a failed delete leaves the row pending (fail closed)
       removed = 1;
     }
   }
   return removed;
+}
+
+// Resolve the durable settle outcome. Legacy rows predating this field are only
+// trusted as "dispatched, outcome unknown" when they carry the dispatch marker
+// written by markSettling (state `settling` + `settlingAt`). Anything else fails
+// closed: no stored-response replay from an unrecorded settle outcome.
+function settleOutcomeOf(entry) {
+  if (entry.settleOutcome === "unknown" || entry.settleOutcome === "success" || entry.settleOutcome === "failed") {
+    return entry.settleOutcome;
+  }
+  if (entry.state === "settling" && Number.isFinite(entry.settlingAt)) return "unknown";
+  return "none";
 }
 
 // Decide what an incoming request may do with an idempotency key. Returns
@@ -472,6 +497,15 @@ export function lookupRecovery({
   if (operationRequestHash && entry.requestHash && operationRequestHash !== entry.requestHash) {
     return { conflict: "request_mismatch" };
   }
+  // Absolute safety gate: a recorded facilitator failure is never replayable,
+  // even if another code path later marked the row settled.
+  if (entry.settleOutcome === "failed") {
+    return { pending: "payment_unresolved", reason: "settlement_failed" };
+  }
+  if (entry.settleOutcome != null
+      && entry.settleOutcome !== "unknown" && entry.settleOutcome !== "success") {
+    return { pending: "payment_unresolved", reason: "invalid_settle_outcome" };
+  }
   if (!entry.settled) {
     if (entry.state === "stuck") {
       // Neither side provable: retain the record, keep the key blocked, and
@@ -482,6 +516,33 @@ export function lookupRecovery({
         operationId: entry.operationId,
         reason: entry.stuckReason || "settlement outcome could not be proven",
       };
+    }
+    // A durable `settling` marker with outcome "unknown" means the settlement
+    // was dispatched before the crash (timeout / lost hook) and the stored
+    // response is the only copy of the result. If this rail cannot be re-read,
+    // fail closed on *charging* (never call the facilitator or run the handler
+    // again) but fail open on delivery: promote once and replay that exact
+    // stored response. A recorded "failed" or any other outcome stays blocked.
+    if (entry.state === "settling" && entry.payload
+        && nowFn() - entry.stagedAt <= IDEMPOTENCY_STAGE_TTL_MS
+        && settleOutcomeOf(entry) === "unknown"
+        && (!paymentChecker || !entry.paymentRef)) {
+      const ref = entry.paymentRef ?? {};
+      const t = nowFn();
+      entry.settleOutcome = "unknown";
+      entry.settled = true;
+      entry.state = "settled";
+      entry.settledAt = t;
+      entry.settlement = {
+        transaction: null,
+        network: ref.network ?? null,
+        payer: null,
+        reconciled: "dispatched_settling_unreadable_rail",
+        note: "promoted after restart: settlement was dispatched before the crash and the rail could not be re-read; stored response replayed once, no second settlement attempted",
+      };
+      promoteEntry(entry.operationId, entry);
+      const promotedHit = replayFor(key);
+      if (promotedHit) return { hit: promotedHit };
     }
     // A staged entry means the handler ran and its settlement is still
     // unresolved (or failed without an explicit failure hook). Do not let a
@@ -682,6 +743,9 @@ export function markSettling(input) {
     entry.settlingAt = nowFn();
     settlingTotal += 1;
   }
+  // Dispatch happened; the facilitator's answer has not been received. This is
+  // the ONLY journal state that may become an unreadable-rail replay.
+  entry.settleOutcome = "unknown";
   if (storeReady && updateEntry(entry.operationId, entry) === false) {
     throw new Error("the settlement attempt could not be recorded before dispatch");
   }
@@ -736,6 +800,7 @@ function promoteReconciled(entry, ref) {
   entry.settledAt = t;
   entry.verified_payer = typeof ref.payer === "string" ? ref.payer.toLowerCase() : null;
   entry.identity = entry.verified_payer ? "settlement_payer" : "settlement_only";
+  entry.settleOutcome = "success";
   entry.settlement = {
     transaction: null,
     network: ref.network ?? null,

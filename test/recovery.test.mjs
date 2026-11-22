@@ -545,6 +545,47 @@ check("a settling operation is never aged out on a timer", () => {
 
 });
 
+check("a definitive settle failure never replays even when the rail is unreadable", () => {
+
+  _setNow(() => 42_500_000);
+  const key = "settle-failed-no-replay";
+  const payload = { ok: true, verdict: "PASS", n: 7 };
+  recordSettlement(key, payload, null, {
+    settledNow: false,
+    paymentRef: { nonce: "0x" + "77".repeat(32), network: "eip155:8453" },
+  });
+  markSettling({ payload: { authorization: { nonce: "0x" + "77".repeat(32) } } });
+  const removed = abandonSettlement(JSON.stringify(payload));
+  assert(removed === 1, "the definitive failure abandons the staged record");
+  const found = lookupRecovery({ key });
+  assert(found === null, "no stored response may be replayed after a reported settle failure");
+  _setNow(() => Date.now());
+
+});
+
+check("dispatched-unknown outcome replays once, then again, without another settle", () => {
+
+  _setNow(() => 43_000_000);
+  const key = "unreadable-rail-replay";
+  const payload = { ok: true, verdict: "PASS", n: 8 };
+  recordSettlement(key, payload, null, {
+    settledNow: false,
+    paymentRef: { nonce: "0x" + "88".repeat(32), network: "eip155:8453" },
+  });
+  markSettling({ payload: { authorization: { nonce: "0x" + "88".repeat(32) } } });
+  const beforeSettleCount = recoveryObservability().settlingTotal;
+
+  const first = lookupRecovery({ key });
+  assert(first?.hit, "the first retry replays the stored response");
+  const second = lookupRecovery({ key });
+  assert(second?.hit, "a second retry returns the same stored response");
+  assert(JSON.stringify(second.hit.payload) === JSON.stringify(first.hit.payload), "both retries return the same bytes");
+  assert(second.hit.replays === first.hit.replays + 1, "the replay counter advances by one per retry");
+  assert(recoveryObservability().settlingTotal === beforeSettleCount, "no second settlement boundary is opened");
+  _setNow(() => Date.now());
+
+});
+
 check("markSettling matches the exact PAYMENT-SIGNATURE header bytes", () => {
 
   _setNow(() => 44_000_000);

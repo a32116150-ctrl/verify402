@@ -13,35 +13,39 @@
 
 import { promoteSettlement, abandonSettlement, markSettling } from "./recovery.mjs";
 
+// Only a real pending result is ambiguous. The other two strings the SDK uses
+// as fallbacks ("Settlement failed", "unknown reason") still come from an
+// explicit facilitator failure response, so they are definitive here.
 const NON_DEFINITIVE_REASONS = new Set([
   "settlement_pending",
-  "Settlement failed", // synthetic fallback for a failed settle with no reason
-  "unknown reason",
 ]);
 
 // The server's SettleError is a distinct class from the one exported by
-// @x402/core/types (both bundles define their own copy), so identify it by
-// shape rather than by `instanceof` across module boundaries.
-function isSettleError(error) {
-  return Boolean(
-    error
-    && typeof error === "object"
-    && error.name === "SettleError"
-    && typeof error.statusCode === "number"
-    && typeof error.errorReason === "string"
-    && "transaction" in error,
-  );
+// @x402/core/types (both bundles define their own copy), and our FacilitatorClient
+// wraps thrown SDK errors in FacilitatorResponseError with the original in
+// `cause`. Identify the actual settle failure by shape anywhere in that chain.
+function findSettleError(error) {
+  let current = error;
+  while (current && typeof current === "object") {
+    if (current.name === "SettleError"
+        && typeof current.statusCode === "number"
+        && typeof current.errorReason === "string"
+        && "transaction" in current) return current;
+    current = current.cause;
+  }
+  return null;
 }
 
 export function isDefinitiveSettlementFailure(error) {
-  if (!isSettleError(error)) return false;
+  const settleError = findSettleError(error);
+  if (!settleError) return false;
 
-  const reason = error.errorReason.trim();
+  const reason = settleError.errorReason.trim();
   if (!reason || NON_DEFINITIVE_REASONS.has(reason)) return false;
 
   // A transaction hash means value may already be moving on-chain. Even a
   // failed-looking result is ambiguous then; never abandon the staged record.
-  if (typeof error.transaction === "string" && error.transaction.trim()) return false;
+  if (typeof settleError.transaction === "string" && settleError.transaction.trim()) return false;
 
   return true;
 }

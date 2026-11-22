@@ -104,6 +104,19 @@ for (let i = 0; i < VECTORS.length; i++) {
   rows.push({ i, vector: `${v.journalWrite} ${v.boundary} ${v.railOnRestart}`, verdict, fields, got, exp, fatal });
 }
 
+// Focused regression tests: a dispatched settlement with an unreadable rail
+// must replay the stored response once and must never charge or settle again.
+for (const i of [15, 21, 25]) {
+  const r = rows[i];
+  assert.equal(r.got?.retryStatus, 200, `vector ${i}: retry must replay with 200`);
+  assert.equal(r.got?.retryReplaysStoredResponse, true, `vector ${i}: stored response must be replayed`);
+  assert.equal(r.got?.retryAfter, "absent", `vector ${i}: replay must not carry Retry-After`);
+  assert.equal(r.got?.state, "delivered", `vector ${i}: final state must be delivered`);
+  assert.equal(r.got?.charges, 1, `vector ${i}: authorization must be charged exactly once`);
+  assert.equal(r.got?.settleCalls, 1, `vector ${i}: no second settlement may be attempted`);
+  assert.equal(r.got?.handlerRuns, 1, `vector ${i}: handler must not re-run`);
+}
+
 console.log("\ncontrol-12 vectors vs verify402 1.1.1 recovery (restart + retry at 180s)\n");
 for (const r of rows) {
   const mark = r.verdict === "conform" ? "✓" : r.verdict === "harness-crash" ? "✗" : "Δ";
@@ -126,6 +139,8 @@ const md = [
   "`charges` is compared on **every** readable row, including `unreachable`. In this harness `unreachable` is a fault injected into the *server* rail read, not into the rail itself — the rail's nonce ledger records whether an authorisation was consumed either way (that is what Detent's own harness counts too). Asserting nothing here would fake the only check separating a paid-and-never-delivered operation from one that was never charged.",
   "",
   "Invariant held everywhere measured: at most one charge per authorization.",
+  "",
+  "Vector 17 (`settle_result before / unreachable`) intentionally remains a divergence. At that fixture point the journal records only the dispatch marker: the facilitator's result has not been written (`test/fixtures/control12-scenario.mjs`: `settleSent: true, settled: false`). It is therefore indistinguishable from the dispatch-without-result cases in vectors 15/21/25, so the unreadable-rail replay rule applies. A facilitator-reported failure is now journaled as `settleOutcome: \"failed\"` by the settle-failure hook and is never replayed; that safety case is covered by a dedicated regression test, not by pretending this fixture point knows an outcome it does not contain.",
   "",
   "| # | journalWrite | boundary | rail | verdict | differing fields |",
   "|---|---|---|---|---|---|",

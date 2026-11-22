@@ -13,6 +13,9 @@ import { spawn } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import http from "node:http";
+import express from "express";
+import { paymentMiddleware, x402ResourceServer } from "@x402/express";
+import { ExactEvmScheme } from "@x402/evm/exact/server";
 
 process.env.X402_MODE = "testnet";
 process.env.BYPASS_PAYMENT = "1";
@@ -38,8 +41,9 @@ const { PAID_TOOL_ROUTES } = await import("../mcp-bridge/index.mjs");
 const {
   recordSettlement, requestHash, lookupRecovery, reserveRecovery, releaseRecovery,
   IDEMPOTENCY_TTL_MS, IDEMPOTENCY_MAX_REPLAYS, IDEMPOTENCY_STAGE_TTL_MS,
-  reconcileStagedEntry, _setNow,
+  reconcileStagedEntry, markSettling, setRecoveryPaymentChecker, _setNow,
 } = await import("../src/recovery.mjs");
+const { isDefinitiveSettlementFailure, registerRecoveryHooks } = await import("../src/settlement-recovery.mjs");
 const { app, paymentRefFromRequest } = await import("../src/server.mjs");
 
 const server = await new Promise((resolve) => {
@@ -1039,6 +1043,141 @@ await check("413: a body over the 64KB cap answers JSON with payload_too_large",
   assert.equal(r.body.code, "payload_too_large");
   assert.equal(typeof r.body.requestId, "string");
   assert.equal(r.headers.get("x-request-id"), r.body.requestId);
+});
+
+// HTTP-level proof for path (a): the facilitator explicitly refuses settlement,
+// the rail is unreadable in this process (no payment checker is wired), and a
+// retry with the same key must reach the paywall again instead of receiving the
+// staged verdict.
+await check("HTTP: explicit facilitator failure (no reason) delivers no verdict on retry", async () => {
+  const key = randomUUID();
+  const verdict = { ok: true, verdict: "no_edge", MUST_NOT_LEAK: "FAILURE_PROBE_DO_NOT_DELIVER" };
+  const NETWORK = "eip155:8453";
+  const PAY_TO = "0x0000000000000000000000000000000000000001";
+  const accepts = [{ scheme: "exact", price: "$0.01", network: NETWORK, payTo: PAY_TO }];
+  const facilitator = {
+    counts: { supported: 0, verify: 0, settle: 0 },
+    async getSupported() {
+      this.counts.supported++;
+      return { kinds: [{ x402Version: 2, scheme: "exact", network: NETWORK }], extensions: [] };
+    },
+    async verify() {
+      this.counts.verify++;
+      return { isValid: true, payer: PAY_TO };
+    },
+    async settle() {
+      this.counts.settle++;
+      // A real facilitator rejection with no errorReason. The SDK maps this to
+      // the synthetic reason "Settlement failed"; it is still a failure.
+      return { success: false, transaction: "", network: NETWORK };
+    },
+  };
+  const resourceServer = registerRecoveryHooks(
+    new x402ResourceServer(facilitator).register(NETWORK, new ExactEvmScheme()),
+    { logError: () => {} },
+  );
+
+  // Prove the precondition: with no checker wired, an unknown-outcome settling
+  // record WOULD replay. This failure must not be left in that state.
+  setRecoveryPaymentChecker(null);
+  const controlKey = randomUUID();
+  const controlNonce = "0x" + "5a".repeat(32);
+  recordSettlement(controlKey, { ok: true, verdict: "control" }, null, {
+    settledNow: false,
+    paymentRef: { nonce: controlNonce, network: NETWORK },
+  });
+  const marker = markSettling({ paymentPayload: { payload: { authorization: { nonce: controlNonce } } } });
+  assert.equal(marker.matched, 1, "control settlement must be journaled");
+  assert.ok(lookupRecovery({ key: controlKey })?.hit, "unreadable-rail precondition must hold");
+
+  let stagedRef = null;
+  const failureApp = express();
+  failureApp.use(express.json());
+  failureApp.use((req, res, next) => {
+    if (req.method !== "POST" || req.path !== "/paid-failure") return next();
+    const rawKey = req.get("x-idempotency-key");
+    if (!rawKey) return next();
+    const found = lookupRecovery({ key: rawKey, requestHash: requestHash(req.path, req.body || {}) });
+    if (found?.hit) return res.json(found.hit.payload);
+    if (found?.pending) return res.status(409).json({ error: "recovery_pending", code: found.pending });
+    return next();
+  });
+  failureApp.use(paymentMiddleware({
+    "POST /paid-failure": { accepts, description: "explicit failure probe", mimeType: "application/json" },
+  }, resourceServer));
+  failureApp.post("/paid-failure", (_req, res) => {
+    recordSettlement(key, verdict, null, { settledNow: false, paymentRef: stagedRef });
+    res.json(verdict);
+  });
+
+  const srv = await new Promise((resolve) => {
+    const s = failureApp.listen(0, "127.0.0.1", () => resolve(s));
+  });
+  const failureBase = `http://127.0.0.1:${srv.address().port}`;
+  const body = JSON.stringify({ test: true });
+  try {
+    const challenge = await fetch(`${failureBase}/paid-failure`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body,
+    });
+    assert.equal(challenge.status, 402);
+    const challengeBody = JSON.parse(Buffer.from(challenge.headers.get("payment-required"), "base64").toString("utf8"));
+    const accepted = challengeBody.accepts[0];
+    const nonce = "0x" + "77".repeat(32);
+    const envelope = {
+      x402Version: 2,
+      accepted,
+      payload: {
+        signature: "0x" + "22".repeat(65),
+        authorization: {
+          from: PAY_TO,
+          to: PAY_TO,
+          value: accepted.amount,
+          validAfter: "0",
+          validBefore: "9999999999",
+          nonce,
+        },
+      },
+    };
+    const raw = Buffer.from(JSON.stringify(envelope)).toString("base64");
+    stagedRef = paymentRefFromRequest(
+      { get: (h) => (String(h).toLowerCase() === "payment-signature" ? raw : undefined) },
+      { chainId: 8453 },
+    );
+    assert.ok(stagedRef?.nonce === nonce, "the test payment must match the staged operation");
+
+    const paidHeaders = {
+      "content-type": "application/json",
+      "x-idempotency-key": key,
+      "payment-signature": raw,
+    };
+    const first = await fetch(`${failureBase}/paid-failure`, { method: "POST", headers: paidHeaders, body });
+    const firstText = await first.text();
+    assert.equal(first.status, 402, `explicit failure must leave the key payable again: ${firstText}`);
+    assert.doesNotMatch(firstText, /FAILURE_PROBE_DO_NOT_DELIVER/, "no verdict may be delivered");
+    assert.equal(lookupRecovery({ key }), null, "a reported failure must not leave a replayable record");
+
+    const second = await fetch(`${failureBase}/paid-failure`, { method: "POST", headers: paidHeaders, body });
+    const secondText = await second.text();
+    assert.equal(second.status, 402, `retry after failure must still reach the paywall: ${secondText}`);
+    assert.doesNotMatch(secondText, /FAILURE_PROBE_DO_NOT_DELIVER/, "no verdict may be delivered on retry");
+    assert.equal(facilitator.counts.settle, 2, "each new payment attempt settles once; no replay shortcut");
+  } finally {
+    await new Promise((resolve) => srv.close(resolve));
+  }
+});
+
+await check("a wrapped SettleError rejection is still classified as definitive", () => {
+  const inner = new Error("Settlement failed");
+  inner.name = "SettleError";
+  inner.statusCode = 400;
+  inner.errorReason = "Settlement failed";
+  inner.transaction = "";
+  const outer = new Error("facilitator settle failed");
+  outer.name = "FacilitatorResponseError";
+  outer.cause = inner;
+  assert.equal(isDefinitiveSettlementFailure(outer), true, "our client's cause chain must not hide a rejection");
 });
 
 server.close();
