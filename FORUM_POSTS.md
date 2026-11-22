@@ -42,8 +42,8 @@ promises anywhere. The credibility IS the negative result.
 >   ~$1,000, not $2.7M.
 >
 > Free endpoints to evaluate it without paying: `/findings` (live verdicts on
-> ETH majors, always `no_edge`, fully reproducible against the venues'
-> own routers), `/.well-known/agent-registration.json`, `/info`.
+> ETH majors, always `no_edge`, with receipts whose hashes can be recomputed from the evidence
+> (paid check logic is hosted), `/.well-known/agent-registration.json`, `/info`.
 > MCP bridge included so it drops into Claude/OO/any MCP client.
 > Headers carry the bazaar schema. Would love harsh feedback.
 

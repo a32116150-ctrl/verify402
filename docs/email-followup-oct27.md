@@ -40,7 +40,7 @@ binding that an executor can verify before signing. The listing description
 does not need to change; only the version/tarball reference does.
 
 If it is easier, the package page is https://www.npmjs.com/package/verify402-mcp
-and the source is https://github.com/a32116150-ctrl/verify402.
+and the client/gate source is https://github.com/a32116150-ctrl/verify402 (paid check engines are hosted).
 
 No rush, and no need to reply if the queue already has this. Thanks.
 

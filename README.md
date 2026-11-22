@@ -686,7 +686,9 @@ The mainnet instance (https://vex402.online) is always-on and is the package def
 
 Apache License 2.0. See `LICENSE` and `NOTICE`.
 
-You may use, modify, and distribute this software, including in commercial agent
+This repository is open-core: the free gate, receipts and MCP client are Apache-2.0; the paid check engines are hosted and are not included in the public source.
+
+You may use, modify, and distribute these open-source parts, including in commercial agent
 systems and bots. If you redistribute it or a product containing it, keep the
 copyright notice, the license text, and the `NOTICE` file. The `verify402` name
 and logo are not licensed for endorsement.

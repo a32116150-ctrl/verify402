@@ -178,7 +178,7 @@ Distribution for each post:
 - **Blog** — the durable asset; no platform risk.
 - **`/testers`** — the conversion page.
 - **`/preflight`, `/mcp`, `/proof`** — product proof.
-- **GitHub** — source, issues, release notes, tester template.
+- **GitHub** — open-source client/gate source, issues, release notes, tester template; paid check engines are hosted.
 - **RSS** — lets aggregators and agents pick up posts without an account.
 
 ### Earned

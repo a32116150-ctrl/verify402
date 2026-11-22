@@ -6,7 +6,7 @@
 and deployed service remain on `1.0.3` until the manual release steps in
 `PUBLISH_STEPS_FOR_ME.md` complete. The mainnet-payment claims below describe
 the audit date, not the current demo.
-**Source of truth:** repository code (`src/server.mjs`, `mcp-bridge/`, `src/openapi.mjs`, `src/config.mjs`)
+**Source of truth for the open-source surfaces:** repository code (`src/server.mjs`, `mcp-bridge/`, `src/openapi.mjs`, `src/config.mjs`); paid check engines are hosted.
 **Production at audit time:** `https://vex402.online` (mainnet mode, confirmed live)
 
 ---

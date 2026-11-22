@@ -20,7 +20,7 @@ Agents, crawlers, and frameworks can fetch `https://vex402.online/.well-known/ve
 | `title` | string | Human-readable service title |
 | `description` | string | High-level summary of service functionality |
 | `version` | string | Semver release version |
-| `license` | string | Open source license (`Apache-2.0`) |
+| `license` | string | License of the open-source parts (`Apache-2.0`); paid check engines are hosted |
 | `canonicalUrl` | string | Canonical base URL (`https://vex402.online`) |
 | `repository` | object | Git repository link and subfolder |
 | `documentation` | object | Key public documentation and schema URLs |
