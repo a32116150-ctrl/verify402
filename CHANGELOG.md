@@ -3,6 +3,17 @@
 All notable changes to verify402. This file records repository changes; it does
 not imply a deploy or an npm publish.
 
+## Unreleased — 2026-11-22
+
+Public copy now matches the market-aligned prices served by the 402 challenges.
+
+- `/safety` is $0.02 per call; `/assure` is $0.10 per call (supplied parts total
+  $0.12, so the bundle stays cheaper than buying the checks separately).
+- The landing page, checks/docs/MCP pages, README, bridge help, OpenAPI and
+  Bazaar metadata now quote the same prices. The landing price floor reads
+  "From $0.02", not "From $0.03".
+- No payment, recovery, receipt or HTTP status behavior changed.
+
 ## 2.6.0 — 2026-11-19
 
 Every install now lists all nine MCP tools. The paid tools are no longer

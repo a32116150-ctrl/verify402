@@ -90,6 +90,7 @@
             <div class="vrow"><span class="pair">get_best_route</span><span class="verdict">$0.03</span><span class="meta">what the chain pays</span></div>
             <div class="vrow"><span class="pair">verify_quote_fairness</span><span class="verdict">$0.05</span><span class="meta">is the quote honest?</span></div>
             <div class="vrow"><span class="pair">get_trade_depth</span><span class="verdict">$0.05</span><span class="meta">how big can I trade?</span></div>
+            <div class="vrow"><span class="pair">get_assurance</span><span class="verdict">$0.10</span><span class="meta">one evidence bundle</span></div>
           </div>
           <div class="vcard-foot">No subscription · registry id: io.github.a32116150-ctrl/verify402-mcp</div>
         </div>
@@ -117,6 +118,7 @@
             <tr><td class="mono">get_best_route</td><td class="mono">$0.03</td><td>What would the chain actually pay?</td><td>Every quoted venue at one pinned block, best first</td></tr>
             <tr><td class="mono">verify_quote_fairness</td><td class="mono">$0.05</td><td>Is this quote someone gave me honest?</td><td>fair / overpaying / too_good_to_be_true, with the chain book</td></tr>
             <tr><td class="mono">get_trade_depth</td><td class="mono">$0.05</td><td>How big can I trade before the round trip eats me?</td><td>Per-size impact, round-trip cost, and the largest size under your tolerance</td></tr>
+            <tr><td class="mono">get_assurance</td><td class="mono">$0.10</td><td>Can I bundle the paid checks into one evidence record?</td><td>One pinned block, a recomputable sha256, and supplied checks priced at least $0.10 separately</td></tr>
           </tbody>
         </table>
       </div>
