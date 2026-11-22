@@ -3,7 +3,7 @@
 All notable changes to verify402. This file records repository changes; it does
 not imply a deploy or an npm publish.
 
-## Unreleased — 2026-11-22
+## 2.6.1 — 2026-11-22
 
 Public copy now matches the market-aligned prices served by the 402 challenges.
 
@@ -13,6 +13,8 @@ Public copy now matches the market-aligned prices served by the 402 challenges.
   Bazaar metadata now quote the same prices. The landing price floor reads
   "From $0.02", not "From $0.03".
 - No payment, recovery, receipt or HTTP status behavior changed.
+Published as `verify402-mcp@2.6.1`; npm, the MCP Registry and the GitHub
+release carry the same identity.
 
 ## 2.6.0 — 2026-11-19
 

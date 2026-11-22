@@ -2,13 +2,14 @@
 // The published npm package has its own package.json; the release-consistency
 // test asserts that this constant, mcp-bridge/package.json, server.json,
 // package-lock.json, the manifest, OpenAPI, and the /mcp page agree.
-export const RELEASE_VERSION = "2.6.0";
+export const RELEASE_VERSION = "2.6.1";
 
 // The version a user can actually install from the public npm registry today.
 // 2.0.0 is the v2 release (assure bundle, six paid tools); 2.0.1 a consistency
 // patch; 2.5.0 the mainnet-only release (the testnet demo retired 2026-11-19);
-// 2.6.0 lists all nine tools for every install (paid tools refuse without EVM_PRIVATE_KEY).
-export const PUBLISHED_VERSION = "2.6.0";
+// 2.6.0 lists all nine tools for every install (paid tools refuse without EVM_PRIVATE_KEY);
+// 2.6.1 aligns the bridge's price defaults and public copy with the live service.
+export const PUBLISHED_VERSION = "2.6.1";
 
 // Machine-readable statement of where this source tree sits in the release
 // process. "published" means the npm artifact exists and was verified:
