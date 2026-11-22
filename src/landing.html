@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>verify402 — don’t sign blind</title>
-<meta name="description" content="verify402 checks the payment, calldata, and chain before an AI agent signs. A free preflight gate, six fixed-price paid checks, typed reasons, and a receipt you can verify. The mainnet service is live at vex402.online, settled end to end in real USDC, including payments from outside agents.">
+<meta name="description" content="Token safety check for AI agents before they swap: quote-based sellability, round-trip cost, TRUST / CAUTION / AVOID. $0.02 per call, free pre-signing gate included. Supporting paid checks settle in USDC over x402 at vex402.online.">
 <link rel="canonical" href="https://vex402.online/">
 <meta name="google-site-verification" content="iGmI2QL110IkjnW0thU3DRZrdgQe_7mZsPWgkZVte7o">
 <script type="application/ld+json">
@@ -16,7 +16,7 @@
       "@id": "https://vex402.online/#website",
       "url": "https://vex402.online/",
       "name": "verify402",
-      "description": "Pre-signing checks for AI agent payments: a free gate, paid checks, typed reasons, and verifiable receipts.",
+      "description": "Token safety check for AI agents before they swap: quote-based sellability, TRUST / CAUTION / AVOID. $0.02 per call with a free pre-signing gate.",
       "publisher": { "@id": "https://vex402.online/#organization" }
     },
     {
@@ -32,7 +32,7 @@
       "applicationCategory": "SecurityApplication",
       "operatingSystem": "Web",
       "url": "https://vex402.online/",
-      "description": "Checks payment, calldata, and chain state before an AI agent signs. The free gate needs no account or wallet; paid checks settle in USDC over x402.",
+      "description": "Token safety check for AI agents before they swap: quote-based sellability, round-trip cost, TRUST / CAUTION / AVOID. $0.02 per call, free pre-signing gate included.",
       "provider": { "@id": "https://vex402.online/#organization" }
     },
     {
@@ -52,7 +52,7 @@
           "name": "What does it cost?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "The preflight gate and the live findings are free. Five individual checks cost $0.03–$0.10 each; the /assure bundle costs $0.19. Paid calls settle in USDC on Base mainnet."
+            "text": "The preflight gate and the live findings are free. Individual checks cost $0.02-$0.05 each; the /assure bundle costs $0.10. Paid calls settle in USDC on Base mainnet."
           }
         },
         {
@@ -162,7 +162,7 @@
         <span class="line"><span>Don’t</span></span>
         <span class="line"><span>sign blind.</span></span>
       </h1>
-      <p class="hero-lead">verify402 checks the payment, the calldata, and the chain before your agent signs. Free gate. Typed reasons. A receipt you can verify.</p>
+      <p class="hero-lead">Token safety check for AI agents before they swap: quote-based sellability, round-trip cost, TRUST / CAUTION / AVOID. $0.02 per call, free pre-signing gate included. Quote-based, not a honeypot proof — transfer restrictions stay in <code>notChecked</code>.</p>
       <div class="hero-actions">
         <a class="btn" href="/preflight#try">Run a free preflight</a>
         <a class="hero-link" href="/inspect">Inspect a 402 before paying →</a>
@@ -263,7 +263,7 @@
     <div class="wrap">
       <div class="checks-head">
         <h2 data-reveal>One free gate.<br>Six paid checks.</h2>
-        <p data-reveal>Start with the free gate. Each paid check measures one claim at a pinned block and returns evidence you can recompute. No subscription.</p>
+        <p data-reveal>Start with token safety at $0.02. The supporting paid checks measure one claim at a pinned block and return evidence you can recompute. No subscription.</p>
       </div>
       <div class="check-list" data-ui>
         <a class="check-row is-free" href="/preflight">
@@ -279,7 +279,7 @@
         <a class="check-row" href="/checks#safety">
           <span class="check-name">/safety</span>
           <span class="check-q">Quote-based sellability: can this token actually be sold?</span>
-          <span class="check-price">$0.10</span>
+          <span class="check-price">$0.02</span>
         </a>
         <a class="check-row" href="/checks#route">
           <span class="check-name">/route</span>
@@ -299,11 +299,11 @@
         <a class="check-row" href="/checks#assure">
           <span class="check-name">/assure</span>
           <span class="check-q">One evidence bundle at a single pinned block</span>
-          <span class="check-price">$0.19</span>
+          <span class="check-price">$0.10</span>
         </a>
       </div>
       <div class="checks-foot">
-        <span>The free gate runs before every signature. The six paid checks are the deeper measurement behind it.</span>
+        <span>The free gate runs before every signature. Token safety is the lead paid check; the others are supporting measurements behind it.</span>
         <a class="textlink" href="/checks">See how each check works</a>
       </div>
     </div>
@@ -377,7 +377,7 @@
     <div class="wrap">
       <p class="pricing-line" data-reveal><span>Free to check.</span><span>From <span class="price-block">$0.03</span>.</span></p>
       <div class="pricing-foot">
-        <p data-reveal>The gate costs nothing. Five individual checks are $0.03–$0.10 each; /assure bundles supplied checks at one pinned block for $0.19. Paid in USDC on Base mainnet. No subscription, no minimum, no account.</p>
+        <p data-reveal>The gate costs nothing. Individual checks are $0.02-$0.05 each; /assure bundles supplied checks at one pinned block for $0.10. Paid in USDC on Base mainnet. No subscription, no minimum, no account.</p>
         <a class="btn" href="/checks" data-reveal>See all prices</a>
       </div>
     </div>
@@ -405,7 +405,7 @@
         </details>
         <details class="faq-item" data-reveal>
           <summary>What does it cost?</summary>
-          <p>The preflight gate and the live findings are free. Five individual checks cost $0.03–$0.10 each; the /assure bundle costs $0.19. Paid calls settle in USDC on Base mainnet.</p>
+          <p>The preflight gate and the live findings are free. Individual checks cost $0.02-$0.05 each; the /assure bundle costs $0.10. Paid calls settle in USDC on Base mainnet.</p>
         </details>
         <details class="faq-item" data-reveal>
           <summary>Do I need a wallet?</summary>

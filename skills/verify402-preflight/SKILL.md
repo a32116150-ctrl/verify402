@@ -218,7 +218,7 @@ Base mainnet in real USDC, from $0.03. The analysis reads mainnet chain data.
 | Tool | Price | Use it for | Do not claim |
 |---|---:|---|---|
 | `verify_arbitrage` | $0.05 | Is a claimed cross-venue arb real at one pinned block? `no_edge` is a normal answer | That you found profit |
-| `check_token_safety` | $0.10 | Quote-based sellability, contract facts, liquidity, round-trip cost at your size | That it is a honeypot proof or transfer test |
+| `check_token_safety` | $0.02 | Quote-based sellability, contract facts, liquidity, round-trip cost at your size | That it is a honeypot proof or transfer test |
 | `get_best_route` | $0.03 | What the configured venues would actually pay for a swap | That it is an all-DEX aggregator |
 | `verify_quote_fairness` | $0.05 | Is a third-party quote fair, overpaying, or too good to be true? | That `fair` guarantees execution |
 | `get_trade_depth` | $0.05 | Position sizing, impact, round-trip cost, and `capacityUsd` under your tolerance | That `capacityUsd` guarantees an exit |

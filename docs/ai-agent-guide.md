@@ -22,7 +22,7 @@ npx -y verify402-mcp --help
 | **Requires Private Key?** | ❌ No | ✅ Yes (`EVM_PRIVATE_KEY`) |
 | **Requires Crypto / Gas?** | ❌ No | ✅ Yes (a little USDC + ETH on Base mainnet) |
 | **Tools Included** | All nine listed; the three free ones work (`preflight_gate`, `inspect_402`, `directory_402`); paid tools refuse clearly | All nine (`preflight_gate`, `verify_arbitrage`, `check_token_safety`, `get_best_route`, `verify_quote_fairness`, `get_trade_depth`, `get_assurance`) |
-| **Cost** | **$0.00** | $0.03 – $0.19 per call via x402 |
+| **Cost** | **$0.00** | $0.02 – $0.10 per call via x402 (individual checks $0.02-$0.05) |
 
 ---
 
@@ -110,7 +110,7 @@ If you want the agent to use paid truth checks:
   - `verify_arbitrage`: **$0.05**
   - `verify_quote_fairness`: **$0.05**
   - `get_trade_depth`: **$0.05**
-  - `check_token_safety`: **$0.10**
+  - `check_token_safety`: **$0.02**
 
 ### Step 3: Fund with a Little Gas
 - Keep a small amount of **ETH on Base** for gas if your client needs approvals.

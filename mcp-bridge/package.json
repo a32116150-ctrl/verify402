@@ -2,7 +2,7 @@
   "name": "verify402-mcp",
   "version": "2.6.0",
   "mcpName": "io.github.a32116150-ctrl/verify402-mcp",
-  "description": "MCP server for verify402: a free, fail-closed preflight gate before signing, plus six paid x402 checks paid per call via x402.",
+  "description": "Token safety check for AI agents before they swap: quote-based sellability, round-trip cost, TRUST / CAUTION / AVOID. $0.02 per call, free pre-signing gate included. MCP server with supporting x402 checks.",
   "type": "module",
   "bin": {
     "verify402-mcp": "index.mjs"

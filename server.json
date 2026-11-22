@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.a32116150-ctrl/verify402-mcp",
   "title": "verify402",
-  "description": "Free x402 preflight gate plus paid on-chain truth checks for AI agents.",
+  "description": "Token safety check for AI agents before they swap: quote-based sellability, $0.02/call, free gate.",
   "websiteUrl": "https://vex402.online",
   "repository": {
     "url": "https://github.com/a32116150-ctrl/verify402",
@@ -28,7 +28,7 @@
         },
         {
           "name": "EVM_PRIVATE_KEY",
-          "description": "Private key for a dedicated hot wallet. Omit and the six paid tools refuse with a clear error (the free tools still work). verify402-mcp@2.6.0 (this published release) defaults paid calls to Base mainnet (eip155:8453) \u2014 real USDC, $0.03-$0.10 per call, capped by MAX_PAYMENT_USD. The public Base Sepolia testnet demo (eip155:84532) was retired on 2026-11-19; there is no public testnet endpoint. Never use a main wallet.",
+          "description": "Private key for a dedicated hot wallet. Omit and the six paid tools refuse with a clear error (the free tools still work). verify402-mcp@2.6.0 (this published release) defaults paid calls to Base mainnet (eip155:8453) \u2014 real USDC, $0.02-$0.10 per call, capped by MAX_PAYMENT_USD. The public Base Sepolia testnet demo (eip155:84532) was retired on 2026-11-19; there is no public testnet endpoint. Never use a main wallet.",
           "isRequired": false,
           "isSecret": true
         },

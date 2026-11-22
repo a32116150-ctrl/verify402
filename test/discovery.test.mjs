@@ -101,17 +101,18 @@ test("discovery: canonical service manifest matches implemented tools and runtim
   // A price change must change this test deliberately; do not derive these from PRICE_DEFAULTS.
   const pinnedDefaultPrices = {
     verify: 0.05,
-    safety: 0.10,
+    safety: 0.02,
     route: 0.03,
     quotecheck: 0.05,
     depth: 0.05,
-    assure: 0.19,
+    assure: 0.10,
   };
   assert.equal(PRICE_DEFAULTS.verify, "$0.05");
-  assert.equal(PRICE_DEFAULTS.safety, "$0.10");
+  assert.equal(PRICE_DEFAULTS.safety, "$0.02");
   assert.equal(PRICE_DEFAULTS.route, "$0.03");
   assert.equal(PRICE_DEFAULTS.quotecheck, "$0.05");
   assert.equal(PRICE_DEFAULTS.depth, "$0.05");
+  assert.equal(PRICE_DEFAULTS.assure, "$0.10");
   for (const [key, expectedUsd] of Object.entries(pinnedDefaultPrices)) {
     assert.equal(Number(PRICE_DEFAULTS[key].replace(/^\$/, "")), expectedUsd);
   }

@@ -6,11 +6,11 @@
 
 export const PRICE_DEFAULTS = Object.freeze({
   verify: "$0.05",
-  safety: "$0.10",
+  safety: "$0.02",
   route: "$0.03",
   quotecheck: "$0.05",
   depth: "$0.05",
-  assure: "$0.19",
+  assure: "$0.10",
 });
 
 export const PREFLIGHT_RATE_PER_MIN = 60;

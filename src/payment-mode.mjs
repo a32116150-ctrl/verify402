@@ -42,13 +42,13 @@ export function paymentRail(mode) {
       ? "Public demo server (Base Sepolia / Solana devnet payments; analysis reads mainnet chain data)"
       : "Mainnet-configured server (Base mainnet / Solana mainnet payments); mainnet readiness must be verified separately",
     openapiDescription: testnet
-      ? "Machine-payable truth service for AI agents: free pre-signing preflight safety gate plus paid, evidence-backed on-chain truth checks paid per call via x402 in USDC. The public demo settles on Base Sepolia testnet; analysis reads Ethereum, Arbitrum, and Base chain data. Mainnet settlement is an explicit deployment choice, not a demo default."
-      : "Machine-payable truth service for AI agents: free pre-signing preflight safety gate plus paid, evidence-backed on-chain truth checks paid per call via x402 in USDC. This instance is configured for Base mainnet / Solana mainnet settlement; mainnet operation requires separate readiness verification and is not implied to be production-validated by the public demo.",
+      ? "Token safety check for AI agents before they swap: quote-based sellability, round-trip cost, TRUST / CAUTION / AVOID. $0.02 per call, free pre-signing gate included. Supporting paid checks cover arbitrage reality, execution book, quote fairness and trade capacity at pinned blocks. The public demo settles on Base Sepolia testnet; analysis reads Ethereum, Arbitrum, and Base chain data. Mainnet settlement is an explicit deployment choice, not a demo default."
+      : "Token safety check for AI agents before they swap: quote-based sellability, round-trip cost, TRUST / CAUTION / AVOID. $0.02 per call, free pre-signing gate included. Supporting paid checks cover arbitrage reality, execution book, quote fairness and trade capacity at pinned blocks. This instance is configured for Base mainnet / Solana mainnet settlement; mainnet operation requires separate readiness verification and is not implied to be production-validated by the public demo.",
     paidFlowNote: testnet
       ? "The public demo uses Base Sepolia (`eip155:84532`); mainnet is not a demo default."
       : "This instance is configured for Base mainnet (`eip155:8453`); verify mainnet readiness separately before paying.",
     agentDescription: testnet
-      ? "Machine-payable truth service for AI agents. POST /preflight is the free pre-signing " +
+      ? "Token safety check for AI agents before they swap: quote-based sellability, round-trip cost, TRUST / CAUTION / AVOID. $0.02 per call, free pre-signing gate included. Supporting checks cover arbitrage reality, execution book, quote fairness and trade capacity. POST /preflight is the free pre-signing " +
         "gate: validate an x402 payment request or a chain transaction and get PASS / CAUTION / " +
         "BLOCK with a short-lived receipt bound to the exact intent. POST /verify measures whether a claimed " +
         "cross-venue arbitrage is real (pinned-block quotes from Uniswap QuoterV2 and each " +
@@ -60,7 +60,7 @@ export function paymentRail(mode) {
         "TRUST / CAUTION / AVOID with evidence. Per-call x402 payment in testnet USDC on Base Sepolia or Solana devnet for the public demo; analysis reads mainnet chain data. " +
         "An MCP server (verify402-mcp, stdio) exposes the free gate and all six checks to any " +
         "MCP client; install at /mcp. No profitability is ever promised; the service reports what it measured."
-      : "Machine-payable truth service for AI agents. POST /preflight is the free pre-signing " +
+      : "Token safety check for AI agents before they swap: quote-based sellability, round-trip cost, TRUST / CAUTION / AVOID. $0.02 per call, free pre-signing gate included. Supporting checks cover arbitrage reality, execution book, quote fairness and trade capacity. POST /preflight is the free pre-signing " +
         "gate: validate an x402 payment request or a chain transaction and get PASS / CAUTION / " +
         "BLOCK with a short-lived receipt bound to the exact intent. POST /verify measures whether a claimed " +
         "cross-venue arbitrage is real (pinned-block quotes from Uniswap QuoterV2 and each " +
@@ -162,9 +162,10 @@ export function buildLlmsText({
   return [
     "# verify402",
     "",
-    "> Per-call truth checks for trading agents. Free pre-signing gate plus",
-    "> paid, evidence-backed verdicts: is this arbitrage real, is this token",
-    "> safe, is this quote fair, and how much can my size move.",
+    "> Token safety check for AI agents before they swap: quote-based sellability,",
+    "> round-trip cost, TRUST / CAUTION / AVOID. $0.02 per call, free pre-signing",
+    "> gate included. Supporting checks cover arbitrage reality, execution book,",
+    "> quote fairness and trade capacity at pinned blocks.",
     "",
     `Live: ${baseUrl}`,
     `Quickstart: ${baseUrl}/start`,
@@ -220,15 +221,18 @@ export function buildLlmsText({
     "",
     `- POST /verify — 0.05 ${rail.usdcLabel}. Is this cross-venue arbitrage real at`,
     "  one pinned block? Most common honest answer: no_edge.",
-    `- POST /safety — 0.10 ${rail.usdcLabel}. Token gate: TRUST / CAUTION / AVOID, with a`,
-    "  quote-based sellability check on the configured venues. It does not execute",
-    "  a transfer; transfer restrictions and unconfigured venues are in notChecked.",
+    `- POST /safety — 0.02 ${rail.usdcLabel}. Lead check: quote-based sellability, round-trip`,
+    "  cost, TRUST / CAUTION / AVOID. It does not execute a transfer; transfer",
+    "  restrictions and unconfigured venues stay in notChecked.",
     `- POST /route — 0.03 ${rail.usdcLabel}. Every configured venue quoting tokenIn to`,
     "  tokenOut at one pinned block, best first.",
     `- POST /quotecheck — 0.05 ${rail.usdcLabel}. Audit someone else's quote: fair /`,
     "  overpaying / too_good_to_be_true / unknown.",
-    `- POST /depth — 0.05 ${rail.usdcLabel}. Largest size that still clears your cost`,
-    "  tolerance; capacityUsd.",
+    `- POST /depth — 0.05 ${rail.usdcLabel}. Supporting sizing check: largest size that`,
+    "  still clears your cost tolerance; capacityUsd.",
+    `- POST /assure — 0.10 ${rail.usdcLabel}. Bundle of supplied paid checks at one pinned`,
+    "  block, one evidence record; accepted only when those checks cost at least $0.10",
+    "  separately.",
     "",
     "## Machine-readable Manifests & Discovery",
     "",

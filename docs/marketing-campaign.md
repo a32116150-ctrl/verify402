@@ -96,7 +96,7 @@ The first three audiences are reachable today. The fourth is warm-intro only.
 | 1 | Free preflight gate | free | acquisition; must run before every signature |
 | 2 | Tester kit (`/testers`) | free | converts a reader into a real intent run |
 | 3 | MCP server | free | embeds the gate in the tool loop |
-| 4 | Five measurement checks | $0.03–$0.10/call, testnet demo | proves the paid surface |
+| 4 | Five measurement checks | $0.02–$0.05/call individual, $0.10 bundle, testnet demo | proves the paid surface |
 | 5 | Design-partner slot | free, 3 teams | integration + public case study |
 | 6 | Hosting sponsorship | $7/month | keeps the free tier awake |
 | 7 | Paid pilot | scoped by email, no mainnet rail offered today | future revenue |

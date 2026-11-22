@@ -262,12 +262,13 @@ const DESCRIPTIONS = {
     "Quotes come from Uniswap's canonical QuoterV2 and each DEX router at one pinned block. " +
     "The honest answer is usually 'no_edge' - that IS the product. Costs $0.05 per call.",
   check_token_safety:
-    "Ask verify402 for a quote-based sellability check on a token BEFORE the agent risks capital. " +
-    "Returns TRUST/CAUTION/AVOID with evidence: live contract facts, market liquidity, " +
-    "a USD-sized sell QUOTED through the configured venues' own routers (direct and WETH-routed), " +
-    "round-trip cost at your intended size, and phantom-price detection. It does NOT execute or " +
-    "simulate a transfer: transfer tax, blacklist, pause, and max-tx restrictions are listed in " +
-    "notChecked, not tested. Unconfigured venues are also named in notChecked. Costs $0.10 per call.",
+    "Token safety check for AI agents before they swap: quote-based sellability, round-trip " +
+    "cost, TRUST / CAUTION / AVOID. $0.02 per call, free pre-signing gate included. " +
+    "Returns evidence: live contract facts, market liquidity, a USD-sized sell QUOTED through " +
+    "the configured venues' own routers (direct and WETH-routed), round-trip cost at your " +
+    "intended size, and phantom-price detection. It does NOT execute or simulate a transfer: " +
+    "transfer tax, blacklist, pause, and max-tx restrictions are listed in notChecked, not " +
+    "tested. Unconfigured venues are also named in notChecked; this is not a honeypot proof.",
   get_best_route:
     "Ask verify402 what the chain would ACTUALLY pay for a swap: the full book from every " +
     "configured venue (direct and WETH-routed) at one pinned block, best first. Aggregators and " +
@@ -285,10 +286,10 @@ const DESCRIPTIONS = {
     "Run the paid checks you need at ONE pinned block and get one evidence bundle back - " +
     "safety, route, quotecheck, depth, or any combination. Cheaper than buying each separately. " +
     "Pass you only what you need: an unsupplied check is reported as notChecked, not guessed. " +
-    "Costs $0.19 per call.",
+    "Costs $0.10 per call; the supplied parts total $0.12.",
 };
 
-const INSTRUCTIONS = `verify402 is an x402 pre-signing gate plus six paid x402 checks.
+const INSTRUCTIONS = `verify402 leads with a $0.02 token safety check for AI agents before they swap: quote-based sellability, round-trip cost, TRUST / CAUTION / AVOID. The free pre-signing gate is included; the other paid x402 checks are supporting measurements.
 
 Free tools (no wallet needed, nothing can be charged):
 - preflight_gate: call BEFORE signing ANY payment, approval, or transaction. It returns PASS / CAUTION / BLOCK with typed reasons. sign_allowed:false means STOP. requires_ack:true means the human must acknowledge the reasons before signing.
@@ -296,7 +297,8 @@ Free tools (no wallet needed, nothing can be charged):
 - directory_402: list the watched public x402 endpoints and what changed.
 
 Paid tools (each costs a small fixed USDC price via x402):
-- verify_arbitrage ($0.05), check_token_safety ($0.10), get_best_route ($0.03), verify_quote_fairness ($0.05), get_trade_depth ($0.05), get_assurance ($0.19).
+- check_token_safety ($0.02) is the lead check: quote-based sellability, round-trip cost, TRUST / CAUTION / AVOID. Free pre-signing gate included.
+- Supporting checks: verify_arbitrage ($0.05), get_best_route ($0.03), verify_quote_fairness ($0.05), get_trade_depth ($0.05), get_assurance ($0.10).
 
 Paid tools are always listed. Without EVM_PRIVATE_KEY they return a clear error and never move money; the free tools still work.
 

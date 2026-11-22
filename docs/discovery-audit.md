@@ -24,7 +24,7 @@ the audit date, not the current demo.
 | `/preflight` | POST | free | Pre-signing gate |
 | `/preflight/verify` | POST | free | Verify a preflight receipt |
 | `/verify` | POST | $0.05 | Arbitrage measurement |
-| `/safety` | POST | $0.10 | Pre-trade token gate |
+| `/safety` | POST | $0.02 | Pre-trade token gate |
 | `/route` | POST | $0.03 | Best route / execution book |
 | `/quotecheck` | POST | $0.05 | Quote fairness audit |
 | `/depth` | POST | $0.05 | Position sizing ladder |

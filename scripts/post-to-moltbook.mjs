@@ -39,7 +39,7 @@ const content = `verify402 is now mainnet-only.
 
 The public Base Sepolia testnet demo was retired on 2026-11-19 — it served real mainnet analysis for testnet USDC, which gave the paid product away for free. The service is now the live mainnet instance at https://vex402.online.
 
-What it does: a free, fail-closed preflight gate (PASS / CAUTION / BLOCK with typed reasons and a short-lived receipt) before an agent signs any payment or transaction, plus six paid checks — arbitrage reality, token sellability, true route, quote fairness, depth, and a pinned-block assurance bundle. $0.03 to $0.19 per call, paid in real USDC on Base via x402. No account, no API key, no minimum.
+What it does: a free, fail-closed preflight gate (PASS / CAUTION / BLOCK with typed reasons and a short-lived receipt) before an agent signs any payment or transaction, plus six paid checks — arbitrage reality, token sellability, true route, quote fairness, depth, and a pinned-block assurance bundle. $0.02 to $0.10 per call (individual checks $0.02-$0.05), paid in real USDC on Base via x402. No account, no API key, no minimum.
 
 The MCP server (verify402-mcp@2.6.0) now lists all nine tools for every install — the free gate works without a wallet, and the six paid tools refuse with a clear error until one is configured. Nothing can be charged without a key.
 

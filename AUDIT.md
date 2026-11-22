@@ -225,7 +225,7 @@ Express app (src/server.mjs)
 - Mainnet uses Base + Solana mainnet and requires `FACILITATOR_URL`; CDP is used when `CDP_API_KEY_ID` is set.
 - `BYPASS_PAYMENT=1` unmounts the paywall, prints a loud warning, and refuses to run with `X402_MODE=mainnet`.
 - Paid responses are settled by the x402 middleware. The `onAfterSettle` hook promotes a staged recovery record only after a confirmed settlement with a transaction reference.
-- Prices come from environment variables with defaults: `/verify` `$0.05`, `/safety` `$0.10`, `/route` `$0.03`, `/quotecheck` `$0.05`, `/depth` `$0.05`.
+- Prices come from environment variables with defaults: `/verify` `$0.05`, `/safety` `$0.02`, `/route` `$0.03`, `/quotecheck` `$0.05`, `/depth` `$0.05`, `/assure` `$0.10`.
 - The x402 402 challenge is the authoritative price; discovery documents repeat the same defaults.
 
 ### 3.3 State
@@ -279,7 +279,7 @@ The paid bridge is EVM-only (`ExactEvmScheme`), defaults to Base mainnet, and en
 | `/preflight` | POST | free | Pre-signing gate |
 | `/preflight/verify` | POST | free | HMAC + expiry verification |
 | `/verify` | POST | $0.05 | Cross-venue arbitrage round trip |
-| `/safety` | POST | $0.10 | Token pre-trade gate |
+| `/safety` | POST | $0.02 | Token pre-trade gate |
 | `/route` | POST | $0.03 | Venue quote book |
 | `/quotecheck` | POST | $0.05 | Quote fairness audit |
 | `/depth` | POST | $0.05 | Size ladder / capacity |

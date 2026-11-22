@@ -1,7 +1,7 @@
 # verify402
 
-> **Machine-payable on-chain truth & pre-signing checks for AI agents.**
-> Free fail-closed preflight gate + six paid checks via x402 in USDC. No API key, no account, no wallet required for the free gate.
+> **Token safety check for AI agents before they swap: quote-based sellability, round-trip cost, TRUST / CAUTION / AVOID. $0.02 per call, free pre-signing gate included.**
+> Supporting x402 checks cover arbitrage reality, execution book, quote fairness and trade capacity at one pinned block. `/preflight` is the free pre-signing gate: PASS / CAUTION / BLOCK with typed reasons and a short-lived receipt. No API key, no account, no wallet for the gate. `/safety` is quote-based, not a honeypot proof: transfer restrictions and unconfigured venues stay in `notChecked`.
 
 [![npm version](https://img.shields.io/npm/v/verify402-mcp.svg)](https://www.npmjs.com/package/verify402-mcp)
 [![MCP Server](https://img.shields.io/badge/MCP-verify402--mcp-blue.svg)](https://vex402.online/mcp)
@@ -96,7 +96,7 @@ Paste this into your client config file:
 ```
 
 #### Option B: Paid Mode (Unlocks 6 Deep Truth Checks)
-Unlocks the six paid x402 checks (`verify_arbitrage`, `check_token_safety`, `get_best_route`, `verify_quote_fairness`, `get_trade_depth`, `get_assurance`). The agent pays per call via x402 in **real USDC on Base mainnet** — $0.03 to $0.10 per call, or $0.19 for the assurance bundle, capped by `MAX_PAYMENT_USD`. The analysis reads mainnet chain data.
+Unlocks the six paid x402 checks (`verify_arbitrage`, `check_token_safety`, `get_best_route`, `verify_quote_fairness`, `get_trade_depth`, `get_assurance`). The agent pays per call via x402 in **real USDC on Base mainnet** — $0.02 to $0.05 per call for individual checks, or $0.10 for the assurance bundle, capped by `MAX_PAYMENT_USD`. The analysis reads mainnet chain data.
 
 ```json
 {
@@ -129,7 +129,7 @@ If you want your agent to use the paid truth tools, follow these 4 steps to set 
    - Generate a brand new EVM address using MetaMask, Rabby, or CLI (`cast wallet new`).
    - ⚠️ **NEVER USE YOUR MAIN WALLET OR COLD VAULT.** Treat this wallet like physical petty cash.
 2. **Fund with a small amount of USDC on Base mainnet (EIP-155:8453)**:
-   - Send only what you are willing to spend — the tools cost fixed amounts per call: `$0.03` (route), `$0.05` (arbitrage/quotecheck/depth), `$0.10` (token safety).
+   - Send only what you are willing to spend — the tools cost fixed amounts per call: `$0.02` (token safety), `$0.03` (route), `$0.05` (arbitrage/quotecheck/depth).
    - The public testnet demo was retired on 2026-11-19; paid calls are on mainnet, in real USDC, capped per your wallet configuration.
 3. **Fund with a little ETH on the same chain for gas** if your client needs it.
 4. **Export the Private Key**:
@@ -162,12 +162,12 @@ Once configured, restart your AI client. The agent automatically has access to t
 | **Verify a transaction before signing** | *"Before signing, run `preflight_gate` on the calldata to check payee, amount, approvals, and block freshness. If it returns BLOCK, stop; a PASS is not a guarantee."* | `preflight_gate` | **Free** |
 | **Read a 402 before paying it** | *"Before paying this x402 endpoint, run `inspect_402` on its URL. Show me the price, token, and payee, and stop if it is BLOCK."* | `inspect_402` | **Free** |
 | **See what the ecosystem charges** | *"Call `directory_402` and show me the watched x402 endpoints with their prices and verdicts."* | `directory_402` | **Free** |
-| **Check measured token safety / sellability** | *"Run `check_token_safety` on token `0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE` and tell me whether it is sellable at a realistic size, what the round-trip cost is, and whether the result is TRUST / CAUTION / AVOID. This is not a code audit."* | `check_token_safety` | $0.10 |
+| **Check measured token safety / sellability** | *"Run `check_token_safety` on token `0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE` and tell me whether it is sellable at a realistic size, what the round-trip cost is, and whether the result is TRUST / CAUTION / AVOID. This is not a code audit."* | `check_token_safety` | $0.02 |
 | **Verify an arbitrage opportunity** | *"Use `verify_arbitrage` to check if the claimed arb between Uniswap V3 and Sushiswap on WETH/USDC is real right now on chain 1."* | `verify_arbitrage` | $0.05 |
 | **Audit a swap quote** | *"I was quoted 0.35 WETH for 1,000 USDC. Call `verify_quote_fairness` to see if this quote is honest or if I'm being overcharged."* | `verify_quote_fairness` | $0.05 |
 | **Check market depth & slippage** | *"Check `get_trade_depth` for WETH on Uniswap V3 to see how much slippage I would take on a $25,000 swap."* | `get_trade_depth` | $0.05 |
 | **Find true on-chain swap route** | *"Query `get_best_route` to find the exact net payout for swapping 2,000 USDC to WETH across all DEX pools."* | `get_best_route` | $0.03 |
-| **Get one evidence bundle** | *"Run `get_assurance` with the safety and route inputs you need, and show me the evidence bundle at one pinned block."* | `get_assurance` | $0.19 |
+| **Get one evidence bundle** | *"Run `get_assurance` with the safety and route inputs you need, and show me the evidence bundle at one pinned block."* | `get_assurance` | $0.10 |
 
 ---
 
@@ -254,7 +254,7 @@ header. In testnet/local mode the card falls back to a Host allowlist
 | `POST /preflight` | free | pre-signing gate: validate a payment request or transaction, return PASS / CAUTION / BLOCK + a short-lived receipt |
 | `POST /preflight/verify` | free | verify a preflight receipt (HMAC, expiry, optional intent + request bindings) |
 | `POST /verify` | $0.05 (x402) | the measurement, with verdict + evidence |
-| `POST /safety` | $0.10 (x402) | pre-trade token check: TRUST / CAUTION / AVOID + evidence; not a code audit |
+| `POST /safety` | $0.02 (x402) | pre-trade token check: TRUST / CAUTION / AVOID + evidence; not a code audit |
 | `POST /route` | $0.03 (x402) | what would the chain ACTUALLY pay for this swap? best route + every quoted venue |
 | `POST /quotecheck` | $0.05 (x402) | audit a quote someone else gave you: fair / overpaying / too_good_to_be_true |
 | `POST /depth` | $0.05 (x402) | position sizing: how big can I trade before the round trip eats me? |

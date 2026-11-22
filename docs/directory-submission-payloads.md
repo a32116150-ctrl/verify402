@@ -52,7 +52,7 @@ Paid (only when a wallet is configured; testnet USDC per call):
 | Tool | Price | What it does |
 |---|---|---|
 | `get_arb_verdict` | $0.05 | Whether a cross-venue arbitrage round trip is profitable at the pinned block. Most common result: `no_edge`. |
-| `get_token_safety` | $0.10 | TRUST / CAUTION / AVOID with evidence; quote-based sellability, not a honeypot proof. |
+| `get_token_safety` | $0.02 | TRUST / CAUTION / AVOID with evidence; quote-based sellability, not a honeypot proof. |
 | `get_trade_route` | $0.03 | What the chain would actually pay, venue by venue. |
 | `check_quote` | $0.05 | Fair / overpaying / too-good-to-be-true for any offered quote. |
 | `get_trade_depth` | $0.05 | Largest size before round-trip costs erase the plan. |

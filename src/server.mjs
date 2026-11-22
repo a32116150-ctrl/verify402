@@ -201,11 +201,11 @@ const ROUTE_PRICE = process.env.ROUTE_PRICE || PRICE_DEFAULTS.route;
 const QUOTECHECK_PRICE = process.env.QUOTECHECK_PRICE || PRICE_DEFAULTS.quotecheck;
 // Sizing: the decision that happens BEFORE every trade after a route is known.
 const DEPTH_PRICE = process.env.DEPTH_PRICE || PRICE_DEFAULTS.depth;
-const ASSURE_PRICE = process.env.ASSURE_PRICE || "$0.19";
+const ASSURE_PRICE = process.env.ASSURE_PRICE || PRICE_DEFAULTS.assure;
 
 // `/assure` is only honest when the bundle costs no more than buying its checks
 // one by one. These parse the same constants the rest of the file uses, so a
-// price change cannot silently reintroduce the old "$0.19 for one $0.03 check"
+// price change cannot silently reintroduce the old "$0.10 for one $0.02 check"
 // overcharge. The gate runs before any chain work; because the x402 middleware
 // cancels settlement on a >=400 response, a rejected bundle is never charged.
 const usdNumber = (price) => Number(String(price).replace(/[^0-9.]/g, ""));
@@ -895,7 +895,7 @@ function paidCatch(req, res, e) {
 }
 
 // Reject an under-valued /assure bundle BEFORE the payment wall, so a caller
-// never signs a $0.19 payment for a request the handler will refuse. An empty
+// never signs a $0.10 payment for a request the handler will refuse. An empty
 // body is left to the paywall: discovery probes must still see the 402.
 // A 400 cancels settlement anyway, but refusing before the 402 is the honest
 // order: no challenge, no signature, no charge. Same pure helper as the
@@ -919,7 +919,7 @@ if (!BYPASS_PAYMENT) app.use(
         accepts: accepts(PRICE),
         iconUrl: "https://vex402.online/logo-400.png",
         description:
-          "Measure whether a cross-venue arbitrage round trip is profitable right now, using Uniswap's canonical QuoterV2 and the venues' own V2 routers, at one pinned block. Returns a verdict with full evidence.",
+          "Measure whether a cross-venue arbitrage round trip is actually profitable at one pinned block, using Uniswap QuoterV2 and each venue's own router. Returns an edge or no_edge verdict with full quoted evidence as a supporting check, not a forecast.",
         mimeType: "application/json",
         extensions: {
           ...declareDiscoveryExtension({
@@ -962,7 +962,7 @@ if (!BYPASS_PAYMENT) app.use(
         accepts: accepts(SAFETY_PRICE),
         iconUrl: "https://vex402.online/logo-400.png",
         description:
-          "Pre-trade gate for an agent about to buy a token. Returns TRUST / CAUTION / AVOID with evidence: contract facts from the live chain, liquidity and scam signals, a quote-based sellability check through the configured venues' own routers (direct and WETH-routed), a full round-trip cost at your intended size, and an offered-price sanity check. It does not execute a transfer; transfer restrictions and unconfigured venues are named in notChecked.",
+          "Token safety check for AI agents before they swap: quote-based sellability, round-trip cost, TRUST / CAUTION / AVOID. $0.02 per call with a free pre-signing gate included; it never executes a transfer, and transfer restrictions and unconfigured venues stay in notChecked, so this is not a honeypot proof.",
         mimeType: "application/json",
         extensions: {
           ...declareDiscoveryExtension({
@@ -997,7 +997,7 @@ if (!BYPASS_PAYMENT) app.use(
         accepts: accepts(ROUTE_PRICE),
         iconUrl: "https://vex402.online/logo-400.png",
         description:
-          "The full execution book right now: every configured venue (direct and WETH-routed) quoting tokenIn -> tokenOut at one pinned block, best first. Verdict-free evidence; pair it with /quotecheck to audit someone else's number.",
+          "See every configured venue quoting your pair at one pinned block, ranked best first, including direct and WETH-routed quotes. Supporting execution evidence; aggregators and unconfigured DEXs are excluded, and nothing is simulated.",
         mimeType: "application/json",
         extensions: {
           ...declareDiscoveryExtension({
@@ -1036,7 +1036,7 @@ if (!BYPASS_PAYMENT) app.use(
         accepts: accepts(DEPTH_PRICE),
         iconUrl: "https://vex402.online/logo-400.png",
         description:
-          "Position sizing as a service. For a ladder of USD sizes, measure what the chain ACTUALLY pays: entry via the best route, immediate exit of the exact position, per-size impact %, round-trip cost %, and the largest size that stays under your cost tolerance. This is what pool-reserve-dollar figures cannot tell you: what a real block gives you for YOUR size.",
+          "Measure how much you can trade before round-trip costs eat the plan: entry, immediate exit, impact and cost across a ladder of sizes at one pinned block. Returns the largest size under your tolerance as a supporting sizing check.",
         mimeType: "application/json",
         extensions: {
           ...declareDiscoveryExtension({
@@ -1076,7 +1076,7 @@ if (!BYPASS_PAYMENT) app.use(
         accepts: accepts(ASSURE_PRICE),
         iconUrl: "https://vex402.online/logo-400.png",
         description:
-          "One evidence bundle at one pinned block: run whichever paid checks you supply (safety, route, quotecheck, depth) together and get a single evidence record with a recomputable sha256. Accepted only when the supplied checks cost at least $0.19 separately, so the bundle is never more expensive than buying them one by one (otherwise 400 insufficient_checks, before payment). Unsupplied checks are reported as notChecked, never guessed.",
+          "One evidence bundle at one pinned block from whichever paid checks you supply: safety, route, quotecheck and depth. Accepted only when those checks cost at least $0.10 separately (parts total $0.12), so the bundle is cheaper than buying them one by one; unsupplied checks stay in notChecked.",
         mimeType: "application/json",
         extensions: {
           ...declareDiscoveryExtension({
@@ -1120,7 +1120,7 @@ if (!BYPASS_PAYMENT) app.use(
         accepts: accepts(QUOTECHECK_PRICE),
         iconUrl: "https://vex402.online/logo-400.png",
         description:
-          "Fairness audit of a quote someone else gave you. Returns fair / overpaying / too_good_to_be_true / unknown, with the full venue book at one pinned block as evidence. Ask this BEFORE signing any swap whose number you did not produce yourself.",
+          "Audit a third-party swap quote against the full configured venue book at one pinned block before you sign. Returns fair / overpaying / too_good_to_be_true as a supporting check, never a verdict on the counterparty.",
         mimeType: "application/json",
         extensions: {
           ...declareDiscoveryExtension({
@@ -2348,7 +2348,7 @@ app.get("/info", (_req, res) => {
     mode: MODE,
     networks: NETWORKS.label,
     description:
-      "Machine-payable truth service. /preflight is the free pre-signing gate: validate an x402 payment request or a chain transaction and get PASS / CAUTION / BLOCK with typed reasons and a short-lived receipt. /verify measures whether a cross-venue arbitrage round trip is profitable; /safety is a pre-trade gate with a quote-based sellability check, not a honeypot proof. /assure runs the paid checks that are supplied and returns one evidence bundle at one pinned block. All quotes come from Uniswap's canonical QuoterV2 and each venue's own router, never from our own reimplementation of venue mathematics. The MCP server (verify402-mcp) exposes the gate and the six checks as native tools; install at /mcp.",
+      "Token safety check for AI agents before they swap: quote-based sellability, round-trip cost, TRUST / CAUTION / AVOID. $0.02 per call, free pre-signing gate included. Supporting paid checks cover arbitrage reality (/verify), execution book (/route), quote fairness (/quotecheck), trade capacity (/depth) and a pinned-block bundle (/assure). /safety does not execute a transfer; transfer restrictions and unconfigured venues stay in notChecked, so it is not a honeypot proof. /preflight is the free pre-signing gate: PASS / CAUTION / BLOCK with typed reasons and a short-lived receipt. All quotes come from Uniswap's canonical QuoterV2 and each venue's own router, never our own venue math. The MCP server (verify402-mcp) exposes the gate and six checks; install at /mcp.",
     prices: {
       preflight: "free",
       preflight_verify: "free",
@@ -2941,7 +2941,7 @@ app.post("/assure", async (req, res) => {
     const chainId = requireChainId(body);
 
     // Price-worthiness gate (also mounted before the paywall, below): never
-    // charge $0.19 for a bundle that costs less bought separately. Kept here as
+    // charge $0.10 for a bundle that costs less bought separately. Kept here as
     // defence in depth so a future mount change cannot reopen the overcharge.
     const priceProblem = assurePriceProblem(body);
     if (priceProblem) {

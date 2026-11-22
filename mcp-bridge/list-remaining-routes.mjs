@@ -6,7 +6,7 @@
 // until each is settled once. This script buys each remaining route once, with
 // the same guard, policy and settlement-evidence check as first-payment.mjs.
 //
-// Cost: testnet USDC only ($0.05 + $0.10 + $0.05 + $0.05 by default prices).
+// Cost: testnet USDC only ($0.05 + $0.02 + $0.05 + $0.05 by default prices).
 // Safety: MAX_PAYMENT_USD caps every individual payment; a mixed challenge that
 // offers a network outside the allowlist is refused as a whole.
 

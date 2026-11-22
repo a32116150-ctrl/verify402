@@ -65,7 +65,7 @@ This checklist tracks official and third-party registry listings for Verify402. 
 - **Implementation:** `src/server.mjs` via `@x402/extensions/bazaar` (`declareDiscoveryExtension`).
 - **Live Endpoints:**
   - `POST /verify` ($0.05 USDC)
-  - `POST /safety` ($0.10 USDC)
+  - `POST /safety` ($0.02 USDC)
   - `POST /route` ($0.03 USDC)
   - `POST /quotecheck` ($0.05 USDC)
   - `POST /depth` ($0.05 USDC)

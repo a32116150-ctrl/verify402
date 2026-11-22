@@ -24,7 +24,7 @@ with a clear error; the free tools still work. Do not promise paid results when 
 This order is a guide, not a ritual. One call per decision is usually enough.
 Quotes are pinned to one block; a result is not “current” later.
 
-## `check_token_safety` — $0.10
+## `check_token_safety` — $0.02
 
 **Question:** Can this token be sold at a realistic size on the configured
 venues, and what does the round trip cost?

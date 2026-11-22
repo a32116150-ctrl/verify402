@@ -30,7 +30,7 @@ Only allowed statuses are used: **PASS**, **FAIL**, **BLOCKED**, **NOT RUN**, an
 | Production `/.well-known/verify402.json` | Service Manifest | **PASS** | HTTP 200 OK, `application/json`, versioned MCP install metadata and current tarball URL. |
 | Production `/sitemap.xml` | Web Discovery | **PASS** | HTTP 200 OK, `application/xml`, indexes the public documentation pages. |
 | Live 402 Challenge on `/verify` | x402 Protocol | **PASS** | HTTP 402 with `payment-required` header declaring Base + Solana exact settlement ($0.05). |
-| Live 402 Challenge on `/safety` | x402 Protocol | **PASS** | HTTP 402 with `payment-required` header declaring Base + Solana exact settlement ($0.10). |
+| Live 402 Challenge on `/safety` | x402 Protocol | **PASS** | HTTP 402 with `payment-required` header declaring Base + Solana exact settlement ($0.02). |
 | Live 402 Challenge on `/route` | x402 Protocol | **PASS** | HTTP 402 with `payment-required` header declaring Base + Solana exact settlement ($0.03). |
 | Live 402 Challenge on `/quotecheck` | x402 Protocol | **PASS** | HTTP 402 with `payment-required` header declaring Base + Solana exact settlement ($0.05). |
 | Live 402 Challenge on `/depth` | x402 Protocol | **PASS** | HTTP 402 with `payment-required` header declaring Base + Solana exact settlement ($0.05). |
@@ -59,7 +59,7 @@ Only allowed statuses are used: **PASS**, **FAIL**, **BLOCKED**, **NOT RUN**, an
 - **Command:** `curl -s -i https://vex402.online/info`
 - **HTTP Status:** `200 OK`
 - **Content-Type:** `application/json; charset=utf-8`
-- **Payload:** Valid JSON containing `name: "verify402"`, price table matching `$0.05`, `$0.10`, `$0.03`, `$0.05`, `$0.05`.
+- **Payload:** Valid JSON containing `name: "verify402"`, price table matching `$0.05`, `$0.02`, `$0.03`, `$0.05`, `$0.05`.
 - **Evaluation:** **PASS**.
 
 #### 3. `GET https://vex402.online/openapi.json`
@@ -161,7 +161,7 @@ In x402 v2 (`@x402/express`), challenge metadata is delivered in the `payment-re
 | Route | Price | Observed `payment-required` Header Contents | Status |
 |---|---|---|---|
 | `POST /verify` | $0.05 | `x402Version: 2`, `accepts` (Base: 50000 USDC, Solana: 50000 USDC), `extensions.bazaar` info & JSON schema draft 2020-12 | **PASS** |
-| `POST /safety` | $0.10 | `x402Version: 2`, `accepts` (Base: 100000 USDC, Solana: 100000 USDC), `extensions.bazaar` with `tokenAddress` required schema | **PASS** |
+| `POST /safety` | $0.02 | `x402Version: 2`, `accepts` (Base: 20000 USDC, Solana: 20000 USDC), `extensions.bazaar` with `tokenAddress` required schema | **PASS** |
 | `POST /route` | $0.03 | `x402Version: 2`, `accepts` (Base: 30000 USDC, Solana: 30000 USDC), `extensions.bazaar` with `tokenIn`, `tokenOut`, `amountIn` | **PASS** |
 | `POST /quotecheck`| $0.05 | `x402Version: 2`, `accepts` (Base: 50000 USDC, Solana: 50000 USDC), `extensions.bazaar` with `quotedOut` audit schema | **PASS** |
 | `POST /depth` | $0.05 | `x402Version: 2`, `accepts` (Base: 50000 USDC, Solana: 50000 USDC), `extensions.bazaar` with ladder sizing schema | **PASS** |

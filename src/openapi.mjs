@@ -215,7 +215,7 @@ export function buildOpenapi(prices, { mode = "testnet", baseUrl = DEMO_BASE_URL
       version: RELEASE_VERSION,
       description: rail.openapiDescription,
       "x-guidance":
-        "Call POST /preflight for free before signing any payment request or raw transaction. It answers PASS/CAUTION/BLOCK with typed reasons, checked/notChecked lists, and a 90-second HMAC receipt. For market truth questions, use the paid POST routes (/verify, /safety, /route, /quotecheck, /depth). Paid routes use x402 exact settlement (0.03-0.10 USDC) and return an evidence_bundle with pinnedBlock, requestHash, and responseHash for cryptographic auditability. The 402 challenge is authoritative for prices and the payment network. CORS: free read-only discovery GET/HEAD/OPTIONS routes allow any origin; POST /preflight and paid routes send no Access-Control-Allow-Origin, so browser-based agents must use a server-side client, the MCP bridge, or an SDK.",
+        "Call POST /preflight for free before signing any payment request or raw transaction. It answers PASS/CAUTION/BLOCK with typed reasons, checked/notChecked lists, and a 90-second HMAC receipt. For market truth questions, use the paid POST routes (/verify, /safety, /route, /quotecheck, /depth). Paid routes use x402 exact settlement (0.02-0.10 USDC) and return an evidence_bundle with pinnedBlock, requestHash, and responseHash for cryptographic auditability. The 402 challenge is authoritative for prices and the payment network. CORS: free read-only discovery GET/HEAD/OPTIONS routes allow any origin; POST /preflight and paid routes send no Access-Control-Allow-Origin, so browser-based agents must use a server-side client, the MCP bridge, or an SDK.",
       "x-state-persistence": statePersistence().warning,
       contact: {
         name: "verify402 Maintainers",
@@ -810,10 +810,10 @@ export function buildOpenapi(prices, { mode = "testnet", baseUrl = DEMO_BASE_URL
           rail,
           price: usd(prices.safety),
           operationId: "checkTokenSafety",
-          summary: "Pre-trade token gate: TRUST / CAUTION / AVOID (quote-based sellability)",
+          summary: "Token safety check for AI agents: quote-based sellability, TRUST / CAUTION / AVOID",
           tag: "Truth",
           guidance:
-            "Gathers live contract facts, liquidity and scam indicators, and performs a quote-based sellability check: a USD-sized sell is quoted through the configured venues' own routers, direct and WETH-routed. It does NOT execute or simulate a transfer, so transfer tax, blacklist, pause, and max-tx restrictions are listed in notChecked, not tested. Unconfigured venues are also named in notChecked.",
+            "Token safety check for AI agents before they swap: quote-based sellability, round-trip cost, TRUST / CAUTION / AVOID. $0.02 per call with the free pre-signing gate included. It does NOT execute or simulate a transfer, so transfer tax, blacklist, pause and max-tx restrictions are listed in notChecked, not tested; unconfigured venues are also named in notChecked.",
           inputSchema: {
             type: "object",
             required: ["chainId", "tokenAddress"],
@@ -880,12 +880,12 @@ export function buildOpenapi(prices, { mode = "testnet", baseUrl = DEMO_BASE_URL
       "/assure": {
         post: paidOperation({
           rail,
-          price: usd(prices.assure ?? "0.19"),
+          price: usd(prices.assure ?? "0.10"),
           operationId: "assurePayment",
           summary: "Bundle of paid checks at one pinned block",
           tag: "Truth",
           guidance:
-            "Runs the paid checks whose inputs are supplied (safety, route, quotecheck, depth) at one pinned block and returns one evidence record with a recomputable sha256. A request is accepted only when the supplied checks cost at least $0.19 separately, so the bundle is never more expensive than buying them one by one; otherwise it returns 400 insufficient_checks before payment. It does not run sanctions, reputation, or honeypot checks that are outside the service scope.",
+            "Runs the supplied paid checks at one pinned block and returns one evidence record with a recomputable sha256. Accepted only when the supplied checks cost at least $0.10 separately (safety $0.02 + quotecheck $0.05 + depth $0.05 = $0.12), so the bundle is cheaper than buying them one by one; otherwise it returns 400 insufficient_checks before payment. It does not run sanctions, reputation, or honeypot checks outside the service scope.",
           inputSchema: {
             type: "object",
             required: ["chainId"],

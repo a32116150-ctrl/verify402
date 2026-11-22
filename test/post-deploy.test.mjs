@@ -84,7 +84,7 @@ function createMock({
       name: "verify402",
       version,
       description: "quote-based sellability",
-      prices: { verify: "$0.05", safety: "$0.10", route: "$0.03", quotecheck: "$0.05", depth: "$0.05" },
+      prices: { verify: "$0.05", safety: "$0.02", route: "$0.03", quotecheck: "$0.05", depth: "$0.05", assure: "$0.10" },
       recovery: { ttlMinutes: 10, noCompanionAlias: "no content-hash companion" },
       preflight: { defaultTtlSeconds: 90, limits: { perMinutePerIp: 60, maxInFlight: 8 } },
       state_persistence: { scope: "process-local", lostOnRestart: true, warning: "process-local restart or deploy not shared across instances" },
@@ -98,7 +98,7 @@ function createMock({
       info: { title: "verify402", version },
       paths: {
         "/verify": { post: { "x-payment-info": { price: { amount: "0.05" } } } },
-        "/safety": { post: { "x-payment-info": { price: { amount: "0.10" } } } },
+        "/safety": { post: { "x-payment-info": { price: { amount: "0.02" } } } },
         "/route": { post: { "x-payment-info": { price: { amount: "0.03" } } } },
         "/quotecheck": { post: { "x-payment-info": { price: { amount: "0.05" } } } },
         "/depth": { post: { "x-payment-info": { price: { amount: "0.05" } } } },
@@ -114,7 +114,7 @@ function createMock({
       paymentRequirements: {
         pricing: {
           verify: { priceUsd: 0.05 },
-          safety: { priceUsd: 0.1 },
+          safety: { priceUsd: 0.02 },
           route: { priceUsd: 0.03 },
           quotecheck: { priceUsd: 0.05 },
           depth: { priceUsd: 0.05 },

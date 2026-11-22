@@ -20,11 +20,11 @@ import { fileURLToPath } from "url";
 
 export const DEFAULT_PRICES = {
   "/verify": 0.05,
-  "/safety": 0.10,
+  "/safety": 0.02,
   "/route": 0.03,
   "/quotecheck": 0.05,
   "/depth": 0.05,
-  "/assure": 0.19,
+  "/assure": 0.10,
 };
 
 const dayKey = () => new Date().toISOString().slice(0, 10);

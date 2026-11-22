@@ -1,8 +1,9 @@
 # verify402-mcp
 
-MCP server for **verify402**: a free, fail-closed **preflight gate** before an
-agent signs a payment or a chain transaction, plus six paid x402 checks
-paid per call over x402.
+MCP server for **verify402**: a token safety check for AI agents before they
+swap — quote-based sellability, round-trip cost, TRUST / CAUTION / AVOID,
+$0.02 per call with a free pre-signing gate included. Supporting x402 checks
+cover arbitrage reality, execution book, quote fairness and trade capacity.
 
 Works with Claude Desktop, Cursor, OpenCode, and any MCP client that speaks
 stdio. The free gate needs **no wallet**. The paid tools settle in **real USDC
@@ -37,11 +38,11 @@ tool names are accepted: `preflight_gate`, `inspect_402`, `directory_402`,
 | `inspect_402` | **free** | "What does this 402 actually ask for?" — price, token, network, payee, bound resource, and a PASS / CAUTION / BLOCK verdict from a read-only fetch |
 | `directory_402` | **free** | "What is the x402 ecosystem asking for right now?" — watched public endpoints with protocol and sign verdicts, plus recorded changes |
 | `verify_arbitrage` | $0.05 | "Is this cross-venue arbitrage opportunity real, right now?" |
-| `check_token_safety` | $0.10 | "Is this token sellable at a realistic size, and what does the round trip cost?" — TRUST / CAUTION / AVOID with evidence; not a code audit |
+| `check_token_safety` | $0.02 | "Is this token sellable at a realistic size, and what does the round trip cost?" — TRUST / CAUTION / AVOID with evidence; not a code audit |
 | `get_best_route` | $0.03 | "What would the chain actually pay for this swap?" — best route + every quoted venue |
 | `verify_quote_fairness` | $0.05 | "A broker/bot offered me this number — is it honest?" fair / overpaying / too_good_to_be_true |
 | `get_trade_depth` | $0.05 | "How big can I trade here before the round trip eats me?" — per-size impact, round-trip cost, capacity |
-| `get_assurance` | $0.19 | One evidence bundle at one pinned block: whichever of safety/route/quotecheck/depth you supply, together. Below buying the checks separately |
+| `get_assurance` | $0.10 | One evidence bundle at one pinned block: whichever of safety/route/quotecheck/depth you supply, together. Below buying the checks separately |
 
 `preflight_gate` is the front door. `inspect_402` reads a 402 challenge
 before an agent pays it, and `directory_402` lists the endpoints we watch.
@@ -132,7 +133,7 @@ To enable the six paid x402 checks (`verify_arbitrage`, `check_token_safety`, `g
    - Create a brand new wallet in MetaMask, Rabby, or via `cast wallet new`.
    - ⚠️ **SECURITY WARNING**: Never use your primary personal wallet, cold storage, or vault.
 2. **Fund the Wallet on Base mainnet (EIP-155:8453)**:
-   - **USDC**: Send only what you are willing to spend (the bridge pays per call: $0.03 to $0.10 in real USDC).
+   - **USDC**: Send only what you are willing to spend (the bridge pays per call: $0.02 to $0.10 in real USDC (individual checks $0.02-$0.05)).
    - **Gas (ETH on Base)**: Keep a little ETH on Base for gas if your client needs it.
    - Paid calls settle on Base mainnet in real USDC, from $0.03 per call. There is no public testnet endpoint.
 3. **Configure Environment Variables in Your MCP Client**:
@@ -191,7 +192,7 @@ Once configured, your agent automatically sees the tools in its context. You can
 
 - **Preflight Gate (Free)**:
   > *"Before signing this transaction, call `preflight_gate` on the payment request / calldata. If it returns BLOCK, abort and explain why."*
-- **Token Quote-Based Sellability Check ($0.10, not a code audit)**:
+- **Token Quote-Based Sellability Check ($0.02, not a code audit)**:
   > *"Analyze token `0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE` using `check_token_safety`. Can it be sold at a realistic size on the configured venues, what is the round-trip cost, and is the result TRUST / CAUTION / AVOID? Read notChecked for transfer restrictions."*
 - **Arbitrage Verification ($0.05)**:
   > *"Use `verify_arbitrage` to verify if there is an arbitrage opportunity between Uniswap V3 and Sushiswap for WETH/USDC on chain 1 at the current block."*

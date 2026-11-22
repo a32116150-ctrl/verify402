@@ -25,7 +25,7 @@ promises anywhere. The credibility IS the negative result.
 >   now*? Pinned-block quotes from Uniswap's QuoterV2 + each router's own
 >   math, flash-loan premium and gas netted. The honest answer is usually
 >   `no_edge` — that's the product.
-> - `check_token_safety` ($0.10): pre-trade gate before buying any token —
+> - `check_token_safety` ($0.02): pre-trade gate before buying any token —
 >   TRUST/CAUTION/AVOID with evidence: live contract calls, a USD-sized sell
 >   quote-based sellability check across the configured venues (it asks
 >   quoters for a price; it does not execute a transfer), round-trip cost
@@ -79,7 +79,7 @@ promises anywhere. The credibility IS the negative result.
 > it. We publish the evidence with every response.
 >
 > Free: `/findings` (live majors, always no_edge), `/info`,
-> `/.well-known/agent-registration.json`. Paid: $0.05/verify, $0.10/safety.
+> `/.well-known/agent-registration.json`. Paid: $0.05/verify, $0.02/safety.
 > MCP tools included.
 
 ## 3. r/ethdev
