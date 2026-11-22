@@ -24,9 +24,12 @@ import { chain, resolveToken } from "./config.mjs";
 import { clientFor, quoteAllVenues, classifyQuoteError } from "./measure.mjs";
 import { paidHonesty, unconfiguredVenues } from "./honesty.mjs";
 import { requirePaidLicense } from "./license.mjs";
+import { remoteEngine } from "./engine-client.mjs";
 
 export async function bestRouteBook(client, chainId, { tokenIn, tokenOut, amountIn, blockNumber }) {
   requirePaidLicense("route");
+  const remote = await remoteEngine("route", chainId, arguments[2] || {});
+  if (remote !== null) return remote;
   return quoteAllVenues(client, chainId, {
     tokenIn, tokenOut, amountIn, blockNumber,
     intermediates: ["WETH"],
@@ -100,6 +103,8 @@ export async function fairQuoteCheck(chainId, {
   blockNumber = null,
 } = {}, { clientFactory = clientFor } = {}) {
   requirePaidLicense("quotecheck");
+  const remote = await remoteEngine("quotecheck", chainId, arguments[1] || {});
+  if (remote !== null) return remote;
   const c = chain(chainId);
   const notes = [];
   const checked = [];

@@ -31,6 +31,7 @@ import { createPublicClient, http, fallback, decodeFunctionResult, encodeFunctio
 import * as viemChains from "viem/chains";
 import { chain, readinessChain, resolveToken, DEFAULT_GAS_UNITS } from "./config.mjs";
 import { requirePaidLicense } from "./license.mjs";
+import { remoteEngine } from "./engine-client.mjs";
 
 export const QUOTER_V2_ABI = [
   {
@@ -478,6 +479,8 @@ export async function measureRoundTrip(chainId, {
   blockNumber: pinnedBlock = null,
 } = {}, { clientFactory = clientFor } = {}) {
   requirePaidLicense("verify");
+  const remote = await remoteEngine("verify", chainId, arguments[1] || {});
+  if (remote !== null) return remote;
   const c = chain(chainId);
   const base = resolveToken(chainId, baseSymbol);
   const target = resolveToken(chainId, targetSymbol);

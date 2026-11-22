@@ -29,6 +29,7 @@ import { clientFor, quoteAllVenues, classifyQuoteError, isHardQuoteFailure } fro
 import { dexscreenerPair as realDexscreenerPair, scamSignals } from "./dexscreener.mjs";
 import { paidHonesty, unconfiguredVenues } from "./honesty.mjs";
 import { requirePaidLicense } from "./license.mjs";
+import { remoteEngine } from "./engine-client.mjs";
 
 const ERC20_ABI = [
   {
@@ -219,6 +220,8 @@ export async function preTradeCheck(chainId, {
   blockNumber = null,
 } = {}, { clientFactory = clientFor, dexscreenerPair = realDexscreenerPair } = {}) {
   requirePaidLicense("safety");
+  const remote = await remoteEngine("safety", chainId, arguments[1] || {});
+  if (remote !== null) return remote;
   const c = chain(chainId);
   const started = Date.now();
 
