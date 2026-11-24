@@ -369,6 +369,21 @@ assert.equal(process.env.RECOVERY_DB_PATH, undefined, "driver must run without R
   check("MAINNET GUARD: with RECOVERY_DB_PATH the server starts", () => {
     assert.equal(listening, true);
   });
+
+  // Fault injection is staging-only: mainnet refuses to start with either switch.
+  for (const [name, value] of [["VERIFY402_CRASH_AT", "promote:before"], ["VERIFY402_STAGING_RAIL_FAULT", "1"]]) {
+    const faultDir = freshDir(`mainnet-fault-${name}`);
+    const r = spawnSync(process.execPath, ["src/server.mjs"], {
+      cwd: root,
+      env: { ...envFor(join(faultDir, "recovery.sqlite"), mainnetEnv), [name]: value },
+      encoding: "utf8",
+      timeout: 30000,
+    });
+    check(`MAINNET GUARD: ${name} set -> REFUSING TO START (exit 1)`, () => {
+      assert.equal(r.status, 1);
+      assert.match(r.stdout + r.stderr, /staging-only/);
+    });
+  }
 }
 
 // The public contract must describe the mode the process actually runs in.

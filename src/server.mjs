@@ -475,6 +475,12 @@ if (BYPASS_PAYMENT && MODE === "mainnet") {
   logError("REFUSING TO START: BYPASS_PAYMENT=1 is local-only and cannot be used with X402_MODE=mainnet.");
   process.exit(1);
 }
+// Fault injection (crash points, forced rail-read failures) exists for the
+// offline audit and the testnet staging reproduction. Never on mainnet.
+if (MODE === "mainnet" && (process.env.VERIFY402_CRASH_AT || process.env.VERIFY402_STAGING_RAIL_FAULT)) {
+  logError("REFUSING TO START: VERIFY402_CRASH_AT / VERIFY402_STAGING_RAIL_FAULT are staging-only and cannot be used with X402_MODE=mainnet.");
+  process.exit(1);
+}
 
 // This process is the hosted service: its paid calls pass the x402 paywall at
 // the HTTP boundary, so the local-engine license gate does not apply here.
@@ -570,7 +576,10 @@ app.use((req, res, next) => {
         // it resolves answer 409 (still resolvable); once it is unprovable the
         // entry becomes `stuck` and the next request gets 503 payment_unresolved.
         const state = reconciliationState(found.operationId);
-        if (state === "unknown") {
+        // A failed attempt must be retried too: otherwise one transient rail
+        // error pins the key at 409 forever and it can never escalate to
+        // `stuck`. reconcileStagedEntry() itself refuses concurrent attempts.
+        if (state === "unknown" || state === "failed") {
           void reconcileStagedEntry(found.operationId).catch(() => {});
         }
         const h = honestFailure(req.path, null);
@@ -746,7 +755,17 @@ const EIP3009_AUTHORIZATION_STATE_ABI = [{
   ],
   outputs: [{ name: "used", type: "bool" }],
 }];
+// Staging-only fault injection for the public 503 reproduction (x402#4293):
+// with VERIFY402_STAGING_RAIL_FAULT=1 every reconciliation read of the rail
+// fails, so a record whose settlement was dispatched cannot be proven on
+// either side and escalates to `stuck` -> 503 payment_unresolved. Inert unless
+// set; the server refuses to start with it in mainnet mode.
+const STAGING_RAIL_FAULT = process.env.VERIFY402_STAGING_RAIL_FAULT === "1";
+if (STAGING_RAIL_FAULT) {
+  logWarn("\n  *** VERIFY402_STAGING_RAIL_FAULT=1 : recovery rail reads are forced to fail. Staging only. ***\n");
+}
 setRecoveryPaymentChecker(async ({ chainId, token, payer, nonce }) => {
+  if (STAGING_RAIL_FAULT) throw new Error("staging rail fault injected (VERIFY402_STAGING_RAIL_FAULT=1)");
   readinessChain(chainId);
   const client = readinessClientFor(chainId);
   const used = await client.readContract({

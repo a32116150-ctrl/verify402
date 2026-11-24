@@ -3,6 +3,21 @@
 All notable changes to verify402. This file records repository changes; it does
 not imply a deploy or an npm publish.
 
+## Unreleased
+
+- **Fix: a failed reconciliation pinned the key at 409 forever.** Retries kicked
+  an on-chain reconciliation only when no attempt had been recorded, so after
+  one failed rail read no retry ever started another. The key could never
+  reach the three failures over five minutes that escalate to `stuck`, and the
+  caller never got `503 payment_unresolved`; only a restart counted. Retries
+  now start a new attempt after a failed one (concurrent attempts are still
+  refused). Regression test in `test/http.test.mjs`.
+- **Staging-only rail fault for the public 503 reproduction (x402#4293).**
+  `VERIFY402_STAGING_RAIL_FAULT=1` forces every recovery read of the payment
+  rail to fail. Runbook: `docs/staging-503-repro.md`.
+- Mainnet now refuses to start with `VERIFY402_CRASH_AT` or
+  `VERIFY402_STAGING_RAIL_FAULT` set.
+
 ## 2.6.1 — 2026-11-22
 
 Public copy now matches the market-aligned prices served by the 402 challenges.
