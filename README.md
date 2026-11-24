@@ -9,6 +9,7 @@
 [![OpenAPI 3.1](https://img.shields.io/badge/OpenAPI-3.1.0-green.svg)](https://vex402.online/openapi.json)
 [![x402 v2](https://img.shields.io/badge/x402-v2%20exact-purple.svg)](https://github.com/x402-foundation/x402)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![a32116150-ctrl/verify402 MCP server](https://glama.ai/mcp/servers/a32116150-ctrl/verify402/badges/score.svg)](https://glama.ai/mcp/servers/a32116150-ctrl/verify402)
 
 > **Status (2026-11-22):** this service is live on **Base + Solana mainnet** at **[vex402.online](https://vex402.online)** — real USDC via the Coinbase CDP facilitator. Current paid-call volume, USDC total and outside-payer counts are published at [vex402.online/stats](https://vex402.online/stats); receipts are at [vex402.online/proof](https://vex402.online/proof). The public Base Sepolia testnet demo was retired on 2026-11-19 — the product is the mainnet service. The analysis reads mainnet chain data (Ethereum, Arbitrum, Base).
 
