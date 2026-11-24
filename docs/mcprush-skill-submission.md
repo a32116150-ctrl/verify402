@@ -1,0 +1,167 @@
+# mcprush skill submission: verify402 preflight
+
+Status: **live.** The skill is published at
+https://mcprush.com/a32116150-ctrl/verify402-preflight and the source lives at
+`skills/verify402-preflight/` in this repository:
+https://github.com/a32116150-ctrl/verify402/tree/master/skills/verify402-preflight
+
+Verified 2026-11-13:
+
+- The skill page resolves and lists **1 MCP server it uses**.
+- The bundle serves: `/api/skills/verify402-preflight/bundle.tar.gz` → 200,
+  16.2 kB, containing `SKILL.md`, the five reference files and `.mcprush.json`.
+- `/api/skills/verify402-preflight/skill.md` → 200, 14.7 kB.
+- Install line: `npx mcprush@latest skill add a32116150-ctrl/verify402-preflight`
+- It sits beside the server listing, which now serves `1.1.0` with an 8-tool
+  surface (`docs/mcprush-server-release-1.1.0.md`).
+
+One normalisation to know about: mcprush folds the `requires:` block into
+listing metadata, so the distributed `SKILL.md` no longer carries
+`requires.mcp: [verify402-mcp]` in its front matter. The relationship is
+declared on the listing page instead ("It expects 1 MCP server to be
+connected"). Keep the block in the repository copy — that is what mcprush
+reads on a new upload.
+
+## Listing fields
+
+| Field | Value |
+|---|---|
+| Kind | Agent skill |
+| Name | `verify402-preflight` |
+| Title | verify402 preflight |
+| Publisher | `a32116150-ctrl` |
+| Category | Security & Testing |
+| Price | Free |
+| Source | Git repository: `https://github.com/a32116150-ctrl/verify402` |
+| Skill path | `skills/verify402-preflight` |
+| Servers it uses | `verify402-mcp` (declared in `requires.mcp`) |
+| Licence | Apache-2.0 |
+
+### Tagline
+
+The signing boundary, with receipts.
+
+### Short description
+
+Use before signing any EVM transaction, token approval, or x402/USDC payment;
+also use when checking a swap quote, token sellability, arbitrage claim, or
+position size. Calls verify402's free preflight gate, reads
+PASS/CAUTION/BLOCK and `checked`/`notChecked`, verifies the short-lived receipt,
+and refuses to sign without it. Routes the six paid verify402 checks and
+states their limits.
+
+### Listing paragraph (paste into the 120+ character field)
+
+verify402 preflight is a free operating manual for AI agents that are about to
+sign an EVM transaction, token approval, or x402/USDC payment. It teaches the
+agent to build the exact intent, call verify402's free preflight gate, read
+PASS/CAUTION/BLOCK and the `checked`/`notChecked` lists, verify the short-lived
+receipt, and refuse to sign without it. It also routes the six optional paid
+on-chain checks and states their limits. It is for agent developers and
+autonomous trading, payment, and treasury agents that need a pre-signing check,
+not a guarantee.
+
+### Network and data disclosure
+
+Use this where the listing asks what the skill sends or why it needs network
+access:
+
+> This skill uses the declared `verify402-mcp` server for the free
+> `preflight_gate` tool. The non-MCP reference calls verify402's own preflight
+> endpoint to turn the supplied payment or transaction intent into a
+> PASS/CAUTION/BLOCK verdict and a short-lived receipt. It sends only the public
+> intent fields (chain/network, addresses, calldata, value, payment terms, and
+> optional policy) plus the receipt during verification. It does not send
+> private keys, seed phrases, signed transactions, or files. The only other
+> outbound request is an optional fetch of a sellerPayoutManifest URL that the
+> caller supplies; the skill does not choose or discover it.
+
+### Long description
+
+This skill is the judgment layer for verify402. It tells an agent when to stop
+at the signing boundary, how to build the exact payment or transaction intent,
+which policy fields actually enforce something, how to read the verdict and the
+`notChecked` gaps, and how to verify the receipt before an executor signs.
+
+It also covers the six paid checks and when they are worth a call:
+`check_token_safety` before buying an unknown token, `verify_quote_fairness`
+before accepting someone else's quote, `get_best_route` before a swap,
+`get_trade_depth` before choosing a size, and `verify_arbitrage` only when
+someone claims an edge. `no_edge` is treated as a valid answer.
+
+The limits are explicit: a PASS is not a guarantee, the token check is not a
+honeypot proof, `capacityUsd` is not a promise of exit, and no result is a
+profit forecast. The live service pays in real USDC on Base mainnet (from $0.03 per call); the
+analysis reads mainnet chain data, and mainnet settlement is not the demo
+default.
+
+### What it will not do
+
+- Guarantee that a transaction is safe or that a counterparty will deliver.
+- Audit a contract, screen sanctions or reputation, or test transfer
+  restrictions such as tax, blacklist, pause, or max-tx.
+- Promise profit or turn `no_edge` into an opportunity.
+- Sign or send a trade. The executor and its signer do that.
+- Replace the receipt check. The skill requires it; the MCP tool alone is
+  advisory.
+
+### What it asks for
+
+- Network access to `https://vex402.online` for the free HTTP
+  fallback.
+- Optional: the `verify402-mcp` server for native `preflight_gate` and paid
+  tools.
+- No file writes, no credentials, no private keys. The paid bridge reads its
+  wallet from its own environment; the skill never asks for a key.
+
+## Review notes
+
+- The skill does not claim the gate is a guarantee. It says the opposite in
+  several places, including the output template.
+- It does not claim the seller owns the payee. It distinguishes
+  `sellerPayoutWallets` (allowlist only) from a verified
+  `sellerPayoutManifest` (`payee_payout_binding`).
+- It does not claim the token check is a honeypot proof.
+- It does not claim `no_edge` is a failure.
+- It does not ask the user to move funds beyond a fixed per-call price.
+  payments only.
+- The skill is free. There is no upsell gate inside it; the paid checks are
+  described because the MCP server exposes them, not because the skill requires
+  a purchase.
+
+## Submission steps
+
+1. Sign in to mcprush Studio as the publisher.
+2. **New listing → Agent skill**.
+3. **Add your skill** and point it at the repository path
+   `skills/verify402-preflight`.
+4. **Edit and check** — confirm the title, description, category, licence, and
+   the `requires.mcp: [verify402-mcp]` relationship.
+5. **Listing and pricing** — set **Free**.
+6. **Prove ownership** of the source repository.
+7. **Submit for review**. Target review time is about 48 hours.
+
+## After approval
+
+The public page should be:
+
+`https://mcprush.com/a32116150-ctrl/verify402-preflight`
+
+Install check:
+
+```bash
+npx mcprush@latest skill add a32116150-ctrl/verify402-preflight
+```
+
+Then ask an agent:
+
+> Before signing this x402 payment, use verify402 preflight. If the verdict is
+> CAUTION, stop and show me the reasons. If it is PASS, verify the receipt and
+> tell me what `notChecked` still leaves open.
+
+## What not to put in the listing
+
+- “100x better” or any unmeasured multiplier.
+- “Guaranteed safe”, “honeypot-free”, or “audited”.
+- “Find profitable trades” or “profit” claims.
+- Mainnet payment instructions for the public demo.

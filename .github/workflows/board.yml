@@ -1,0 +1,72 @@
+name: board-scan
+
+# Daily structural read of the first page of the public x402 catalog.
+#
+# The result is published on the `board-data` branch, NOT master: the service
+# fetches that branch at runtime (see src/board.mjs), so a data refresh never
+# triggers a Render deploy and never restarts the live counters.
+#
+# One read-only request per endpoint, no wallet, no payment. If this job fails,
+# the board keeps serving the last good snapshot and its date says so.
+
+on:
+  # Two daily attempts, not one. GitHub's scheduler is best-effort: the first
+  # scheduled run on 2026-11-15 fired at 12:50 UTC for a 05:23 cron, and no run
+  # appeared on 2026-11-16. A second window costs one extra branch commit and
+  # means a missed slot self-heals the same day instead of the board silently
+  # ageing. The loader serves the newest data branch, so a duplicate scan is
+  # harmless.
+  schedule:
+    - cron: "23 5 * * *"
+    - cron: "23 17 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: board-scan
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install runtime deps
+        run: npm ci --omit=dev --ignore-scripts
+
+      - name: Scan
+        run: node scripts/board-scan.mjs data/board.json 300
+
+      - name: Publish the data branch
+        run: |
+          set -euo pipefail
+          git config user.name "board-scan"
+          git config user.email "board-scan@users.noreply.github.com"
+
+          blob=$(git hash-object -w data/board.json)
+          subtree=$(printf '100644 blob %s\tboard.json\n' "$blob" | git mktree)
+          tree=$(printf '040000 tree %s\tdata\n' "$subtree" | git mktree)
+
+          # checkout is shallow, so fetch the data branch before parenting to it
+          git fetch --no-tags --depth=1 origin \
+            refs/heads/board-data:refs/remotes/origin/board-data || true
+          prev=$(git rev-parse --verify --quiet refs/remotes/origin/board-data || true)
+          msg="board data $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+          if [ -n "$prev" ]; then
+            commit=$(git commit-tree "$tree" -p "$prev" -m "$msg")
+          else
+            commit=$(git commit-tree "$tree" -m "$msg")
+          fi
+
+          git push origin "${commit}:refs/heads/board-data"
+          echo "published $commit"

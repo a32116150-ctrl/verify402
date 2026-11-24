@@ -1,0 +1,829 @@
+# Changelog
+
+All notable changes to verify402. This file records repository changes; it does
+not imply a deploy or an npm publish.
+
+## Unreleased
+
+- **Fix: a failed reconciliation pinned the key at 409 forever.** Retries kicked
+  an on-chain reconciliation only when no attempt had been recorded, so after
+  one failed rail read no retry ever started another. The key could never
+  reach the three failures over five minutes that escalate to `stuck`, and the
+  caller never got `503 payment_unresolved`; only a restart counted. Retries
+  now start a new attempt after a failed one (concurrent attempts are still
+  refused). Regression test in `test/http.test.mjs`.
+- **Staging-only rail fault for the public 503 reproduction (x402#4293).**
+  `VERIFY402_STAGING_RAIL_FAULT=1` forces every recovery read of the payment
+  rail to fail. Runbook: `docs/staging-503-repro.md`.
+- Mainnet now refuses to start with `VERIFY402_CRASH_AT` or
+  `VERIFY402_STAGING_RAIL_FAULT` set.
+
+## 2.6.1 — 2026-11-22
+
+Public copy now matches the market-aligned prices served by the 402 challenges.
+
+- `/safety` is $0.02 per call; `/assure` is $0.10 per call (supplied parts total
+  $0.12, so the bundle stays cheaper than buying the checks separately).
+- The landing page, checks/docs/MCP pages, README, bridge help, OpenAPI and
+  Bazaar metadata now quote the same prices. The landing price floor reads
+  "From $0.02", not "From $0.03".
+- No payment, recovery, receipt or HTTP status behavior changed.
+Published as `verify402-mcp@2.6.1`; npm, the MCP Registry and the GitHub
+release carry the same identity.
+
+## 2.6.0 — 2026-11-19
+
+Every install now lists all nine MCP tools. The paid tools are no longer
+registered only when a wallet is configured; they are always registered and
+refuse at call time with a clear error unless EVM_PRIVATE_KEY is set — no
+402 challenge is ever issued and no payment ever happens without a wallet.
+
+- Why: listings and registries (Glama, MCP Registry, npm) launch the bridge
+  without a wallet, so they saw only the three free tools and scored them.
+  The full surface must be visible for the product to be discoverable.
+- The free tools are unchanged: no wallet needed, nothing can be charged.
+Published as `verify402-mcp@2.6.0`; the live service, npm and the registry
+will be updated to the same identity.
+
+## 2.5.0 — 2026-11-19
+
+The mainnet-only release. The public Base Sepolia testnet demo is gone — it
+served real mainnet analysis for testnet USDC, which gave the paid product
+away for free. Every paid call on the live service settles real USDC on
+Base mainnet / Solana mainnet via the Coinbase CDP facilitator, from $0.03
+per call ($0.19 for the assure bundle).
+
+- The public testnet demo at verify402.onrender.com was retired on
+  2026-11-19: GET/HEAD redirect to https://vex402.online, everything else
+  answers 410 demo_retired. The static site now carries one truthful mainnet
+  version of every page.
+- Docs, skill, bridge help text and registry metadata all record the
+  retirement; the landing page labels the testnet ledger counter as historical.
+- No tool, price, schema or policy change against 2.0.1 beyond the
+  retirement; six paid checks including get_assurance ($0.19).
+Published as `verify402-mcp@2.5.0`; the live service, npm and the registry
+will be updated to the same identity.
+
+## 2.0.1 — 2026-11-19
+
+Consistency patch over 2.0.0 — text and metadata only, no behavior change.
+
+- The published package contradicted itself after 2.0.0: the instructions listed
+  six paid tools while the package's own text still said "five". Everything the
+  npm package, repository, site, docs, and skill say now consistently reads
+  six paid checks (including `get_assurance`).
+- The live site and the 402 challenge (x402 Bazaar metadata) for `/assure`
+  described the retired pre-flight-wrapper design; both now describe the paid
+  checks bundle at one pinned block.
+- Request-shape examples on the checks page now match the OpenAPI examples.
+- The telemetry allowlist accepts `get_assurance`.
+- Bazaar health check covers six routes.
+Published as `verify402-mcp@2.0.1`; the live service and registry advertise the
+same identity.
+
+## 2.0.0 — 2026-11-19
+
+Version identity moves to 2.0.0 for the v2 release.
+
+New:
+- The paid checks now appear as a single HTTP endpoint, `POST /assure` ($0.19),
+  which runs whichever of the paid checks you supply at one pinned block and
+  returns one evidence bundle. It is cheaper than buying the same checks
+  separately.
+- A live on-chain usage counter is served at `/stats` and shown on the home
+  page; it is read from Base mainnet and Base Sepolia and labels operator calls
+  separately from outside payers.
+- `/explorer` on mainnet now reads the full settlement history from a small
+  persisted index instead of a 250k-block window, so it no longer drops the
+  operator's 18 Nov tests.
+
+Copy and positioning now lead with evidence rather than an apology: the
+“no external buyer” language is gone, replaced by dated receipts and the
+live counter. Historical marketing pages remain dated records.
+
+No new security promise is made: the gate is still advisory, and the paid
+checks are still scoped and listed in `notChecked`.
+
+Full offline test suite passes.
+
+## 1.1.7 — 2026-11-19
+
+Metadata-only correction. 1.1.6 moved the paid-call default to Base mainnet,
+but the MCP Registry entry for it still described `VERIFY402_NETWORKS` as
+defaulting to `eip155:84532` — the exact rail mismatch 1.1.6 removed. Registry
+versions are immutable, so this release republishes identical code with
+corrected metadata: default `eip155:8453`, with the Base Sepolia demo as an
+explicit opt-in. No runtime, tool, price, schema or policy change.
+
+## 1.1.6 — 2026-11-18
+
+Flips the paid-call default to the live service. `DEFAULT_NETWORKS` is now Base
+mainnet (`eip155:8453`) and the default server is https://vex402.online, so a
+bridge with a funded wallet pays real USDC out of the box. Paying is still
+opt-in in the only hard sense — no `EVM_PRIVATE_KEY`, no signer — and every
+payment stays bounded by `MAX_PAYMENT_USD`, `MAX_DAILY_USD`, the pinned payee,
+the canonical-USDC check and the paid-route list.
+
+The Base Sepolia testnet demo (`eip155:84532`, https://verify402.onrender.com)
+becomes an explicit `VERIFY402_URL` + `VERIFY402_NETWORKS` opt-in. Refusal
+messages now name the networks a 402 actually offered, so a rail mismatch is
+diagnosable in one line. Docs, `.env.example`, the MCP Registry description and
+the `/mcp` page state the new default. Full offline test suite passes.
+
+## 1.1.5 — 2026-11-18
+
+Ships `instructions` in the MCP `initialize` response. An agent connecting to
+the server is told how to use the free and paid tools, what PASS / CAUTION /
+BLOCK mean, and not to sign without the Gate. No tool, price, schema, network
+or policy change. Full offline test suite passes.
+
+## 1.1.4 — 2026-11-18
+
+Stdio framing fix for MCP clients that require stdout to be JSON-RPC only.
+The bridge printed a human-readable banner to stdout on connect, so any
+harness (e.g. containerised build tests) reading it as an MCP client saw a
+corrupt stream before the first JSON-RPC frame. Diagnostics now go to
+**stderr**; stdout carries only the protocol. No tool, price, schema,
+network or policy change. Full offline test suite passes with the change.
+
+## 1.1.3 — 2026-11-18
+
+Documentation-only release over 1.1.2: no runtime, price, schema, tool, or
+network change. It announces that the mainnet instance of verify402 is live at
+`https://api.vex402.online` (Base + Solana mainnet, USDC, Coinbase CDP
+facilitator, exact-x402). Two operator end-to-end settlements have moved
+on-chain as of this release (transactions visible on Base); no external buyer
+has paid anything yet, and this release makes no claim otherwise. The public
+demo at `vex402.online` remains testnet. Safety defaults do not change: the
+bridge defaults paid calls to Base Sepolia testnet (`eip155:84532`), and the
+mainnet instance is an explicit opt-in (`VERIFY402_URL` + `VERIFY402_NETWORKS=eip155:8453`).
+
+## 1.1.2 — 2026-11-17
+
+A release for the MCP bridge; the service metadata follows the same version
+identity (see `src/version.mjs`).
+
+The change since 1.1.1: the installed payer now carries the challenge's
+`extensions.bazaar` declaration into the payment payload it sends to the
+facilitator, so a settlement can be cataloged. Until now, paid calls from the
+installable bridge could not be entered into the Bazaar even though the
+service's own buyer (a separate script) could. No protocol, price, schema or
+tool change. The default public origin also moved from `verify402.onrender.com`
+to `https://vex402.online`; the old host still works.
+
+Published 2026-11-17T14:13:26.566Z to npm as `verify402-mcp@1.1.2`, gitHead
+`39c7f56c5d393ffa5e9b210ded8b61e5ba5f27fe`, shasum
+`802f1d36a1f7686c1adc14a134fc739663434055` (identical to the inspected dry-run
+pack). The MCP Registry entry, the GitHub release, and the `master` push that
+deploys are separate approval gates.
+
+## 1.1.1 — 2026-11-16
+
+A fix release for the service. The MCP bridge has no runtime change — the only
+source diff from 1.1.0 is one corrected comment — and `verify402-mcp@1.1.1` is a
+marker release so that the version a caller installs matches the version the
+service reports (see `PUBLISH_STEPS_FOR_ME.md`).
+
+**Published 2026-11-16.** npm `latest` is `1.1.1`: tarball shasum
+`f9d0f0c40f8aa9806b067848fa2cb67a4e5b3e1a`, `gitHead`
+`7c43cbf5406d73d9ae396ed1363170414a2cc74e`, registry timestamp
+`2026-11-16T15:36:48.514Z`. The MCP Registry entry and the Render deployment remain
+separate, pending steps.
+
+### Fixed
+
+- **Durable recovery could never work for a real client.** The settlement
+  reference was decoded from the legacy `x-payment` header only, while x402 v2
+  clients — including `verify402-mcp` — send `PAYMENT-SIGNATURE`, which the
+  SDK's Express adapter reads first. Every v2 caller therefore staged a record
+  with no payment reference, so after a lost settle outcome the record could
+  never be checked on-chain and the caller's key stayed blocked with no path to
+  their paid result. Both headers are read now, and the Solana rail (no EIP-3009
+  nonce) is identified by its signed transaction instead of being written off as
+  unreconcilable.
+- **The advertised evidence hash did not reproduce.** `evidence_bundle.responseHash`
+  was computed before the honesty arrays were merged into the body, so a
+  receiver following the documented recompute recipe got a different number on
+  every response from a handler that did not already return `checked` /
+  `notChecked` — i.e. on essentially all of them. One projection
+  (`projectionCore`) now feeds both the advertised hash and the stored record,
+  and the bundle is built over the body as sent.
+- **Spec 0.9 conformance: `settling` and `stuck`.** The write-ahead boundary is
+  now real: an `onBeforeSettle` hook records `settling` on the operation before
+  the facilitator call, keyed by the exact `PAYMENT-SIGNATURE` bytes, the decoded
+  envelope, the EIP-3009 nonce or the Solana transaction. In durable mode a write
+  that does not land aborts the settlement (nothing was charged; the staged
+  record still blocks a duplicate charge). Retries answer `409
+  operation_in_flight` while the outcome can still resolve, and `503
+  payment_unresolved` — no `Retry-After`, named reason, `retry: same_payment` —
+  once it cannot be proven on either side. `stuck` and `settling` records are
+  never aged out by the TTL, in any mode, and both are counted on
+  `/info.recovery.observability`. A transient reconciliation failure stays 409
+  and is escalated only after three failures at least five minutes apart past
+  the staging window.
+- `/findings` had no per-IP budget (AUDIT L-3): a free chain read with a 30s
+  cache could be kept permanently cold, turning the endpoint into a public RPC
+  proxy. It now shares the standard limiter at 30 requests/minute per IP.
+- `/usage` lost `byInspectHost` on restart (serialized but not restored), and the
+  promised `body_no_challenge` counter — a 402 that carries no challenge in the
+  `PAYMENT-REQUIRED` header or the body — was never emitted. Both are fixed and
+  covered by tests.
+- Malformed JSON and oversized bodies answered with Express's HTML stack trace
+  (including `/app/node_modules/...` paths) instead of the documented JSON error
+  shape. A terminal error handler answers `invalid_json` / `payload_too_large` /
+  `internal_error` with a `requestId`; `requestIdMiddleware` now runs before the
+  body parser so every error carries one.
+- The board copy, the blog post and the workflow said "most-called"; the catalog
+  has no server-side ordering and ignores the parameters that would request one,
+  so the sample is simply the first 300 entries returned. Reworded everywhere,
+  and `BANNED_PUBLIC_CLAIMS` now blocks the phrase from coming back.
+- Settlement and payment-mode comments still named `verify402.com` (a parked
+  domain) and `npm 1.0.9` (superseded by 1.1.0).
+
+### Added
+
+- `src/cdp-auth.mjs` — CDP facilitator auth without the CDP SDK. The Bazaar
+  catalog that agents search is fed by the CDP facilitator only, so a service that
+  settles elsewhere is invisible to discovery. The SDK would do the same in ~104
+  packages and pull a high-severity advisory in a transitive validator into the
+  paid path, so the 120-second JWT (Ed25519 or ES256, `uris` bound to the exact
+  method+host+path, random nonce) is minted with `node:crypto`. Wiring: when
+  `FACILITATOR_URL` points at `api.cdp.coinbase.com`, the server mints those JWTs
+  (`HTTPFacilitatorClient.createAuthHeaders`); in mainnet the keys presence alone
+  still selects CDP. A half-configured environment no longer kills the service —
+  testnet falls back to `x402.org` loudly (`cdp-misconfigured` on `/health`,
+  nothing indexed) while mainnet still refuses to start. `/health` now reports
+  `facilitator` (host) and `discovery` (`cdp-bazaar-eligible` | `none` |
+  `cdp-misconfigured`) so a switch is checkable from outside.
+
+### Fixed
+
+- `/inspect` reported `challenge` without `extensions`, so it answered "no
+  discovery metadata" for endpoints that declare it — including verify402's own
+  paid routes, which do publish a valid `extensions.bazaar` block (CDP's public
+  `/validate` accepts it). The field now survives into the response, and a new
+  `discovery` summary says whether a bazaar block is declared, which method it
+  names, and whether it carries an input schema and an output example. Metadata
+  that is declared but too thin for an agent to construct a call is now a named
+  caution (`discovery_incomplete`) rather than silence.
+
+### Added
+
+- `GET /board`, `GET /board.json`, `GET /badge` — a public board of the
+  first 300 x402 endpoints the public catalog returns, refreshed daily by
+  `.github/workflows/board.yml` (data published on the `board-data` branch, so a
+  refresh never redeploys the service). Each row is one read-only request,
+  timestamped, with the verdict, chain, price, authorization window and 30-day
+  call count; the badge is an embeddable SVG for the endpoint's own page. The
+  page and the JSON carry the same caveats: a structural read is not an audit,
+  not a reputation score, and not an endorsement. `scripts/board-scan.mjs`
+  produces the data; `test/board.test.mjs` pins rendering, escaping and the
+  honesty constraints. The loader serves the bundled snapshot immediately and
+  refreshes from the data branch behind the request; a failed refresh retries in
+  60 s rather than after the full 15-minute window, and an empty board answers
+  `503 board_warming` with `no-store` (and an uncached badge) so a cold instance
+  can never cache "not scanned" over a real verdict.
+- `docs/recovery-audit.md` records where the implementation stands against
+  recovery-extension spec 0.8 control 11: the durable store journals before the
+  facilitator call, gates eviction on reconciliation, resolves staged records
+  from EIP-3009 `authorizationState`, and does the same pass at startup
+  (`test/recovery-durable.test.mjs` covers each branch). The remaining gap is
+  observability — no state named `settling`, and the `stuck` case is logged but
+  not counted — plus the fact that the live instance runs `memory-only` and so
+  does not have the guarantee until the durable cutover. Spec 0.8 itself lives
+  in the upstream proposal, not in this repository.
+
+### Fixed
+
+- `POST /inspect` now refuses a response whose `PAYMENT-REQUIRED` header and
+  JSON body carry **different** payment challenges: `422 challenge_mismatch`.
+  Before, a header was read first and the body was never parsed when a header
+  existed, so two disagreeing challenges resolved silently to the header — the
+  exact split a swapped-payee attack needs, since a compliant x402 client pays
+  the header while a human or a model reads the body. A body that is prose or
+  a stub (`{"error":"Payment required"}`) still defers to the header, because
+  there is nothing to compare. Comparison is order-independent. Covered in
+  `test/inspect.test.mjs` (matching, reordered-but-equal, swapped payee,
+  prose, stub).
+
+### Fixed
+
+- `POST /inspect` now recognizes a challenge and its **v1-dialect twin** as the
+  same demand. Many live sellers announce the terms in both x402 v2 (header)
+  and v1 (body) — same amount/asset/payTo/chain, written as
+  `amount`+`eip155:8453` in the header and `maxAmountRequired`+`base` in the
+  body. The mismatch check now unfolds v1 aliases (network names with a
+  documented CAIP-2 mapping, `maxAmountRequired`, `timeout`, `payTo`) before
+  comparing, and wrapper fields that are not part of the term sheet (the
+  declared `resource`, the body's prose or error keys) do not participate.
+  Anything that does not normalize cleanly still fails closed
+  (`422 challenge_mismatch`) — including the gondola-ai/x402 mirror case,
+  which now reads `PASS`. Caught by our own Bazaar scan, which flagged 31
+  public endpoints before two fixes: 12 were the same-terms case our earlier
+  comparison treated as different; 16 are dual-dialect twins that now read
+  as the same demand; a handful advertise a **subset** of the header's
+  accepts and stay refused deliberately. Covered by extended header/body
+  tests, including the real gondola-ai shape. The original mismatch
+  behavior is unchanged for swapped-payee disagreement.
+
+
+### Added
+
+- `GET /blog/what-public-402s-look-like` — a field note from the 300 top
+  the first public x402 Bazaar endpoints the catalog returns, one read-only probe each: Base,
+  canonical USDC, five-minute authorizations in the majority and 57 asking
+  for one hour, 222 well-formed plus 60 well-formed-with-flags, the
+  inspector checks we refused, and the defects the scan surfaced in our own
+  tool (both fixed and live). Raw JSON is in `docs/bazaar-scan-2026-11.json`
+  so any number in the post can be re-checked independently.
+- `GET /blog/check-an-x402-endpoint-before-you-pay`,
+  `GET /blog/pre-signing-gate-in-an-mcp-agent`, and
+  `GET /blog/verify402-mcp-1-1-0` — three notes: the six fields a 402 decides
+  and how to read them for free; a 15-minute MCP install with the guard wired
+  so a BLOCK cannot reach the signer; and the 1.1.0 release note (two free
+  tools, seller terms binding, token registry, durable counters, and what
+  did not change). All four are in the blog index, the RSS feed, the
+  sitemap, and the index's structured data.
+
+## 1.1.0
+
+Two new free MCP tools and a payment token registry. The npm package, the MCP
+Registry entry, and the deployment are separate approval steps; this entry
+records the source change. Release runbook: `PUBLISH_STEPS_FOR_ME.md`.
+
+### Added
+
+- Durable `/usage` counters. When `VERIFY402_USAGE_PATH` is set (or a durable
+  path exists next to `RECOVERY_DB_PATH`), the free-gate call counters are
+  written to a small JSON file and survive restart and deploy; otherwise they
+  stay process-local and say so. Atomic write (tmp file + rename), corrupt file
+  starts a fresh window with a warning, and `flushUsage()` runs on graceful
+  shutdown. Includes new `byTool` and `mcpPings` buckets. The `/usage` response
+  now states its persistence scope explicitly. Covered by new persistence tests
+  in `test/usage.test.mjs`.
+- `POST /inspect` now counts the target host in `byInspectHost` — hostname
+  only, no path, no identity, counts-only. Sellers can see whether their
+  endpoint is getting looked at without learning who called. Exposed on
+  `GET /usage` and persisted with the same file as the other counters.
+- Seller-signed terms manifests: `policy.sellerTermsManifest` (caller-pinned
+  HTTPS origin, seller-signed, spec `verify402/seller-terms@1`) + the same
+  fetch-verify discipline as the payout manifest. The challenge's network,
+  asset, amount and timeout are bound to one seller publication: a drift of
+  any of the four **BLOCKs** (`terms_mismatch`, naming the field); a resource
+  with no published terms is a CAUTION (`terms_resource_unlisted`); a bad or
+  expired manifest degrades like the payout manifest (`terms_manifest_*`);
+  a match records `terms_match` and a signed `termsBinding` in the receipt.
+  Ten tests cover the matching/mismatch matrix plus signature and expiry.
+
+- `POST /usage/ping` — anonymous, opt-in usage pings from the MCP bridge. The
+  bridge sends one line per tool call (`tool` + `ok: boolean`) only when the
+  operator sets `VERIFY402_TELEMETRY=1`; never arguments, intents, results,
+  wallets, or IPs. Tool name comes from a shared allowlist; pings are labelled
+  by the `X-Verify402-Client` header, counted as `mcp:<tool>` in `byKind`,
+  `byTool`, `byStatus`, and a new `byClientSource: "mcp-ping"` bucket. A failed
+  ping never changes a tool's answer and the endpoint accepts at most 120/min
+  per IP. A new `mcp-bridge/test/telemetry.test.mjs` pins the opt-in-off default,
+  the minimal payload, and the never-throw guarantee.
+
+- Two new free MCP tools in the bridge: `inspect_402` (read an x402 402
+  challenge before paying it — endpoint URL or a challenge you already have;
+  returns price, token, network, payee, the bound resource, a PASS / CAUTION /
+  BLOCK verdict, typed reasons, and a receipt) and `directory_402` (the watched
+  list of public x402 endpoints with protocol and sign verdicts and recorded
+  changes). Both are registered without a wallet, are not bound to any paid
+  route, and are advertised as free in the manifest and on the `/mcp` page.
+  This is the first change to the published package since `1.0.9`, so a new
+  package release is now meaningful rather than cosmetic. Five bridge tests
+  cover the free-tool guarantees.
+- `src/tokens.mjs`: a payment token registry for the chains the gate already
+  supports — USDC, USDT, DAI, USDG, and WETH on Ethereum, Arbitrum, Base, the
+  two testnet rails, and Solana mainnet/devnet. Addresses were cross-checked
+  against CoinGecko's per-chain token lists and against the USDC addresses
+  already in `config.mjs`; Solana uses the Circle-issued mint, not a bridged
+  variant. A recognized dollar stable is now named instead of being flagged
+  `non_canonical_asset`, and a USD cap can be enforced on it with the $1
+  parity labelled as assumed, not verified. Volatile assets (WETH) get a
+  `volatile_asset` caution because the gate cannot price them in USD; unknown
+  addresses still get the old caution. The manifest now advertises the
+  recognized assets per network. Covered by eight registry tests plus four
+  preflight tests (suite now 477).
+
+- `POST /inspect` and the `/inspect` page: a free, no-wallet x402 inspector.
+  Paste an endpoint URL (GET or an empty POST) and the service fetches the
+  `402` once, reads the `PAYMENT-REQUIRED` header or body challenge, and runs
+  the same structural payment preflight an agent runs before signing on every
+  accept. Returns price, token, network, payee, the bound `resource`, a
+  PASS/CAUTION/BLOCK verdict, typed reasons, the checks that ran, and a
+  receipt. A pasted challenge (JSON or base64 header) needs no fetch. The
+  fetch is pinned to a validated public address (private/loopback refused,
+  no redirects, 64 KB cap, 6 s timeout) so a second DNS answer cannot rebind
+  it; the 402 is treated as untrusted data. `/inspect` has its own per-IP
+  rate bucket (20/min) so preflight traffic cannot spend its budget, and it
+  shares the in-flight cap. Covered by 13 unit tests plus three HTTP-level
+  checks (suite now 477). Linked from the nav, footer, sitemap, landing page,
+  and `llms.txt`; also listed in the plain-text root menu.
+- `GET /directory.json` and the `/directory` page: a watched list of public
+  x402 endpoints, re-inspected every 15 minutes. Each entry carries two
+  verdicts: `protocol` (is the challenge well-formed x402? network-agnostic)
+  and `sign` (should an agent on this instance's supported networks sign it?).
+  The watch diffs status, price, payee, network, and both verdicts on every
+  refresh and records the changes. Seed entries are data, not endorsements:
+  this service's own `/verify`, Naven's Robinhood Chain demo, and three
+  grug402 intentional edge cases (missing header, non-base64 header, legacy v1
+  header). History is process-local unless `VERIFY402_DIRECTORY_FILE` is set;
+  on a free host that file is ephemeral, so a restart starts a fresh history.
+  `/inspect` now also accepts the legacy v1 `X-PAYMENT` header. Covered by ten
+  unit tests plus two HTTP checks (suite now 477).
+
+- `GET /explorer` and the `/activity` page: a testnet explorer with two tables.
+  Payments are every ERC-20 transfer to the service payTo address on Base
+  Sepolia, read from a public Blockscout indexer with explorer links, a USDC
+  total, and `stale`/cache markers. Verdicts are the published findings rows
+  (pair, verdict, net/gross bps, pinned block) with a recompute link. The page
+  has a one-box search (tx hash, address, pair, verdict, date), a testnet
+  ribbon, and `armed: false` for mainnet until it is armed. Linked from the nav,
+  footer, sitemap, and `llms.txt`.
+- `GET /npm-stats` and a home-page counter: last-7-day and last-30-day npm
+  downloads for `verify402-mcp`, cached for an hour server-side. Labeled as
+  downloads, not unique agents.
+- `src/explorer.mjs` with exact fixed-point USDC formatting and normalization,
+  covered by eight offline tests (suite now 477).
+- Recovery audit (`npm run audit:recovery`, `test/recovery-concurrency.test.mjs`
+  and `test/recovery-crash.test.mjs`, `docs/recovery-audit.md`): three concurrent
+  copies through the real `@x402/express` middleware (3 handler runs and 3
+  settles without the claim; 1 and 1 with it, losers 409 not 402), plus a
+  ten-case crash matrix that SIGKILLs a process at each durable store write and
+  asserts one charge, one handler run, and no replay before promotion. Kill
+  points live in `src/recovery-store.mjs` behind `VERIFY402_CRASH_AT`, inert
+  unless the audit sets them.
+
+- `GET /usage/site`: aggregate HTML page views by path, referring host, and day
+  for the human site, plus the count of skipped crawlers/clients. No cookies, no
+  IP addresses, no query strings, no per-visitor identifiers, and no unique
+  visitor claim. Counts persist to `<RECOVERY_DB_PATH dir>/site-analytics.json`
+  (or `SITE_ANALYTICS_PATH`) and fall back to a process-local window that says
+  so. See `docs/site-analytics.md`.
+- `npm run check:durability` (`scripts/durability-cutover.mjs`): reads the live
+  `/health` and `/info` and reports whether settlement recovery is durable.
+  Exit 0 only when a restart replays a settled idempotency key instead of
+  charging again.
+- Boot warnings that name the two memory-only gaps (`RECOVERY_DB_PATH` unset,
+  analytics process-local) instead of leaving them to be discovered on
+  `/health`.
+
+### Security
+
+- `npm audit --omit=dev` is back to **0 vulnerabilities**. `@x402/*` moves from
+  2.28.0 to 2.30.0 (zod 4.6.7, clearing GHSA-mrhx-c7xc-m3w5), `viem` to
+  2.57.17, and the transitive `body-parser` to 2.4.0 (GHSA-27r3-jxmh-p828).
+- `@coinbase/cdp-sdk` is no longer a hard dependency. It was only reachable when
+  `MODE=mainnet` and `CDP_API_KEY_ID` were both set; that branch now imports it
+  lazily and fails closed with an install hint. The live testnet deployment
+  never took the branch, and the package's zod 3 tree was the last advisory in
+  the audit.
+
+### Changed
+
+- `DEPLOY.md` 3.2: one-time durable-recovery cutover checklist (paid instance,
+  1 GB disk at `/var/data`, `RECOVERY_DB_PATH`, verification, rollback).
+- `render.yaml` carries the disk configuration as a commented block, because a
+  free instance cannot attach one.
+- `README.md` endpoint table lists `/usage` and `/usage/site`.
+
+### Docs
+
+- Historical deploy guides moved to `docs/archive/` with an index; current
+  guidance stays in `DEPLOY.md`.
+- `video/`, `renders/`, and `*.mp4` are ignored so local media cannot enter git.
+
+### Release metadata
+
+- npm: `verify402-mcp@1.1.0` (dist-tag `latest`), published
+  `2026-11-12T23:54:12Z`, `gitHead
+  f5d5d9afb0fbd4206d3f294ad13b0cab9ed4f3b1`, shasum
+  `9680417149657a1d8d267e12a6bec42d9a268bed`; 12 files, 33.2 kB.
+- MCP Registry: `io.github.a32116150-ctrl/verify402-mcp` `1.1.0` active and
+  latest (`publishedAt: 2026-11-13T00:05:20.114959Z`).
+- GitHub: release `mcp-v1.1.0` published `2026-11-13T12:30:31Z`; the tag points
+  at `f5d5d9a`, the commit npm built from, not the later docs-only commits.
+- Render: `/info` reports `1.1.0`; free-only post-deploy check passed 29/29
+  against `https://vex402.online`.
+- Clean install from the public registry: 12 files, 33.2 kB, `npm audit` →
+  0 vulnerabilities.
+- Not part of this release: durable settlement recovery is still the dashboard
+  cutover in `DEPLOY.md` §3.1/3.2; the deployed service reports
+  `recoveryStore: memory-only`.
+- mcprush: listing `a32116150-ctrl/verify402-mcp` serves `1.1.0` with an
+  8-tool surface (was 6), released `2026-11-13`; the agent skill
+  `a32116150-ctrl/verify402-preflight` is live alongside it.
+
+## 1.0.9 — 2026-10-26
+
+`verify402-mcp@1.0.9` removes the `@x402` client SDK from the published bridge
+and implements the x402 v2 payer locally on `viem`. A clean install now reports
+zero audit findings.
+
+### Changed
+
+- Removed the `@x402/axios` and `@x402/evm` dependencies. They pulled a nested
+  `zod` 3.25.76 copy covered by
+  [GHSA-mrhx-c7xc-m3w5](https://github.com/advisories/GHSA-mrhx-c7xc-m3w5)
+  (memory-exhaustion DoS; every 3.x is in range, no patched 3.x exists), and npm
+  ignores `overrides` declared inside a dependency, so consumers could not clear
+  the banner. Upstream: x402-foundation/x402#3953.
+- Added `mcp-bridge/x402-client.mjs`: x402 v2 wire format
+  (`PAYMENT-REQUIRED` / `PAYMENT-SIGNATURE` / `PAYMENT-RESPONSE`), scheme
+  `exact`, EIP-3009 `transferWithAuthorization` with a random 32-byte nonce and
+  `validBefore = now + maxTimeoutSeconds`. It signs only after the unchanged
+  selection, policy, and tool-bound guard in `payment-policy.mjs` pass.
+- No change to tools, routes, prices, spend caps, network allowlists, payee
+  checks, settlement, or `/usage` labels.
+
+### Verified
+
+- Packed-tarball install: 123 packages, `npm audit` → **0 vulnerabilities**
+  (was 5–6 high).
+- 243/243 offline tests, discovery validation 35/35.
+- Live end-to-end paid call: 0.03 Base Sepolia testnet USDC settled;
+  transaction `0x2506afa3087f86cdf64072741be77d30d92613b74143118c5b5b72ca3c5825f7`
+  with an on-chain Transfer from the payer to the configured payee.
+
+### Release metadata
+
+- npm: `verify402-mcp@1.0.9`, `gitHead
+  60c7b6fcffb1c1d47561577b752d9c68b8ecba16`, shasum
+  `ce1742d7b187b6881a7ba396d978de61c935750c`.
+- MCP Registry: `1.0.9` active and latest
+  (`publishedAt: 2026-10-26T11:56:38.535824Z`).
+- GitHub: release `mcp-v1.0.9` published `2026-10-26T11:58:20Z`.
+- Render: `/info` reports `1.0.9`; free-only post-deploy check passed 29/29.
+- Clean install from the public registry: 123 packages, `npm audit` →
+  0 vulnerabilities, no `@x402` in the tree.
+
+## 1.0.8 — 2026-10-24
+
+`verify402-mcp@1.0.8` corrects payout provenance, adds an automatic x402
+preflight hook, and labels MCP traffic anonymously for usage attribution.
+
+### Changed
+
+- `policy.sellerPayoutWallets` is now a caller-supplied payout **allowlist**,
+  not a binding. A match adds `payee_payout_allowlist`; a mismatch is
+  **BLOCK** `payee_not_payout_wallet`. It never adds `payee_payout_binding`.
+  This closes the circular case where a list copied from the 402 could look
+  like independent provenance.
+- Added `policy.sellerPayoutManifest` and the `verify402/seller-payout@1`
+  manifest. The gate fetches a seller-signed manifest from a caller-pinned
+  public HTTPS origin outside the 402, verifies the EIP-191 signature, chain,
+  expiry, optional `expectedSigner`, and payee membership. Only a verified
+  match adds `payee_payout_binding`.
+- Payment responses now include `payeeBinding` with the provenance source,
+  match result, origin, signer, expiry, and manifest hash when applicable.
+  `payTo ownership / proven seller payout wallet` remains in `notChecked`;
+  a signed seller manifest is a binding, not independent proof of wallet
+  ownership.
+- `examples/preflight-guard.mjs` now exports `createX402PreflightHook()` and
+  `guardX402Payment()`. The hook maps an x402 v2 challenge to a payment intent,
+  blocks on `BLOCK`, refuses unacknowledged `CAUTION`, verifies the receipt,
+  and attaches it to `context.verify402` before signing.
+- The MCP bridge now sends one shared anonymous label,
+  `X-Verify402-Client: verify402-mcp/<version>`, on free and paid requests.
+  `/usage` reports the label source (declared header or User-Agent), caps the
+  number of distinct labels, and states that labels are self-declared and not
+  identities. `client-id.mjs` reads the version from `package.json`.
+
+### Release metadata
+
+- npm: `verify402-mcp@1.0.8`, `gitHead
+  d61fcfec31d5fd8d3884ccebe015d81821c0bac9`, shasum
+  `b892f4da0277466666ba0ef9ba13f33ed930f8be`.
+- MCP Registry: `1.0.8` active and latest
+  (`publishedAt: 2026-10-24T10:55:44.461072Z`).
+- GitHub: release `mcp-v1.0.8` published `2026-10-24T10:56:28Z`.
+- Render: `/info` reports `1.0.8`; free-only post-deploy check passed 29/29.
+
+## 1.0.7 — 2026-10-24
+
+`verify402-mcp@1.0.7` adds opt-in caller-supplied obligation state and seller
+payout binding to the free preflight gate.
+
+### Added
+
+- Optional caller-supplied obligation checks for payment intents.
+  `payment.idempotencyKey` plus `policy.obligation.settledKeys` returns
+  **BLOCK** `obligation_already_settled` for a re-presented key.
+  `policy.obligation.spentUsd` plus `grantUsd` returns **BLOCK**
+  `cumulative_spend_over_grant` when this payment would exceed the grant.
+  The gate does not persist this state; `notChecked` names the missing
+  cross-process ledger and any missing key/ledger input.
+- Optional `policy.sellerPayoutWallets` binds `payTo` to caller-supplied seller
+  payout addresses. A match adds `payee_payout_binding`; a mismatch is
+  **BLOCK** `payee_not_payout_wallet`. This is a binding, not independent proof
+  that the seller controls the wallet. **Superseded in Unreleased:** the
+  caller-supplied list is now an allowlist; only a verified
+  `policy.sellerPayoutManifest` adds `payee_payout_binding`.
+- The preflight receipt now binds `payment.idempotencyKey` and the normalized
+  obligation/payout policy through the existing intent hash.
+
+### Changed
+
+- `policy.allowedPayTo` matches now add `payee_allowlist` to `checked`.
+- MCP `preflight_gate` exposes `payment.idempotencyKey`,
+  `policy.obligation`, `policy.sellerPayoutWallets`, and the previously missing
+  `policy.allowedResourceHosts`.
+
+### Release metadata
+
+- npm: `verify402-mcp@1.0.7`, `gitHead
+  485256fda9072447ea4ae3b8a3420069c9efb765`.
+- MCP Registry: `1.0.7` active and latest
+  (`publishedAt: 2026-10-23T23:55:58.349764Z`).
+- GitHub: release `mcp-v1.0.7` published `2026-10-23T23:58:30Z` and is the
+  latest release.
+- Render: `/info` reports `1.0.7`; free-only post-deploy check passed 29/29.
+
+## 1.0.6 — 2026-10-23
+
+`verify402-mcp@1.0.6` is the release that points at the fixed public
+`/preflight` service. The MCP bridge itself still forwards the caller's
+`policy` object; the behavior change is server-side and applies to clients
+already using the public server.
+
+### Fixed
+
+- `payment.resource` is no longer accepted as an identity check just because it
+  parses as a URL. With no `policy.expectedResource` or
+  `policy.allowedResourceHosts`, the verdict is now **CAUTION**
+  `resource_identity_unverified`, and `notChecked` names `resource identity`.
+- `policy.allowedResourceHosts` binds the resource host. A matching host is a
+  checked `resource_host` and can PASS; a foreign host is **BLOCK**
+  `resource_host_not_allowed`. `policy.expectedResource` still performs exact
+  URL binding.
+- Unsupported but real networks such as `eip155:56` now say “not supported by
+  this instance” and list the supported networks, instead of calling the chain
+  unknown. The verdict remains **BLOCK**.
+
+### Scope disclosures
+
+- `notChecked` now names `payTo ownership / proven seller payout wallet` and
+  `obligation state (idempotency key, cumulative spend, grant balance)`.
+  Neither is implemented as a ledger or registry.
+
+### Release metadata
+
+- npm: `verify402-mcp@1.0.6`, `gitHead
+  954702575b9df58a08e8dbdac45d680ecf3cc365`.
+- MCP Registry: `1.0.6` active and latest
+  (`publishedAt: 2026-10-23T22:12:34.131712Z`).
+- GitHub: release `mcp-v1.0.6` is published and is the latest release.
+- Render: `/info` reports `1.0.6`; free-only post-deploy check passed 29/29.
+
+## 1.0.5 — 2026-10-22
+
+`verify402-mcp@1.0.5` is published to npm. The package is immutable; do not
+republish, overwrite, or unpublish it. No git tag, GitHub release, MCP Registry
+entry, or deployment is implied by the npm publication: the MCP Registry entry
+and the Render deployment remain pending and unverified. The previously
+published `verify402-mcp@1.0.4` remains immutable.
+
+### Security
+
+- The 402 challenge is now validated as a whole before any signature exists.
+  Every offered requirement must use an allowlisted EVM network, the
+  configured payee, the canonical USDC contract *and* the canonical EIP-712
+  domain for that network, pin EIP-3009, and stay inside the per-payment cap.
+  A challenge that also offers Base mainnet is refused as a whole instead of
+  being filtered down to the testnet option.
+- `maxTimeoutSeconds` is validated as a positive integer no greater than
+  `300`. The SDK signs `validBefore = now + maxTimeoutSeconds`, so a missing,
+  string, fractional, zero, negative, or unbounded value is now refused rather
+  than turned into a long-lived transferable authorization.
+- Signing extensions are closed by default. `extra.assetTransferMethod` must
+  be `eip3009`; `permit2` and any unvalidated `extra` key are refused. The
+  `extra` allowlist is `name`, `version`, `assetTransferMethod`, `paymentFlow`.
+- `VERIFY402_NETWORKS` is constrained to an explicit supported map
+  (`eip155:84532` Base Sepolia, `eip155:8453` Base mainnet). An arbitrary
+  `eip155:<chainId>` is refused instead of inferred from an asset the SDK
+  happens to recognise. Base mainnet stays an explicit opt-in; the default is
+  Base Sepolia testnet.
+- An explicitly empty `VERIFY402_NETWORKS` or `VERIFY402_PAY_TO` fails closed
+  instead of silently falling back to a default.
+- The 402 resource must be an exact `origin + path` match with no query, no
+  fragment, and no trailing-slash normalisation, and it must be one of the
+  configured paid routes.
+- The payer proves that the requirement it signs is the exact object the SDK
+  selected out of the 402 challenge. A substituted or mutated requirement is
+  refused, and the selected requirement is re-validated immediately before
+  signing.
+- The paid smoke reads the 402 challenge from the `PAYMENT-REQUIRED` header
+  only. The response body is never used to authorise or override a payment, and
+  the paid branch aborts before the payer is spawned when the header is
+  missing, malformed, or refused by the shared policy.
+- The paid smoke now requires genuine settlement evidence: a decodable
+  `PAYMENT-RESPONSE` receipt whose settlement succeeded, on the expected
+  network, with a transaction hash, and with a matching payer and amount when
+  the receipt reports them. A paid run without that evidence exits non-zero.
+
+### Release metadata
+
+- The release version is `1.0.5` consistently across the package manifest, the
+  lockfile, `server.json`, the service manifest, OpenAPI, the version module,
+  the site, and the release-consistency assertions.
+- The registry and manifest metadata now describe the real 1.0.5 default
+  (Base Sepolia testnet, `isRequired: false`) instead of claiming a
+  testnet default for the mainnet-defaulted 1.0.4 artifact.
+
+### Tests
+
+- New offline regression tests cover the `maxTimeoutSeconds` boundaries, the
+  installed bridge's real x402 client path with a fake signer (a refused
+  challenge never reaches the signer), the settlement-receipt gate, the
+  header-first 402 parser, and a cross-layer reconciliation that requires the
+  shared validator, the standalone payer, the installed bridge, and the paid
+  smoke to reach the same accept/refuse decision for the same fixture.
+
+## Unreleased — Hotfix 2 (2026-10-21)
+
+### Security
+
+- Idempotency keys are treated as bearer credentials. Weak, short, sequential,
+  or repeated-block keys are rejected with `400 weak_idempotency_key`; callers
+  are told to use `crypto.randomUUID()`. No key still means normal pay-per-call,
+  and raw keys are never logged.
+- The agent card and other public identity URLs no longer derive from `Host`.
+  `AGENT_URL` is required in mainnet; testnet/local requests are checked against
+  a host allowlist.
+- Security headers (`nosniff`, referrer policy, frame protection, and a
+  static-site CSP) are set on every response. `x-powered-by` is disabled.
+- CORS is now explicit: free read-only discovery allows any origin; paid routes
+  and free writes emit no wildcard.
+- `SIGTERM`/`SIGINT` stop new connections, drain in-flight requests up to
+  `SHUTDOWN_TIMEOUT_MS`, then exit `0`; a drain timeout force-closes and exits
+  `1`.
+
+### Correctness
+
+- One pinned block is threaded through `/safety`, `/verify`, `/route`,
+  `/quotecheck`, and `/depth`; the measurement block is canonical in the
+  evidence bundle.
+- `/depth` uses the token's real decimals. `impliedPriceBase` is the primary
+  field; `impliedPriceUsd` remains only as a deprecated alias for known
+  USD-stable bases.
+- `quoteV2` accepts a legitimate exact 1:1 output while retaining the structural
+  decode guard.
+- All paid-route numeric inputs are validated at the boundary with explicit
+  ranges, JSON numbers only, BigInt bps/ratios, and `uint256` raw limits. Bad
+  input returns a stable 400, never a 500.
+- x402 packages are pinned exactly to `2.28.0`; a real middleware test proves
+  settlement is cancelled for every response `>= 400`.
+
+### MCP bridge
+
+- Every paid MCP operation generates one `x-idempotency-key` and reuses it on
+  retry. Lost responses and timeouts are retried; `402` and `409` are not.
+  `recovery.replayed` is surfaced to the caller.
+- `paid-call.mjs` is included in the published package's `files` list. Without
+  that entry a future publish would ship `index.mjs` with a missing import.
+
+### Discovery and docs
+
+- OpenAPI, the service manifest, `/info`, runtime responses, and tests now share
+  TTL, preflight-concurrency, price, health/readiness-shape, and banned-claim
+  values. `/ready` is documented in OpenAPI.
+- Fixed stale discovery text: idempotency TTL, preflight concurrency, health
+  fields, 409 wording, responseHash scope, npm/registry “NOT YET” status, and
+  `DEPLOY.md`'s old test count. Docs point at `npm run test:counts` instead of
+  hardcoding counts.
+- Recovery and `/usage` are documented as process-local and lost on restart.
+  Mainnet startup now requires both `AGENT_URL` and `PREFLIGHT_SECRET`.
+- `.env.example` lists every discovered server, registration, test, and MCP
+  environment variable using placeholders only.
+- `DEPLOY_CHECKLIST.md` now covers a paid always-on host, rollback, and the
+  `npm run smoke` post-deploy checks.
+
+### Tests
+
+- Added regression coverage for key entropy, x402 settlement cancellation,
+  pinned blocks, depth decimals, MCP replay/no-double-payment, forged Host,
+  malformed paid inputs, exact 1:1 quotes, discovery parity, security headers,
+  CORS, and graceful shutdown.
+- Offline mode still uses one closed endpoint with no public fallback;
+  RPC-required tests are classified in `test/rpc-manifest.json`.
+
+### `verify402-mcp` 1.0.4 release status
+
+`verify402-mcp@1.0.4` was published to npm on 2026-10-21 and was the `latest`
+tag until `1.0.5`. Do not publish 1.0.4 again and do not overwrite 1.0.3; npm
+versions are immutable. The patch was backward compatible: no MCP tool names,
+inputs, or existing response fields were removed, and it added the missing
+`paid-call.mjs` package file.
+
+The focused repair pass reconciles local package and lockfile metadata, the
+service manifest, OpenAPI, `/info`, the `/mcp` page, and onboarding docs at
+`1.0.4`. It also changes the source-tree bridge default to Base Sepolia
+testnet and fails closed on a mainnet-only challenge. That runtime change is
+**not** in the immutable published `1.0.4` package: npm `1.0.4` still defaults
+to mainnet, so public-demo clients must set `VERIFY402_NETWORKS=eip155:84532`
+until a future patch release is approved. It does not push, tag, publish, or
+deploy. GitHub, the MCP Registry, and the live service remain on `1.0.3` until
+the human-only steps in `PUBLISH_STEPS_FOR_ME.md` are completed.

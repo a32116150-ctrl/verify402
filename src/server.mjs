@@ -10,51 +10,438 @@
 // account, no API key, no signup - which is the entire point, because the
 // intended caller is a program.
 
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { renderSiteHtml, withAssetFingerprint, withCanonical } from "./site-mode.mjs";
+const LANDING_HTML = readFileSync(new URL("./landing.html", import.meta.url), "utf8");
+const SITE_DIR = fileURLToPath(new URL("./site", import.meta.url));
+
 import express from "express";
 import { paymentMiddleware, x402ResourceServer } from "@x402/express";
+import { FacilitatorClient } from "./facilitator-client.mjs";
 import { ExactEvmScheme } from "@x402/evm/exact/server";
 import { ExactSvmScheme } from "@x402/svm/exact/server";
-import { HTTPFacilitatorClient } from "@x402/core/server";
 import { declareDiscoveryExtension } from "@x402/extensions/bazaar";
 
-import { measureRoundTrip, clientFor } from "./measure.mjs";
+import { measureRoundTrip, clientFor, readinessProbe, readinessClientFor, isHardQuoteFailure } from "./measure.mjs";
 import { preTradeCheck } from "./safety.mjs";
-import { fairQuoteCheck, bestRouteBook } from "./quotecheck.mjs";
-import { CHAINS, DEFAULT_SIZE, chain, resolveToken } from "./config.mjs";
+import { fairQuoteCheck, bestRouteBook, parseRawPositive } from "./quotecheck.mjs";
+import { depthProfile } from "./depth.mjs";
+import { enableHostedMode } from "./license.mjs";
+import { CHAINS, DEFAULT_SIZE, chain, readinessChain, resolveToken, requireChainId } from "./config.mjs";
+import {
+  PRICE_DEFAULTS,
+  PREFLIGHT_RATE_PER_MIN,
+  FREE_GATE_DAILY_LIMIT,
+  FREE_API_KEY_DAILY_LIMIT,
+  INSPECT_RATE_PER_MIN,
+  FINDINGS_RATE_PER_MIN,
+  PREFLIGHT_MAX_IN_FLIGHT,
+  SHUTDOWN_TIMEOUT_MS_DEFAULT,
+} from "./contract.mjs";
+import {
+  IDEMPOTENCY_TTL_MS, IDEMPOTENCY_MAX_REPLAYS,
+  recordSettlement, lookupRecovery,
+  reserveRecovery, releaseRecovery,
+  evidenceBundle, requestHash, expiredRecoveryInfo,
+  validateIdempotencyKey,
+  reconciliationState, reconcileStagedEntry, reconcileStagedOnStartup,
+  setRecoveryPaymentChecker, recoveryStoreHealth,
+  sha256Hex, canonicalStable, recoveryObservability,
+} from "./recovery.mjs";
+import { RecoveryStoreError, closeRecoveryStore } from "./recovery-store.mjs";
+import { setDurableRecovery, statePersistence, recoveryDoesNotGuarantee, persistenceLine } from "./recovery-persistence.mjs";
+import {
+  initSiteAnalytics, siteAnalyticsMiddleware, siteAnalyticsSnapshot, flushSiteAnalytics,
+} from "./site-analytics.mjs";
+import { buildExplorerPayload, fetchExplorer } from "./explorer.mjs";
+import {
+  createSettlementIndex,
+  fetchTestnetStats,
+  summarizeSettlements,
+  DEFAULT_OPERATOR_ADDRESSES,
+} from "./settlement-stats.mjs";
+import { inspectUrl, inspectPaymentChallenge, extractChallenge, InspectError } from "./inspect.mjs";
+import { loadBoard, renderBoardPage, renderBadgeSvg, badgeFor, BOARD_SOURCE } from "./board.mjs";
+import { renderFindingPage, findingPermalink } from "./finding-page.mjs";
+import { cdpAuthHeaders, isCdpFacilitatorUrl } from "./cdp-auth.mjs";
+import { createDirectory } from "./directory.mjs";
+import {
+  preflight, verifyReceipt, PreflightError,
+  PREFLIGHT_SPEC, RECEIPT_SPEC, RECEIPT_SECRET_SOURCE,
+  DEFAULT_TTL_SECONDS, MAX_TTL_SECONDS,
+} from "./preflight.mjs";
+import { registerRecoveryHooks } from "./settlement-recovery.mjs";
+import { buildOpenapi } from "./openapi.mjs";
+import { buildServiceManifest } from "./manifest.mjs";
+import { RELEASE_VERSION } from "./version.mjs";
+import {
+  buildAgentDescription,
+  buildInfoHosting,
+  buildLlmsText,
+  buildPreflightPaymentExample,
+  buildPreflightPaymentNetworks,
+  buildPreflightRequestExample,
+  DEMO_BASE_URL,
+  paymentRail,
+} from "./payment-mode.mjs";
+import { parseAgentUrl, parseTrustedHosts, resolvePublicBaseUrl } from "./public-url.mjs";
+import { recordPreflight, recordInspectHost, recordInspectOutcome, recordToolPing, usageSnapshot, initUsage, flushUsage, PINGABLE_TOOLS } from "./usage.mjs";
+import {
+  HttpError, requestIdMiddleware, sendPublicError, sendClassifiedError, classifyError,
+} from "./errors.mjs";
+import { paidHonesty, honestFailure, unconfiguredVenues, isPaidRoute } from "./honesty.mjs";
+import { installConsoleRedaction, logInfo, logWarn, logError } from "./log.mjs";
+import { randomUUID } from "node:crypto";
+
+// Install before any startup/config log can run. This also wraps direct
+// console.* calls made by dependencies or future code.
+installConsoleRedaction();
 
 // ---------------------------------------------------------------- config ----
 const MODE = process.env.X402_MODE === "mainnet" ? "mainnet" : "testnet";
 
-const NETWORKS =
-  MODE === "mainnet"
-    ? { evm: "eip155:8453", svm: "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp", label: "Base mainnet / Solana mainnet" }
-    : { evm: "eip155:84532", svm: "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1", label: "Base Sepolia / Solana devnet" };
+// The agent card is an identity document, not a reflection of the request.
+// Mainnet must pin its public origin; every other mode falls back to a Host
+// allowlist, and an unlisted Host is rejected rather than echoed.
+const AGENT_URL_CHECK = parseAgentUrl(process.env.AGENT_URL);
+if (!AGENT_URL_CHECK.ok) {
+  logError(`REFUSING TO START: ${AGENT_URL_CHECK.error}.`);
+  process.exit(1);
+}
+const AGENT_URL = AGENT_URL_CHECK.value;
+// The configured public origin for runtime metadata. Mainnet requires an
+// explicit AGENT_URL; testnet falls back to the documented demo origin.
+const PUBLIC_BASE_URL = AGENT_URL || DEMO_BASE_URL;
+const RAIL = paymentRail(MODE);
+if (MODE === "mainnet" && !AGENT_URL) {
+  logError("REFUSING TO START: X402_MODE=mainnet requires AGENT_URL (e.g. https://verify402.example). The agent card must not derive its identity from the Host header.");
+  process.exit(1);
+}
+const TRUSTED_HOSTS = parseTrustedHosts(process.env.TRUSTED_HOSTS, { agentUrl: AGENT_URL });
+if (MODE === "mainnet" && !String(process.env.PREFLIGHT_SECRET || "").trim()) {
+  logError("REFUSING TO START: X402_MODE=mainnet requires PREFLIGHT_SECRET, so preflight receipts remain verifiable across restarts and instances.");
+  process.exit(1);
+}
+
+// Durable settlement recovery store: explicit, persistent path. Mainnet
+// requires it (guard below); other modes default to memory-only unless set —
+// see DEPLOY.md. Recovery.mjs performs the actual open + startup load.
+const RECOVERY_DB_PATH = process.env.RECOVERY_DB_PATH || null;
+
+if (MODE === "mainnet") {
+  const alwaysOnConfirmed =
+    String(process.env.MAINNET_ALWAYS_ON_CONFIRMED || "").trim().toLowerCase() === "yes" ||
+    String(process.env.REQUIRE_ALWAYS_ON || "").trim() === "1";
+  if (!alwaysOnConfirmed) {
+    logError("REFUSING TO START: X402_MODE=mainnet requires MAINNET_ALWAYS_ON_CONFIRMED=yes (or REQUIRE_ALWAYS_ON=1). Free hosts spin down; mainnet requires an always-on paid instance.");
+    process.exit(1);
+  }
+  if (String(process.env.ALLOW_MAINNET_ON_FREE_TIER || "").trim()) {
+    logError("REFUSING TO START: ALLOW_MAINNET_ON_FREE_TIER must not be set. Mainnet is not allowed on a free tier.");
+    process.exit(1);
+  }
+  // Mainnet money records must survive a restart. The durable recovery store
+  // (src/recovery-store.mjs, bootstrapped in recovery.mjs) is required,
+  // explicitly configured, and must have opened cleanly. There is no implicit
+  // default path: an unset variable refuses at boot.
+  if (!RECOVERY_DB_PATH) {
+    logError("REFUSING TO START: X402_MODE=mainnet requires RECOVERY_DB_PATH — a persistent, writable path for the settlement recovery store. Without it a restart could charge a caller twice. There is no default; do not point mainnet at a development path such as .data.");
+    process.exit(1);
+  }
+}
+
+// The recovery store opened (or failed) during recovery.mjs module bootstrap.
+// Mainnet refuses to run without a healthy durable store; other modes stay up
+// (the free gate must serve) but fail closed on paid routes until it is
+// healthy again — 503 recovery_unavailable.
+if (RECOVERY_DB_PATH && MODE === "mainnet") {
+  const health = recoveryStoreHealth();
+  if (!health.enabled || !health.healthy) {
+    logError(`REFUSING TO START: RECOVERY_DB_PATH=${RECOVERY_DB_PATH} did not open as a healthy SQLite store: ${health.lastError ?? "unknown error"}. Mainnet cannot run without durable settlement recovery.`);
+    process.exit(1);
+  }
+}
+
+// Publish the persistence mode this process actually runs in. Without this,
+// /info, /openapi.json and the manifest would keep describing the default
+// memory-only behaviour even on an instance with a healthy durable store.
+{
+  const rs = recoveryStoreHealth();
+  setDurableRecovery(rs.enabled && rs.healthy);
+}
+
+if (!RECOVERY_DB_PATH) {
+  // Testnet default. Say it out loud at boot: /health already reports
+  // "memory-only", but a deploy log should not leave the operator guessing.
+  logWarn("RECOVERY_DB_PATH is not set: paid idempotency records are process-local, so a restart or deploy can charge a retried call again. See DEPLOY.md 3.1.");
+}
+
+// Aggregate page-view counting. It shares the durable disk with the recovery
+// store when one is configured, so a funnel number survives a deploy instead of
+// resetting every time a free instance spins down. Without a durable path it
+// stays in memory and snapshot() says so.
+const SITE_ANALYTICS = initSiteAnalytics();
+const USAGE_INIT = initUsage();
+if (!SITE_ANALYTICS.enabled) {
+  logWarn("site analytics are process-local (no SITE_ANALYTICS_PATH or RECOVERY_DB_PATH): page-view counts reset on restart or deploy");
+}
+
+const NETWORKS = { evm: RAIL.evmNetwork, svm: RAIL.svmNetwork, label: RAIL.label };
 
 const PAY_TO_EVM = process.env.PAY_TO_EVM || "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb";
 const PAY_TO_SVM = process.env.PAY_TO_SVM || "BdcsYodhwWUhLTuL5FJ3m8D4u4wVy8KMw7vAvPVucAbJ";
-const PRICE = process.env.PRICE || "$0.05";
+const PRICE = process.env.PRICE || PRICE_DEFAULTS.verify;
 // The pre-trade gate is the product most agents will call before every swap;
 // it is priced above /verify because it does strictly more work:
-// contract facts, market data, a USD-sized sell probe and a full round trip.
-const SAFETY_PRICE = process.env.SAFETY_PRICE || "$0.10";
+// contract facts, market data, a quote-based sellability check and a full round trip.
+const SAFETY_PRICE = process.env.SAFETY_PRICE || PRICE_DEFAULTS.safety;
 // Fairness audit: cheap enough to run before every single swap.
-const ROUTE_PRICE = process.env.ROUTE_PRICE || "$0.03";
-const QUOTECHECK_PRICE = process.env.QUOTECHECK_PRICE || "$0.05";
+const ROUTE_PRICE = process.env.ROUTE_PRICE || PRICE_DEFAULTS.route;
+const QUOTECHECK_PRICE = process.env.QUOTECHECK_PRICE || PRICE_DEFAULTS.quotecheck;
+// Sizing: the decision that happens BEFORE every trade after a route is known.
+const DEPTH_PRICE = process.env.DEPTH_PRICE || PRICE_DEFAULTS.depth;
+const ASSURE_PRICE = process.env.ASSURE_PRICE || PRICE_DEFAULTS.assure;
+
+// `/assure` is only honest when the bundle costs no more than buying its checks
+// one by one. These parse the same constants the rest of the file uses, so a
+// price change cannot silently reintroduce the old "$0.10 for one $0.02 check"
+// overcharge. The gate runs before any chain work; because the x402 middleware
+// cancels settlement on a >=400 response, a rejected bundle is never charged.
+const usdNumber = (price) => Number(String(price).replace(/[^0-9.]/g, ""));
+const CHECK_STANDALONE_USD = Object.freeze({
+  safety: usdNumber(SAFETY_PRICE),
+  route: usdNumber(ROUTE_PRICE),
+  quotecheck: usdNumber(QUOTECHECK_PRICE),
+  depth: usdNumber(DEPTH_PRICE),
+});
+const ASSURE_PRICE_USD = usdNumber(ASSURE_PRICE);
+const CHECK_KEYS = Object.freeze(["safety", "route", "quotecheck", "depth"]);
+const ASSURANCE_SPEC = "verify402/assurance@1";
+const ASSURANCE_RECOMPUTE =
+  "sha256 (hex, prefixed with 'sha256:') of the canonical JSON of {spec, chainId, chainName, blockNumber, checked, notChecked, sections, verdict}; canonical = keys sorted recursively, no whitespace";
+
+// Shared by the pre-paywall guard and the handler so the two cannot drift:
+// null when the bundle is worth at least its own price, otherwise the typed
+// 400 to send. Kept pure so it can run before any chain or payment work.
+function assurePriceProblem(body, { requireChecks = true } = {}) {
+  const requestedChecks = CHECK_KEYS.filter((k) => body && body[k] && typeof body[k] === "object");
+  if (!requestedChecks.length) {
+    // Discovery probes (CDP Bazaar, bazaar-health) POST an empty body and must
+    // still receive the 402 challenge. Only the handler, after payment, treats
+    // an empty bundle as a typed 400; settlement is cancelled, so it is free.
+    if (!requireChecks) return null;
+    return {
+      code: "no_paid_checks",
+      message: "at least one of safety, route, quotecheck, or depth must be supplied",
+      extra: { standalonePricesUsd: CHECK_STANDALONE_USD, assurePriceUsd: ASSURE_PRICE_USD },
+    };
+  }
+  const separateUsd = requestedChecks.reduce((sum, k) => sum + CHECK_STANDALONE_USD[k], 0);
+  if (separateUsd + 1e-9 >= ASSURE_PRICE_USD) return null;
+  return {
+    code: "insufficient_checks",
+    message: `/assure costs $${ASSURE_PRICE_USD.toFixed(2)}, but the checks you supplied cost $${separateUsd.toFixed(2)} separately. Add checks until the bundle is worth at least $${ASSURE_PRICE_USD.toFixed(2)}, or call the checks directly and pay less.`,
+    extra: {
+      supplied: requestedChecks,
+      suppliedSeparateUsd: Number(separateUsd.toFixed(2)),
+      assurePriceUsd: ASSURE_PRICE_USD,
+      standalonePricesUsd: CHECK_STANDALONE_USD,
+    },
+  };
+}
+
+// JSON-safe deep copy used only for hashing: BigInt becomes its decimal string
+// (the wire form) and undefined object keys are dropped, exactly like
+// JSON.stringify. Canonical hashing over this mirrors the JSON a caller
+// receives, so `assurance.evidenceHash` can be recomputed from the response.
+function toJsonSafe(value) {
+  if (typeof value === "bigint") return value.toString();
+  if (Array.isArray(value)) return value.map((v) => (v === undefined ? null : toJsonSafe(v)));
+  if (value && typeof value === "object") {
+    const out = {};
+    for (const [k, v] of Object.entries(value)) {
+      if (v === undefined || typeof v === "function" || typeof v === "symbol") continue;
+      out[k] = toJsonSafe(v);
+    }
+    return out;
+  }
+  return typeof value === "function" || typeof value === "symbol" ? undefined : value;
+}
+
+// Live paid-usage counters. Mainnet keeps a small persisted index of USDC
+// transfers to the payee and extends it from the launch block; testnet is read
+// from public Blockscout. The operator list is what lets the counter separate
+// "our own tests" from "someone else paid" without guessing.
+const OPERATOR_ADDRESSES = (process.env.OPERATOR_ADDRESSES || DEFAULT_OPERATOR_ADDRESSES.join(","))
+  .split(",")
+  .map((value) => value.trim())
+  .filter(Boolean);
+const SETTLEMENT_INDEX_PATH = process.env.SETTLEMENT_INDEX_PATH === "off"
+  ? null
+  : process.env.SETTLEMENT_INDEX_PATH
+    || (RECOVERY_DB_PATH ? join(dirname(RECOVERY_DB_PATH), "settlement-index.json") : null);
+const settlementIndex = MODE === "mainnet"
+  ? createSettlementIndex({
+      payTo: PAY_TO_EVM,
+      rpcUrl: process.env.BASE_RPC_URL || "https://base-rpc.publicnode.com",
+      filePath: SETTLEMENT_INDEX_PATH,
+      startBlock: Number(process.env.SETTLEMENT_INDEX_START_BLOCK || 59_000_000),
+    })
+  : null;
 
 // The public x402.org facilitator is testnet-only. Mainnet needs a real one.
+// Mainnet: Coinbase's CDP facilitator. CDP_API_KEY_ID / CDP_API_KEY_SECRET are
+// read from the environment at boot. The client is ./facilitator-client.mjs —
+// an HTTPFacilitatorClient wired to throw FacilitatorResponseError, so a
+// facilitator failure reaches the caller as 502 with the facilitator's own message
+// instead of an opaque 500. It is a
+// *settlement service*: it never holds the money — signed payments go
+// straight to the payTo addresses.
+// The public x402.org facilitator is testnet-only. Mainnet options:
+//   * a keyless hosted facilitator via FACILITATOR_URL — verified live:
+//     PayAI (https://facilitator.payai.network) serves x402 v2 exact on
+//     Base mainnet AND Solana mainnet, no account, no region lock.
+//   * Coinbase CDP — used automatically when CDP_API_KEY_ID/SECRET are set
+//     (region-restricted availability; kept as the upgrade path).
+// The guard stands: no configured mainnet facilitator, no server.
 const FACILITATOR_URL =
   process.env.FACILITATOR_URL || (MODE === "mainnet" ? "" : "https://x402.org/facilitator");
 
 if (MODE === "mainnet" && !FACILITATOR_URL) {
-  console.error("REFUSING TO START: mainnet mode needs FACILITATOR_URL (e.g. https://api.cdp.coinbase.com/platform/v2/x402).");
+  logError("REFUSING TO START: mainnet mode needs FACILITATOR_URL (e.g. https://facilitator.payai.network) or a CDP API key.");
   process.exit(1);
 }
+// A CDP facilitator URL without keys would settle nothing (every verify 401s).
+// Rather than take the service down if an environment was left half-configured,
+// fall back to the public testnet facilitator and say so loudly in the logs and
+// in /health — a working service that admits it is not indexed beats an outage.
+// Mainnet keeps the hard guard: no facilitator, no server.
+const CDP_MISSING_KEYS =
+  (isCdpFacilitatorUrl(FACILITATOR_URL) ||
+    (MODE === "mainnet" && Boolean(process.env.CDP_API_KEY_ID))) &&
+  !(process.env.CDP_API_KEY_ID && process.env.CDP_API_KEY_SECRET);
+if (CDP_MISSING_KEYS) {
+  const missing = [
+    process.env.CDP_API_KEY_ID ? null : "CDP_API_KEY_ID",
+    process.env.CDP_API_KEY_SECRET ? null : "CDP_API_KEY_SECRET",
+  ].filter(Boolean).join(" + ");
+  if (MODE === "mainnet") {
+    logError(`REFUSING TO START: the CDP facilitator needs ${missing}.`);
+    process.exit(1);
+  }
+  logError(
+    `CDP facilitator selected without ${missing}; falling back to https://x402.org/facilitator. ` +
+      "Nothing will be indexed into the Bazaar until both keys are set.",
+  );
+}
+const USE_CDP_FACILITATOR = !CDP_MISSING_KEYS &&
+  (isCdpFacilitatorUrl(FACILITATOR_URL) || (MODE === "mainnet" && Boolean(process.env.CDP_API_KEY_ID)));
+const EFFECTIVE_FACILITATOR_URL = CDP_MISSING_KEYS && MODE !== "mainnet"
+  ? "https://x402.org/facilitator"
+  : FACILITATOR_URL;
 
 const PORT = Number(process.env.PORT || 4021);
+const SHUTDOWN_TIMEOUT_MS = (() => {
+  const parsed = Number(process.env.SHUTDOWN_TIMEOUT_MS || SHUTDOWN_TIMEOUT_MS_DEFAULT);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : SHUTDOWN_TIMEOUT_MS_DEFAULT;
+})();
 
 // ----------------------------------------------------------------- app -----
 const app = express();
+// We run behind a proxy (Render): without this, req.protocol reports http and
+// the agent-registration file would advertise the wrong scheme.
+app.set("trust proxy", 1);
+app.disable("x-powered-by");
+
+// Security headers are set before any route so static HTML, JSON discovery,
+// paid responses, and errors all carry the same baseline.
+const CONTENT_SECURITY_POLICY = [
+  "default-src 'self'",
+  "script-src 'self'",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src https://fonts.gstatic.com",
+  "img-src 'self' data: https://mcprush.com",
+  "connect-src 'self'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+].join("; ");
+app.use((_req, res, next) => {
+  res.set("X-Content-Type-Options", "nosniff");
+  res.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.set("X-Frame-Options", "DENY");
+  res.set("Content-Security-Policy", CONTENT_SECURITY_POLICY);
+  next();
+});
+
+// The public Base Sepolia demo at verify402.onrender.com was retired on
+// 2026-11-19. It served the same mainnet analysis for testnet USDC — free
+// product, no reason for an agent to ever pay. In testnet mode this instance
+// now redirects humans to the mainnet service and refuses everything else,
+// before any route runs. Local development and the offline test harness set
+// TESTNET_DEMO_ENABLED=1 to boot the full sandbox.
+const DEMO_RETIRED = MODE === "testnet" && process.env.TESTNET_DEMO_ENABLED !== "1";
+if (DEMO_RETIRED) {
+  const MAINNET = "https://vex402.online";
+  app.use((req, res) => {
+    if (req.method === "GET" || req.method === "HEAD") {
+      return res.redirect(301, `${MAINNET}${req.originalUrl || "/"}`);
+    }
+    return res.status(410).json({
+      ok: false,
+      error: "demo_retired",
+      message: "The public testnet demo was retired on 2026-11-19. The product is the mainnet service at https://vex402.online — free preflight gate at /preflight, paid checks from $0.03 in real USDC.",
+      redirect: MAINNET,
+    });
+  });
+}
+
+// CORS is deliberately narrow. Free, read-only discovery may be fetched by a
+// browser from any origin; paid and state-changing routes emit no ACAO at all.
+// Agents call paid routes server-side, so a wildcard there would only widen the
+// attack surface without enabling a supported client.
+const DISCOVERY_GET_PATHS = new Set([
+  "/",
+  "/health",
+  "/ready",
+  "/info",
+  "/usage",
+  "/usage/site",
+  "/stats",
+  "/findings",
+  "/explorer",
+  "/npm-stats",
+  "/openapi.json",
+  "/llms.txt",
+  "/robots.txt",
+  "/sitemap.xml",
+  "/.well-known/verify402.json",
+  "/.well-known/x402",
+  "/.well-known/agent-card.json",
+  "/.well-known/agent-registration.json",
+  "/.well-known/402index-verify.txt",
+]);
+app.use((req, res, next) => {
+  if (!DISCOVERY_GET_PATHS.has(req.path)) return next();
+  if (req.method !== "GET" && req.method !== "HEAD" && req.method !== "OPTIONS") return next();
+  res.set("Access-Control-Allow-Origin", "*");
+  res.set("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS");
+  res.set("Access-Control-Allow-Headers", "Accept, Content-Type");
+  res.set("Access-Control-Max-Age", "86400");
+  if (req.method === "OPTIONS") return res.status(204).end();
+  next();
+});
+
+// The request id is assigned before the body is parsed: a malformed body is
+// still a request, and its error needs the same id every other reply carries.
+app.use(requestIdMiddleware);
 app.use(express.json({ limit: "64kb" }));
+// Count HTML page views (never paid calls, assets, or JSON discovery). The
+// middleware only listens for response completion, so it cannot delay a reply.
+app.use(siteAnalyticsMiddleware);
 
 // Same price on both rails, so an agent can pay on whichever chain it already
 // holds funds - and a Solana agent never has to bridge.
@@ -63,14 +450,489 @@ const accepts = (price) => [
   { scheme: "exact", price, network: NETWORKS.svm, payTo: PAY_TO_SVM },
 ];
 
-const facilitatorClient = new HTTPFacilitatorClient({ url: FACILITATOR_URL });
+// Testnet: the free x402.org facilitator.
+// Mainnet: CDP when CDP_API_KEY_ID is present; otherwise the plain HTTP
+// facilitator named by FACILITATOR_URL (e.g. PayAI, keyless). Same interface,
+// zero changes downstream.
+//
+// The CDP SDK is loaded on demand and is not a hard dependency: it carries a
+// separate zod 3 tree with an open advisory, and the live testnet deployment
+// never takes this branch. Operators who enable CDP install it explicitly.
+// CDP auth is minted locally (src/cdp-auth.mjs): the SDK that would do it also
+// pulls a high-severity advisory in a transitive validator, which is not worth
+// carrying for one JWT.
+const facilitatorClient = USE_CDP_FACILITATOR
+  ? new FacilitatorClient({ url: EFFECTIVE_FACILITATOR_URL, createAuthHeaders: cdpAuthHeaders() })
+  : new FacilitatorClient({ url: EFFECTIVE_FACILITATOR_URL });
 
 // Local development escape hatch. Loud on purpose: a service that believes it
 // is charging when it is not is worse than one that is plainly down.
 const BYPASS_PAYMENT = process.env.BYPASS_PAYMENT === "1";
 if (BYPASS_PAYMENT) {
-  console.warn("\n  *** BYPASS_PAYMENT=1 : paid routes are UNPROTECTED. Local testing only. ***\n");
+  logWarn("\n  *** BYPASS_PAYMENT=1 : paid routes are UNPROTECTED. Local testing only. ***\n");
 }
+if (BYPASS_PAYMENT && MODE === "mainnet") {
+  logError("REFUSING TO START: BYPASS_PAYMENT=1 is local-only and cannot be used with X402_MODE=mainnet.");
+  process.exit(1);
+}
+// Fault injection (crash points, forced rail-read failures) exists for the
+// offline audit and the testnet staging reproduction. Never on mainnet.
+if (MODE === "mainnet" && (process.env.VERIFY402_CRASH_AT || process.env.VERIFY402_STAGING_RAIL_FAULT)) {
+  logError("REFUSING TO START: VERIFY402_CRASH_AT / VERIFY402_STAGING_RAIL_FAULT are staging-only and cannot be used with X402_MODE=mainnet.");
+  process.exit(1);
+}
+
+// This process is the hosted service: its paid calls pass the x402 paywall at
+// the HTTP boundary, so the local-engine license gate does not apply here.
+enableHostedMode();
+
+// ---------------------------------------------------------------- recovery --
+// The recovery contract (see src/recovery.mjs): a caller that sends
+// x-idempotency-key on its first call can replay that settled verdict —
+// same bytes, no second charge — within the TTL, capped at MAX_REPLAYS.
+// This middleware runs BEFORE the payment wall, which is the entire point:
+// by the time paymentMiddleware inspects the request, a legitimate replay has
+// already been answered.
+//
+// C-1: the key is the only credential. No payer scope is derived from
+// `x-payment` / `payment-signature`; those headers are unverified at this
+// layer. The settled record's verified payer comes only from the facilitator.
+app.use((req, res, next) => {
+  const rawKey = String(req.get("x-idempotency-key") || req.get("idempotency-key") || "").trim();
+  // Scope: paid routes only. Recovery exists to protect a payment, so a free
+  // POST (/inspect, /usage/ping) must never be rejected or 409'd because of a
+  // key header — on a free route the header is meaningless, and answering 409
+  // would invent a payment obligation that does not exist. /preflight and
+  // /.well-known are excluded for the same reason (preflight issues its own
+  // receipt and is free).
+  if (rawKey && req.method === "POST" && isPaidRoute(req.path)) {
+    // The key is a bearer credential. A short, repeated, or sequential value is
+    // guessable, so reject it before it can be bound to an operation.
+    const keyCheck = validateIdempotencyKey(rawKey);
+    if (!keyCheck.ok) {
+      const h = honestFailure(req.path, null);
+      res.set("Cache-Control", "no-store");
+      return res.status(400).json({
+        error: "weak_idempotency_key",
+        code: "weak_idempotency_key",
+        message: keyCheck.message,
+        requestId: req.requestId,
+        ...h,
+      });
+    }
+    const key = keyCheck.key;
+    // A key is bound to one operation's canonical request content. Reuse with
+    // different content is a conflict, rejected before payment — never a wrong
+    // answer and never a free read.
+    const rh = requestHash(req.path, req.body || {});
+    const found = lookupRecovery({ key, requestHash: rh });
+    if (found?.conflict) {
+      const h = honestFailure(req.path, null);
+      res.set("Cache-Control", "no-store");
+      return res.status(409).json({
+        error: "recovery_conflict",
+        code: "request_mismatch",
+        conflict: found.conflict,
+        message: "this idempotency key belongs to a different request; use a new key for a new operation",
+        requestId: req.requestId,
+        ...h,
+      });
+    }
+    if (found?.hit) {
+      const hit = found.hit;
+      return res.json({
+        ...hit.payload,
+        recovery: {
+          replayed: true,
+          responseHash: hit.responseHash,
+          replays: hit.replays,
+          ttlMinutes: IDEMPOTENCY_TTL_MS / 60000,
+          maxReplays: IDEMPOTENCY_MAX_REPLAYS,
+        },
+      });
+    }
+    if (found?.pending === "payment_unresolved") {
+      // The record resolved to `stuck`: the outcome can be proven on neither
+      // side. 503 is deliberate and does NOT carry Retry-After — the block is
+      // per-operation, not time-based, and must not be read as service health.
+      const h = honestFailure(req.path, null);
+      res.set("Cache-Control", "no-store");
+      return res.status(503).json({
+        error: "payment_unresolved",
+        code: "payment_unresolved",
+        conflict: "payment_unresolved",
+        retry: "same_payment",
+        reason: found.reason || "settlement outcome could not be proven",
+        message: "this operation's settlement outcome cannot be proven; the record is retained and this key stays blocked. Do not pay again with a new key: this is one stuck operation, not an unhealthy service.",
+        requestId: req.requestId,
+        ...h,
+      });
+    }
+    if (found?.pending) {
+      if (found.pending === "reconciliation_required") {
+        // Past the stage TTL with the settle outcome unknown: the payment may
+        // already have settled. Never expire into "charge again" without an
+        // on-chain check — reconcile (EIP-3009 authorizationState), and until
+        // it resolves answer 409 (still resolvable); once it is unprovable the
+        // entry becomes `stuck` and the next request gets 503 payment_unresolved.
+        const state = reconciliationState(found.operationId);
+        // A failed attempt must be retried too: otherwise one transient rail
+        // error pins the key at 409 forever and it can never escalate to
+        // `stuck`. reconcileStagedEntry() itself refuses concurrent attempts.
+        if (state === "unknown" || state === "failed") {
+          void reconcileStagedEntry(found.operationId).catch(() => {});
+        }
+        const h = honestFailure(req.path, null);
+        if (state === "stuck") {
+          res.set("Cache-Control", "no-store");
+          return res.status(503).json({
+            error: "payment_unresolved",
+            code: "payment_unresolved",
+            conflict: "payment_unresolved",
+            retry: "same_payment",
+            reason: "settlement outcome could not be proven",
+            message: "this operation's settlement outcome cannot be proven; the record is retained and this key stays blocked. Do not pay again with a new key: this is one stuck operation, not an unhealthy service.",
+            requestId: req.requestId,
+            ...h,
+          });
+        }
+        res.set("Cache-Control", "no-store");
+        res.set("Retry-After", "1");
+        return res.status(409).json({
+          error: "recovery_conflict",
+          code: "settlement_pending",
+          conflict: "operation_in_flight",
+          retry: "same_payment",
+          reason: state === "failed" ? "reconciliation_failed" : "payment_in_progress",
+          message: "a staged payment for this idempotency key has an unresolved settle outcome; it is being reconciled on-chain and will resolve to a replay or a fresh payment — retry the SAME payment after it resolves, do not pay again",
+          requestId: req.requestId,
+          ...h,
+        });
+      }
+      const h = honestFailure(req.path, null);
+      res.set("Cache-Control", "no-store");
+      res.set("Retry-After", "1");
+      return res.status(409).json({
+        error: "recovery_conflict",
+        code: "settlement_pending",
+        conflict: "operation_in_flight",
+        retry: "same_payment",
+        reason: "payment_in_progress",
+        message: "this idempotency key is still being processed; retry the SAME payment after the settlement resolves",
+        requestId: req.requestId,
+        ...h,
+      });
+    }
+    // Reserve before the paywall. Without this, two concurrent requests with
+    // the same key both reach the handler and both pay. The reservation is
+    // process-local; a restart loses it, exactly like the recovery records.
+    const reservation = reserveRecovery({ key, requestHash: rh });
+    if (reservation?.conflict) {
+      const h = honestFailure(req.path, null);
+      res.set("Cache-Control", "no-store");
+      return res.status(409).json({
+        error: "recovery_conflict",
+        code: "request_mismatch",
+        conflict: reservation.conflict,
+        message: "this idempotency key belongs to a different request; use a new key for a new operation",
+        requestId: req.requestId,
+        ...h,
+      });
+    }
+    if (reservation?.pending) {
+      const h = honestFailure(req.path, null);
+      res.set("Cache-Control", "no-store");
+      res.set("Retry-After", "1");
+      return res.status(409).json({
+        error: "recovery_conflict",
+        code: "operation_in_flight",
+        conflict: "operation_in_flight",
+        message: "this idempotency key is already processing another request; retry after it completes",
+        requestId: req.requestId,
+        ...h,
+      });
+    }
+    if (reservation?.token) {
+      req.recoveryReservation = { key, token: reservation.token };
+      const release = () => releaseRecovery(key, reservation.token);
+      res.once("finish", release);
+      res.once("close", release);
+    }
+    // Post-window typed signal: expired verdicts leave a tombstone; a retry
+    // now re-measures with the paywall re-armed (no free measures), and the
+    // response below will carry recovery.remeasured instead of being silent.
+    req.expiredRecovery = expiredRecoveryInfo(key);
+    req.idempotencyKey = key;
+    req.recoveryRequestHash = rh;
+  }
+  next();
+});
+
+// How to reconcile this payment on-chain if the process restarts before the
+// settle hook fires: decode the (middleware-verified) x-payment envelope and
+// keep the EIP-3009 authorization identity — payer `from`, `nonce`, and the
+// `validBefore` settle deadline. Nothing here is trusted for AUTHORIZATION
+// (C-1 stands: the key is the only credential); the payer/nonce are used only
+// as arguments to a token-contract view call whose answer is ground truth.
+// Returns null when the header is absent (bypass mode) or undecodable; those
+// records fail closed on reconciliation instead. Both rails we accept are
+// covered: EVM by the EIP-3009 authorization, Solana by the signed transaction.
+//
+// The header name matters: x402 v2 clients (including verify402's own bridge)
+// send PAYMENT-SIGNATURE, and the SDK's express adapter reads that first. An
+// earlier version read only the legacy x-payment header, so every v2 caller
+// staged a record with no payment reference — permanently unreconcilable after
+// a lost settle outcome.
+// Exported for the boundary test: this is the only place the settlement rail's
+// identity is read, and a wrong header name here silently disables durable
+// recovery for every real client.
+export function paymentRefFromRequest(req, core) {
+  try {
+    const chainId = Number(core?.chainId);
+    const token = CHAINS[chainId]?.tokens?.USDC?.address ?? null;
+    const raw = req.get("payment-signature") || req.get("x-payment");
+    if (!raw) return null;
+    const env = JSON.parse(Buffer.from(raw, "base64").toString("utf8"));
+    const auth = env?.payload?.authorization ?? env?.authorization ?? null;
+    const network = env?.x402?.network ?? env?.network ?? (Number.isFinite(chainId) ? `eip155:${chainId}` : null);
+    // Identity for the settlement-attempt boundary. `proofHash` is the hash
+    // of the exact header bytes (what the onBeforeSettle hook can see without
+    // re-serializing), `envHash` of the decoded envelope. Used only to match a
+    // settlement attempt to the record it belongs to.
+    const proofHash = sha256Hex(raw);
+    const envHash = sha256Hex(canonicalStable(env));
+
+    // Solana exact: the signed transaction is this operation's unique identity.
+    // Detected by payload shape (no EIP-3009 authorization, a signed
+    // transaction), not by `network` — clients are not required to echo the
+    // network inside the proof envelope.
+    const tx = env?.payload?.transaction;
+    if (typeof tx === "string" && tx && typeof auth?.nonce !== "string") {
+      return {
+        chainId: Number.isFinite(chainId) ? chainId : null,
+        token: null,
+        payer: typeof env?.payload?.from === "string" ? env.payload.from : null,
+        nonce: null,
+        validBefore: null,
+        network,
+        txHash: sha256Hex(tx),
+        proofHash,
+        envHash,
+      };
+    }
+
+    const nonce = auth?.nonce;
+    const payer = auth?.from;
+    if (!token || typeof payer !== "string" || !/^0x[0-9a-fA-F]{40}$/.test(payer)) return null;
+    if (typeof nonce !== "string" || !/^0x[0-9a-fA-F]{64}$/.test(nonce)) return null;
+    const validBefore = Number(auth?.validBefore);
+    return {
+      chainId,
+      token,
+      payer,
+      nonce,
+      validBefore: Number.isFinite(validBefore) ? validBefore : null,
+      network,
+      proofHash,
+      envHash,
+    };
+  } catch {
+    return null;
+  }
+}
+
+// EIP-3009 reconciliation: the token contract itself is the ground truth for
+// "did this payment settle". USDC (the settlement asset on every route) exposes
+// authorizationState(authorizer, nonce) as a free view call. The readiness
+// client is reused: short timeout, no retries, no new dependency.
+const EIP3009_AUTHORIZATION_STATE_ABI = [{
+  name: "authorizationState",
+  type: "function",
+  stateMutability: "view",
+  inputs: [
+    { name: "authorizer", type: "address" },
+    { name: "nonce", type: "bytes32" },
+  ],
+  outputs: [{ name: "used", type: "bool" }],
+}];
+// Staging-only fault injection for the public 503 reproduction (x402#4293):
+// with VERIFY402_STAGING_RAIL_FAULT=1 every reconciliation read of the rail
+// fails, so a record whose settlement was dispatched cannot be proven on
+// either side and escalates to `stuck` -> 503 payment_unresolved. Inert unless
+// set; the server refuses to start with it in mainnet mode.
+const STAGING_RAIL_FAULT = process.env.VERIFY402_STAGING_RAIL_FAULT === "1";
+if (STAGING_RAIL_FAULT) {
+  logWarn("\n  *** VERIFY402_STAGING_RAIL_FAULT=1 : recovery rail reads are forced to fail. Staging only. ***\n");
+}
+setRecoveryPaymentChecker(async ({ chainId, token, payer, nonce }) => {
+  if (STAGING_RAIL_FAULT) throw new Error("staging rail fault injected (VERIFY402_STAGING_RAIL_FAULT=1)");
+  readinessChain(chainId);
+  const client = readinessClientFor(chainId);
+  const used = await client.readContract({
+    address: token,
+    abi: EIP3009_AUTHORIZATION_STATE_ABI,
+    functionName: "authorizationState",
+    args: [payer, nonce],
+  });
+  return Boolean(used);
+});
+
+// Shared exit path for the paid handlers: attach the honesty contract and the
+// standard evidence bundle, remember the settlement under the caller's
+// idempotency key (if provided), then send. `core` is the handler's result;
+// cache/elapsedMs may already be on it.
+function emitPaid(req, res, core) {
+  const body = req.body || {};
+  // `_detail` is provider detail retained for server-side logging only. It must
+  // never cross the public boundary (H-6).
+  const clean = { ...core };
+  delete clean._detail;
+  const honesty = paidHonesty(req.path, {
+    checked: Array.isArray(clean.checked) ? clean.checked : [],
+    notChecked: Array.isArray(clean.notChecked) ? clean.notChecked : [],
+  });
+  // The bundle is computed over the body as it will be sent, honesty arrays
+  // included. Computing it over `clean` first (the old order) made the
+  // advertised responseHash disagree with the documented recompute recipe for
+  // every handler that did not already return checked/notChecked.
+  const withHonesty = { ...clean, ...honesty };
+  const bundle = evidenceBundle({
+    route: req.path,
+    body,
+    pinnedBlock: clean?.blockNumber ?? clean?.cache?.pinnedBlock ?? null,
+    payload: withHonesty,
+  });
+  const full = { ...withHonesty, evidence_bundle: bundle };
+  if (req.expiredRecovery) {
+    // Typed signal (prismdeadlines): the caller can branch on this instead of
+    // guessing whether it paid twice for one answer. The paywall re-armed for
+    // this call; the flag makes the double charge visible, and hands back the
+    // hash of the verdict they lost so the two measurements can be compared.
+    full.recovery = {
+      remeasured: true,
+      previousResponseHash: req.expiredRecovery.previousResponseHash,
+      expiredAt: req.expiredRecovery.expiredAt,
+      note: "an earlier settlement of this operation existed but its replay window expired; this is a fresh measurement charged normally",
+    };
+  }
+  if (req.idempotencyKey) {
+    // STAGED, not settled: the x402 onAfterSettle hook (above) promotes this
+    // record only after the settlement actually succeeds, and only for this
+    // operation identity. In local bypass mode there is no settlement to wait
+    // for, so the record promotes immediately (same loud warning as the
+    // paywall bypass: local testing only).
+    //
+    // WRITE-AHEAD: with RECOVERY_DB_PATH set, recordSettlement journals the
+    // staged record to SQLite (WAL, synchronous=FULL) right here — before the
+    // middleware submits the settlement after this handler returns. If that
+    // journaling fails, fail closed: no verdict, no settlement, 503.
+    try {
+      recordSettlement(req.idempotencyKey, full, null, {
+        settledNow: BYPASS_PAYMENT,
+        requestHash: bundle.requestHash,
+        paymentRef: paymentRefFromRequest(req, clean),
+      });
+    } catch (e) {
+      if (e instanceof RecoveryStoreError) {
+        return paidFail(req, res, 503, "recovery_unavailable",
+          "the settlement journal is unavailable; no verdict was issued and no payment should be made for this request",
+          { log: e });
+      }
+      throw e;
+    }
+  }
+  res.json(full);
+}
+
+// A typed failure on a paid route. Never echoes the provider's message; logs
+// it under the request id. Both honesty arrays are always present (H-1).
+function paidFail(req, res, status, code, message, { kind = null, log = null, extra = {} } = {}) {
+  const honesty = honestFailure(req.path, kind);
+  return sendPublicError(req, res, status, code, message, {
+    log,
+    extra: { ...honesty, ...extra },
+  });
+}
+
+// One boundary for caller mistakes. Every 400 on a paid route goes through
+// here, so the public shape and the stable code cannot drift route by route.
+function badRequest(req, res, code, message, extra = {}) {
+  return paidFail(req, res, 400, code, message, { extra });
+}
+
+// Numeric inputs are JSON numbers, not strings/booleans/arrays. An omitted
+// optional field may take a default; an explicit null or wrong type is a 400.
+function numberField(value, name, {
+  min = -Infinity,
+  max = Infinity,
+  exclusiveMin = false,
+  integer = false,
+  fallback = undefined,
+} = {}) {
+  const v = value === undefined ? fallback : value;
+  const finite = typeof v === "number" && Number.isFinite(v);
+  const inRange = finite && (exclusiveMin ? v > min : v >= min) && v <= max;
+  if (!finite || !inRange || (integer && !Number.isInteger(v))) {
+    const left = exclusiveMin ? `> ${min}` : `>= ${min}`;
+    const right = Number.isFinite(max) ? ` and <= ${max}` : "";
+    throw new HttpError(400, `invalid_${name}`, `${name} must be a JSON number ${left}${right}${integer ? " (integer)" : ""}`);
+  }
+  return v;
+}
+
+// Percent inputs are converted to integer basis points before any comparison.
+// The boundary stays a JSON number for the public API; downstream ratios are
+// BigInt, so a tolerance is never a lossy float.
+function percentToBps(value, name, { max = 100 } = {}) {
+  const pct = numberField(value, name, { min: 0, max, exclusiveMin: true });
+  const bps = BigInt(Math.round(pct * 100));
+  if (bps <= 0n || bps > BigInt(Math.round(max * 100))) {
+    throw new HttpError(400, `invalid_${name}`, `${name} must be a percentage in (0, ${max}] with at least 0.01% precision`);
+  }
+  return bps;
+}
+
+// Map a typed engine result to an HTTP failure. Only transport/decode are hard
+// failures; no_pool/revert are market facts and stay 200 with ok:false.
+function hardFailureResponse(req, res, result) {
+  if (!result || result.ok !== false || !isHardQuoteFailure(result)) return false;
+  const code = result.kind === "decode" ? "internal_error" : "rpc_unavailable";
+  const message = result.kind === "decode"
+    ? "the provider returned data this service could not decode; no verdict was issued"
+    : "the chain could not be read; no verdict was issued and no settlement should occur";
+  paidFail(req, res, 503, code, message, {
+    kind: result.kind,
+    log: result._detail ?? result.kind,
+    extra: { quote_status: "failed", unavailable_reason: result.kind },
+  });
+  return true;
+}
+
+function paidCatch(req, res, e) {
+  if (e instanceof HttpError) {
+    if (e.status === 400) return badRequest(req, res, e.code, e.message);
+    return paidFail(req, res, e.status, e.code, e.message);
+  }
+  const c = classifyError(e);
+  const kind = c.code === "rpc_unavailable" || c.code === "rpc_rate_limited" ? "transport" : null;
+  return paidFail(req, res, c.status, c.code, c.message, { kind, log: e });
+}
+
+// Reject an under-valued /assure bundle BEFORE the payment wall, so a caller
+// never signs a $0.10 payment for a request the handler will refuse. An empty
+// body is left to the paywall: discovery probes must still see the 402.
+// A 400 cancels settlement anyway, but refusing before the 402 is the honest
+// order: no challenge, no signature, no charge. Same pure helper as the
+// handler, so the two cannot drift. Trailing slashes are normalised because
+// Express routing is non-strict.
+app.use((req, res, next) => {
+  if (req.method !== "POST") return next();
+  const path = req.path.length > 1 ? req.path.replace(/\/+$/, "") : req.path;
+  if (path !== "/assure") return next();
+  const problem = assurePriceProblem(req.body, { requireChecks: false });
+  if (!problem) return next();
+  return badRequest(req, res, problem.code, problem.message, problem.extra);
+});
 
 // Middleware stays compiled but UNMOUNTED in bypass mode: one loud warning,
 // no protection, and no possibility of the two configs disagreeing.
@@ -79,12 +941,34 @@ if (!BYPASS_PAYMENT) app.use(
     {
       "POST /verify": {
         accepts: accepts(PRICE),
+        iconUrl: "https://vex402.online/logo-400.png",
         description:
-          "Measure whether a cross-venue arbitrage round trip is profitable right now, using Uniswap's canonical QuoterV2 and the venues' own V2 routers, at one pinned block. Returns a verdict with full evidence.",
+          "Measure whether a cross-venue arbitrage round trip is actually profitable at one pinned block, using Uniswap QuoterV2 and each venue's own router. Returns an edge or no_edge verdict with full quoted evidence as a supporting check, not a forecast.",
         mimeType: "application/json",
         extensions: {
           ...declareDiscoveryExtension({
+            method: "POST",
+            bodyType: "json",
             input: { chainId: 1, target: "WETH", base: "USDC", size: 100000 },
+            output: {
+              example: {
+                ok: true,
+                verdict: "no_edge",
+                chainId: 1,
+                chainName: "ethereum",
+                blockNumber: 21000000,
+                base: { symbol: "USDC", address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", decimals: 6 },
+                target: { symbol: "WETH", address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", decimals: 18 },
+                size: { raw: "100000000000", human: 100000 },
+                buy: { venue: "uniswap-v3", kind: "v3", feeBps: 5, amountOutRaw: "30000000000000000000", amountOutHuman: 30 },
+                sell: { venue: "sushiswap", kind: "v2", feeBps: 30, amountOutRaw: "99700000000", amountOutHuman: 99700 },
+                gross: { raw: "-300000000", human: -300, bps: -30 },
+                costs: { gasUsd: 2.4, flashLoanPremiumBps: 5, totalRaw: "1200000000" },
+                net: { raw: "-1500000000", human: -1500, bps: -150 },
+                method: { quoting: "V3 via Uniswap QuoterV2; V2 via router getAmountsOut", blockPinned: true, sameVenueRoundTrip: false },
+                caveats: ["Measures a cross-venue round trip at one block. It is not a forecast, and it is not financial advice."],
+              },
+            },
             inputSchema: {
               properties: {
                 chainId: { type: "integer", description: "1 Ethereum, 42161 Arbitrum, 8453 Base" },
@@ -100,13 +984,26 @@ if (!BYPASS_PAYMENT) app.use(
       },
       "POST /safety": {
         accepts: accepts(SAFETY_PRICE),
+        iconUrl: "https://vex402.online/logo-400.png",
         description:
-          "Pre-trade gate for an agent about to buy a token. Verdict TRUST / CAUTION / AVOID with evidence: contract facts from the live chain, market liquidity and scam signals, a USD-sized sell probe (the honeypot question, answered against every venue's own router, direct and WETH-routed), a full round-trip cost at your intended size, and an offered-price sanity check against chain consensus.",
+          "Token safety check for AI agents before they swap: quote-based sellability, round-trip cost, TRUST / CAUTION / AVOID. $0.02 per call with a free pre-signing gate included; it never executes a transfer, and transfer restrictions and unconfigured venues stay in notChecked, so this is not a honeypot proof.",
         mimeType: "application/json",
         extensions: {
           ...declareDiscoveryExtension({
+            method: "POST",
+            bodyType: "json",
             input: { chainId: 1, tokenAddress: "0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE", intendedUsd: 500 },
-            output: { verdict: "TRUST", reasons: [], notes: [], checked: ["contract", "market", "sellability", "liquidity"] },
+            output: {
+              example: {
+                ok: true,
+                verdict: "TRUST",
+                token: { input: "0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE", address: "0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE", chainId: 1, chainName: "ethereum" },
+                reasons: [],
+                notes: ["liquidity and a quote-based sellability check both cleared"],
+                checked: ["contract", "market", "quote-based sellability", "liquidity"],
+                evidence: { canSell: true, probedInUsd: 500, venuesThatQuote: ["uniswap-v3", "sushiswap"] },
+              },
+            },
             inputSchema: {
               properties: {
                 chainId: { type: "integer", description: "1 Ethereum, 42161 Arbitrum, 8453 Base" },
@@ -122,12 +1019,31 @@ if (!BYPASS_PAYMENT) app.use(
       },
       "POST /route": {
         accepts: accepts(ROUTE_PRICE),
+        iconUrl: "https://vex402.online/logo-400.png",
         description:
-          "The full execution book right now: every venue (direct and WETH-routed) quoting tokenIn -> tokenOut at one pinned block, best first. Verdict-free evidence; pair it with /quotecheck to audit someone else's number.",
+          "See every configured venue quoting your pair at one pinned block, ranked best first, including direct and WETH-routed quotes. Supporting execution evidence; aggregators and unconfigured DEXs are excluded, and nothing is simulated.",
         mimeType: "application/json",
         extensions: {
           ...declareDiscoveryExtension({
+            method: "POST",
+            bodyType: "json",
             input: { chainId: 1, tokenIn: "USDC", tokenOut: "WETH", amountIn: "1000000000" },
+            output: {
+              example: {
+                ok: true,
+                chainId: 1,
+                chainName: "ethereum",
+                blockNumber: 21000000,
+                amountIn: "1000000000",
+                best: { venue: "uniswap-v3", kind: "v3", amountOut: "326259300000000000" },
+                book: [
+                  { venue: "uniswap-v3", kind: "v3", amountOut: "326259300000000000" },
+                  { venue: "sushiswap", kind: "v2", amountOut: "325001000000000000" },
+                ],
+                unavailable: ["pancakeswap-v2"],
+                note: null,
+              },
+            },
             inputSchema: {
               properties: {
                 chainId: { type: "integer", description: "1 Ethereum, 42161 Arbitrum, 8453 Base" },
@@ -140,18 +1056,119 @@ if (!BYPASS_PAYMENT) app.use(
           }),
         },
       },
-      "POST /quotecheck": {
-        accepts: accepts(QUOTECHECK_PRICE),
+      "POST /depth": {
+        accepts: accepts(DEPTH_PRICE),
+        iconUrl: "https://vex402.online/logo-400.png",
         description:
-          "Fairness audit of a quote someone else gave you. Returns fair / overpaying / too_good_to_be_true / unknown, with the full venue book at one pinned block as evidence. Ask this BEFORE signing any swap whose number you did not produce yourself.",
+          "Measure how much you can trade before round-trip costs eat the plan: entry, immediate exit, impact and cost across a ladder of sizes at one pinned block. Returns the largest size under your tolerance as a supporting sizing check.",
         mimeType: "application/json",
         extensions: {
           ...declareDiscoveryExtension({
+            method: "POST",
+            bodyType: "json",
+            input: { chainId: 1, tokenAddress: "WETH", baseSymbol: "USDC", sizesUsd: [100, 1000, 10000, 100000] },
+            output: {
+              example: {
+                ok: true,
+                token: { address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", base: "USDC", chainId: 1 },
+                blockNumber: 21000000,
+                maxRoundTripPct: 1,
+                capacityUsd: 10000,
+                ladder: [
+                  { sizeUsd: 100, fillable: true, buyVenue: "uniswap-v3", sellVenue: "uniswap-v3", gotTokens: 0.03, impliedPriceBase: 3300.12, impliedPriceUsd: 3300.12, impactPct: 0.01, roundTripCostPct: 0.12, underTolerance: true },
+                  { sizeUsd: 10000, fillable: true, buyVenue: "uniswap-v3", sellVenue: "sushiswap", gotTokens: 3.02, impliedPriceBase: 3310.4, impliedPriceUsd: 3310.4, impactPct: 0.3, roundTripCostPct: 0.9, underTolerance: true },
+                  { sizeUsd: 100000, fillable: false, buyVenue: null, sellVenue: null, gotTokens: null, impliedPriceBase: null, impliedPriceUsd: null, impactPct: null, roundTripCostPct: null, underTolerance: false },
+                ],
+                checked: ["target token facts", "dexscreener liquidity", "entry via best route", "immediate exit of the exact position"],
+                notes: ["largest size with round-trip cost <= 1%: $10,000"],
+              },
+            },
+            inputSchema: {
+              properties: {
+                chainId: { type: "integer", description: "1 Ethereum, 42161 Arbitrum, 8453 Base" },
+                tokenAddress: { type: "string", description: "Target token symbol or 0x address (the thing you plan to buy)" },
+                baseSymbol: { type: "string", description: "What you pay with, default USDC" },
+                sizesUsd: { type: "array", description: "Ladder of sizes in USD, max 6, each <= 1,000,000", items: { type: "number" } },
+                maxRoundTripPct: { type: "number", description: "Your cost tolerance, default 1%" },
+              },
+              required: ["tokenAddress"],
+            },
+          }),
+        },
+      },
+      "POST /assure": {
+        accepts: accepts(ASSURE_PRICE),
+        iconUrl: "https://vex402.online/logo-400.png",
+        description:
+          "One evidence bundle at one pinned block from whichever paid checks you supply: safety, route, quotecheck and depth. Accepted only when those checks cost at least $0.10 separately (parts total $0.12), so the bundle is cheaper than buying them one by one; unsupplied checks stay in notChecked.",
+        mimeType: "application/json",
+        extensions: {
+          ...declareDiscoveryExtension({
+            method: "POST",
+            bodyType: "json",
+            input: {
+              chainId: 8453,
+              safety: { tokenAddress: "0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE", intendedUsd: 500 },
+              route: { tokenIn: "USDC", tokenOut: "WETH", amountIn: "500000000" },
+              quotecheck: { tokenIn: "USDC", tokenOut: "WETH", amountIn: "500000000", quotedOut: "150000000000000000" },
+              depth: { tokenAddress: "0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE", sizesUsd: [100, 500, 1000] },
+            },
+            output: {
+              example: {
+                ok: true,
+                spec: "verify402/assurance@1",
+                chainId: 8453,
+                chainName: "Base",
+                blockNumber: 21000000,
+                verdict: "CAUTION",
+                sections: { safety: { verdict: "CAUTION" }, route: { quote_status: "ok" } },
+                checked: ["safety:...", "route:book", "quotecheck:fairness", "depth:capacity"],
+                notChecked: ["route: venues not configured on this chain"],
+                assurance: { spec: "verify402/assurance@1", evidenceHash: "sha256:...", recompute: "..." },
+              },
+            },
+            inputSchema: {
+              properties: {
+                chainId: { type: "integer", description: "1 Ethereum, 42161 Arbitrum, 8453 Base" },
+                safety: { type: "object", description: "Token sellability facts (tokenAddress, intendedUsd, offeredPriceUsd, baseSymbol)" },
+                route: { type: "object", description: "Best route at one pinned block (tokenIn, tokenOut, amountIn raw units)" },
+                quotecheck: { type: "object", description: "Fairness audit of a quote (tokenIn, tokenOut, amountIn, quotedOut, venueClaimed)" },
+                depth: { type: "object", description: "Position sizing ladder (tokenAddress, baseSymbol, sizesUsd, maxRoundTripPct)" },
+              },
+              required: ["chainId"],
+            },
+          }),
+        },
+      },
+      "POST /quotecheck": {
+        accepts: accepts(QUOTECHECK_PRICE),
+        iconUrl: "https://vex402.online/logo-400.png",
+        description:
+          "Audit a third-party swap quote against the full configured venue book at one pinned block before you sign. Returns fair / overpaying / too_good_to_be_true as a supporting check, never a verdict on the counterparty.",
+        mimeType: "application/json",
+        extensions: {
+          ...declareDiscoveryExtension({
+            method: "POST",
+            bodyType: "json",
             input: {
               chainId: 1, tokenIn: "USDC", tokenOut: "WETH",
               amountIn: "1000000000",
               quotedOut: "326259300000000000",
               venueClaimed: "some-router.example",
+            },
+            output: {
+              example: {
+                ok: true,
+                verdict: "fair",
+                offered: { quotedOut: "326259300000000000", claimedVenue: "some-router.example", claimedChain: null },
+                blockNumber: 21000000,
+                amountIn: "1000000000",
+                book: [{ venue: "uniswap-v3", kind: "v3", amountOut: "326259300000000000" }],
+                unavailable: [],
+                evidence: { chainBest: { venue: "uniswap-v3", amountOut: "326259300000000000" }, ratioVsChainBest: 1.0 },
+                checked: ["parsed offer", "quoted the book at the pinned block", "compared offer to chain best"],
+                notes: ["the offer is inside the noise band of what the chain pays right now"],
+              },
             },
             inputSchema: {
               properties: {
@@ -168,9 +1185,12 @@ if (!BYPASS_PAYMENT) app.use(
         },
       },
     },
-    new x402ResourceServer(facilitatorClient)
-      .register(NETWORKS.evm, new ExactEvmScheme())
-      .register(NETWORKS.svm, new ExactSvmScheme()),
+    registerRecoveryHooks(
+      new x402ResourceServer(facilitatorClient)
+        .register(NETWORKS.evm, new ExactEvmScheme())
+        .register(NETWORKS.svm, new ExactSvmScheme()),
+      { logError },
+    ),
   ),
 );
 
@@ -179,19 +1199,11 @@ if (!BYPASS_PAYMENT) app.use(
 // indexers actually look for when they meet an unfamiliar service: the A2A
 // agent card and the ERC-8004 domain-verification file. Both derive from one
 // registration file so they can never disagree.
-function registrationFile(req) {
-  const base = process.env.AGENT_URL || `${req.protocol}://${req.get("host")}`;
+function registrationFile(base) {
   const file = {
     type: "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
     name: "verify402",
-    description:
-      "Machine-payable truth service for AI agents. POST /verify measures whether a claimed " +
-      "cross-venue arbitrage is real (pinned-block quotes from Uniswap QuoterV2 and each " +
-      "router's own math; the honest answer is usually no_edge). POST /safety is a pre-trade " +
-      "gate: contract facts, market liquidity and scam signals, a USD-sized sell probe across " +
-      "every venue, round-trip cost at the intended size, and phantom-price detection. " +
-      "TRUST / CAUTION / AVOID with evidence. Per-call x402 payment, USDC on Base or Solana. " +
-      "No profitability is ever promised; the service reports what it measured.",
+    description: buildAgentDescription(MODE),
     image: `${base}/agent-icon.svg`,
     services: [
       { name: "web", endpoint: base },
@@ -199,10 +1211,23 @@ function registrationFile(req) {
       { name: "x402", endpoint: `${base}/safety`, version: "x402" },
       { name: "x402", endpoint: `${base}/route`, version: "x402" },
       { name: "x402", endpoint: `${base}/quotecheck`, version: "x402" },
+      { name: "x402", endpoint: `${base}/depth`, version: "x402" },
     ],
     x402Support: true,
     active: true,
     supportedTrust: ["reputation"],
+    url: base,
+    defaultInputModes: ["application/json"],
+    defaultOutputModes: ["application/json"],
+    capabilities: { transports: ["http"], x402: { supported: true, network: NETWORKS.evm, asset: "USDC" } },
+    skills: [
+      { id: "preflight", name: "preflight", description: "Free pre-signing gate for any x402 payment request or chain transaction: PASS / CAUTION / BLOCK, typed reasons, checked/notChecked, and a short-lived receipt bound to the exact intent and a fresh pinned block. Call before signing." },
+      { id: "verify", name: "verify", description: "Cross-venue arbitrage truth check: pinned-block quotes from both sides, three-state verdict (edge / no_edge / no_edge_costs_ate_it), evidence included." },
+      { id: "safety", name: "safety", description: "Pre-trade gate: contract facts, market liquidity, scam signals, a quote-based sellability check, round-trip cost at the intended size, TRUST / CAUTION / AVOID with evidence and notChecked transfer restrictions." },
+      { id: "route", name: "route", description: "What the chain would actually pay for a swap: best route plus every quoted venue at a USD size." },
+      { id: "quotecheck", name: "quotecheck", description: "Audit a quote someone else gave you: fair / overpaying / too_good_to_be_true, re-measured at a pinned block." },
+      { id: "depth", name: "depth", description: "Position sizing: how big can I trade before the round trip eats me? Capacity ladder across sizes." },
+    ],
   };
   // Once the owner mints the identity (npm run register), set AGENT_ID and
   // IDENTITY_REGISTRY and the file binds back to the on-chain agent.
@@ -216,87 +1241,1176 @@ function registrationFile(req) {
 }
 
 app.get(["/.well-known/agent-registration.json", "/.well-known/agent-card.json"], (req, res) => {
+  const identity = resolvePublicBaseUrl(req, { agentUrl: AGENT_URL, trustedHosts: TRUSTED_HOSTS });
+  if (!identity.ok) {
+    res.set("Cache-Control", "no-store");
+    return res.status(400).json({
+      error: identity.code,
+      code: identity.code,
+      message: identity.message,
+      requestId: req.requestId,
+    });
+  }
   res.set("Cache-Control", "public, max-age=3600");
-  res.json(registrationFile(req));
+  res.json(registrationFile(identity.base));
+});
+
+// 402 Index domain-ownership proof. The value is the public SHA-256 hash of a
+// private claim token, by design; publishing it lets us edit our own 402 Index
+// listings. The token itself stays in ~/.config/verify402/ (mode 600).
+app.get("/.well-known/402index-verify.txt", (_req, res) => {
+  res.type("text/plain").send("83f1c578d78d2b9645a4640bcc77939bdfbae84a86b7798d4d753e18085f3b14");
+});
+
+// Browsers and discovery crawlers both ask for /favicon.ico before anything
+// else. Serve the PNG mark at that exact path.
+app.get("/favicon.ico", (_req, res) => {
+  res.type("image/png");
+  res.sendFile(`${SITE_DIR}/favicon.png`);
+});
+
+// Crawler policy. Any agent is welcome; the service is public and free to read.
+app.get("/robots.txt", (_req, res) => {
+  res.type("text/plain").send(
+    [
+      "User-agent: *",
+      "Allow: /",
+      "",
+      "User-agent: GPTBot",
+      "Allow: /",
+      "",
+      "User-agent: ClaudeBot",
+      "Allow: /",
+      "",
+      "User-agent: PerplexityBot",
+      "Allow: /",
+      "",
+      "Sitemap: https://vex402.online/sitemap.xml",
+      "# Machine-readable discovery contracts:",
+      "# Canonical service manifest: /.well-known/verify402.json",
+      "# Plain-text contract: /llms.txt",
+      "# OpenAPI specification: /openapi.json",
+      "# x402 capability discovery: /.well-known/x402",
+      "",
+    ].join("\n"),
+  );
+});
+
+// XML sitemap of all public documentation and landing pages for web crawlers.
+app.get("/sitemap.xml", (_req, res) => {
+  res.set("Cache-Control", "public, max-age=3600");
+  res.type("application/xml").send(
+    `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://vex402.online/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://vex402.online/start</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://vex402.online/docs</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://vex402.online/ai-agent-payment-security</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://vex402.online/x402-endpoint-checker</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://vex402.online/verify-usdc-payment-request</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://vex402.online/token-approval-checker</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://vex402.online/agent-payment-receipt</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://vex402.online/crypto-arbitrage-verification</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://vex402.online/mcp</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://vex402.online/preflight</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://vex402.online/inspect</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://vex402.online/board</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
+  <url><loc>https://vex402.online/directory</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://vex402.online/testers</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://vex402.online/audit</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://vex402.online/blog</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://vex402.online/blog/x402-attack-shapes</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://vex402.online/blog/verify402-is-live-on-mainnet</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://vex402.online/blog/what-a-pre-signing-gate-can-check</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://vex402.online/blog/a-receipt-is-a-falsifiable-record</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://vex402.online/blog/three-intents-never-sign-unchecked</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://vex402.online/blog/check-an-x402-endpoint-before-you-pay</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://vex402.online/blog/pre-signing-gate-in-an-mcp-agent</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://vex402.online/blog/verify402-mcp-1-1-0</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://vex402.online/blog/verify402-mcp-1-1-1</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://vex402.online/blog/verify402-cdp-facilitator-testnet</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://vex402.online/blog/what-public-402s-look-like</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://vex402.online/checks</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://vex402.online/proof</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://vex402.online/live</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+${Object.keys(CHAINS[1].tokens)
+  .filter((t) => t !== "USDC")
+  .map((t) => `  <url><loc>https://vex402.online/finding/${t}</loc><changefreq>daily</changefreq><priority>0.6</priority></url>`)
+  .join("\n")}
+  <url><loc>https://vex402.online/activity</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://vex402.online/donate</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://vex402.online/sponsor</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
+</urlset>`
+  );
+});
+
+// llms.txt: the service contract in plain text, for LLM agents that read a
+// site before calling it. Every price here is also in the live 402 challenge,
+// which stays authoritative; this file is a map, not a quote.
+app.get("/llms.txt", (_req, res) => {
+  res.set("Cache-Control", "public, max-age=300");
+  res.type("text/plain").send(
+    buildLlmsText({
+      mode: MODE,
+      baseUrl: PUBLIC_BASE_URL,
+      releaseVersion: RELEASE_VERSION,
+    }),
+  );
+});
+
+// Canonical machine-readable service manifest for agent discovery systems.
+app.get("/.well-known/verify402.json", (_req, res) => {
+  res.set("Cache-Control", "public, max-age=300");
+  res.json(
+    buildServiceManifest({
+      baseUrl: PUBLIC_BASE_URL,
+      mode: MODE,
+      prices: {
+        verify: PRICE,
+        safety: SAFETY_PRICE,
+        route: ROUTE_PRICE,
+        quotecheck: QUOTECHECK_PRICE,
+        depth: DEPTH_PRICE,
+        assure: ASSURE_PRICE,
+      },
+      payTo: {
+        evm: PAY_TO_EVM,
+        svm: PAY_TO_SVM,
+      },
+    })
+  );
+});
+
+// OpenAPI contract for x402scan and any agent that reads a spec before paying.
+// Prices are injected from the same strings the 402 middleware uses, so the
+// metadata and the runtime challenge cannot drift apart.
+app.get("/openapi.json", (_req, res) => {
+  res.set("Cache-Control", "public, max-age=300");
+  res.json(buildOpenapi({
+    verify: PRICE,
+    safety: SAFETY_PRICE,
+    route: ROUTE_PRICE,
+    quotecheck: QUOTECHECK_PRICE,
+    depth: DEPTH_PRICE,
+    assure: ASSURE_PRICE,
+  }, {
+    mode: MODE,
+    baseUrl: PUBLIC_BASE_URL,
+  }));
+});
+
+// x402 capability manifest, per draft-hawkins-x402-dns-discovery-02.
+// A bare-domain crawler gets the full paid surface in one GET; each resource
+// entry is a pointer, so the 402 challenge (not this file) stays authoritative
+// for price and terms. Free resources are deliberately excluded.
+app.get("/.well-known/x402", (_req, res) => {
+  res.set("Cache-Control", "public, max-age=300");
+  res.json({
+    x402Version: 2,
+    kind: "resource-server",
+    name: "verify402",
+    description:
+      "Per-call truth checks for trading agents: arbitrage reality, token safety, execution book, quote fairness, and trade capacity. Free preflight gate; paid verdicts return reproducible evidence, not profit promises.",
+    resources: [
+      {
+        url: `${PUBLIC_BASE_URL}/verify`,
+        method: "POST",
+        description:
+          "Is this cross-venue arbitrage real at one pinned block? Returns a verdict with full evidence; the most common honest answer is no_edge.",
+      },
+      {
+        url: `${PUBLIC_BASE_URL}/safety`,
+        method: "POST",
+        description:
+          "Pre-trade token gate: TRUST / CAUTION / AVOID, with live contract facts and a quote-based sellability check on the configured venues. Does not execute a transfer; transfer restrictions are in notChecked.",
+      },
+      {
+        url: `${PUBLIC_BASE_URL}/route`,
+        method: "POST",
+        description:
+          "Every configured venue quoting tokenIn to tokenOut at one pinned block, direct and WETH-routed, best first. Aggregators and unconfigured DEXs are excluded.",
+      },
+      {
+        url: `${PUBLIC_BASE_URL}/quotecheck`,
+        method: "POST",
+        description:
+          "Audit a quote someone else gave you: fair / overpaying / too_good_to_be_true / unknown, with the venue book as evidence.",
+      },
+      {
+        url: `${PUBLIC_BASE_URL}/depth`,
+        method: "POST",
+        description:
+          "Largest size that still clears your cost tolerance: per-size entry and exit quotes, impact, round-trip cost, and capacityUsd.",
+      },
+      {
+        url: `${PUBLIC_BASE_URL}/assure`,
+        method: "POST",
+        description:
+          "One pinned-block assurance bundle from the paid checks you supply, with a recomputable sha256 evidence hash. Supplied checks must total at least the bundle price.",
+      },
+    ],
+    attestation: { type: "none" },
+    docs: `${PUBLIC_BASE_URL}/start`,
+    contact: "a32116150@gmail.com",
+    updated: "2026-10-19T00:00:00Z",
+  });
 });
 
 // Hero verdicts, FREE. Ethereum majors at one size - the boring part of the
 // market, and almost always no_edge. That is the point: an agent (or a
 // human) can validate that this service tells reproducible truth before
-// paying for a long-tail token. First call after a new block costs a few
-// RPC round trips; cached per block after that.
-app.get("/findings", async (_req, res) => {
+// paying for a long-tail token.
+//
+// The first version recomputed every pair on every new block. That is correct
+// and unusable: on a public RPC a full set can take 90-160 seconds, so the
+// free "live" page - the one thing meant to earn trust - sat at "loading".
+// The showcase does not need a fresh block for every visitor. It needs an
+// honest snapshot, a timestamp, and a bound on how long a slow pair may hold
+// the answer. So: one snapshot, served while a refresh runs in the background,
+// measurements limited to two in flight (a burst of four gets throttled by
+// public RPCs), each success cached for five minutes, and a hard per-pair
+// budget that reports `unavailable` instead of hanging.
+// A full pass can take 90-160 seconds on a public RPC, so a 120 s TTL keeps
+// every visitor on the edge of `stale`. Match the five-minute pair cache:
+// the snapshot is reused for at most five minutes, then re-measured.
+const FINDINGS_TTL_MS = 300_000;
+const FINDINGS_PAIR_BUDGET_MS = 26_000;
+const FINDINGS_PAIR_TTL_MS = 5 * 60_000;
+const FINDINGS_CONCURRENCY = 2;
+const findingsPairs = new Map(); // target -> { at, row }
+let findingsSnap = null; // { payload, at }
+let findingsRefresh = null;
+let findingsFill = null;
+
+const withTimeout = (promise, ms, label) =>
+  Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error(`${label}: no quote within ${Math.round(ms / 1000)}s`)), ms),
+    ),
+  ]);
+
+// Small pool: enough concurrency to be quick, little enough not to trip the
+// public RPC's rate limiter. Kept local so the endpoint has no new dependency.
+async function mapLimit(items, limit, fn) {
+  const out = new Array(items.length);
+  let next = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (next < items.length) {
+      const i = next++;
+      out[i] = await fn(items[i]);
+    }
+  });
+  await Promise.all(workers);
+  return out;
+}
+
+async function measureFindingPair(target) {
+  const hit = findingsPairs.get(target);
+  if (hit && Date.now() - hit.at < FINDINGS_PAIR_TTL_MS) return hit.row;
+  const baseTok = CHAINS[1].tokens.USDC;
   try {
-    const client = clientFor(1);
-    const blockNumber = await client.getBlockNumber();
-    const size = 100000;
-    const baseTok = CHAINS[1].tokens.USDC;
-    const targets = Object.keys(CHAINS[1].tokens).filter((t) => t !== "USDC");
-
-    const results = await Promise.all(
-      targets.map((target) => {
-        const key = `1:USDC:${target}:${size}:0:${blockNumber}`;
-        const cached = cache.get(key);
-        if (cached) return Promise.resolve(cached);
-        return measureRoundTrip(1, {
-          baseSymbol: "USDC",
-          targetSymbol: target,
-          size: BigInt(Math.round(size * 10 ** baseTok.decimals)),
-          minNet: 0n,
-        }).then((result) => {
-          cachePut(key, result);
-          return result;
-        });
+    const r = await withTimeout(
+      measureRoundTrip(1, {
+        baseSymbol: "USDC",
+        targetSymbol: target,
+        size: BigInt(Math.round(100000 * 10 ** baseTok.decimals)),
+        minNet: 0n,
       }),
+      FINDINGS_PAIR_BUDGET_MS,
+      target,
     );
-
-    res.json({
-      explanation:
-        "Free showcase: Ethereum majors, $100k round trips, this block. The honest answer is normally no_edge - that is the market's fee boundary, not a failure. Arbitrary tokens and live sizes are the paid routes POST /verify and POST /safety.",
-      blockNumber: Number(blockNumber),
-      results: results.map((r) => ({
-        target: r.target.symbol,
-        verdict: r.verdict,
-        grossBps: r.gross.bps,
-        netBps: r.net.bps,
-      })),
-    });
+    if (!r.ok) {
+      return { target, verdict: "unavailable", reason: r.reason, blockNumber: r.blockNumber ?? null };
+    }
+    const row = {
+      target: r.target.symbol,
+      verdict: r.verdict,
+      grossBps: r.gross.bps,
+      netBps: r.net.bps,
+      blockNumber: r.blockNumber,
+      blockHash: r.blockHash ?? null,
+      // Reproducible inputs: everything needed to re-derive the two numbers above
+      // from the same pinned block with a public RPC (feedback: clearreason_assistant,
+      // Moltbook). Without these the row was a claim, not a receipt.
+      inputs: {
+        size: { raw: r.size.raw, human: r.size.human, symbol: r.base.symbol },
+        minNetBps: 0,
+        buy: { venue: r.buy.venue, kind: r.buy.kind, feeBps: r.buy.feeBps },
+        sell: { venue: r.sell.venue, kind: r.sell.kind, feeBps: r.sell.feeBps },
+        gas: {
+          units: r.costs.gasUnits,
+          priceGwei: r.costs.gasPriceGwei,
+          pricePinned: false,
+          tokenUsd: r.costs.gasTokenUsd,
+          usd: r.costs.gasUsd,
+        },
+        flashLoanPremiumBps: r.costs.flashLoanPremiumBps,
+      },
+      method:
+        "exact-input quote at the pinned block: buy then sell through the named venue routers, net = gross - gasUsd - flashLoanPremium. The gas price is sampled at measurement time, not from blockNumber (getGasPrice() has no block tag); re-derive grossBps/netBps by re-quoting both legs at blockNumber and sampling gas again.",
+    };
+    findingsPairs.set(target, { at: Date.now(), row });
+    return row;
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    // Free route, same H-6 boundary: never echo the provider's message. The
+    // row is explicitly unavailable; the detail stays in the redacted log.
+    logError("[findings] measurement failed", e);
+    return { target, verdict: "unavailable", reason: "measurement unavailable: the chain/provider could not be read", blockNumber: null };
+  }
+}
+
+async function computeFindings() {
+  const targets = Object.keys(CHAINS[1].tokens).filter((t) => t !== "USDC");
+  const results = await mapLimit(targets, FINDINGS_CONCURRENCY, measureFindingPair);
+
+  const blocks = results.map((r) => r.blockNumber).filter((n) => Number.isFinite(n));
+  let blockNumber = blocks.length ? Math.max(...blocks) : null;
+  if (blockNumber == null) {
+    try { blockNumber = Number(await clientFor(1).getBlockNumber()); } catch { /* reported as null */ }
+  }
+
+  return {
+    explanation:
+      "Free showcase: Ethereum majors, $100k round trips, each pair pinned to the latest block it was measured at. Every row carries its own reproducible inputs (size, buy/sell venue + fee tier, gas at the pinned block, flash-loan premium) so the two bps numbers can be re-derived by anyone with an RPC. The honest answer is normally no_edge - that is the market's fee boundary, not a failure. Arbitrary tokens and live sizes are the paid routes POST /verify and POST /safety.",
+    blockNumber,
+    measuredAt: new Date().toISOString(),
+    results,
+  };
+}
+
+// A pair that timed out is retried once, alone, after the snapshot is already
+// being served. The result is a complete snapshot within a minute or so without
+// ever making a visitor wait for the retry.
+function fillMissingFindings() {
+  if (findingsFill) return;
+  const missing = (findingsSnap?.payload.results || [])
+    .filter((r) => r.verdict === "unavailable")
+    .map((r) => r.target);
+  if (!missing.length) return;
+  findingsFill = new Promise((resolve) => setTimeout(resolve, 4000))
+    .then(async () => {
+      for (const target of missing) {
+        findingsPairs.delete(target);
+        await measureFindingPair(target);
+      }
+      const payload = await computeFindings();
+      findingsSnap = { payload, at: Date.now() };
+    })
+    .catch((e) => logWarn("findings retry failed", e))
+    .finally(() => { findingsFill = null; });
+}
+
+function refreshFindings() {
+  if (!findingsRefresh) {
+    findingsRefresh = computeFindings()
+      .then((payload) => {
+        findingsSnap = { payload, at: Date.now() };
+        fillMissingFindings();
+        return payload;
+      })
+      .finally(() => { findingsRefresh = null; });
+  }
+  return findingsRefresh;
+}
+
+const findingsAge = () => Math.round((Date.now() - findingsSnap.at) / 1000);
+
+// Free, cached mirror of the npm counters. The home page reads this instead of
+// calling npm from the browser: one cache, no CSP exception, and a stale copy
+// beats a blank number when the registry is slow.
+let npmStatsSnap = null;
+app.get("/npm-stats", async (_req, res) => {
+  if (npmStatsSnap && Date.now() - npmStatsSnap.at < 3_600_000) {
+    res.set("Cache-Control", "public, max-age=300");
+    return res.json({ ...npmStatsSnap.payload, ageSeconds: Math.round((Date.now() - npmStatsSnap.at) / 1000) });
+  }
+  const point = (range) => `https://api.npmjs.org/downloads/point/${range}/verify402-mcp`;
+  const read = (range) =>
+    fetch(point(range), { signal: AbortSignal.timeout(8000) }).then((r) => {
+      if (!r.ok) throw new Error(`npm ${r.status}`);
+      return r.json();
+    });
+  try {
+    const [week, month] = await Promise.all([read("last-week"), read("last-month")]);
+    const payload = {
+      spec: "verify402/npm-stats@1",
+      package: "verify402-mcp",
+      lastWeek: week.downloads,
+      lastMonth: month.downloads,
+      fetchedAt: new Date().toISOString(),
+      note: "npm downloads, not unique agents. Mirror and automated installs are included.",
+    };
+    npmStatsSnap = { at: Date.now(), payload };
+    res.set("Cache-Control", "public, max-age=300");
+    return res.json({ ...payload, ageSeconds: 0 });
+  } catch (e) {
+    logError("[npm-stats] fetch failed", e);
+    if (npmStatsSnap) return res.json({ ...npmStatsSnap.payload, stale: true });
+    return res.status(503).json({
+      error: "npm_stats_unavailable",
+      message: "the npm registry did not answer; retry shortly",
+    });
   }
 });
 
-app.get("/", (_req, res) => {
+// The settlement list is read from the chain, not from a local ledger: the free
+// instance has no durable store, so a local table would reset on deploy. The
+// indexer is fixed, never caller-supplied, so this route cannot be used to
+// reach an arbitrary host.
+let explorerSnap = null;
+// 402 directory: a small seed list, re-inspected on a schedule. The watch is
+// off in offline tests and can be disabled with VERIFY402_DIRECTORY_WATCH=0.
+const directory = createDirectory({
+  filePath: process.env.VERIFY402_DIRECTORY_FILE || null,
+});
+// On by default; VERIFY402_DIRECTORY_WATCH=0 disables it.
+if (process.env.VERIFY402_DIRECTORY_WATCH !== "0" && process.env.TEST_OFFLINE !== "1") {
+  directory.start();
+  const boot = setTimeout(() => directory.runOnce().catch(() => {}), 2000);
+  if (typeof boot.unref === "function") boot.unref();
+}
+
+app.get("/directory.json", (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json(directory.snapshot());
+});
+
+app.get("/explorer", async (_req, res) => {
+  const now = Date.now();
+  if (explorerSnap && now - explorerSnap.at < 60_000) {
+    res.set("Cache-Control", "public, max-age=30");
+    return res.json({ ...explorerSnap.payload, ageSeconds: Math.round((now - explorerSnap.at) / 1000) });
+  }
+  try {
+    let payload = null;
+    if (MODE === "mainnet" && settlementIndex) {
+      try {
+        const snap = await settlementIndex.refresh();
+        payload = buildExplorerPayload({
+          mode: MODE,
+          payTo: PAY_TO_EVM,
+          transfers: snap.rows.map((row) => ({
+            transaction_hash: row.txHash,
+            timestamp: row.timestamp,
+            from: { hash: row.from },
+            to: { hash: PAY_TO_EVM },
+            token: { symbol: "USDC", decimals: 6 },
+            total: { value: row.amountRaw },
+          })),
+          results: findingsSnap?.payload?.results || [],
+          measuredAt: findingsSnap?.payload?.measuredAt || null,
+          baseUrl: PUBLIC_BASE_URL,
+        });
+      } catch (error) {
+        logWarn("[explorer] settlement index unavailable; using the recent chain window", error?.message || error);
+      }
+    }
+    if (!payload) {
+      payload = await fetchExplorer({
+        mode: MODE,
+        payTo: PAY_TO_EVM,
+        results: findingsSnap?.payload?.results || [],
+        measuredAt: findingsSnap?.payload?.measuredAt || null,
+        baseUrl: PUBLIC_BASE_URL,
+        rpcUrl: process.env.EXPLORER_RPC_URL || undefined,
+      });
+    }
+    explorerSnap = { at: now, payload };
+    res.set("Cache-Control", "public, max-age=30");
+    return res.json({ ...payload, ageSeconds: 0 });
+  } catch (e) {
+    logError("[explorer] chain indexer failed", e);
+    if (explorerSnap) {
+      res.set("Cache-Control", "no-store");
+      return res.json({ ...explorerSnap.payload, stale: true, ageSeconds: Math.round((now - explorerSnap.at) / 1000) });
+    }
+    return res.status(503).json({
+      error: "explorer_unavailable",
+      message: "the chain indexer did not answer; retry shortly",
+    });
+  }
+});
+
+// Every row gets the URL of the page that shows it, so a caller can cite the
+// finding instead of pasting numbers into a chat.
+function withFindingPermalinks(payload) {
+  return {
+    ...payload,
+    results: (payload.results || []).map((r) => ({ ...r, permalink: findingPermalink(r.target) })),
+  };
+}
+
+app.get("/findings", perIpRateLimit({ max: FINDINGS_RATE_PER_MIN, label: "findings calls" }), async (req, res) => {
+  if (findingsSnap && Date.now() - findingsSnap.at < FINDINGS_TTL_MS) {
+    res.set("Cache-Control", "public, max-age=30");
+    return res.json({ ...withFindingPermalinks(findingsSnap.payload), ageSeconds: findingsAge() });
+  }
+  if (findingsSnap) {
+    // Stale-while-revalidate: the visitor gets the last honest snapshot now,
+    // clearly marked with its age, while a fresh one is measured behind it.
+    refreshFindings().catch(() => {});
+    res.set("Cache-Control", "no-store");
+    return res.json({ ...withFindingPermalinks(findingsSnap.payload), stale: true, ageSeconds: findingsAge() });
+  }
+  try {
+    // Cold: bounded by the per-pair budget, so this cannot hang for minutes.
+    const payload = await refreshFindings();
+    res.set("Cache-Control", "public, max-age=30");
+    return res.json({ ...withFindingPermalinks(payload), ageSeconds: 0 });
+  } catch (e) {
+    return sendPublicError(req, res, 503, "rpc_unavailable", "the measurement pass failed; retry in a few seconds", {
+      log: e,
+      extra: { hint: "The measurement pass failed; retry in a few seconds." },
+    });
+  }
+});
+
+// ---------------------------------------------------------- preflight gate --
+// The pre-signing check. FREE on purpose: a control that an agent must run
+// before every signature is infrastructure, not a toll booth. The deep
+// measurements (/verify, /safety, /depth) stay paid. Free still costs RPC, so
+// the gate is rate-limited per IP and capped in flight; otherwise a free
+// endpoint becomes a public proxy for the chain.
+let preflightInFlight = 0;
+
+// Each free endpoint gets its own per-IP bucket: a busy preflight caller must
+// not spend the inspector's budget, and an inspector URL fetch is slower and
+// more expensive than a structural preflight.
+// The ping is self-reported, so the label is either a recognisable bridge
+// identity (verify402-mcp/<version>) or a short lower-case token; anything else
+// is bucketed as "mcp" rather than invented.
+function normalizeDeclaredPingClient(value) {
+  const v = String(value ?? "").trim().toLowerCase().slice(0, 64);
+  if (!/^[a-z0-9][a-z0-9._/-]{0,63}$/.test(v)) return "mcp";
+  return v;
+}
+
+function perIpRateLimit({ max, label }) {
+  const buckets = new Map();
+  let sweptAt = 0;
+  return function rateLimit(req, res, next) {
+    // trust proxy=1 makes req.ip the rightmost untrusted hop (the client
+    // address appended by Render), not a client-supplied leftmost
+    // X-Forwarded-For value.
+    const ip = req.ip || req.socket?.remoteAddress || "unknown";
+    const now = Date.now();
+    const bucket = buckets.get(ip);
+    if (!bucket || now - bucket.at >= 60_000) {
+      buckets.set(ip, { at: now, n: 1 });
+    } else {
+      bucket.n += 1;
+      if (bucket.n > max) {
+        res.set("Retry-After", "60");
+        return res.status(429).json({
+          error: "rate_limited",
+          message: `max ${max} ${label} per minute per IP`,
+          requestId: req.requestId,
+        });
+      }
+    }
+    if (now - sweptAt >= 60_000) {
+      sweptAt = now;
+      for (const [k, v] of buckets) if (now - v.at > 120_000) buckets.delete(k);
+    }
+    next();
+  };
+}
+
+// Free gate: 60 calls/minute and a daily cap per IP. An optional
+// operator-issued free API key (X-Verify402-Key, configured via
+// FREE_API_KEYS) raises the daily cap without changing the minute cap.
+const FREE_API_KEYS = new Set(
+  String(process.env.FREE_API_KEYS || "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean),
+);
+
+function freeGateRateLimit() {
+  const buckets = new Map();
+  let sweptAt = 0;
+  return function rateLimit(req, res, next) {
+    const ip = req.ip || req.socket?.remoteAddress || "unknown";
+    const now = Date.now();
+    const day = new Date(now).toISOString().slice(0, 10);
+    const presentedKey = String(req.get("x-verify402-key") || "").trim();
+    const keyed = presentedKey.length > 0 && FREE_API_KEYS.has(presentedKey);
+    const dailyMax = keyed ? FREE_API_KEY_DAILY_LIMIT : FREE_GATE_DAILY_LIMIT;
+
+    let bucket = buckets.get(ip);
+    if (!bucket || bucket.day !== day) {
+      bucket = { day, minuteAt: now, minuteN: 0, dayN: 0 };
+      buckets.set(ip, bucket);
+    }
+    if (bucket.dayN >= dailyMax) {
+      const midnight = Date.parse(`${day}T00:00:00.000Z`) + 86_400_000;
+      const retryAfter = Math.max(1, Math.ceil((midnight - now) / 1000));
+      res.set("Retry-After", String(retryAfter));
+      return res.status(429).json({
+        error: "rate_limited",
+        code: "free_gate_daily_limit",
+        message: `max ${dailyMax} free gate calls per day per IP${keyed ? " for this API key" : ""}`,
+        requestId: req.requestId,
+      });
+    }
+    if (now - bucket.minuteAt >= 60_000) {
+      bucket.minuteAt = now;
+      bucket.minuteN = 0;
+    }
+    bucket.minuteN += 1;
+    if (bucket.minuteN > PREFLIGHT_RATE_PER_MIN) {
+      res.set("Retry-After", "60");
+      return res.status(429).json({
+        error: "rate_limited",
+        message: `max ${PREFLIGHT_RATE_PER_MIN} free gate calls per minute per IP`,
+        requestId: req.requestId,
+      });
+    }
+    bucket.dayN += 1;
+
+    if (now - sweptAt >= 60_000) {
+      sweptAt = now;
+      for (const [key, value] of buckets) {
+        if (value.day !== day && now - value.minuteAt > 120_000) buckets.delete(key);
+      }
+    }
+    next();
+  };
+}
+
+const preflightRateLimit = freeGateRateLimit();
+
+const inspectRateLimit = perIpRateLimit({ max: INSPECT_RATE_PER_MIN, label: "inspections" });
+const pingRateLimit = perIpRateLimit({ max: 120, label: "pings" });
+
+function preflightConcurrency(req, res, next) {
+  if (preflightInFlight >= PREFLIGHT_MAX_IN_FLIGHT) {
+    res.set("Retry-After", "2");
+    return res.status(429).json({ error: "busy", message: "too many concurrent gate calls; retry shortly", requestId: req.requestId });
+  }
+  preflightInFlight += 1;
+  let released = false;
+  const release = () => {
+    if (released) return;
+    released = true;
+    preflightInFlight -= 1;
+  };
+  res.on("finish", release);
+  res.on("close", release);
+  next();
+}
+
+app.post("/preflight", preflightRateLimit, preflightConcurrency, async (req, res) => {
+  res.set("Cache-Control", "no-store");
+  const started = Date.now();
+  try {
+    const result = await preflight(req.body || {});
+    const ms = Date.now() - started;
+    recordPreflight({ req, result, status: 200, ms });
+    res.json({ ...result, elapsedMs: ms });
+  } catch (e) {
+    const ms = Date.now() - started;
+    if (e instanceof PreflightError) {
+      recordPreflight({ req, result: null, status: e.status, ms, code: e.code });
+      if (e.status >= 500) {
+        return sendPublicError(req, res, e.status, "preflight_unavailable", "the chain could not be read, so no receipt was issued; the gate must fail closed", {
+          log: e,
+          extra: { code: e.code },
+        });
+      }
+      const extra = { code: e.code };
+      if (e.code === "invalid_kind") {
+        extra.example = buildPreflightRequestExample({
+          mode: MODE,
+          baseUrl: PUBLIC_BASE_URL,
+        });
+        extra.docs = "/start";
+        extra.validKinds = ["payment", "transaction", "sign-in"];
+        extra.hint = "valid kinds: payment, transaction, sign-in";
+      }
+      return sendPublicError(req, res, e.status, e.code, e.message, { extra });
+    }
+    recordPreflight({ req, result: null, status: 503, ms, code: "preflight_unavailable" });
+    // Fail closed: no receipt means an executor must refuse to sign. A 200
+    // with a guessed verdict would be the one failure mode this gate exists
+    // to prevent. The provider's message stays in the log, never the body.
+    return sendPublicError(req, res, 503, "preflight_unavailable", "the chain could not be read, so no receipt was issued; the gate must fail closed", {
+      log: e,
+      extra: { code: "preflight_unavailable" },
+    });
+  }
+});
+
+// Live paid-usage counters. The mainnet side is backed by the persisted
+// settlement index; the testnet side is read from public Blockscout. Both are
+// chain rows, not estimates.
+let statsSnap = null;
+let statsAt = 0;
+let statsPromise = null;
+const STATS_TTL_MS = 60_000;
+
+async function refreshStats() {
+  let mainnet = null;
+  if (settlementIndex) {
+    try {
+      const snap = await settlementIndex.refresh();
+      mainnet = {
+        chain: "Base",
+        network: "eip155:8453",
+        source: "rpc-index",
+        ...summarizeSettlements(snap.rows, OPERATOR_ADDRESSES),
+      };
+    } catch (error) {
+      logWarn("[stats] mainnet settlement index unavailable", error?.message || error);
+    }
+  }
+
+  let testnet = null;
+  try {
+    testnet = await fetchTestnetStats({
+      payTo: PAY_TO_EVM,
+      operatorAddresses: OPERATOR_ADDRESSES,
+    });
+  } catch (error) {
+    logWarn("[stats] testnet Blockscout unavailable", error?.message || error);
+  }
+
+  // The testnet demo has no mainnet index of its own. Read the live mainnet
+  // counter once instead of rescanning Base from the free host. If the mainnet
+  // service is down, the page shows a dash rather than a guess.
+  if (!mainnet && MODE === "testnet" && process.env.TEST_OFFLINE !== "1") {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 4_000);
+    try {
+      const response = await fetch("https://vex402.online/stats", {
+        headers: { accept: "application/json" },
+        signal: controller.signal,
+      });
+      if (response.ok) {
+        const body = await response.json();
+        if (body?.mainnet) mainnet = body.mainnet;
+      }
+    } catch {
+      // A dash is better than a made-up number.
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  return {
+    spec: "verify402/stats@1",
+    fetchedAt: new Date().toISOString(),
+    mode: MODE,
+    mainnet,
+    testnet,
+    freeCalls: usageSnapshot().total,
+    note: "Counts are on-chain USDC transfers to the service address. A paid call is not a unique agent; operator calls are counted separately from outside payers. Testnet amounts are testnet USDC.",
+  };
+}
+
+function ensureStats() {
+  if (!statsPromise) {
+    statsPromise = refreshStats()
+      .then((payload) => {
+        statsSnap = payload;
+        statsAt = Date.now();
+        return payload;
+      })
+      .finally(() => { statsPromise = null; });
+  }
+  return statsPromise;
+}
+
+app.get("/stats", async (_req, res) => {
+  const now = Date.now();
+  if (statsSnap && now - statsAt < STATS_TTL_MS) {
+    res.set("Cache-Control", "public, max-age=30");
+    return res.json({ ...statsSnap, ageSeconds: Math.round((now - statsAt) / 1000) });
+  }
+  try {
+    const payload = await ensureStats();
+    res.set("Cache-Control", "public, max-age=30");
+    return res.json({ ...payload, ageSeconds: 0 });
+  } catch (error) {
+    logError("[stats] chain counter failed", error);
+    if (statsSnap) {
+      res.set("Cache-Control", "no-store");
+      return res.json({ ...statsSnap, stale: true, ageSeconds: Math.round((now - statsAt) / 1000) });
+    }
+    return res.status(503).json({
+      error: "stats_unavailable",
+      message: "the chain counter did not answer; retry shortly",
+    });
+  }
+});
+
+// Warm the counter at boot and once a minute after that. The first mainnet
+// scan is the only expensive one; later scans read only new blocks.
+if (process.env.TEST_OFFLINE !== "1") {
+  const warm = setTimeout(() => { ensureStats().catch(() => {}); }, 3_000);
+  if (typeof warm.unref === "function") warm.unref();
+  const timer = setInterval(() => {
+    if (Date.now() - statsAt >= STATS_TTL_MS) ensureStats().catch(() => {});
+  }, 30_000);
+  if (typeof timer.unref === "function") timer.unref();
+}
+
+// Anonymous, process-local free-gate counts. This is a call counter, not an
+// identity system; see src/usage.mjs for the boundary.
+app.get("/usage", (req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json(usageSnapshot());
+});
+
+// Anonymous tool-call pings from the MCP bridge, opt-in via VERIFY402_TELEMETRY=1
+// on the bridge side. Payload: { tool, ok } and nothing else. No arguments, no
+// intent, no result. The tool name must come from the shared allowlist and the
+// body is tiny by construction; clients are labelled by the X-Verify402-Client
+// header.
+app.post("/usage/ping", pingRateLimit, (req, res) => {
+  res.set("Cache-Control", "no-store");
+  const body = req.body ?? {};
+  const tool = typeof body.tool === "string" ? body.tool.trim().toLowerCase() : "";
+  if (!PINGABLE_TOOLS.includes(tool)) {
+    return res.status(400).json({ error: "unknown_tool", message: "tool must be one of the known MCP tool names", requestId: req.requestId });
+  }
+  if (typeof body.ok !== "boolean") {
+    return res.status(400).json({ error: "invalid_body", message: "ok must be a boolean", requestId: req.requestId });
+  }
+  const client = normalizeDeclaredPingClient(req.get("x-verify402-client"));
+  const event = recordToolPing({ tool, ok: body.ok, client, now: Date.now() });
+  return res.status(202).json({ accepted: Boolean(event) });
+});
+
+// Aggregate page views of the human site: which pages are reached, from where,
+// on which days. No cookies, no IP, no query strings. Honest about scope.
+app.get("/usage/site", (req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json(siteAnalyticsSnapshot());
+});
+
+app.post("/preflight/verify", preflightRateLimit, (req, res) => {
+  res.set("Cache-Control", "no-store");
+  const receipt = req.body?.receipt ?? req.body;
+  const options = {};
+  if (req.body?.intent !== undefined) options.intent = req.body.intent;
+  if (req.body?.request !== undefined) options.request = req.body.request;
+  res.json(verifyReceipt(receipt, options));
+});
+
+// Free x402 inspector: fetch a real 402 (or accept a pasted challenge) and run
+// the same structural payment preflight an agent runs before signing. The URL
+// fetch is pinned to a validated public address; see src/inspect.mjs.
+app.post("/inspect", inspectRateLimit, preflightConcurrency, async (req, res) => {
+  res.set("Cache-Control", "no-store");
+  const body = req.body || {};
+  try {
+    let result;
+    if (body.url) {
+      const method = String(body.method || "GET").toUpperCase();
+      if (method !== "GET" && method !== "POST") {
+        return res.status(400).json({ error: "invalid_method", code: "invalid_method", message: "method must be GET or POST", requestId: req.requestId });
+      }
+      recordInspectHost(String(body.url));
+      result = await inspectUrl(String(body.url), { method });
+    } else if (body.challenge) {
+      result = await inspectPaymentChallenge({
+        challenge: body.challenge,
+        targetUrl: body.target ? String(body.target) : null,
+      });
+    } else if (body.header) {
+      const challenge = extractChallenge({ header: String(body.header) });
+      result = await inspectPaymentChallenge({ challenge });
+    } else {
+      return res.status(400).json({
+        error: "invalid_request",
+        code: "invalid_request",
+        message: "send { url } to fetch a challenge, or { challenge } / { header } to inspect one you already have",
+        requestId: req.requestId,
+      });
+    }
+    return res.json({ ...result, requestId: req.requestId });
+  } catch (e) {
+    if (e instanceof InspectError) {
+      if (e.outcome === "body_no_challenge") recordInspectOutcome("body_no_challenge");
+      return res.status(e.status).json({
+        error: e.code,
+        code: e.code,
+        message: e.message,
+        requestId: req.requestId,
+      });
+    }
+    logError("[inspect] failed", e);
+    return res.status(502).json({
+      error: "inspect_failed",
+      code: "inspect_failed",
+      message: "could not inspect that endpoint; retry or paste the challenge instead",
+      requestId: req.requestId,
+    });
+  }
+});
+
+// A cold instance has no board yet (local snapshot missing + first refresh in
+// flight). Answer 503 with a short retry instead of caching an empty board.
+function boardWarming(res, kind) {
+  res.set("Cache-Control", "no-store");
+  res.set("Retry-After", "10");
+  if (kind === "json") {
+    return res.status(503).json({
+      error: "board_warming",
+      code: "board_warming",
+      message: "the board is loading its first snapshot; retry in a few seconds",
+    });
+  }
+  return res.status(503).type("html").send(
+    "<!doctype html><meta charset=\"utf-8\"><title>board warming · verify402</title>" +
+    "<body style=\"font:16px/1.6 system-ui;margin:12vh auto;max-width:34rem;padding:0 1.2rem\">" +
+    "<h1 style=\"font-size:1.4rem\">The board is loading its first snapshot.</h1>" +
+    "<p>This instance just started and has not read the daily scan yet. Reload in a few seconds — " +
+    "the data is cached after the first read.</p>" +
+    "<p><a href=\"/inspect\">Inspect any 402 directly</a> while you wait.</p></body>",
+  );
+}
+
+// Free findings, as shareable pages. `/findings` is JSON for machines; this is
+// the same row with a stable URL and Open Graph tags, so a human can post a
+// link that carries the evidence instead of a screenshot of it. Only the
+// showcase pairs are renderable — this is not a free /verify for any token.
+app.get("/finding/:target", perIpRateLimit({ max: FINDINGS_RATE_PER_MIN, label: "finding pages" }), async (req, res) => {
+  const target = String(req.params.target || "").trim().toUpperCase();
+  const allowed = Object.keys(CHAINS[1].tokens).filter((t) => t !== "USDC");
+  if (!allowed.includes(target)) {
+    res.status(404).type("html").send(
+      `<!doctype html><meta charset="utf-8"><title>Not a free finding · verify402</title>` +
+      `<p>Free findings cover ${allowed.join(", ")} only. For any other token, use the paid route <code>POST /verify</code>. ` +
+      `<a href="/findings">All free findings</a>.</p>`,
+    );
+    return;
+  }
+  try {
+    const row = await measureFindingPair(target);
+    res.set("Cache-Control", "public, max-age=60");
+    res.type("html").send(
+      withCanonical(renderFindingPage(row, { origin: "https://vex402.online", measuredAt: findingsSnap?.payload?.measuredAt ?? null }), req.path),
+    );
+  } catch (e) {
+    logError("[finding] render failed", e);
+    res.status(503).type("text").send("finding unavailable; retry shortly");
+  }
+});
+
+// Public board: a daily structural read of the first page of the public x402
+// endpoints. Data comes from the `board-data` branch (see scripts/board-scan.mjs
+// and .github/workflows/board.yml) so a data refresh never redeploys the
+// service; the bundled data/board.json is the fallback.
+app.get(["/board", "/board/"], async (req, res) => {
+  try {
+    const board = await loadBoard();
+    // Never let a cold instance's empty cache be served — or cached — as the board.
+    if (!board.rows.length) return boardWarming(res, "html");
+    res.set("Cache-Control", "public, max-age=300");
+    res.type("html").send(withCanonical(renderBoardPage(board), req.path));
+  } catch (e) {
+    logError("[board] render failed", e);
+    res.status(503).type("text").send("board unavailable; retry shortly");
+  }
+});
+
+app.get("/board.json", async (_req, res) => {
+  const board = await loadBoard();
+  if (!board.rows.length) return boardWarming(res, "json");
+  res.set("Cache-Control", "public, max-age=300");
+  res.json({
+    ...board,
+    note:
+      "One structural read per endpoint at generatedAt, by verify402's free /inspect logic. " +
+      "Not an audit, reputation score, endorsement, or promise about settlement. Read `caveats`.",
+    badge: "https://vex402.online/badge?url=<urlencoded endpoint url>",
+    inspect: "POST https://vex402.online/inspect { url, method } for a fresh read",
+  });
+});
+
+app.get("/badge", async (req, res) => {
+  const url = String(req.query.url || "").slice(0, 800);
+  const board = await loadBoard();
+  const badge = badgeFor(board, url);
+  // An empty board would turn every badge into "not scanned", which is a wrong
+  // claim for an endpoint that was scanned. Serve it, but do not cache it.
+  res.set("Cache-Control", board.rows.length ? "public, max-age=300" : "no-store");
+  res.set("X-Robots-Tag", "noindex");
+  res.set("Content-Type", "image/svg+xml; charset=utf-8");
+  res.send(renderBadgeSvg(badge));
+});
+
+// The blog index and its post directory share a prefix: /blog is a page,
+// /blog/<slug> is a static file. Route the index explicitly before static so
+// Express does not redirect to a directory listing that does not exist.
+app.get(["/blog", "/blog/"], (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.type("text/html").send(withCanonical(withAssetFingerprint(renderSiteHtml(readFileSync(`${SITE_DIR}/blog.html`, "utf8"), { mode: MODE, path: "/blog" })), "/blog"));
+});
+
+// Static pages for humans: /start, /checks, /live, /proof, /docs, /donate, /sponsor (+ /assets).
+// Clean URLs via the html extension; HTML is no-store so edits go live at once.
+// The copy is rendered per mode first: the same files are served by the testnet
+// demo and the mainnet box, and payment-rail claims must match the 402 a caller
+// actually receives.
+app.use((req, res, next) => {
+  if (req.method !== "GET" && req.method !== "HEAD") return next();
+  const urlPath = req.path;
+  const dot = urlPath.lastIndexOf(".");
+  const slash = urlPath.lastIndexOf("/");
+  const ext = dot > slash ? urlPath.slice(dot) : "";
+  if (ext && ext !== ".html") return next();
+  const rel = ext === ".html" ? urlPath : `${urlPath.replace(/\/$/, "")}.html`;
+  if (!rel.startsWith("/") || rel.includes("..")) return next();
+  let raw;
+  try {
+    raw = readFileSync(SITE_DIR + rel, "utf8");
+  } catch {
+    return next();
+  }
+  res.set("Cache-Control", "no-store");
+  res.type("text/html").send(withCanonical(withAssetFingerprint(renderSiteHtml(raw, { mode: MODE, path: urlPath })), urlPath));
+});
+
+app.use(express.static(SITE_DIR, {
+  index: false,
+  extensions: ["html"],
+  setHeaders(res, filePath) {
+    if (filePath.endsWith(".html")) res.setHeader("Cache-Control", "no-store");
+    else res.setHeader("Cache-Control", "public, max-age=300");
+  },
+}));
+
+
+app.get("/", (req, res) => {
+  // Humans and search/verification crawlers get the landing page; machine clients keep the plain menu.
+  const accept = String(req.headers.accept || "");
+  const ua = String(req.headers["user-agent"] || "");
+  const isCrawler = /google|bot|crawler|spider|slurp|facebookexternalhit|bingbot|yandex|duckduckbot/i.test(ua);
+  const wantsHtml = accept.includes("text/html") || isCrawler;
+  if (wantsHtml) {
+    res.set("Cache-Control", "no-store");
+    return res.type("text/html").send(withCanonical(withAssetFingerprint(renderSiteHtml(LANDING_HTML, { mode: MODE, path: "/" })), "/"));
+  }
   res.type("text/plain").send(
     [
       "verify402 - a machine-payable truth service",
       "",
+      "  POST /preflight free               should I sign this payment or transaction? (gate)",
+      "  POST /preflight/verify free        verify a preflight receipt (HMAC + expiry)",
+      "  POST /inspect  free                read an x402 402 challenge and preflight it (no wallet)",
+      "  GET  /directory.json free          watched public x402 endpoints + changes",
+      "  GET  /board        free            daily structural read of public x402 endpoints",
+      "  GET  /board.json   free            the same data, with caveats",
+      "  GET  /badge        free            embeddable SVG for a scanned endpoint",
       `  POST /verify   ${PRICE} per call        is this arbitrage opportunity real?`,
       `  POST /safety   ${SAFETY_PRICE} per call        is this token safe to buy? (pre-trade gate)`,
       `  POST /route    ${ROUTE_PRICE} per call        what would the chain actually pay for this swap?`,
       `  POST /quotecheck ${QUOTECHECK_PRICE} per call      audit a quote someone else gave you`,
+      `  POST /depth    ${DEPTH_PRICE} per call        how big can I trade before cost eats me?`,
+      `  POST /assure   ${ASSURE_PRICE} per call       bundle of paid checks at one pinned block, one evidence record`,
       "  GET  /findings free                 live verdicts on Ethereum majors, free",
+      "  GET  /usage    free                 anonymous free-gate call counts (process-local)",
+      "  GET  /usage/site free               aggregate page views of the human site (no cookies, no IP)",
+      "  GET  /stats    free                 live paid-usage counter (on-chain USDC transfers)",
+      "  GET  /mcp      free                 MCP server: free gate + six paid tools",
+      "  GET  /start    free                 five-minute quickstart for developers (human page)",
       "  GET  /info     free                 machine-readable service description",
       "  GET  /health   free",
       "  GET  /.well-known/agent-registration.json   free   agent identity file",
       "",
       "Call a paid route with no payment to receive HTTP 402 and payment instructions.",
+      "Preflight is free and fail-closed: if the chain cannot be read, it returns 503 and no receipt.",
+      "Send x-idempotency-key on the first call: within 10 min a retry of a paid call",
+      "replays the SAME verdict with no second charge (3 replays max). Use crypto.randomUUID();",
+      "weak keys are rejected with 400 weak_idempotency_key. The key is a secret: a leaked key",
+      "allows replay until the TTL/cap. " + persistenceLine(),
+      "Every paid response carries an evidence_bundle (requestHash/responseHash/pinnedBlock).",
       "",
     ].join("\n"),
   );
 });
 
 app.get("/health", (_req, res) => {
-  res.json({ ok: true, mode: MODE, price: PRICE, networks: NETWORKS.label });
+  const rs = recoveryStoreHealth();
+  res.json({
+    ok: true, mode: MODE, price: PRICE, preflight: "free", networks: NETWORKS.label, ready: "/ready",
+    recoveryStore: rs.enabled ? (rs.healthy ? "ok" : "unavailable") : "memory-only",
+  });
+});
+
+// Readiness is a DEEP check: read the latest block with a short timeout. A
+// process that is up but cannot reach a chain must not receive traffic. Liveness
+// stays /health; orchestrators should use /ready for traffic.
+app.get("/ready", async (req, res) => {
+  const started = Date.now();
+  const chainId = Number(process.env.READY_CHAIN_ID || 1);
+  try {
+    readinessChain(chainId);
+    const probe = await readinessProbe(chainId);
+    res.set("Cache-Control", "no-store");
+    return res.json({
+      ok: true,
+      ready: true,
+      mode: MODE,
+      chainId,
+      blockNumber: probe.blockNumber,
+      latencyMs: Date.now() - started,
+    });
+  } catch (e) {
+    return sendPublicError(req, res, 503, "rpc_unavailable", "the readiness chain is not configured or could not be read within the timeout", {
+      log: e,
+      extra: { ok: false, ready: false, chainId, latencyMs: Date.now() - started },
+    });
+  }
 });
 
 app.get("/info", (_req, res) => {
   res.json({
     name: "verify402",
+    version: RELEASE_VERSION,
+    mode: MODE,
+    networks: NETWORKS.label,
     description:
-      "Machine-payable truth service. /verify measures whether a cross-venue arbitrage round trip is profitable; /safety is a pre-trade gate that tells an agent whether a token is safe to buy before it risks capital. All quotes come from Uniswap's canonical QuoterV2 and each venue's own router, never from our own reimplementation of venue mathematics.",
-    prices: { verify: PRICE, safety: SAFETY_PRICE, route: ROUTE_PRICE, quotecheck: QUOTECHECK_PRICE },
-    payment: { protocol: "x402", scheme: "exact", acceptsExample: accepts(PRICE)[0] },
+      "Token safety check for AI agents before they swap: quote-based sellability, round-trip cost, TRUST / CAUTION / AVOID. $0.02 per call, free pre-signing gate included. Supporting paid checks cover arbitrage reality (/verify), execution book (/route), quote fairness (/quotecheck), trade capacity (/depth) and a pinned-block bundle (/assure). /safety does not execute a transfer; transfer restrictions and unconfigured venues stay in notChecked, so it is not a honeypot proof. /preflight is the free pre-signing gate: PASS / CAUTION / BLOCK with typed reasons and a short-lived receipt. All quotes come from Uniswap's canonical QuoterV2 and each venue's own router, never our own venue math. The MCP server (verify402-mcp) exposes the gate and six checks; install at /mcp.",
+    prices: {
+      preflight: "free",
+      preflight_verify: "free",
+      verify: PRICE,
+      safety: SAFETY_PRICE,
+      route: ROUTE_PRICE,
+      quotecheck: QUOTECHECK_PRICE,
+      depth: DEPTH_PRICE,
+      assure: ASSURE_PRICE,
+    },
+    usage: {
+      path: "/usage",
+      price: "free",
+      scope: "this process instance; resets on restart or deploy",
+      note: "Anonymous free-gate call counts. Not a unique-agent count; paid settlements are the identity-backed signal.",
+    },
+    state_persistence: statePersistence(),
+    hosting: buildInfoHosting(MODE),
+    payment: {
+      protocol: "x402",
+      scheme: "exact",
+      // Non-secret: which facilitator settles, and whether that facilitator
+      // feeds the Bazaar (the catalog agents search). /health stays liveness-only.
+      facilitator: (() => {
+        try {
+          return new URL(EFFECTIVE_FACILITATOR_URL).host;
+        } catch {
+          return EFFECTIVE_FACILITATOR_URL || "none";
+        }
+      })(),
+      discovery: CDP_MISSING_KEYS ? "cdp-misconfigured" : USE_CDP_FACILITATOR ? "cdp-bazaar-eligible" : "none",
+      network: NETWORKS.evm,
+      networkLabel: NETWORKS.label,
+      acceptsExample: accepts(PRICE)[0],
+    },
     chains: Object.entries(CHAINS).map(([id, c]) => ({
       chainId: Number(id),
       name: c.name,
@@ -304,6 +2418,41 @@ app.get("/info", (_req, res) => {
       venues: [...c.v3Fees.map((f) => `uni-v3-${f / 10000}%`), ...c.v2Routers.map((r) => r.label)],
     })),
     endpoints: [
+      {
+        method: "POST",
+        path: "/preflight",
+        price: "free",
+        body: {
+          kind: "payment",
+          payment: buildPreflightPaymentExample({
+            mode: MODE,
+            baseUrl: PUBLIC_BASE_URL,
+            payTo: PAY_TO_EVM,
+          }),
+          from: "0x...",
+          policy: { maxAmountUsd: 0.25, allowedPayTo: ["0x..."] },
+        },
+        response: {
+          verdict: "PASS | CAUTION | BLOCK",
+          reasons: "[{ code, severity, message }]",
+          checked: "[what was actually checked]",
+          notChecked: "[what was deliberately not checked]",
+          receipt: "{ spec, id, kind, verdict, intentHash, requestHash, blockNumber, blockHash, issuedAt, expiresAt, signature }",
+        },
+        use_when: "an agent is about to sign ANY x402 payment request or chain transaction; free and fail-closed",
+      },
+      {
+        method: "POST",
+        path: "/preflight/verify",
+        price: "free",
+        body: {
+          receipt: "{...the receipt returned by /preflight...}",
+          intent: "{optional: the normalized intent returned by /preflight}",
+          request: "{optional: the exact request body sent to /preflight}",
+        },
+        response: { valid: "boolean", reason: "null | missing_receipt | unknown_spec | missing_signature | bad_signature | missing_intent_hash | missing_request_hash | bad_expiry | expired | invalid_intent | invalid_request | intent_mismatch | request_mismatch", intentBound: "boolean", requestBound: "boolean" },
+        use_when: "an executor verifies a preflight receipt against its own intent/request before allowing a signature",
+      },
       {
         method: "POST",
         path: "/verify",
@@ -327,10 +2476,11 @@ app.get("/info", (_req, res) => {
           verdict: "TRUST | CAUTION | AVOID",
           reasons: ["why it is not TRUST"],
           notes: ["what checked out"],
-          checked: ["contract", "market", "sellability", "liquidity", "price-sanity"],
-          evidence: "contract facts, market data, sell-probe venues, round-trip cost, price comparison",
+          checked: ["contract", "market", "quote-based sellability", "liquidity", "price-sanity"],
+          notChecked: ["actual token transfer or sell execution", "transfer tax / fee-on-transfer", "blacklist / pause / max-tx restrictions", "venues not in config"],
+          evidence: "contract facts, market data, quote-based sellability venues, round-trip cost, price comparison",
         },
-        use_when: "an agent is about to BUY a token and needs to know it can exit and the price is real",
+        use_when: "an agent is about to BUY a token and needs a quote-based check that it can exit on the configured venues, plus the stated untested restrictions",
       },
       {
         method: "POST",
@@ -339,8 +2489,10 @@ app.get("/info", (_req, res) => {
         body: { chainId: 1, tokenIn: "USDC", tokenOut: "WETH", amountIn: "1000000000" },
         response: {
           best: "{ venue, kind, amountOut(raw) } | null",
-          book: "every venue (direct + WETH-routed), best first, one pinned block",
+          book: "every configured venue (direct + WETH-routed), best first, one pinned block",
           unavailable: ["venues that could not quote the size"],
+          checked: ["every configured venue", "direct and WETH-routed paths"],
+          notChecked: ["aggregators", "unconfigured DEX venues", "execution", "MEV"],
         },
         use_when: "an agent wants the chain's own answer for what a swap should pay, before trusting any counterparty's number",
       },
@@ -356,12 +2508,123 @@ app.get("/info", (_req, res) => {
         },
         use_when: "an agent was OFFERED a quote by a broker/aggregator/bot and is about to sign it",
       },
+      {
+        method: "POST",
+        path: "/depth",
+        price: DEPTH_PRICE,
+        body: { chainId: 1, tokenAddress: "WETH", baseSymbol: "USDC", sizesUsd: [100, 1000, 10000, 100000], maxRoundTripPct: 1 },
+        response: {
+          capacityUsd: "largest rung with round-trip cost <= maxRoundTripPct",
+          ladder: "per size: impactPct, roundTripCostPct, buyVenue, sellVenue, impliedPriceBase, impliedPriceUsd (deprecated alias for USD-stable bases only)",
+          notes: ["the honest caveats, block-pinned"],
+        },
+        use_when: "an agent is ABOUT TO CHOOSE A SIZE and needs to know what the pool will really give it",
+      },
     ],
     unpayable: "A request without payment returns HTTP 402 with instructions in the payment-required header.",
+    chainIdRequired: "Every paid route and every transaction preflight requires an integer chainId. Missing => 400 missing_chain; wrong type => 400 invalid_chain; unsupported => 400 unsupported_chain. There is no silent Ethereum default.",
+    errors: {
+      bad_request: "400; the caller's input is wrong (specific code: missing_chain, invalid_chain, unsupported_chain, invalid_size, ...)",
+      rate_limited: "429; retry after the advertised window",
+      busy: "429; too many concurrent requests",
+      rpc_unavailable: "503; the chain/provider could not be read; no verdict was issued",
+      rpc_rate_limited: "503; the provider rate-limited us; no verdict was issued",
+      internal_error: "500; no provider detail is returned",
+      requestId: "Every error carries requestId and the same value in the x-request-id header; server logs use it.",
+      settlement: "x402 settlement is cancelled for any response >=400 (the installed @x402/express middleware checks res.statusCode). A 503 means no charge.",
+      payment_unresolved: "503; this ONE operation's settlement outcome cannot be proven. No Retry-After, `retry: same_payment`, reason named. It is not a service-health signal: do not fail over or open a circuit breaker.",
+      operation_in_flight: "409; the same idempotency key is still resolving. Retry the SAME payment after Retry-After.",
+    },
+    readiness: {
+      path: "/ready",
+      price: "free",
+      check: "RPC eth_chainId must match READY_CHAIN_ID, then latest block read; whole probe capped at 3s",
+      liveness: "/health",
+    },
+    preflight: {
+      spec: PREFLIGHT_SPEC,
+      receiptSpec: RECEIPT_SPEC,
+      price: "free",
+      defaultTtlSeconds: DEFAULT_TTL_SECONDS,
+      limits: { perMinutePerIp: PREFLIGHT_RATE_PER_MIN, maxInFlight: PREFLIGHT_MAX_IN_FLIGHT },
+      intents: ["payment", "transaction"],
+      paymentNetworks: buildPreflightPaymentNetworks(MODE),
+      transactionChains: Object.keys(CHAINS).map(Number),
+      verdicts: {
+        PASS: "every check in `checked` passed at this fresh pinned block",
+        CAUTION: "at least one check needs a decision; read `reasons`",
+        BLOCK: "at least one hard check failed; do not sign",
+      },
+      blockFreshness: {
+        cautionAfterSeconds: 30,
+        blockAfterSeconds: 120,
+        noTimestamp: "503, no receipt",
+        note: "EVM only; the response carries block.timestamp and block.ageSeconds",
+      },
+      binding: `sha256 of the canonical normalized intent and the exact request body, a fresh pinned block where the chain is readable, and an expiry (default ${DEFAULT_TTL_SECONDS}s, max ${MAX_TTL_SECONDS}s). requestHash is additive within ${RECEIPT_SPEC}; older receipts are signature-valid but unbound and return missing_request_hash when a request is supplied. Receipt-only verification returns intentBound:false and requestBound:false.`,
+      failClosed: "if the chain cannot be read, /preflight returns 503 and issues no receipt; an executor should refuse to sign without a verifiable PASS or an explicitly acknowledged CAUTION",
+      receiptSigning: RECEIPT_SECRET_SOURCE === "env"
+        ? "hmac-sha256 with PREFLIGHT_SECRET"
+        : "hmac-sha256 with an ephemeral per-process secret; set PREFLIGHT_SECRET for multi-instance verification",
+      verify: "POST /preflight/verify; supply intent and request, then require intentBound and requestBound",
+      mcpTool: "preflight_gate",
+      doesNotCheck: [
+        "recipient reputation",
+        "sanctions screening",
+        "contract audits",
+        "balance-delta simulation",
+        "MEV/sandwich protection",
+        "payment signature / signed payload",
+        "gas price/limit chosen by the signer",
+        "raw signed-transaction binding",
+        "facilitator settlement",
+        "counterparty identity / tool metadata",
+        "prompt injection / hidden Unicode in tool output",
+      ],
+      note: "A PASS is not a guarantee or a counterparty audit. It means the listed checks passed at this block; `notChecked` lists what was not examined, including tool metadata and response content.",
+    },
+    mcp: {
+      package: "verify402-mcp",
+      version: RELEASE_VERSION,
+      license: "Apache-2.0",
+      transport: "stdio",
+      install: `${PUBLIC_BASE_URL}/mcp`,
+      freeTool: "preflight_gate",
+      paidTools: ["verify_arbitrage", "check_token_safety", "get_best_route", "verify_quote_fairness", "get_trade_depth", "get_assurance"],
+      freeOnlyWithoutWallet: false,
+      note: "All nine tools are listed for every install. The three free tools work with no wallet; the six paid tools refuse with a clear error unless EVM_PRIVATE_KEY is configured. The bridge caps each payment at MAX_PAYMENT_USD and only pays an allowlisted network, payee and resource. It signs x402 payments only, never a trade.",
+    },
+    recovery: {
+      header: "x-idempotency-key",
+      behavior: "Send this header on the FIRST call of an operation. If the response is lost after settlement, retrying with the same header returns the SAME verdict within the TTL without requiring payment again. Records are promoted to replayable ONLY after your settlement is confirmed by the facilitator: a failed or pending settlement leaves no free replay (fail-closed).",
+      keyStrength: "Use crypto.randomUUID() or at least 32 URL-safe characters (A-Z, a-z, 0-9, _, -) with at least 16 distinct characters. Weak keys return 400 weak_idempotency_key. Omitting the header keeps normal pay-per-call behavior.",
+      ttlMinutes: IDEMPOTENCY_TTL_MS / 60000,
+      maxReplays: IDEMPOTENCY_MAX_REPLAYS,
+      maxReplaysNote: "the cap is per operation, bound to the caller's key",
+      identity: "The original idempotency key is the only replay credential. The service does NOT derive a payer identity from x-payment, payment-signature, or authorization.from. The settled record stores the facilitator-confirmed payer as verified_payer for audit only.",
+      noCompanionAlias: "There is no content-hash companion alias. A public content hash would turn a known body into a free read, and a token returned only in the original response cannot help a lost-response retry. The caller's secret key is the only credential that survives.",
+      requestBinding: "The key is bound to the canonical request body; reusing it for a different operation returns 409 recovery_conflict before payment.",
+      afterWindow: "expired verdicts leave a tombstone holding the previous responseHash for 6 hours; a retry re-measures with the paywall re-armed and the response carries recovery.remeasured + previousResponseHash so agents can branch instead of guessing",
+      delegatedSpend: "the caps here are client-side for the signer that constructs the payment; spend through wallets delegated to OTHER agents is outside this contract and governed by the delegating owner's own controls",
+      warn: "The key is the caller's secret: whoever presents it can replay the verdict for free until the TTL/replay cap. Do not log it publicly. A leaked key cannot be revoked; use a new key for the next operation.",
+      doesNotGuarantee: recoveryDoesNotGuarantee(),
+      // Control 11: `stuck` must be counted and surfaced, never silently aged
+      // out. These are process-local counters, same scope as the records.
+      observability: recoveryObservability(),
+    },
+    evidence_bundle: {
+      spec: "verify402/evidence-bundle@1",
+      included: "evidence_bundle: { requestHash, responseHash, pinnedBlock, mode, createdAt, payment.in }",
+      requestHash: "sha256 of the canonical JSON { route, body } (keys sorted recursively, no whitespace)",
+      responseHash: "sha256 of the canonical JSON of the response body excluding evidence_bundle, recovery, cache, elapsedMs, and operationId",
+      verifier: "use src/recovery.mjs canonicalStable() as reference, or key-sort and stringify with no whitespace, then sha256",
+    },
     honesty: [
       "No profit is promised. The measured answer for mainstream pairs is usually no_edge.",
       "If a response says edge, verify before acting; the service reports what it measured, not what it guarantees.",
-      "Safety verdicts are measured evidence (live contract calls, actual venue quotes, market data), not a paid audit or a score from folklore.",
+      "Safety verdicts use a quote-based sellability check (quotes, not transfer execution). Transfer tax, blacklist, pause, and max-tx restrictions are listed in notChecked.",
+      "A preflight PASS is not a guarantee: it means the listed checks passed at that block; `notChecked` names what was not examined.",
+      "Payment preflight PASS can be structural_only: with no payer from address or no proof, it validates the request shape and says so.",
       "Not financial advice.",
     ],
   });
@@ -381,49 +2644,59 @@ app.post("/verify", async (req, res) => {
   const started = Date.now();
   try {
     const body = req.body || {};
-    const chainId = Number(body.chainId ?? 1);
+    const chainId = requireChainId(body);
     const base = String(body.base ?? "USDC").toUpperCase();
     const target = String(body.target ?? "").toUpperCase();
-    const size = Number(body.size ?? DEFAULT_SIZE);
-    const minNet = Number(body.minNet ?? 0);
 
-    if (!target) return res.status(400).json({ error: "target is required, e.g. {\"target\":\"WETH\"}" });
-    if (!CHAINS[chainId]) {
-      return res.status(400).json({ error: `unsupported chainId ${chainId}`, supported: Object.keys(CHAINS).map(Number) });
-    }
-    if (!Number.isFinite(size) || size <= 0) {
-      return res.status(400).json({ error: "size must be a positive number" });
-    }
-
+    if (!target) return badRequest(req, res, "missing_target", 'target is required, e.g. {"target":"WETH"}');
     const c = CHAINS[chainId];
     const baseTok = c.tokens[base];
     const targetTok = c.tokens[target];
-    if (!baseTok) return res.status(400).json({ error: `unknown base ${base}`, known: Object.keys(c.tokens) });
-    if (!targetTok) return res.status(400).json({ error: `unknown target ${target}`, known: Object.keys(c.tokens) });
+    if (!baseTok) return badRequest(req, res, "unknown_base", `unknown base ${base}`, { known: Object.keys(c.tokens) });
+    if (!targetTok) return badRequest(req, res, "unknown_target", `unknown target ${target}`, { known: Object.keys(c.tokens) });
 
-    const blockNumber = await clientFor(chainId).getBlockNumber();
+    const maxWhole = Number.MAX_SAFE_INTEGER / 10 ** baseTok.decimals;
+    const size = numberField(body.size, "size", {
+      min: 0, max: maxWhole, exclusiveMin: true, fallback: DEFAULT_SIZE,
+    });
+    const minNet = numberField(body.minNet, "minNet", {
+      min: 0, max: maxWhole, fallback: 0,
+    });
+    const raw = BigInt(Math.round(size * 10 ** baseTok.decimals));
+    if (raw <= 0n) return badRequest(req, res, "invalid_size", "size rounds to zero raw units; use a larger amount");
+    const minNetRaw = BigInt(Math.round(minNet * 10 ** baseTok.decimals));
+
+    let blockNumber;
+    try {
+      blockNumber = await clientFor(chainId).getBlockNumber();
+    } catch (e) {
+      return paidCatch(req, res, e);
+    }
     const key = `${chainId}:${base}:${target}:${size}:${minNet}:${blockNumber}`;
 
     if (cache.has(key)) {
-      return res.json({ ...cache.get(key), cache: { hit: true, pinnedBlock: Number(blockNumber) }, elapsedMs: Date.now() - started });
+      return emitPaid(req, res, { ...cache.get(key), cache: { hit: true, pinnedBlock: Number(blockNumber) }, elapsedMs: Date.now() - started });
     }
 
-    const raw = BigInt(Math.round(size * 10 ** baseTok.decimals));
     const result = await measureRoundTrip(chainId, {
       baseSymbol: base,
       targetSymbol: target,
       size: raw,
-      minNet: BigInt(Math.round(minNet * 10 ** baseTok.decimals)),
+      minNet: minNetRaw,
+      blockNumber,
     });
 
+    // transport/decode: 503, no charge, no cached verdict, no settlement record.
+    if (hardFailureResponse(req, res, result)) return;
+
     cachePut(key, result);
-    res.json({
+    emitPaid(req, res, {
       ...result,
       cache: { hit: false, pinnedBlock: Number(blockNumber) },
       elapsedMs: Date.now() - started,
     });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    return paidCatch(req, res, e);
   }
 });
 
@@ -434,29 +2707,36 @@ app.post("/safety", async (req, res) => {
   const started = Date.now();
   try {
     const body = req.body || {};
-    const chainId = Number(body.chainId ?? 1);
+    const chainId = requireChainId(body);
     const tokenAddress = String(body.tokenAddress ?? "").trim();
-    const intendedUsd = Number(body.intendedUsd ?? 500);
-    const offeredPriceUsd = body.offeredPriceUsd != null ? Number(body.offeredPriceUsd) : null;
     const baseSymbol = String(body.baseSymbol ?? "USDC").toUpperCase();
 
     if (!tokenAddress) {
-      return res.status(400).json({ error: 'tokenAddress is required, e.g. {"tokenAddress":"0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE"}' });
+      return badRequest(req, res, "missing_tokenAddress", 'tokenAddress is required, e.g. {"tokenAddress":"0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE"}');
     }
-    if (!CHAINS[chainId]) {
-      return res.status(400).json({ error: `unsupported chainId ${chainId}`, supported: Object.keys(CHAINS).map(Number) });
-    }
-    if (!Number.isFinite(intendedUsd) || intendedUsd <= 0) {
-      return res.status(400).json({ error: "intendedUsd must be a positive number" });
-    }
+    const c = CHAINS[chainId];
+    const baseTok = c.tokens[baseSymbol];
+    if (!baseTok) return badRequest(req, res, "unknown_base", `unknown base ${baseSymbol}`, { known: Object.keys(c.tokens) });
+    const maxWhole = Number.MAX_SAFE_INTEGER / 10 ** baseTok.decimals;
+    const intendedUsd = numberField(body.intendedUsd, "intendedUsd", {
+      min: 0, max: maxWhole, exclusiveMin: true, fallback: 500,
+    });
+    const offeredPriceUsd = body.offeredPriceUsd != null
+      ? numberField(body.offeredPriceUsd, "offeredPriceUsd", { min: 0, max: maxWhole })
+      : null;
 
     // Same (route, params, block) cache key: two agents asking about the same
     // token in the same block share one set of probes.
-    const blockNumber = await clientFor(chainId).getBlockNumber();
+    let blockNumber;
+    try {
+      blockNumber = await clientFor(chainId).getBlockNumber();
+    } catch (e) {
+      return paidCatch(req, res, e);
+    }
     const key = `safety:${chainId}:${tokenAddress.toLowerCase()}:${intendedUsd}:${offeredPriceUsd ?? ""}:${blockNumber}`;
 
     if (cache.has(key)) {
-      return res.json({
+      return emitPaid(req, res, {
         ...cache.get(key),
         cache: { hit: true, pinnedBlock: Number(blockNumber) },
         elapsedMs: Date.now() - started,
@@ -468,16 +2748,22 @@ app.post("/safety", async (req, res) => {
       intendedUsd,
       offeredPriceUsd,
       baseSymbol,
+      blockNumber,
     });
 
+    if (hardFailureResponse(req, res, result)) return;
+    if (result?.ok === false && result.kind === "bad_request") {
+      return badRequest(req, res, "bad_request", result.error || "invalid token or parameters");
+    }
+
     cachePut(key, result);
-    res.json({
+    emitPaid(req, res, {
       ...result,
       cache: { hit: false, pinnedBlock: Number(blockNumber) },
       elapsedMs: Date.now() - started,
     });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    return paidCatch(req, res, e);
   }
 });
 
@@ -486,10 +2772,7 @@ app.post("/route", async (req, res) => {
   const started = Date.now();
   try {
     const body = req.body || {};
-    const chainId = Number(body.chainId ?? 1);
-    if (!CHAINS[chainId]) {
-      return res.status(400).json({ error: `unsupported chainId ${chainId}`, supported: Object.keys(CHAINS).map(Number) });
-    }
+    const chainId = requireChainId(body);
     let addrIn; let addrOut; let amountIn;
     try {
       addrIn = resolveToken(chainId, String(body.tokenIn ?? "").trim()).address;
@@ -502,42 +2785,55 @@ app.post("/route", async (req, res) => {
       addrOut = String(body.tokenOut ?? "").trim();
     }
     if (!/^0x[0-9a-fA-F]{40}$/.test(addrIn) || !/^0x[0-9a-fA-F]{40}$/.test(addrOut)) {
-      return res.status(400).json({ error: "tokenIn/tokenOut must be a known symbol or a 0x address" });
+      return badRequest(req, res, "invalid_token", "tokenIn/tokenOut must be a known symbol or a 0x address");
     }
     if (addrIn.toLowerCase() === addrOut.toLowerCase()) {
-      return res.status(400).json({ error: "tokenIn and tokenOut must differ" });
+      return badRequest(req, res, "same_token", "tokenIn and tokenOut must differ");
     }
     try {
-      amountIn = BigInt(body.amountIn);
-      if (amountIn <= 0n) throw new Error();
-    } catch {
-      return res.status(400).json({ error: "amountIn must be a positive integer string in RAW units of tokenIn" });
+      amountIn = parseRawPositive(body.amountIn, "amountIn");
+    } catch (e) {
+      return badRequest(req, res, "invalid_amountIn", e.message);
     }
 
     const client = clientFor(chainId);
-    const blockNumber = await client.getBlockNumber();
+    let blockNumber;
+    try {
+      blockNumber = await client.getBlockNumber();
+    } catch (e) {
+      return paidCatch(req, res, e);
+    }
     const key = `route:${chainId}:${addrIn.toLowerCase()}:${addrOut.toLowerCase()}:${amountIn.toString()}:${blockNumber}`;
     if (cache.has(key)) {
-      return res.json({ ...cache.get(key), cache: { hit: true, pinnedBlock: Number(blockNumber) }, elapsedMs: Date.now() - started });
+      return emitPaid(req, res, { ...cache.get(key), cache: { hit: true, pinnedBlock: Number(blockNumber) }, elapsedMs: Date.now() - started });
     }
 
     const book = await bestRouteBook(client, chainId, { tokenIn: addrIn, tokenOut: addrOut, amountIn, blockNumber });
+    if (book.hard_failure) {
+      return hardFailureResponse(req, res, { ok: false, kind: book.hard_failure.kind, _detail: book.hard_failure.detail });
+    }
+
     const best = book.quoted[0] ?? null;
+    const quoteStatus = best ? (book.unavailable.length ? "partial" : "ok") : "no_pool";
     const result = {
-      ok: true,
+      ok: Boolean(best),
+      quote_status: quoteStatus,
+      unavailable_reason: quoteStatus === "no_pool" ? "no_pool" : quoteStatus === "partial" ? "some_venues_no_pool" : null,
       chainId,
       chainName: CHAINS[chainId].name,
       blockNumber: Number(blockNumber),
       amountIn: amountIn.toString(),
       best: best ? { venue: best.venue, kind: best.kind, amountOut: best.amountOut.toString() } : null,
       book: book.quoted.map((q) => ({ venue: q.venue, kind: q.kind, amountOut: q.amountOut.toString() })),
+      // Backward-compatible names plus typed reasons.
       unavailable: book.unavailable.map((u) => u.venue),
-      note: best ? null : "no venue quoted this pair at this size",
+      unavailable_reasons: book.unavailable,
+      note: best ? null : "no configured venue quoted this pair at this size",
     };
     cachePut(key, result);
-    res.json({ ...result, cache: { hit: false, pinnedBlock: Number(blockNumber) }, elapsedMs: Date.now() - started });
+    emitPaid(req, res, { ...result, cache: { hit: false, pinnedBlock: Number(blockNumber) }, elapsedMs: Date.now() - started });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    return paidCatch(req, res, e);
   }
 });
 
@@ -545,49 +2841,472 @@ app.post("/quotecheck", async (req, res) => {
   const started = Date.now();
   try {
     const body = req.body || {};
-    const chainId = Number(body.chainId ?? 1);
-    if (!CHAINS[chainId]) {
-      return res.status(400).json({ error: `unsupported chainId ${chainId}`, supported: Object.keys(CHAINS).map(Number) });
-    }
+    const chainId = requireChainId(body);
     const required = ["tokenIn", "tokenOut", "amountIn", "quotedOut"];
     const missing = required.filter((k) => body[k] === undefined || body[k] === null || body[k] === "");
     if (missing.length) {
-      return res.status(400).json({ error: `missing fields: ${missing.join(", ")}`, example: required.map((k) => ({ [k]: "..." })).reduce((a, b) => ({ ...a, ...b })) });
+      return badRequest(req, res, "missing_fields", `missing fields: ${missing.join(", ")}`);
+    }
+    let amountIn;
+    let quotedOut;
+    try {
+      amountIn = parseRawPositive(body.amountIn, "amountIn");
+    } catch (e) {
+      return badRequest(req, res, "invalid_amountIn", e.message);
+    }
+    try {
+      quotedOut = parseRawPositive(body.quotedOut, "quotedOut");
+    } catch (e) {
+      return badRequest(req, res, "invalid_quotedOut", e.message);
     }
 
     // Cache by offered number: two agents auditing the same offer in the same
     // block share one book.
-    const blockNumber = await clientFor(chainId).getBlockNumber();
-    const key = `qc:${chainId}:${String(body.tokenIn).toLowerCase()}:${String(body.tokenOut).toLowerCase()}:${String(body.amountIn)}:${String(body.quotedOut)}:${blockNumber}`;
+    let blockNumber;
+    try {
+      blockNumber = await clientFor(chainId).getBlockNumber();
+    } catch (e) {
+      return paidCatch(req, res, e);
+    }
+    const key = `qc:${chainId}:${String(body.tokenIn).toLowerCase()}:${String(body.tokenOut).toLowerCase()}:${amountIn.toString()}:${quotedOut.toString()}:${blockNumber}`;
     if (cache.has(key)) {
-      return res.json({ ...cache.get(key), cache: { hit: true, pinnedBlock: Number(blockNumber) }, elapsedMs: Date.now() - started });
+      return emitPaid(req, res, { ...cache.get(key), cache: { hit: true, pinnedBlock: Number(blockNumber) }, elapsedMs: Date.now() - started });
     }
 
     const result = await fairQuoteCheck(chainId, {
       tokenIn: body.tokenIn,
       tokenOut: body.tokenOut,
-      amountIn: body.amountIn,
-      quotedOut: body.quotedOut,
+      amountIn: amountIn.toString(),
+      quotedOut: quotedOut.toString(),
       venueClaimed: body.venueClaimed ?? null,
       chainIn: body.chainIn ?? null,
+      blockNumber,
     });
 
+    if (hardFailureResponse(req, res, result)) return;
+    if (result?.ok === false && result.kind === "bad_request") {
+      return badRequest(req, res, "bad_request", result.error || "invalid token or parameters");
+    }
+
     cachePut(key, result);
-    res.json({ ...result, cache: { hit: false, pinnedBlock: Number(blockNumber) }, elapsedMs: Date.now() - started });
+    emitPaid(req, res, { ...result, cache: { hit: false, pinnedBlock: Number(blockNumber) }, elapsedMs: Date.now() - started });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    return paidCatch(req, res, e);
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`\nverify402 listening on http://localhost:${PORT}`);
-  console.log(`  mode        : ${MODE}  (${NETWORKS.label})`);
-  console.log(`  /verify     : ${PRICE}   (is this arbitrage real?)`);
-  console.log(`  /safety     : ${SAFETY_PRICE}   (is this token safe to buy?)`);
-  console.log(`  /route      : ${ROUTE_PRICE}   (what would the chain actually pay?)`);
-  console.log(`  /quotecheck : ${QUOTECHECK_PRICE}   (is someone else's quote honest?)`);
-  console.log(`  pay to EVM  : ${PAY_TO_EVM}`);
-  console.log(`  pay to SVM  : ${PAY_TO_SVM}`);
-  console.log(`  facilitator : ${FACILITATOR_URL}`);
-  console.log(`  free        : GET / , /info , /health , /.well-known/*.json\n`);
+// Position sizing: the ladder scan.
+app.post("/depth", async (req, res) => {
+  const started = Date.now();
+  try {
+    const body = req.body || {};
+    const chainId = requireChainId(body);
+    const token = String(body.tokenAddress ?? "").trim();
+    if (!token) return badRequest(req, res, "missing_tokenAddress", 'tokenAddress is required, e.g. {"tokenAddress":"WETH"}');
+    const baseSymbol = String(body.baseSymbol ?? "USDC").toUpperCase();
+    const maxRoundTripBps = percentToBps(body.maxRoundTripPct ?? 1.0, "maxRoundTripPct", { max: 100 });
+    let sizesUsd = null;
+    if (body.sizesUsd != null) {
+      if (!Array.isArray(body.sizesUsd) || !body.sizesUsd.length || body.sizesUsd.length > 20) {
+        return badRequest(req, res, "invalid_sizesUsd", "sizesUsd must be a non-empty array of at most 20 positive numbers, each <= 1,000,000 USD");
+      }
+      try {
+        sizesUsd = body.sizesUsd.map((value) => numberField(value, "sizesUsd", {
+          min: 0, max: 1_000_000, exclusiveMin: true,
+        }));
+      } catch (e) {
+        if (e instanceof HttpError && e.status === 400) {
+          return badRequest(req, res, "invalid_sizesUsd", "sizesUsd must contain only positive JSON numbers, each <= 1,000,000 USD");
+        }
+        throw e;
+      }
+    }
+
+    let blockNumber;
+    try {
+      blockNumber = await clientFor(chainId).getBlockNumber();
+    } catch (e) {
+      return paidCatch(req, res, e);
+    }
+    const key = `depth:${chainId}:${token.toLowerCase()}:${baseSymbol}:${JSON.stringify(sizesUsd)}:${maxRoundTripBps}:${blockNumber}`;
+    if (cache.has(key)) {
+      return emitPaid(req, res, { ...cache.get(key), cache: { hit: true, pinnedBlock: Number(blockNumber) }, elapsedMs: Date.now() - started });
+    }
+
+    const result = await depthProfile(chainId, {
+      tokenAddress: token,
+      baseSymbol,
+      sizesUsd,
+      maxRoundTripBps,
+      blockNumber,
+    });
+    if (hardFailureResponse(req, res, result)) return;
+    if (result?.ok === false && result.kind === "bad_request") {
+      return badRequest(req, res, "bad_request", result.error || "invalid token or parameters");
+    }
+
+    cachePut(key, result);
+    emitPaid(req, res, {
+      ...result,
+      cache: { hit: false, pinnedBlock: Number(blockNumber) },
+      elapsedMs: Date.now() - started,
+    });
+  } catch (e) {
+    return paidCatch(req, res, e);
+  }
 });
+
+// Errors raised before a route runs — a malformed JSON body, a body over the
+// 64KB cap — used to fall through to Express's default handler, which answers
+// an HTML page with a stack trace and the server's file paths. Every endpoint
+// here speaks JSON, so those failures answer in the same envelope as the rest:
+// a stable code plus the request id, and nothing about the process.
+app.post("/assure", async (req, res) => {
+  const started = Date.now();
+  try {
+    const body = req.body || {};
+    const chainId = requireChainId(body);
+
+    // Price-worthiness gate (also mounted before the paywall, below): never
+    // charge $0.10 for a bundle that costs less bought separately. Kept here as
+    // defence in depth so a future mount change cannot reopen the overcharge.
+    const priceProblem = assurePriceProblem(body);
+    if (priceProblem) {
+      return badRequest(req, res, priceProblem.code, priceProblem.message, priceProblem.extra);
+    }
+
+    const client = clientFor(chainId);
+    const sections = {};
+    const checked = [];
+    const notChecked = new Set();
+
+    let blockNumber;
+    try {
+      blockNumber = await client.getBlockNumber();
+    } catch (e) {
+      return paidCatch(req, res, e);
+    }
+
+    const safetyInput = body.safety && typeof body.safety === "object" ? body.safety : null;
+    if (safetyInput?.tokenAddress) {
+      const tokenAddress = String(safetyInput.tokenAddress).trim();
+      const baseSymbol = String(safetyInput.baseSymbol ?? "USDC").toUpperCase();
+      const c = CHAINS[chainId];
+      const baseTok = c.tokens[baseSymbol];
+      if (!baseTok) return badRequest(req, res, "unknown_base", `unknown base ${baseSymbol}`, { known: Object.keys(c.tokens) });
+      const maxWhole = Number.MAX_SAFE_INTEGER / 10 ** baseTok.decimals;
+      const intendedUsd = numberField(safetyInput.intendedUsd ?? 500, "safety.intendedUsd", {
+        min: 0, max: maxWhole, exclusiveMin: true, fallback: 500,
+      });
+      const offeredPriceUsd = safetyInput.offeredPriceUsd != null
+        ? numberField(safetyInput.offeredPriceUsd, "safety.offeredPriceUsd", { min: 0, max: maxWhole })
+        : null;
+
+      const result = await preTradeCheck(chainId, {
+        tokenAddress,
+        intendedUsd,
+        offeredPriceUsd,
+        baseSymbol,
+        blockNumber,
+      });
+      if (hardFailureResponse(req, res, result)) return;
+      if (result?.ok === false && result.kind === "bad_request") {
+        return badRequest(req, res, "bad_request", result.error || "invalid safety parameters");
+      }
+      sections.safety = result;
+      for (const item of result.checked ?? []) checked.push(`safety:${item}`);
+      for (const item of result.notChecked ?? []) notChecked.add(item);
+    } else {
+      notChecked.add("safety: not requested");
+    }
+
+    const routeInput = body.route && typeof body.route === "object" ? body.route : null;
+    if (routeInput?.tokenIn != null && routeInput?.tokenOut != null && routeInput?.amountIn != null) {
+      let addrIn; let addrOut; let amountIn;
+      try {
+        addrIn = resolveToken(chainId, String(routeInput.tokenIn).trim()).address;
+      } catch {
+        addrIn = String(routeInput.tokenIn).trim();
+      }
+      try {
+        addrOut = resolveToken(chainId, String(routeInput.tokenOut).trim()).address;
+      } catch {
+        addrOut = String(routeInput.tokenOut).trim();
+      }
+      if (!/^0x[0-9a-fA-F]{40}$/.test(addrIn) || !/^0x[0-9a-fA-F]{40}$/.test(addrOut)) {
+        return badRequest(req, res, "invalid_token", "route.tokenIn/tokenOut must be a known symbol or a 0x address");
+      }
+      if (addrIn.toLowerCase() === addrOut.toLowerCase()) {
+        return badRequest(req, res, "same_token", "route.tokenIn and route.tokenOut must differ");
+      }
+      try {
+        amountIn = parseRawPositive(routeInput.amountIn, "route.amountIn");
+      } catch (e) {
+        return badRequest(req, res, "invalid_amountIn", e.message);
+      }
+
+      const book = await bestRouteBook(client, chainId, { tokenIn: addrIn, tokenOut: addrOut, amountIn, blockNumber });
+      if (book.hard_failure) {
+        return hardFailureResponse(req, res, { ok: false, kind: book.hard_failure.kind, _detail: book.hard_failure.detail });
+      }
+      const best = book.quoted[0] ?? null;
+      const quoteStatus = best ? (book.unavailable.length ? "partial" : "ok") : "no_pool";
+      const result = {
+        ok: Boolean(best),
+        quote_status: quoteStatus,
+        unavailable_reason: quoteStatus === "no_pool" ? "no_pool" : quoteStatus === "partial" ? "some_venues_no_pool" : null,
+        chainId,
+        chainName: CHAINS[chainId].name,
+        blockNumber: Number(blockNumber),
+        amountIn: amountIn.toString(),
+        best: best ? { venue: best.venue, kind: best.kind, amountOut: best.amountOut.toString() } : null,
+        book: book.quoted.map((q) => ({ venue: q.venue, kind: q.kind, amountOut: q.amountOut.toString() })),
+        unavailable: book.unavailable.map((u) => u.venue),
+        unavailable_reasons: book.unavailable,
+        note: best ? null : "no configured venue quoted this pair at this size",
+      };
+      sections.route = result;
+      checked.push("route:book");
+      notChecked.add("route: venues not configured on this chain");
+    } else if (routeInput) {
+      return badRequest(req, res, "missing_route_fields", "route requires tokenIn, tokenOut, and amountIn");
+    } else {
+      notChecked.add("route: not requested");
+    }
+
+    const quoteInput = body.quotecheck && typeof body.quotecheck === "object" ? body.quotecheck : null;
+    if (quoteInput?.tokenIn != null && quoteInput?.tokenOut != null && quoteInput?.amountIn != null && quoteInput?.quotedOut != null) {
+      let amountIn; let quotedOut;
+      try {
+        amountIn = parseRawPositive(quoteInput.amountIn, "quotecheck.amountIn");
+      } catch (e) {
+        return badRequest(req, res, "invalid_amountIn", e.message);
+      }
+      try {
+        quotedOut = parseRawPositive(quoteInput.quotedOut, "quotecheck.quotedOut");
+      } catch (e) {
+        return badRequest(req, res, "invalid_quotedOut", e.message);
+      }
+      const result = await fairQuoteCheck(chainId, {
+        tokenIn: quoteInput.tokenIn,
+        tokenOut: quoteInput.tokenOut,
+        amountIn: amountIn.toString(),
+        quotedOut: quotedOut.toString(),
+        venueClaimed: quoteInput.venueClaimed ?? null,
+        chainIn: quoteInput.chainIn ?? null,
+        blockNumber,
+      });
+      if (hardFailureResponse(req, res, result)) return;
+      if (result?.ok === false && result.kind === "bad_request") {
+        return badRequest(req, res, "bad_request", result.error || "invalid quotecheck parameters");
+      }
+      sections.quotecheck = result;
+      checked.push("quotecheck:fairness");
+      notChecked.add("quotecheck: off-chain promises and seller terms");
+    } else if (quoteInput) {
+      return badRequest(req, res, "missing_quotecheck_fields", "quotecheck requires tokenIn, tokenOut, amountIn, and quotedOut");
+    } else {
+      notChecked.add("quotecheck: not requested");
+    }
+
+    const depthInput = body.depth && typeof body.depth === "object" ? body.depth : null;
+    if (depthInput?.tokenAddress) {
+      const token = String(depthInput.tokenAddress).trim();
+      const baseSymbol = String(depthInput.baseSymbol ?? "USDC").toUpperCase();
+      const c = CHAINS[chainId];
+      const baseTok = c.tokens[baseSymbol];
+      if (!baseTok) return badRequest(req, res, "unknown_base", `unknown base ${baseSymbol}`, { known: Object.keys(c.tokens) });
+      let sizesUsd = null;
+      if (depthInput.sizesUsd != null) {
+        if (!Array.isArray(depthInput.sizesUsd) || !depthInput.sizesUsd.length || depthInput.sizesUsd.length > 20) {
+          return badRequest(req, res, "invalid_sizesUsd", "sizesUsd must be a non-empty array of at most 20 positive numbers, each <= 1,000,000 USD");
+        }
+        try {
+          sizesUsd = depthInput.sizesUsd.map((value) => numberField(value, "depth.sizesUsd", {
+            min: 0, max: 1_000_000, exclusiveMin: true,
+          }));
+        } catch (e) {
+          if (e instanceof HttpError && e.status === 400) {
+            return badRequest(req, res, "invalid_sizesUsd", "sizesUsd must contain only positive numbers, each <= 1,000,000 USD");
+          }
+          throw e;
+        }
+      }
+      const maxRoundTripBps = percentToBps(depthInput.maxRoundTripPct ?? 1.0, "depth.maxRoundTripPct", { max: 100 });
+      const result = await depthProfile(chainId, {
+        tokenAddress: token,
+        baseSymbol,
+        sizesUsd,
+        maxRoundTripBps,
+        blockNumber,
+      });
+      if (hardFailureResponse(req, res, result)) return;
+      if (result?.ok === false && result.kind === "bad_request") {
+        return badRequest(req, res, "bad_request", result.error || "invalid depth parameters");
+      }
+      sections.depth = result;
+      checked.push("depth:capacity");
+      notChecked.add("depth: external market context is advisory");
+    } else if (depthInput) {
+      return badRequest(req, res, "missing_tokenAddress", "depth.tokenAddress is required");
+    } else {
+      notChecked.add("depth: not requested");
+    }
+
+    if (!Object.keys(sections).length) {
+      return badRequest(req, res, "no_paid_checks", "at least one of safety, route, quotecheck, or depth must be supplied");
+    }
+
+    const verdict = Object.values(sections).some((section) => section?.verdict === "AVOID" || section?.verdict === "too_good_to_be_true")
+      ? "AVOID"
+      : Object.values(sections).some((section) => section?.verdict === "CAUTION" || section?.verdict === "overpaying")
+        ? "CAUTION"
+        : "PASS";
+    // Merge the route's declared honesty limits here — emitPaid merges the same
+    // list — so the hash covers exactly the arrays the caller receives and
+    // `assurance.evidenceHash` is recomputable from the response body.
+    const honesty = paidHonesty("/assure", { checked, notChecked: [...notChecked] });
+    const evidence = {
+      spec: ASSURANCE_SPEC,
+      chainId,
+      chainName: CHAINS[chainId].name,
+      blockNumber: Number(blockNumber),
+      checked: honesty.checked,
+      notChecked: honesty.notChecked,
+      sections,
+      verdict,
+    };
+    const evidenceHash = `sha256:${sha256Hex(canonicalStable(toJsonSafe(evidence)))}`;
+    const result = {
+      ok: Object.values(sections).every((section) => section?.ok !== false),
+      ...evidence,
+      assurance: {
+        spec: ASSURANCE_SPEC,
+        evidenceHash,
+        recompute: ASSURANCE_RECOMPUTE,
+      },
+      summary: "Paid checks ran at one pinned block. Read notChecked before acting. Recompute assurance.evidenceHash from this response to prove it was not altered.",
+    };
+
+    const key = `assure:${chainId}:${JSON.stringify(body)}:${blockNumber}`;
+    if (cache.has(key)) {
+      return emitPaid(req, res, { ...cache.get(key), cache: { hit: true, pinnedBlock: Number(blockNumber) }, elapsedMs: Date.now() - started });
+    }
+    cachePut(key, result);
+    emitPaid(req, res, {
+      ...result,
+      cache: { hit: false, pinnedBlock: Number(blockNumber) },
+      elapsedMs: Date.now() - started,
+    });
+  } catch (e) {
+    return paidCatch(req, res, e);
+  }
+});
+
+app.use((err, req, res, next) => {
+  if (res.headersSent) return next(err);
+  const requestId = req.requestId || randomUUID();
+  const tooLarge = err?.type === "entity.too.large" || err?.status === 413 || err?.statusCode === 413;
+  const badJson = err?.type === "entity.parse.failed" || (err instanceof SyntaxError && "body" in err);
+  if (badJson || tooLarge) {
+    const code = tooLarge ? "payload_too_large" : "invalid_json";
+    res.set("Cache-Control", "no-store");
+    return res.status(tooLarge ? 413 : 400).json({
+      error: code,
+      code,
+      message: tooLarge
+        ? "request body exceeds the 64KB limit"
+        : "request body is not valid JSON",
+      requestId,
+    });
+  }
+  logError(`[unhandled] ${req.method} ${req.path}`, err);
+  res.set("Cache-Control", "no-store");
+  res.status(500).json({
+    error: "internal_error",
+    code: "internal_error",
+    message: "the request failed; retry with the requestId if it repeats",
+    requestId,
+  });
+});
+
+export { app };
+
+const IS_MAIN = Boolean(process.argv[1]) && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (IS_MAIN) {
+  (async () => {
+    // Before accepting traffic: reconcile every staged payment loaded from the
+    // durable store. A payment that settled while the process was down
+    // promotes here (replayable), instead of risking a second charge.
+    try {
+      const n = await reconcileStagedOnStartup();
+      if (n > 0) logInfo(`recovery startup: reconciled ${n} staged operation(s) from the durable store`);
+    } catch (e) {
+      logWarn(`recovery startup reconciliation errored: ${e?.message ?? e}`);
+    }
+    // Warm the public board before the first visitor: the loader serves the
+    // bundled snapshot immediately and refreshes from the data branch behind it.
+    void loadBoard().catch(() => {});
+    const server = app.listen(PORT, () => {
+    const address = server.address();
+    const listeningPort = address && typeof address === "object" ? address.port : PORT;
+    logInfo(`\nverify402 listening on http://localhost:${listeningPort}`);
+    logInfo(`  mode        : ${MODE}  (${NETWORKS.label})`);
+    logInfo(`  /preflight  : free   (should I sign this payment or transaction?)`);
+    logInfo(`  /verify     : ${PRICE}   (is this arbitrage real?)`);
+    logInfo(`  /safety     : ${SAFETY_PRICE}   (is this token safe to buy?)`);
+    logInfo(`  /route      : ${ROUTE_PRICE}   (what would the chain actually pay?)`);
+    logInfo(`  /quotecheck : ${QUOTECHECK_PRICE}   (is someone else's quote honest?)`);
+    logInfo(`  pay to EVM  : ${PAY_TO_EVM}`);
+    logInfo(`  pay to SVM  : ${PAY_TO_SVM}`);
+    logInfo(`  facilitator : ${EFFECTIVE_FACILITATOR_URL}${CDP_MISSING_KEYS ? "  (CDP requested but keys missing — refused)" : ""}`);
+    logInfo(`  free        : GET / , /info , /health , /ready , /findings , /.well-known/*.json\n`);
+
+    // Warm the free snapshot as soon as the process is up: a cold Render instance
+    // should spend its boot time measuring, not making the first visitor wait.
+    refreshFindings().catch((e) => logWarn("findings prewarm failed", e));
+    // Keep the warm snapshot warm: without traffic, a 5-minute-old snapshot is
+    // what the nav badge shows — which reads as "stale" to a visitor. Cheap:
+    // the pair cache means one pass every few minutes.
+    const warmer = setInterval(() => {
+      refreshFindings().catch((e) => logWarn("findings warmer failed", e));
+    }, 240_000);
+    warmer.unref?.();
+  });
+
+  // Graceful shutdown: stop accepting new connections immediately, let active
+  // requests finish, and force-close only when the drain deadline expires.
+  let shuttingDown = false;
+  function shutdown(signal) {
+    if (shuttingDown) {
+      logWarn(`received ${signal} while already shutting down; forcing close`);
+      server.closeAllConnections?.();
+      process.exit(1);
+    }
+    shuttingDown = true;
+    logInfo(`received ${signal}; draining in-flight requests (timeout ${SHUTDOWN_TIMEOUT_MS}ms)`);
+    const timer = setTimeout(() => {
+      logError(`graceful shutdown timed out after ${SHUTDOWN_TIMEOUT_MS}ms; forcing close`);
+      server.closeAllConnections?.();
+      process.exit(1);
+    }, SHUTDOWN_TIMEOUT_MS);
+    timer.unref();
+    server.close((err) => {
+      clearTimeout(timer);
+      if (err) {
+        logError("graceful shutdown failed", err);
+        process.exit(1);
+      }
+      closeRecoveryStore();
+      flushSiteAnalytics();
+      flushUsage();
+      logInfo("graceful shutdown complete");
+      process.exit(0);
+    });
+    // Keep-alive sockets with no active request must not hold the drain open.
+    server.closeIdleConnections?.();
+  }
+  process.once("SIGTERM", () => shutdown("SIGTERM"));
+  process.once("SIGINT", () => shutdown("SIGINT"));
+  })();
+}

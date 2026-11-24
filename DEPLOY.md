@@ -8,8 +8,8 @@ the go-to-market cannot be automated and pretending otherwise costs weeks.
 
 ```bash
 npm install
-npm test                # 5/5: bytecode check, quoter agreement, no-invented-profit,
-                        #      monotonicity, determinism
+npm test                # full suite; run `npm run test:counts` for the current
+                        # offline/RPC split. Do not hardcode a check count in docs.
 BYPASS_PAYMENT=1 node src/server.mjs &
 curl -s localhost:4021/health
 curl -s -X POST localhost:4021/safety \
@@ -32,8 +32,17 @@ Dockerfile is standard.
    X402_MODE=testnet
    # PUBLIC facilitator, testnet-only, fine for launch:
    FACILITATOR_URL=https://x402.org/facilitator
+   # Optional but recommended: stable HMAC key for /preflight receipts.
+   # Generate with `openssl rand -hex 32`; never commit it.
+   PREFLIGHT_SECRET=<32-byte hex>
    ```
    `PAY_TO_EVM` / `PAY_TO_SVM` default to the owner's wallets in code.
+   If `PREFLIGHT_SECRET` is unset, receipts use a per-process secret: they
+   verify only inside that process. That is acceptable for a single 90-second
+   gate, but set the secret before running more than one instance.
+   The Blueprint in `render.yaml` generates this value once with
+   `generateValue: true`; for an existing manual service, set it in the
+   Render dashboard.
 4. Verify public behavior:
    - `curl https://<app>.onrender.com/health`
    - `curl https://<app>.onrender.com/safety` (no payment) → expect HTTP/1.1 402
@@ -66,13 +75,101 @@ a reputation surface, not buyers.
 ## 3. Mainnet (only after testnet settlements work end to end)
 
 - `X402_MODE=mainnet`
+- `AGENT_URL=https://<app>.onrender.com` (required in mainnet; the server refuses
+  to start without it, because the agent card must not trust the Host header)
 - A mainnet facilitator, e.g. Coinbase CDP:
   `FACILITATOR_URL=https://api.cdp.coinbase.com/platform/v2/x402`
   (create a CDP API key; do NOT reuse `x402.org/facilitator` - it is testnet-only)
 - The server refuses to start in mainnet mode without `FACILITATOR_URL`. That
   refusal is a feature; never bypass it.
+- `RECOVERY_DB_PATH` (see section 3.1) - **required in mainnet mode**; the
+  server refuses to start without it.
 - Settle one real $0.05 payment yourself as the first buyer before letting
   strangers pay: proof the rail works and receipts land.
+
+### 3.1 Settlement recovery store (RECOVERY_DB_PATH) - durable, single instance
+
+The settlement recovery store is a SQLite file on one disk. It is write-ahead
+(a staged payment is journaled **before** the facilitator settlement call) with
+`PRAGMA journal_mode=WAL` and `PRAGMA synchronous=FULL`, so a committed row
+survives even a SIGKILL. A restart can never cause a double charge.
+
+- Run **exactly one** server instance per database file. Two instances against
+  the same path is undefined and can double-charge. Do not enable horizontal
+  autoscaling with this configuration.
+- In mainnet mode the file must be on a **persistent** disk. Recommended on
+  Render: attach a persistent disk (paid instance; disks are $0.25/GB/mo)
+  mounted at e.g. `/var/data` and set
+  `RECOVERY_DB_PATH=/var/data/recovery/recovery.sqlite`. The WAL sidecars
+  (`-wal`, `-shm`) live beside the file on the same disk. There is **no
+  implicit default**: the variable must be set explicitly in mainnet mode, and
+  a development path such as `.data/recovery.sqlite` (gitignored) is refused.
+- In testnet/dev mode the variable is optional: unset = the historical
+  memory-only behavior; set = full durability with identical semantics.
+
+Fail-closed semantics:
+
+- Store fails to open at boot (corrupt file, unwritable dir): mainnet exits
+  with `REFUSING TO START`; testnet stays up but every paid route answers
+  `503 recovery_unavailable` until the store is healthy. The free gate
+  (`/preflight`, `/`, `/info`, `/health`, `/ready`, `/.well-known/*`) is
+  unaffected.
+- Journaling fails at payment time (disk full, lock timeout): the paid call
+  fails closed with `503 recovery_unavailable` - no verdict, no settlement,
+  no unrecorded money movement.
+- Staged-but-unconfirmed records (settle outcome lost, e.g. a restart before
+  the settle hook fired) never silently expire into "charge again". They are
+  reconciled against the token contract via the EIP-3009 view
+  `authorizationState(payer, nonce)`: authorization consumed -> promoted to
+  settled (replayable); past the authorization's `validBefore` deadline and
+  not consumed -> definitively safe to expire, the retry pays normally; check
+  cannot be made (RPC error, or a Solana-shaped record with no equivalent
+  view call) -> the key stays pending and the paid route answers 503
+  `recovery_unavailable` instead of letting the retry pay again.
+- The unhealthy-store flag clears itself on the next successful store
+  operation; `/health` exposes it as `recoveryStore: ok | unavailable |
+  memory-only`.
+
+Driver: `node:sqlite`, built into Node >= 22.13.0 (`engines.node`) - no native
+dependency was added; verified on 22.23.3.
+
+### 3.2 Cutover: making the deployed instance durable (one-time)
+
+The testnet demo runs on the free plan with no disk, so `/health` honestly
+reports `recoveryStore: "memory-only"`. That means a paid retry after a restart
+or deploy can be charged again. The code is ready; the cutover is a dashboard
+action.
+
+Check the current state from the outside:
+
+```bash
+npm run check:durability          # exit 0 = durable, 1 = memory-only
+```
+
+Cutover steps:
+
+1. Render dashboard -> verify402 -> Settings -> Instance Type: move off **Free**
+   (free instances cannot attach disks and spin down by design).
+2. Add a **Disk**: name `recovery`, mount path `/var/data`, size 1 GB
+   ($0.25/GB/mo). Keep **one** instance: SQLite is single-writer, so do not
+   enable horizontal autoscaling against this file.
+3. Add env var `RECOVERY_DB_PATH=/var/data/recovery/recovery.sqlite`.
+   Render creates the directory. Do not point it at `.data` (refused in
+   mainnet mode).
+4. Deploy, then re-run `npm run check:durability`. Expect
+   `recoveryStore ok` and `statePersistence durable-single-instance`.
+5. Prove the fix: settle one paid call, restart the service, retry with the same
+   `x-idempotency-key`. It must replay the same verdict with no second
+   settlement.
+
+Same disk, same cutover, also makes `/usage/site` page-view counts durable
+(`SITE_ANALYTICS_PATH` defaults to the recovery store's directory). To keep
+analytics elsewhere, set `SITE_ANALYTICS_PATH` explicitly.
+
+Rollback: remove `RECOVERY_DB_PATH` and redeploy. The service falls back to
+memory-only and says so on `/health`; no migration is required, and the SQLite
+file is simply ignored.
+
 
 ## 4. Distribution (the actual bottleneck)
 

@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>verify402 — don’t sign blind</title>
+<meta name="description" content="Token safety check for AI agents before they swap: quote-based sellability, round-trip cost, TRUST / CAUTION / AVOID. $0.02 per call, free pre-signing gate included. Supporting paid checks settle in USDC over x402 at vex402.online.">
+<link rel="canonical" href="https://vex402.online/">
+<meta name="google-site-verification" content="iGmI2QL110IkjnW0thU3DRZrdgQe_7mZsPWgkZVte7o">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://vex402.online/#website",
+      "url": "https://vex402.online/",
+      "name": "verify402",
+      "description": "Token safety check for AI agents before they swap: quote-based sellability, TRUST / CAUTION / AVOID. $0.02 per call with a free pre-signing gate.",
+      "publisher": { "@id": "https://vex402.online/#organization" }
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://vex402.online/#organization",
+      "name": "verify402",
+      "url": "https://vex402.online"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://vex402.online/#software",
+      "name": "verify402",
+      "applicationCategory": "SecurityApplication",
+      "operatingSystem": "Web",
+      "url": "https://vex402.online/",
+      "description": "Token safety check for AI agents before they swap: quote-based sellability, round-trip cost, TRUST / CAUTION / AVOID. $0.02 per call, free pre-signing gate included.",
+      "provider": { "@id": "https://vex402.online/#organization" }
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://vex402.online/#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Does PASS mean the transaction is safe?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No. PASS means the listed checks passed at that block. Read notChecked for what the gate did not verify, including counterparty reputation, sanctions, settlement, and off-chain promises. A PASS is a measurement, not a guarantee."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What does it cost?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "The preflight gate and the live findings are free. Individual checks cost $0.02-$0.05 each; the /assure bundle costs $0.10. Paid calls settle in USDC on Base mainnet."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Do I need a wallet?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Not for the free gate or the browser demo. No account and no API key. A wallet is only needed if you choose to call the paid checks; the MCP bridge caps what it can authorize."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does it sign or send a trade?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No. verify402 returns a verdict and a receipt. The executor and its signer decide what to do. The MCP bridge signs the x402 payment only; it never signs or sends a trade."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I use it with my own agent?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Use the free MCP server for preflight_gate, or call the HTTP endpoint from any runtime. The skill and references cover the exact payment and transaction payloads."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is this mainnet?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "The analysis reads mainnet chain data. This instance settles real USDC on Base mainnet and Solana mainnet through the Coinbase CDP facilitator. No result is a profit forecast."
+          }
+        }
+      ]
+    }
+  ]
+}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/site.css">
+<link rel="stylesheet" href="/assets/home.css">
+<script src="/assets/home.js" defer></script>
+<link rel="alternate" type="application/rss+xml" title="verify402 blog" href="/blog/rss.xml">
+</head>
+<body class="home">
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="site-head">
+  <a class="brand" href="/" aria-label="verify402 home">verify<span>[</span>402<span>]</span></a>
+  <nav class="site-nav" aria-label="Primary">
+    <a href="/checks">Checks</a>
+    <a href="/preflight">Preflight</a>
+    <a href="/inspect">Inspect</a>
+    <a href="/directory">Directory</a>
+    <a href="/mcp">MCP</a>
+    <a href="/proof">Proof</a>
+    <a href="/activity">Activity</a>
+    <a href="/blog">Blog</a>
+    <a href="/board">Board</a>
+    <a href="/docs">Docs</a>
+  </nav>
+  <div class="site-actions">
+    <a class="site-status" href="/live"><span class="status-dot"></span><span data-block>snapshot · block —</span></a>
+    <a class="btn sm" href="/preflight#try">Run free check</a>
+    <details class="site-menu">
+      <summary>Menu</summary>
+      <nav aria-label="Menu">
+        <p class="menu-label">Start</p>
+        <a href="/preflight">Free gate</a>
+        <a href="/checks">Paid checks &amp; prices</a>
+        <a href="/start">Quickstart</a>
+        <a href="/mcp">MCP server</a>
+        <p class="menu-label">Explore</p>
+        <a href="/inspect">402 inspector</a>
+        <a href="/directory">402 directory</a>
+        <a href="/live">Live findings</a>
+        <a href="/activity">Activity</a>
+        <p class="menu-label">Trust</p>
+        <a href="/proof">Proof &amp; receipts</a>
+        <a href="/board">Public board</a>
+        <a href="/audit">Payment review</a>
+        <a href="/testers">Tester kit</a>
+        <p class="menu-label">Project</p>
+        <a href="/blog">Blog</a>
+        <a href="/docs">Documentation</a>
+        <a href="/donate">Donate</a>
+        <a href="/sponsor">Sponsor hosting</a>
+        <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">GitHub</a>
+      </nav>
+    </details>
+  </div>
+</header>
+
+<main id="main">
+
+  <div role="status" style="background:#0f2a1d;color:#b8f5cf;border-bottom:1px solid #1f5a37;padding:10px 18px;text-align:center;font-size:.92rem;line-height:1.6">
+    <strong>Live on mainnet.</strong> USDC via Coinbase CDP at <a href="https://vex402.online/info" style="color:#7ef0b4">vex402.online</a>. Paid calls have settled on-chain, including payments from outside agents. <a href="/blog/verify402-is-live-on-mainnet" style="color:#7ef0b4">What that means →</a>
+  </div>
+
+  <section class="hero">
+    <div class="hero-copy">
+      <h1 class="hero-title">
+        <span class="line"><span>Don’t</span></span>
+        <span class="line"><span>sign blind.</span></span>
+      </h1>
+      <p class="hero-lead">Token safety check for AI agents before they swap: quote-based sellability, round-trip cost, TRUST / CAUTION / AVOID. $0.02 per call, free pre-signing gate included. Quote-based, not a honeypot proof — transfer restrictions stay in <code>notChecked</code>.</p>
+      <div class="hero-actions">
+        <a class="btn" href="/preflight#try">Run a free preflight</a>
+        <a class="hero-link" href="/inspect">Inspect a 402 before paying →</a>
+        <a class="hero-link" href="#checks">See the paid checks</a>
+      </div>
+      <ul class="hero-facts">
+        <li>No wallet for the gate</li>
+        <li>Receipt expires in 90 seconds</li>
+        <li>Works over MCP or HTTP</li>
+      </ul>
+    </div>
+
+    <div class="hero-art">
+      <div class="artifact-field" data-ui>
+        <p class="artifact-label">Example intent · not a live transaction</p>
+        <div class="receipt" id="receipt" data-receipt aria-live="polite">
+          <div class="receipt-head">
+            <span class="receipt-brand">verify[402]</span>
+            <span class="receipt-id" data-receipt-id>pf_3f8c…a12</span>
+          </div>
+          <div class="receipt-label">Preflight verdict</div>
+          <div class="receipt-verdict block" data-receipt-verdict>BLOCK</div>
+          <div class="receipt-reason" data-receipt-reason>unlimited_approval</div>
+          <div class="receipt-detail" data-receipt-detail>The spender can move the full token balance. No expiry, no cap.</div>
+          <div class="receipt-rows" data-receipt-rows>
+            <div class="receipt-row"><span>intent</span><b>approve</b></div>
+            <div class="receipt-row"><span>spender</span><b>0x4e…91c</b></div>
+            <div class="receipt-row"><span>allowance</span><b>unlimited</b></div>
+            <div class="receipt-row"><span>expires</span><b>90 seconds</b></div>
+          </div>
+          <div class="receipt-foot">Bound to the exact intent and a fresh block. Verify before signing.</div>
+        </div>
+        <div class="receipt-tabs" role="tablist" aria-label="Example intents">
+          <button class="receipt-tab" type="button" role="tab" aria-selected="false" data-receipt-tab="payment">Payment</button>
+          <button class="receipt-tab" type="button" role="tab" aria-selected="true" data-receipt-tab="approval">Approval</button>
+          <button class="receipt-tab" type="button" role="tab" aria-selected="false" data-receipt-tab="swap">Swap</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="ticker" aria-label="What verify402 checks">
+    <div class="ticker-track">
+      <span>Payment requests</span><span>Token approvals</span><span>Swaps</span><span>x402</span><span>MCP</span><span>Base mainnet</span><span>Mainnet analysis</span>
+      <span>Payment requests</span><span>Token approvals</span><span>Swaps</span><span>x402</span><span>MCP</span><span>Base mainnet</span><span>Mainnet analysis</span>
+    </div>
+  </div>
+
+  <section class="film" id="film">
+    <div class="wrap film-grid">
+      <div class="film-copy">
+        <p class="film-eyebrow" data-reveal>22 seconds · launch film</p>
+        <h2 class="film-title" data-reveal>Don’t sign blind.</h2>
+        <p data-reveal>Your agent can sign in milliseconds. verify402 is the check before it does: a free gate, typed reasons, and a receipt you can verify. The film shows a real BLOCK verdict and live Base numbers.</p>
+        <a class="film-link" href="/proof" data-reveal>Read the receipts →</a>
+      </div>
+      <div class="film-player" data-reveal>
+        <video controls preload="metadata" playsinline poster="/assets/verify402-film.jpg" aria-label="verify402 launch film">
+          <source src="/assets/verify402-film.mp4" type="video/mp4">
+          Your browser does not support HTML video. <a href="/assets/verify402-film.mp4">Download the MP4</a>.
+        </video>
+        <div class="film-meta"><span>22 sec · 1920×1080</span><span>Sound on</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="statement">
+    <div class="wrap statement-stack">
+      <p class="statement-line" data-reveal>Most agent failures look like a signature.</p>
+      <p class="statement-copy statement-lead" data-reveal>A model can be right about the trade and wrong about the transaction. verify402 is the check between the intent and the signature.</p>
+      <p class="statement-copy statement-note" data-reveal>It is not a guarantee. It is a measurement, with the gaps written down.</p>
+
+      <div class="statement-metrics" aria-label="verify402 proof numbers" data-reveal>
+        <div class="metric">
+          <b data-stat="mainnet-paid">—</b>
+          <span>paid calls on Base mainnet</span>
+          <small><span data-stat="mainnet-usdc">—</span> USDC settled · chain-verifiable</small>
+        </div>
+        <div class="metric">
+          <b data-stat="outside-payers">—</b>
+          <span>outside payers</span>
+          <small><span data-stat="outside-usdc">—</span> USDC from wallets the operator does not control</small>
+        </div>
+        <div class="metric">
+          <b data-stat="testnet-paid">—</b>
+          <span>testnet settlements</span>
+          <small>retired demo · historical</small>
+        </div>
+      </div>
+
+      <div class="statement-proof" data-reveal>
+        <span class="statement-source">Live from the chain · updated <span data-stat-updated>—</span> · <span data-stat="total-paid">—</span> calls across both networks · free gate <span data-stat="free-calls">—</span> checks on this instance. <a href="/proof">Read the receipts</a>.</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="checks" id="checks">
+    <div class="wrap">
+      <div class="checks-head">
+        <h2 data-reveal>One free gate.<br>Six paid checks.</h2>
+        <p data-reveal>Start with token safety at $0.02. The supporting paid checks measure one claim at a pinned block and return evidence you can recompute. No subscription.</p>
+      </div>
+      <div class="check-list" data-ui>
+        <a class="check-row is-free" href="/preflight">
+          <span class="check-name">/preflight</span>
+          <span class="check-q">Is this safe to sign?</span>
+          <span class="check-price">Free</span>
+        </a>
+        <a class="check-row" href="/checks#verify">
+          <span class="check-name">/verify</span>
+          <span class="check-q">Is this arbitrage real, net of costs?</span>
+          <span class="check-price">$0.05</span>
+        </a>
+        <a class="check-row" href="/checks#safety">
+          <span class="check-name">/safety</span>
+          <span class="check-q">Quote-based sellability: can this token actually be sold?</span>
+          <span class="check-price">$0.02</span>
+        </a>
+        <a class="check-row" href="/checks#route">
+          <span class="check-name">/route</span>
+          <span class="check-q">What would the chain actually pay?</span>
+          <span class="check-price">$0.03</span>
+        </a>
+        <a class="check-row" href="/checks#quotecheck">
+          <span class="check-name">/quotecheck</span>
+          <span class="check-q">Is this quote honest or too good?</span>
+          <span class="check-price">$0.05</span>
+        </a>
+        <a class="check-row" href="/checks#depth">
+          <span class="check-name">/depth</span>
+          <span class="check-q">How big can this trade be?</span>
+          <span class="check-price">$0.05</span>
+        </a>
+        <a class="check-row" href="/checks#assure">
+          <span class="check-name">/assure</span>
+          <span class="check-q">One evidence bundle at a single pinned block</span>
+          <span class="check-price">$0.10</span>
+        </a>
+      </div>
+      <div class="checks-foot">
+        <span>The free gate runs before every signature. Token safety is the lead paid check; the others are supporting measurements behind it.</span>
+        <a class="textlink" href="/checks">See how each check works</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="how">
+    <div class="wrap">
+      <div class="how-head">
+        <h2 data-reveal>One call<br>before the signature.</h2>
+        <p data-reveal>The gate is intentionally boring: build the exact intent, check it at a fresh block, keep the receipt. If the verdict is BLOCK, the executor stops.</p>
+      </div>
+      <div class="pipeline" data-ui>
+        <div class="stage" data-reveal>
+          <div class="stage-word">Intent</div>
+          <p>Build the exact payment request or transaction. No hand-waving about what the agent thinks it is signing.</p>
+        </div>
+        <div class="stage" data-reveal>
+          <div class="stage-word">Gate</div>
+          <p>PASS, CAUTION, or BLOCK at a fresh block, with typed reasons and a list of what was not checked.</p>
+        </div>
+        <div class="stage" data-reveal>
+          <div class="stage-word">Receipt</div>
+          <p>Verify the short-lived receipt against the intent. Then sign, or stop. The choice stays with the executor.</p>
+        </div>
+      </div>
+      <p class="how-foot" data-reveal>Free. No account, API key, or wallet. The paid checks are optional.</p>
+    </div>
+  </section>
+
+  <section class="install" id="install">
+    <div class="wrap install-grid">
+      <div>
+        <h2 data-reveal>Put the gate<br>in the agent.</h2>
+        <p data-reveal>The free MCP server exposes <code class="inline">preflight_gate</code>. One package, no wallet, and it works in any client that speaks MCP: Claude Desktop, Cursor, OpenCode, or your own runtime.</p>
+        <div class="install-actions" data-reveal>
+          <a class="btn" href="/mcp">MCP setup</a>
+          <a class="textlink" href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener">npm package</a>
+        </div>
+      </div>
+      <div data-reveal data-ui>
+        <div class="command">
+          <code>npx -y verify402-mcp@latest</code>
+          <button type="button" data-copy="npx -y verify402-mcp@latest">Copy</button>
+        </div>
+        <p class="install-note">Free installs list all nine tools; only the three free ones run without a wallet. Paid mode is opt-in, capped by <code>MAX_PAYMENT_USD</code>.</p>
+        <p class="install-note">npm downloads · <strong data-npm-week>—</strong> last 7 days · <strong data-npm-month>—</strong> last 30. Downloads are installs, not unique agents; the count is read from the npm registry.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="live">
+    <div class="wrap live-grid">
+      <div>
+        <h2 data-reveal>Watch it<br>say no.</h2>
+        <p data-reveal>A free route publishes the current verdicts on Ethereum majors, computed the same way as the paid calls. Most are no_edge. That is the point.</p>
+        <div class="live-actions" data-reveal>
+          <a class="btn" href="/live">Open the live page</a>
+          <a class="textlink" href="/preflight#try">Check an approval in the browser</a>
+        </div>
+      </div>
+      <div class="findings" data-ui data-reveal>
+        <div class="findings-head"><b>GET /findings</b><span>free · <span data-block>block —</span></span></div>
+        <div data-findings>
+          <div class="vrow"><span class="pair">WETH</span><span class="verdict">no_edge</span><span class="meta">loading…</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="pricing">
+    <div class="wrap">
+      <p class="pricing-line" data-reveal><span>Free to check.</span><span>From <span class="price-block">$0.02</span>.</span></p>
+      <div class="pricing-foot">
+        <p data-reveal>The gate costs nothing. Individual checks are $0.02-$0.05 each; /assure bundles supplied checks at one pinned block for $0.10. Paid in USDC on Base mainnet. No subscription, no minimum, no account.</p>
+        <a class="btn" href="/checks" data-reveal>See all prices</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="soft">
+    <div class="wrap">
+      <div class="band">
+        <div>
+          <h3>Bring three intents.</h3>
+          <p>One you expect to pass, one you are unsure about, one you think should be blocked. I will run them through the free gate and reply with the raw verdict, the reason codes, and the checks that did not run.</p>
+        </div>
+        <a class="btn" href="/testers">Open the tester kit</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="faq">
+    <div class="wrap faq-grid">
+      <h2 data-reveal>Questions,<br>answered.</h2>
+      <div class="faq-list">
+        <details class="faq-item" data-reveal>
+          <summary>Does PASS mean the transaction is safe?</summary>
+          <p>No. PASS means the listed checks passed at that block. Read <code class="inline">notChecked</code> for what the gate did not verify, including counterparty reputation, sanctions, settlement, and off-chain promises. A PASS is a measurement, not a guarantee.</p>
+        </details>
+        <details class="faq-item" data-reveal>
+          <summary>What does it cost?</summary>
+          <p>The preflight gate and the live findings are free. Individual checks cost $0.02-$0.05 each; the /assure bundle costs $0.10. Paid calls settle in USDC on Base mainnet.</p>
+        </details>
+        <details class="faq-item" data-reveal>
+          <summary>Do I need a wallet?</summary>
+          <p>Not for the free gate or the browser demo. No account and no API key. A wallet is only needed if you choose to call the paid checks; the MCP bridge caps what it can authorize.</p>
+        </details>
+        <details class="faq-item" data-reveal>
+          <summary>Does it sign or send a trade?</summary>
+          <p>No. verify402 returns a verdict and a receipt. The executor and its signer decide what to do. The MCP bridge signs the x402 payment only; it never signs or sends a trade.</p>
+        </details>
+        <details class="faq-item" data-reveal>
+          <summary>Can I use it with my own agent?</summary>
+          <p>Yes. Use the free MCP server for <code class="inline">preflight_gate</code>, or call the HTTP endpoint from any runtime. The skill and references cover the exact payment and transaction payloads.</p>
+        </details>
+        <details class="faq-item" data-reveal>
+          <summary>Is this mainnet?</summary>
+          <p>The analysis reads mainnet chain data. This instance settles real USDC on Base mainnet and Solana mainnet through the Coinbase CDP facilitator. No result is a profit forecast.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <a class="final" href="/preflight#try" aria-label="Run a free preflight">
+    <span class="final-top"><span>Before the next signature.</span><span class="final-arrow">↗</span></span>
+    <span class="final-word">CHECK</span>
+  </a>
+
+</main>
+
+<footer class="site-foot">
+  <div class="foot-mark" aria-hidden="true">verify<span>[402]</span></div>
+  <div class="foot-links">
+    <div>
+      <h2>Product</h2>
+      <a href="/inspect">402 inspector</a>
+      <a href="/directory">402 directory</a>
+      <a href="/preflight">Preflight gate</a>
+      <a href="/checks">The six checks</a>
+      <a href="/mcp">MCP server</a>
+      <a href="/live">Live findings</a>
+      <a href="/activity">Activity</a>
+      <a href="/testers">Tester kit</a>
+      <a href="/blog">Blog</a>
+      <a href="/start">Quickstart</a>
+    </div>
+    <div>
+      <h2>Project</h2>
+      <a href="/proof">Proof &amp; receipts</a>
+      <a href="/docs">Documentation</a>
+      <a href="/donate">Donate</a>
+      <a href="/sponsor">Sponsor hosting</a>
+      <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">Open-source client &amp; gate</a>
+      <a href="https://github.com/x402-foundation/x402/issues/3847" rel="noopener">x402 proposal</a>
+    </div>
+    <div>
+      <h2>For machines</h2>
+      <a href="/.well-known/verify402.json">Service manifest</a>
+      <a href="/openapi.json">OpenAPI 3.1</a>
+      <a href="/llms.txt">llms.txt</a>
+      <a href="/findings">/findings</a>
+      <a href="/blog/rss.xml">RSS</a>
+    </div>
+    <div>
+      <h2>For teams</h2>
+      <p class="foot-note">Embedding a pre-signing check in a wallet, agent, or treasury workflow?</p>
+      <a href="mailto:a32116150@gmail.com?subject=verify402%20walkthrough">Talk to the builder</a>
+      <a href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener">npm package</a>
+    </div>
+  </div>
+  <p class="foot-legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data. This instance settles real USDC on Base mainnet / Solana mainnet over x402. Prices are per call, paid in USDC over x402; the preflight gate is free.</p>
+</footer>
+
+<script src="/assets/site.js"></script>
+</body>
+</html>

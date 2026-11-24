@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Blog — notes from before the signature · verify402</title>
+<meta name="description" content="Field notes on the pre-signing layer for agent payments: what a gate can check, what a receipt proves, and the intents an agent should never sign unchecked.">
+<link rel="canonical" href="https://vex402.online/blog">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Blog — notes from before the signature · verify402">
+<meta property="og:description" content="Scope, receipts, and field notes from building a pre-signing gate for agent payments.">
+<meta property="og:url" content="https://vex402.online/blog">
+<meta property="og:image" content="https://vex402.online/assets/logo-400.png">
+<meta name="twitter:card" content="summary">
+<meta name="google-site-verification" content="iGmI2QL110IkjnW0thU3DRZrdgQe_7mZsPWgkZVte7o">
+<link rel="alternate" type="application/rss+xml" title="verify402 blog" href="/blog/rss.xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/site.css">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "Blog", "name": "verify402 — notes from before the signature", "description": "Scope, receipts, and field notes from building a pre-signing gate for agent payments.", "url": "https://vex402.online/blog", "publisher": {"@type": "Organization", "name": "verify402", "url": "https://vex402.online"}, "blogPost": [{"@type": "BlogPosting", "headline": "What a pre-signing gate can see in three x402 attack shapes", "url": "https://vex402.online/blog/x402-attack-shapes", "datePublished": "2026-11-23"}, {"@type": "BlogPosting", "headline": "verify402 is live on mainnet — here is the receipt", "url": "https://vex402.online/blog/verify402-is-live-on-mainnet", "datePublished": "2026-11-18"}, {"@type": "BlogPosting", "headline": "verify402 settles through the Coinbase CDP facilitator (testnet)", "url": "https://vex402.online/blog/verify402-cdp-facilitator-testnet", "datePublished": "2026-11-16"}, {"@type": "BlogPosting", "headline": "What verify402-mcp 1.1.1 ships", "url": "https://vex402.online/blog/verify402-mcp-1-1-1", "datePublished": "2026-11-16"}, {"@type": "BlogPosting", "headline": "What x402's 402s actually look like", "url": "https://vex402.online/blog/what-public-402s-look-like", "datePublished": "2026-11-13"}, {"@type": "BlogPosting", "headline": "What verify402-mcp 1.1.0 ships", "url": "https://vex402.online/blog/verify402-mcp-1-1-0", "datePublished": "2026-11-13"}, {"@type": "BlogPosting", "headline": "Check an x402 endpoint before you pay it", "url": "https://vex402.online/blog/check-an-x402-endpoint-before-you-pay", "datePublished": "2026-11-13"}, {"@type": "BlogPosting", "headline": "Put a pre-signing gate in an MCP agent in 15 minutes", "url": "https://vex402.online/blog/pre-signing-gate-in-an-mcp-agent", "datePublished": "2026-11-13"}, {"@type": "BlogPosting", "headline": "What a pre-signing gate can check — and what it can’t", "url": "https://vex402.online/blog/what-a-pre-signing-gate-can-check", "datePublished": "2026-10-25"}, {"@type": "BlogPosting", "headline": "A receipt is not a guarantee. It’s a falsifiable record.", "url": "https://vex402.online/blog/a-receipt-is-a-falsifiable-record", "datePublished": "2026-10-25"}, {"@type": "BlogPosting", "headline": "Three payment intents your agent should never sign unchecked", "url": "https://vex402.online/blog/three-intents-never-sign-unchecked", "datePublished": "2026-10-25"}]}</script>
+</head>
+<body>
+
+<header class="site-head">
+  <a class="brand" href="/" aria-label="verify402 home">verify<span>[</span>402<span>]</span></a>
+  <nav class="site-nav" aria-label="Primary">
+    <a href="/checks">Checks</a>
+    <a href="/preflight">Preflight</a>
+    <a href="/inspect">Inspect</a>
+    <a href="/directory">Directory</a>
+    <a href="/mcp">MCP</a>
+    <a href="/proof">Proof</a>
+    <a href="/activity">Activity</a>
+    <a href="/blog">Blog</a>
+    <a href="/board">Board</a>
+    <a href="/docs">Docs</a>
+  </nav>
+  <div class="site-actions">
+    <a class="site-status" href="/live"><span class="status-dot"></span><span data-block>snapshot · block —</span></a>
+    <a class="btn sm" href="/preflight#try">Run free check</a>
+    <details class="site-menu">
+      <summary>Menu</summary>
+      <nav aria-label="Menu">
+        <p class="menu-label">Start</p>
+        <a href="/preflight">Free gate</a>
+        <a href="/checks">Paid checks &amp; prices</a>
+        <a href="/start">Quickstart</a>
+        <a href="/mcp">MCP server</a>
+        <p class="menu-label">Explore</p>
+        <a href="/inspect">402 inspector</a>
+        <a href="/directory">402 directory</a>
+        <a href="/live">Live findings</a>
+        <a href="/activity">Activity</a>
+        <p class="menu-label">Trust</p>
+        <a href="/proof">Proof &amp; receipts</a>
+        <a href="/board">Public board</a>
+        <a href="/audit">Payment review</a>
+        <a href="/testers">Tester kit</a>
+        <p class="menu-label">Project</p>
+        <a href="/blog">Blog</a>
+        <a href="/docs">Documentation</a>
+        <a href="/donate">Donate</a>
+        <a href="/sponsor">Sponsor hosting</a>
+        <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">GitHub</a>
+      </nav>
+    </details>
+  </div>
+</header>
+
+<main>
+  <div class="wrap page-head">
+    <p class="eyebrow">Field notes · the pre-signing layer</p>
+    <h1>Notes from before the signature.</h1>
+    <p class="lead">Scope, receipts, and the failure modes that happen after the model decides but before the money moves. No price predictions, no token talk, no growth hacks.</p>
+    <div class="btn-row">
+      <a class="btn" href="/testers">Bring three intents</a>
+      <a class="btn ghost" href="/blog/rss.xml">RSS feed</a>
+    </div>
+  </div>
+
+  <section class="tight">
+    <div class="wrap">
+      <div class="post-list">
+
+        <a class="post-card" href="/blog/x402-attack-shapes">
+          <div class="post-meta">
+            <span class="post-tag">Field notes</span>
+            <time datetime="2026-11-23">Nov 23, 2026</time>
+            <span>6 min</span>
+          </div>
+          <div>
+            <h2>What a pre-signing gate can see in three x402 attack shapes</h2>
+            <p>Three reported failure shapes run through a local offline preflight: an overcharge, a Solana approval accepted as payment, and a sign-in domain mismatch. What each did — and did not — catch.</p>
+          </div>
+          <span class="post-read">Read →</span>
+        </a>
+
+        <a class="post-card" href="/blog/verify402-is-live-on-mainnet">
+          <div class="post-meta">
+            <span class="post-tag">Mainnet</span>
+            <time datetime="2026-11-18">Nov 18, 2026</time>
+            <span>7 min</span>
+          </div>
+          <div>
+            <h2>verify402 is live on mainnet — here is the receipt</h2>
+            <p>Base + Solana mainnet at vex402.online. Real USDC has settled on Base mainnet, including payments from outside x402 agents. Chain-verifiable. Traffic, not code, is still the open question.</p>
+          </div>
+          <span class="post-read">Read →</span>
+        </a>
+
+        <a class="post-card" href="/blog/what-public-402s-look-like">
+          <div class="post-meta">
+            <span class="post-tag">Field note</span>
+            <time datetime="2026-11-13">Nov 13, 2026</time>
+            <span>8 min</span>
+          </div>
+          <div>
+            <h2>What x402's 402s actually look like</h2>
+            <p>300 public x402 endpoints from the catalog's first page, one probe each: Base, USDC, five-minute authorizations — and the 57 that ask for an hour. Raw JSON included.</p>
+          </div>
+          <span class="post-read">Read →</span>
+        </a>
+
+        <a class="post-card" href="/blog/verify402-cdp-facilitator-testnet">
+          <div class="post-meta">
+            <span class="post-tag">Settlement</span>
+            <time datetime="2026-11-16">Nov 16, 2026</time>
+            <span>6 min</span>
+          </div>
+          <div>
+            <h2>We settle through the Coinbase CDP facilitator (testnet)</h2>
+            <p>One testnet USDC payment settled end-to-end through CDP — the only path the Bazaar indexes. What settled, what did not; chain-verified.</p>
+          </div>
+          <span class="post-read">Read →</span>
+        </a>
+
+        <a class="post-card" href="/blog/verify402-mcp-1-1-1">
+          <div class="post-meta">
+            <span class="post-tag">Release note</span>
+            <time datetime="2026-11-16">Nov 16, 2026</time>
+            <span>6 min</span>
+          </div>
+          <div>
+            <h2>What verify402-mcp 1.1.2 ships</h2>
+            <p>Six recovery defects fixed — PAYMENT-SIGNATURE support, a reproducible evidence hash, settling / stuck implemented — and what did not change.</p>
+          </div>
+          <span class="post-read">Read →</span>
+        </a>
+
+        <a class="post-card" href="/blog/verify402-mcp-1-1-0">
+          <div class="post-meta">
+            <span class="post-tag">Release note</span>
+            <time datetime="2026-11-13">Nov 13, 2026</time>
+            <span>7 min</span>
+          </div>
+          <div>
+            <h2>What verify402-mcp 1.1.0 ships</h2>
+            <p>Two free tools, provider-published terms binding, a token registry, durable counters — and the things that did not change.</p>
+          </div>
+          <span class="post-read">Read →</span>
+        </a>
+
+        <a class="post-card" href="/blog/check-an-x402-endpoint-before-you-pay">
+          <div class="post-meta">
+            <span class="post-tag">x402</span>
+            <time datetime="2026-11-13">Nov 13, 2026</time>
+            <span>8 min</span>
+          </div>
+          <div>
+            <h2>Check an x402 endpoint before you pay it</h2>
+            <p>A 402 is a price tag, not a receipt. The six fields that decide what you sign, what each one can get wrong, and a free way to read them without a wallet.</p>
+          </div>
+          <span class="post-read">Read →</span>
+        </a>
+
+        <a class="post-card" href="/blog/pre-signing-gate-in-an-mcp-agent">
+          <div class="post-meta">
+            <span class="post-tag">Integration</span>
+            <time datetime="2026-11-13">Nov 13, 2026</time>
+            <span>10 min</span>
+          </div>
+          <div>
+            <h2>Put a pre-signing gate in an MCP agent in 15 minutes</h2>
+            <p>Three free tools, one config block, and one hook that makes the signature unreachable until the receipt verifies. No key, no wallet, no account.</p>
+          </div>
+          <span class="post-read">Read →</span>
+        </a>
+
+        <a class="post-card" href="/blog/what-a-pre-signing-gate-can-check">
+          <div class="post-meta">
+            <span class="post-tag">Scope</span>
+            <time datetime="2026-10-25">Oct 25, 2026</time>
+            <span>8 min</span>
+          </div>
+          <div>
+            <h2>What a pre-signing gate can check — and what it can't</h2>
+            <p>A gate is useful only if its boundary is honest. Here is the checklist it can run against an intent, and the list of things it must say it does not know.</p>
+          </div>
+          <span class="post-read">Read →</span>
+        </a>
+
+        <a class="post-card" href="/blog/a-receipt-is-a-falsifiable-record">
+          <div class="post-meta">
+            <span class="post-tag">Receipts</span>
+            <time datetime="2026-10-25">Oct 25, 2026</time>
+            <span>7 min</span>
+          </div>
+          <div>
+            <h2>A receipt is not a guarantee. It's a falsifiable record.</h2>
+            <p>A green check that nobody can verify is a logo. A receipt binds the exact intent, the block, the verdict, and an expiry — so a third party can tell what was checked and when.</p>
+          </div>
+          <span class="post-read">Read →</span>
+        </a>
+
+        <a class="post-card" href="/blog/three-intents-never-sign-unchecked">
+          <div class="post-meta">
+            <span class="post-tag">Failure modes</span>
+            <time datetime="2026-10-25">Oct 25, 2026</time>
+            <span>9 min</span>
+          </div>
+          <div>
+            <h2>Three payment intents your agent should never sign unchecked</h2>
+            <p>An unlimited approval, an x402 offer that does not match the resource, and a swap with no floor. In each case the signature is valid; the intent is not.</p>
+          </div>
+          <span class="post-read">Read →</span>
+        </a>
+
+      </div>
+
+      <div class="callout" style="margin-top:36px">
+        <h3>What this blog is for</h3>
+        <p>Each post is a working note from a solo-built service. If a claim cannot be reproduced against the live gate or the public repo, it does not belong here. Corrections are published, not quietly edited away.</p>
+      </div>
+
+      <div class="btn-row" style="margin-top:28px">
+        <a class="btn" href="/testers">Send three intents</a>
+        <a class="btn ghost" href="/preflight#try">Run the gate first</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-foot">
+  <div class="foot-mark" aria-hidden="true">verify<span>[402]</span></div>
+  <div class="foot-links">
+    <div>
+      <h2>Product</h2>
+      <a href="/inspect">402 inspector</a>
+      <a href="/directory">402 directory</a>
+      <a href="/preflight">Preflight gate</a>
+      <a href="/checks">The six checks</a>
+      <a href="/mcp">MCP server</a>
+      <a href="/live">Live findings</a>
+      <a href="/activity">Activity</a>
+      <a href="/testers">Tester kit</a>
+      <a href="/blog">Blog</a>
+      <a href="/start">Quickstart</a>
+    </div>
+    <div>
+      <h2>Project</h2>
+      <a href="/proof">Proof &amp; receipts</a>
+      <a href="/docs">Documentation</a>
+      <a href="/donate">Donate</a>
+      <a href="/sponsor">Sponsor hosting</a>
+      <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">Open-source client &amp; gate</a>
+      <a href="https://github.com/x402-foundation/x402/issues/3847" rel="noopener">x402 proposal</a>
+    </div>
+    <div>
+      <h2>For machines</h2>
+      <a href="/.well-known/verify402.json">Service manifest</a>
+      <a href="/openapi.json">OpenAPI 3.1</a>
+      <a href="/llms.txt">llms.txt</a>
+      <a href="/findings">/findings</a>
+      <a href="/blog/rss.xml">RSS</a>
+    </div>
+    <div>
+      <h2>For teams</h2>
+      <p class="foot-note">Embedding a pre-signing check in a wallet, agent, or treasury workflow?</p>
+      <a href="mailto:a32116150@gmail.com?subject=verify402%20walkthrough">Talk to the builder</a>
+      <a href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener">npm package</a>
+    </div>
+  </div>
+  <p class="foot-legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data. This instance settles real USDC on Base mainnet / Solana mainnet over x402. Real USDC has settled on Base mainnet, including payments from outside agents. Prices are per call, paid in USDC over x402; /preflight is free.</p>
+</footer>
+
+<script src="/assets/site.js"></script>
+</body>
+</html>

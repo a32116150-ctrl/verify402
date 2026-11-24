@@ -1,17 +1,61 @@
 {
-  "name": "verify402-mcp-bridge",
-  "version": "1.0.0",
-  "private": true,
-  "description": "MCP bridge exposing verify402's paid tools (verify_arbitrage, check_token_safety) to any MCP client, paying per call via x402.",
+  "name": "verify402-mcp",
+  "version": "2.6.1",
+  "mcpName": "io.github.a32116150-ctrl/verify402-mcp",
+  "description": "Token safety check for AI agents before they swap: quote-based sellability, round-trip cost, TRUST / CAUTION / AVOID. $0.02 per call, free pre-signing gate included. MCP server with supporting x402 checks.",
   "type": "module",
+  "bin": {
+    "verify402-mcp": "index.mjs"
+  },
   "main": "index.mjs",
+  "files": [
+    ".env.example",
+    "budget.mjs",
+    "client-id.mjs",
+    "index.mjs",
+    "LICENSE",
+    "log.mjs",
+    "NOTICE",
+    "paid-call.mjs",
+    "payment-policy.mjs",
+    "README.md",
+    "x402-client.mjs"
+  ],
   "scripts": {
-    "start": "node index.mjs"
+    "start": "node index.mjs",
+    "test": "node --test test/payment-policy.test.mjs test/first-payment.test.mjs test/paid-call.test.mjs test/bridge-client.test.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "x402",
+    "ai-agents",
+    "crypto",
+    "preflight",
+    "payments",
+    "base",
+    "solana",
+    "trading-bot"
+  ],
+  "license": "Apache-2.0",
+  "author": "verify402 (https://github.com/a32116150-ctrl/verify402)",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/a32116150-ctrl/verify402.git",
+    "directory": "mcp-bridge"
+  },
+  "homepage": "https://vex402.online/mcp",
+  "bugs": {
+    "url": "https://github.com/a32116150-ctrl/verify402/issues"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.1",
-    "@x402/axios": "^2.28.0",
-    "@x402/evm": "^2.28.0",
     "axios": "^1.13.2",
     "dotenv": "^16.4.5",
     "viem": "^2.39.0",

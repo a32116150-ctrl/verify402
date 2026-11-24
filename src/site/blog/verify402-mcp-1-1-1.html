@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What verify402-mcp 1.1.1 ships · verify402</title>
+<meta name="description" content="The 1.1.1 release fixes the settlement-recovery path: durable recovery now works for every real v2 caller (not just legacy clients), the advertised evidence hash is reproducible, and the crash-arming half of x402's double-sign window (settling / stuck) is implemented and observable. The bridge has no runtime change.">
+<link rel="canonical" href="https://vex402.online/blog/verify402-mcp-1-1-1">
+<meta property="og:type" content="article">
+<meta property="og:title" content="What verify402-mcp 1.1.1 ships">
+<meta property="og:description" content="Six recovery defects, fixed — and what did not change.">
+<meta property="og:url" content="https://vex402.online/blog/verify402-mcp-1-1-1">
+<meta property="og:image" content="https://vex402.online/assets/logo-400.png">
+<meta name="twitter:card" content="summary">
+<meta name="google-site-verification" content="iGmI2QL110IkjnW0thU3DRZrdgQe_7mZsPWgkZVte7o">
+<link rel="alternate" type="application/rss+xml" title="verify402 blog" href="/blog/rss.xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/site.css">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "BlogPosting", "headline": "What verify402-mcp 1.1.1 ships", "description": "Six recovery defects fixed — PAYMENT-SIGNATURE support, a reproducible evidence hash, settling/stuck implemented and observable — and what did not change.", "datePublished": "2026-11-16", "dateModified": "2026-11-16", "author": {"@type": "Organization", "name": "verify402", "url": "https://vex402.online"}, "publisher": {"@type": "Organization", "name": "verify402", "url": "https://vex402.online"}, "mainEntityOfPage": "https://vex402.online/blog/verify402-mcp-1-1-1", "image": "https://vex402.online/assets/logo-400.png"}</script>
+</head>
+<body>
+
+<header class="site-head">
+  <a class="brand" href="/" aria-label="verify402 home">verify<span>[</span>402<span>]</span></a>
+  <nav class="site-nav" aria-label="Primary">
+    <a href="/checks">Checks</a>
+    <a href="/preflight">Preflight</a>
+    <a href="/inspect">Inspect</a>
+    <a href="/directory">Directory</a>
+    <a href="/mcp">MCP</a>
+    <a href="/proof">Proof</a>
+    <a href="/activity">Activity</a>
+    <a href="/blog">Blog</a>
+    <a href="/board">Board</a>
+    <a href="/docs">Docs</a>
+  </nav>
+  <div class="site-actions">
+    <a class="site-status" href="/live"><span class="status-dot"></span><span data-block>snapshot · block —</span></a>
+    <a class="btn sm" href="/preflight#try">Run free check</a>
+    <details class="site-menu">
+      <summary>Menu</summary>
+      <nav aria-label="Menu">
+        <p class="menu-label">Start</p>
+        <a href="/preflight">Free gate</a>
+        <a href="/checks">Paid checks &amp; prices</a>
+        <a href="/start">Quickstart</a>
+        <a href="/mcp">MCP server</a>
+        <p class="menu-label">Explore</p>
+        <a href="/inspect">402 inspector</a>
+        <a href="/directory">402 directory</a>
+        <a href="/live">Live findings</a>
+        <a href="/activity">Activity</a>
+        <p class="menu-label">Trust</p>
+        <a href="/proof">Proof &amp; receipts</a>
+        <a href="/board">Public board</a>
+        <a href="/audit">Payment review</a>
+        <a href="/testers">Tester kit</a>
+        <p class="menu-label">Project</p>
+        <a href="/blog">Blog</a>
+        <a href="/docs">Documentation</a>
+        <a href="/donate">Donate</a>
+        <a href="/sponsor">Sponsor hosting</a>
+        <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">GitHub</a>
+      </nav>
+    </details>
+  </div>
+</header>
+
+<main>
+  <div class="wrap page-head">
+    <p class="eyebrow">Release note · 6 min read · Nov 16, 2026</p>
+    <h1>What verify402-mcp 1.1.1 ships.</h1>
+    <p class="lead">The release where the recovery path became real: five defects in the settlement-recovery flow, all fatal to the feature's promise, fixed — and a marker republish so the installed version agrees with the deployed service.</p>
+  </div>
+
+  <article class="wrap prose">
+    <p>1.1.1 was published after explicit approval: npm <code class="inline">verify402-mcp@1.1.1</code> (gitHead <code class="inline">7c43cbf5406d73d9ae396ed1363170414a2cc74e</code>), the MCP Registry active/latest, GitHub release <code class="inline">mcp-v1.1.1</code>, and Render serving 1.1.1. The bridge has <b>no runtime change</b>; 1.1.1 exists as a marker so the version you install is the version the service reports. All the change is in the service — the six things that were broken between “we say settlement recovery exists” and the code actually doing it.</p>
+
+    <h2>The one that hurt: durable recovery was unreachable for every real caller</h2>
+
+    <p>The service read the legacy <code class="inline">x-payment</code> header for the payment's identity — but the x402 v2 SDK sends <code class="inline">PAYMENT-SIGNATURE</code>, and our own bridge sends that too. Every genuine v2 caller therefore staged a recovery record with no payment reference and could never reconcile a lost response. The durable-recovery feature worked only for clients that don't exist. The bridge is untouched here; the fix is in the service, and a v2 settlement reference test now guards it.</p>
+
+    <p>The Solana rail had the same problem in the other direction — there is no EIP-3009 nonce to match — so a Solana-exact settlement could never be reconciled at all. It is now identified by its signed transaction.</p>
+
+    <h2>The second: the evidence hash a receiver cannot reproduce</h2>
+
+    <p>Every paid response advertises a <code class="inline">responseHash</code>. Before 1.1.1, the service hashed the body <i>before</i> the honesty arrays (<code class="inline">checked</code> / <code class="inline">notChecked</code>) were merged in — so the advertised hash disagreed with the documented recompute recipe for every handler that did not already return them. A verification artifact you cannot verify is worse than none. The fix is one projection (<code class="inline">projectionCore</code>) feeding both sides: the evidence bundle a receiver recomputes, and the record used for replay promotion. A new test asserts the advertised recipe names every key the projection excludes, so the prose cannot drift from the implementation again.</p>
+
+    <h2>The third: spec 0.9 existed on paper, not in the wire</h2>
+
+    <p>The extension said <code class="inline">409 operation_in_flight</code> while a settlement can still resolve and <code class="inline">503 payment_unresolved</code> once it is stuck. The service answered <code class="inline">503 recovery_unavailable</code> instead. 1.1.1 implements it:</p>
+
+    <ul>
+      <li><b>Write-ahead <code class="inline">settling</code> marker</b> — written before the facilitator call (<code class="inline">onBeforeSettle</code>), matched by header bytes, envelope, nonce, or Solana transaction.</li>
+      <li><b><code class="inline">409 operation_in_flight</code></b> while the outcome is still resolvable; <b><code class="inline">503 payment_unresolved</code></b> once it is <code class="inline">stuck</code> — with no <code class="inline">Retry-After</code> and a named reason.</li>
+      <li><b>Neither state can be aged out</b> on a timer, in any mode. A reconciliation failure escalates after a persistent ladder rather than a single transient error.</li>
+      <li><b>Observable</b>: both states are counted at <code class="inline">/info.recovery.observability</code>, and the first <code class="inline">stuck</code> raises a server-side ALARM line.</li>
+    </ul>
+
+    <h2>The smaller ones</h2>
+
+    <ul>
+      <li><code class="inline">/findings</code> gets the same per-IP budget as the rest of the free surface; an unmetered enumeration endpoint was an abuse surface.</li>
+      <li>A malformed JSON body or a body over the 64KB cap now answers a typed JSON error (<code class="inline">invalid_json</code> / <code class="inline">payload_too_large</code>) with a <code class="inline">requestId</code> — not an Express HTML stack trace carrying <code class="inline">/app/node_modules/...</code> paths.</li>
+      <li><code class="inline">/usage</code> restores <code class="inline">byInspectHost</code> across restarts and actually emits the <code class="inline">body_no_challenge</code> counter it promised.</li>
+      <li>Release identity drift closed: root <code class="inline">package.json</code> had sat at 1.0.9 while everything else said 1.1.0; the release-consistency test now covers it.</li>
+    </ul>
+
+    <h2>Independent verification, and what it found</h2>
+
+    <p>The spec review thread on <a class="textlink" href="https://github.com/x402-foundation/x402/pull/3848" rel="noopener">x402-foundation/x402#3848</a> is where the substance of this work lives. Two independent implementers came at it from code rather than prose: Hitek-cel (Detent) ran crash-fault injection across its seven journal writes and published a 29-vector control-12 set derived from the suite; cv-scvd re-verified a Durable-Object claim/begin window in their own purchase flow, found the non-covered gap, and published the corrected trace publicly. The extension is not done when it is written down; it is done when two codebases survive the same crash.</p>
+
+    <p>The service ships with those implementation gaps closed. The vectors have <b>not yet been run</b> against this build; a conformance harness is queued, and results will be reported in the thread, not asserted here.</p>
+
+    <h2>What 1.1.1 does not change</h2>
+
+    <ul>
+      <li>No new tools. The eight stay the eight.</li>
+      <li>No price changes. The five checks remain testnet USDC; the free gate and <code class="inline">/inspect</code> stay free.</li>
+      <li>The deployed recovery store is still memory-only. The durable cutover (SQLite WAL, <code class="inline">RECOVERY_DB_PATH</code>) is built and tested but not yet the deployment; <code class="inline">/health</code> says so out loud.</li>
+      <li>At that release, no outside paid calls. There is no version of this release that manufactures adoption, and none is implied. The ledger is at <a class="textlink" href="/proof#traction">the traction ledger</a>, which keeps the zero months visible.</li>
+      <li>The <code class="inline">notChecked</code> lists. A longer list is not the point; an honest one is.</li>
+    </ul>
+
+    <div class="callout good">
+      <h3>Upgrade</h3>
+      <p><code class="inline">npx -y verify402-mcp@1.1.1</code>. If you pinned <code class="inline">@1.1.0</code>, nothing about your tools changes; the service behind them is what got fixed.</p>
+    </div>
+
+    <div class="post-cta">
+      <p class="eyebrow">The ask</p>
+      <h2>Bring the crash, not the complaint.</h2>
+      <p>If you build x402 flows, the thing we need is not opinions about the extension — it is a failing reproduction. The control-12 vector format and the crash harness the adjacent implementations have both landed in the public thread; the shortest path to making this spec real is running both against your own rail and posting what breaks.</p>
+      <div class="btn-row">
+        <a class="btn" href="/testers">Open the tester kit</a>
+        <a class="btn ghost" href="https://github.com/x402-foundation/x402/pull/3848">Read the review thread</a>
+      </div>
+    </div>
+
+    <p class="post-foot">Previous: <a class="textlink" href="/blog/verify402-mcp-1-1-0">What verify402-mcp 1.1.0 ships.</a> · <a class="textlink" href="/blog">All notes</a></p>
+  </article>
+</main>
+
+<footer class="site-foot">
+  <div class="foot-mark" aria-hidden="true">verify<span>[402]</span></div>
+  <div class="foot-links">
+    <div>
+      <h2>Product</h2>
+      <a href="/preflight">Preflight gate</a>
+      <a href="/checks">The five checks</a>
+      <a href="/mcp">MCP server</a>
+      <a href="/live">Live findings</a>
+      <a href="/activity">Activity</a>
+      <a href="/testers">Tester kit</a>
+      <a href="/blog">Blog</a>
+      <a href="/start">Quickstart</a>
+    </div>
+    <div>
+      <h2>Project</h2>
+      <a href="/proof">Proof &amp; receipts</a>
+      <a href="/docs">Documentation</a>
+      <a href="/donate">Donate</a>
+      <a href="/sponsor">Sponsor hosting</a>
+      <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">Open-source client &amp; gate</a>
+      <a href="https://github.com/x402-foundation/x402/pull/3848" rel="noopener">x402 proposal</a>
+    </div>
+    <div>
+      <h2>For machines</h2>
+      <a href="/.well-known/verify402.json">Service manifest</a>
+      <a href="/openapi.json">OpenAPI 3.1</a>
+      <a href="/llms.txt">llms.txt</a>
+      <a href="/findings">/findings</a>
+      <a href="/blog/rss.xml">RSS</a>
+    </div>
+    <div>
+      <h2>For teams</h2>
+      <p class="foot-note">Embedding a pre-signing check in a wallet, agent, or treasury workflow?</p>
+      <a href="mailto:a32116150@gmail.com?subject=verify402%20walkthrough">Talk to the builder</a>
+      <a href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener">npm package</a>
+    </div>
+  </div>
+  <p class="foot-legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data. This instance settles real USDC on Base mainnet / Solana mainnet over x402. Real USDC has settled on Base mainnet, including payments from outside agents. Prices are per call, paid in USDC over x402; /preflight and /inspect are free.</p>
+</footer>
+
+<script src="/assets/site.js"></script>
+</body>
+</html>

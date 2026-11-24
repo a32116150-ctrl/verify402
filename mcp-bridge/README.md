@@ -1,59 +1,309 @@
-# verify402 MCP bridge
+# verify402-mcp
 
-Makes verify402's paid tools available to any MCP client (Claude Desktop,
-OpenCode, Cursor, custom agents) with per-call x402 payment handled
-automatically.
+MCP server for **verify402**: a token safety check for AI agents before they
+swap — quote-based sellability, round-trip cost, TRUST / CAUTION / AVOID,
+$0.02 per call with a free pre-signing gate included. Supporting x402 checks
+cover arbitrage reality, execution book, quote fairness and trade capacity.
+
+Works with Claude Desktop, Cursor, OpenCode, and any MCP client that speaks
+stdio. The free gate needs **no wallet**. The paid tools settle in **real USDC
+on Base mainnet** (`eip155:8453`) at https://vex402.online — Base + Solana
+mainnet, real USDC via the Coinbase CDP facilitator — using a dedicated hot
+wallet. The analysis reads mainnet chain data. The public Base Sepolia testnet demo was
+retired on 2026-11-19 — the live service at https://vex402.online is the only
+public endpoint. The bridge never signs or sends a trade.
+
+> **Published package note:** `verify402-mcp@2.6.1` is published to npm. The
+> full tool surface is listed for every install (free tools work immediately;
+> the six paid tools refuse with a clear error until `EVM_PRIVATE_KEY` is
+> set). The public testnet demo was retired on 2026-11-19; the live service is
+> the only endpoint. All published versions are immutable. Do not republish or
+> overwrite any published version.
+
+## Anonymous usage telemetry (opt-in)
+
+The bridge can send one anonymous line per tool call to the service: the tool
+name and whether it succeeded (`POST /usage/ping`). Never arguments, intents,
+results, wallet data, or IPs. Off by default; set `VERIFY402_TELEMETRY=1` to
+turn it on. A failed ping never changes the tool's answer, and only these
+tool names are accepted: `preflight_gate`, `inspect_402`, `directory_402`,
+`verify_arbitrage`, `check_token_safety`, `get_best_route`,
+`verify_quote_fairness`, `get_trade_depth`, `get_assurance`.
 
 ## Tools
 
 | tool | price | what it answers |
 |---|---|---|
+| `preflight_gate` | **free** | "Should I sign this payment request or transaction?" — PASS / CAUTION / BLOCK with reasons, `checked` / `notChecked`, and a short-lived receipt |
+| `inspect_402` | **free** | "What does this 402 actually ask for?" — price, token, network, payee, bound resource, and a PASS / CAUTION / BLOCK verdict from a read-only fetch |
+| `directory_402` | **free** | "What is the x402 ecosystem asking for right now?" — watched public endpoints with protocol and sign verdicts, plus recorded changes |
 | `verify_arbitrage` | $0.05 | "Is this cross-venue arbitrage opportunity real, right now?" |
-| `check_token_safety` | $0.10 | "Is this token safe to buy?" — TRUST / CAUTION / AVOID with evidence |
+| `check_token_safety` | $0.02 | "Is this token sellable at a realistic size, and what does the round trip cost?" — TRUST / CAUTION / AVOID with evidence; not a code audit |
+| `get_best_route` | $0.03 | "What would the chain actually pay for this swap?" — best route + every quoted venue |
+| `verify_quote_fairness` | $0.05 | "A broker/bot offered me this number — is it honest?" fair / overpaying / too_good_to_be_true |
+| `get_trade_depth` | $0.05 | "How big can I trade here before the round trip eats me?" — per-size impact, round-trip cost, capacity |
+| `get_assurance` | $0.10 | One evidence bundle at one pinned block: whichever of safety/route/quotecheck/depth you supply, together. Below buying the checks separately |
 
-## Setup
+`preflight_gate` is the front door. `inspect_402` reads a 402 challenge
+before an agent pays it, and `directory_402` lists the endpoints we watch.
+Call the gate before signing any crypto
+transaction or x402 payment request. If `sign_allowed` is false, **do not
+sign**. If `requires_ack` is true, surface the reasons to the operator. The
+receipt expires (default 90s); call again instead of reusing it.
+
+For payment intents, `policy.allowedResourceHosts` binds the host in
+`payment.resource`; a matching host can PASS and a foreign host is BLOCK.
+Without `allowedResourceHosts` or `expectedResource`, an otherwise valid
+resource is CAUTION `resource_identity_unverified` and `resource identity` is
+listed in `notChecked`. The bridge forwards this policy to the server; the
+server enforces it.
+
+Two optional caller-supplied checks are forwarded as-is:
+
+- `payment.idempotencyKey` + `policy.obligation.settledKeys` rejects a key the
+  caller already settled; `policy.obligation.spentUsd` + `grantUsd` rejects
+  cumulative spend over the grant. The bridge does **not** persist this state.
+- `policy.sellerPayoutWallets` is a caller-supplied payout allowlist. A
+  mismatch is BLOCK, but a match is not provenance and never adds
+  `payee_payout_binding`.
+- `policy.sellerPayoutManifest` fetches a seller-signed manifest from a
+  caller-pinned HTTPS origin outside the 402. Only a verified manifest whose
+  `payTo` list matches adds `payee_payout_binding`. The response includes
+  `payeeBinding` with the source, origin, signer, expiry, and manifest hash.
+
+The gate is advisory at this layer: the bridge does not hold the agent's
+transaction key and cannot stop an agent that ignores the answer. Enforcement
+belongs in the executor that signs — verify the receipt, then sign. See
+[`examples/preflight-guard.mjs`](https://github.com/a32116150-ctrl/verify402/blob/master/examples/preflight-guard.mjs)
+for a deny-by-default reference that refuses to call the signer without a
+verified receipt.
+
+## Distribution & Run
+
+The package is officially published on npm as **[`verify402-mcp`](https://www.npmjs.com/package/verify402-mcp)** and indexed on the official [Model Context Protocol Registry](https://registry.modelcontextprotocol.io/).
+
+Run directly via `npx` (stdio transport):
 
 ```bash
-cd mcp-bridge
-npm install
+npx -y verify402-mcp --help
 ```
 
-Create `.env` (this file holds the BUYER's key — the wallet that pays; never
-commit it):
+You can also install it globally:
 
-```
-EVM_PRIVATE_KEY=0x...          # wallet with USDC on the payment network
-VERIFY402_URL=https://your-deployment.example.com
-MAX_PAYMENT_USD=0.25           # hard policy: refuse to sign any payment above this
+```bash
+npm install -g verify402-mcp
+verify402-mcp --help
 ```
 
-## Wire into Claude Desktop (or any MCP client)
+Or run from source:
 
+```bash
+git clone https://github.com/a32116150-ctrl/verify402
+cd verify402/mcp-bridge
+npm ci
+node index.mjs --help
+```
+
+---
+
+## AI Agent Integration (Step-by-Step)
+
+### Step 1: Free Mode (Zero Config, No Wallet)
+The bridge lists all nine tools. With no wallet, the free **`preflight_gate`** works immediately (checks transaction calldata, payment challenges, payee/amount, approvals, and block freshness before signing) and the six paid tools refuse with a clear error. Paste this into your client configuration. The paid `check_token_safety` check adds a quote-based sellability check; it does not execute a transfer and is not a honeypot guarantee.
+
+**Claude Desktop** (`claude_desktop_config.json`) or **Cursor** (`.cursor/mcp.json`):
 ```json
 {
   "mcpServers": {
     "verify402": {
-      "command": "node",
-      "args": ["/absolute/path/to/verify402/mcp-bridge/index.mjs"],
+      "command": "npx",
+      "args": ["-y", "verify402-mcp"],
       "env": {
-        "EVM_PRIVATE_KEY": "0x...",
-        "VERIFY402_URL": "https://your-deployment.example.com",
-        "MAX_PAYMENT_USD": "0.25"
+        "VERIFY402_URL": "https://vex402.online"
       }
     }
   }
 }
 ```
 
-## Payment policy (load-bearing)
+### Step 2: Paid Mode (Setting Up the Hot Wallet)
+To enable the six paid x402 checks (`verify_arbitrage`, `check_token_safety`, `get_best_route`, `verify_quote_fairness`, `get_trade_depth`, `get_assurance`), configure a dedicated hot wallet that pays per call in USDC via x402:
 
-Before signing anything, the bridge enforces a spend cap:
+1. **Create a Dedicated Hot Wallet**:
+   - Create a brand new wallet in MetaMask, Rabby, or via `cast wallet new`.
+   - ⚠️ **SECURITY WARNING**: Never use your primary personal wallet, cold storage, or vault.
+2. **Fund the Wallet on Base mainnet (EIP-155:8453)**:
+   - **USDC**: Send only what you are willing to spend (the bridge pays per call: $0.02 to $0.10 in real USDC (individual checks $0.02-$0.05)).
+   - **Gas (ETH on Base)**: Keep a little ETH on Base for gas if your client needs it.
+   - Paid calls settle on Base mainnet in real USDC, from $0.03 per call. There is no public testnet endpoint.
+3. **Configure Environment Variables in Your MCP Client**:
+   - Set `EVM_PRIVATE_KEY` to the 64-character private key of the hot wallet.
+   - `VERIFY402_NETWORKS` defaults to `eip155:8453` (Base mainnet); set it only to change rails.
+   - Set safety caps `MAX_PAYMENT_USD` (e.g., `"0.25"`) and `MAX_DAILY_USD` (e.g., `"1.00"`).
 
-- `MAX_PAYMENT_USD` (default $0.25) — the x402 client itself refuses to
-  construct or sign a payment above this limit, before any signature exists.
-  The default asset is USDC; unrecognized assets are rejected unless explicitly
-  allowed in `spendControls`.
+**Paid Configuration Block (Claude Desktop, Cursor, Cline, Windsurf)**:
+```json
+{
+  "mcpServers": {
+    "verify402": {
+      "command": "npx",
+      "args": ["-y", "verify402-mcp"],
+      "env": {
+        "VERIFY402_URL": "https://vex402.online",
+        "EVM_PRIVATE_KEY": "0xYOUR_HOT_WALLET_PRIVATE_KEY",
+        "MAX_PAYMENT_USD": "0.25",
+        "MAX_DAILY_USD": "1.00",
+        "VERIFY402_NETWORKS": "eip155:8453",
+        "VERIFY402_PAY_TO": "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb"
+      }
+    }
+  }
+}
+```
 
-A bridge that signs whatever an arbitrary 402 asks for is a blank cheque.
-This cap is enforced inside `x402Client` (`applySpendControls`), so removing
-it from this file's config is a security regression, not a refactor.
+### OpenCode V2 Configuration
+In `opencode.jsonc` (or `~/.config/opencode/opencode.jsonc`):
+```jsonc
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "servers": {
+      "verify402": {
+        "type": "local",
+        "command": ["npx", "-y", "verify402-mcp"],
+        "environment": {
+          "VERIFY402_URL": "https://vex402.online",
+          "EVM_PRIVATE_KEY": "{env:EVM_PRIVATE_KEY}",
+          "VERIFY402_NETWORKS": "eip155:8453",
+          "MAX_PAYMENT_USD": "0.25",
+          "MAX_DAILY_USD": "1.00"
+        }
+      }
+    }
+  }
+}
+```
+
+---
+
+## How AI Agents Use verify402 (Prompt Examples)
+
+Once configured, your agent automatically sees the tools in its context. You can prompt it directly:
+
+- **Preflight Gate (Free)**:
+  > *"Before signing this transaction, call `preflight_gate` on the payment request / calldata. If it returns BLOCK, abort and explain why."*
+- **Token Quote-Based Sellability Check ($0.02, not a code audit)**:
+  > *"Analyze token `0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE` using `check_token_safety`. Can it be sold at a realistic size on the configured venues, what is the round-trip cost, and is the result TRUST / CAUTION / AVOID? Read notChecked for transfer restrictions."*
+- **Arbitrage Verification ($0.05)**:
+  > *"Use `verify_arbitrage` to verify if there is an arbitrage opportunity between Uniswap V3 and Sushiswap for WETH/USDC on chain 1 at the current block."*
+- **Quote Fairness Audit ($0.05)**:
+  > *"I was offered 0.35 WETH for 1,000 USDC. Run `verify_quote_fairness` to see if this is fair or if I'm overpaying."*
+- **Market Depth & Capacity ($0.05)**:
+  > *"Check `get_trade_depth` for WETH on Uniswap V3 to see how much slippage and impact a $50,000 swap would suffer."*
+
+## Safety
+
+- The bridge signs **x402 payments only**. It never signs or broadcasts a trade.
+- Each paid tool call mints one `crypto.randomUUID()` idempotency key and sends it
+  as `x-idempotency-key`. A timeout or lost response is retried with the **same**
+  key, so the server replays the settled verdict (`recovery.replayed: true`)
+  instead of charging twice. A 402 or 409 is never auto-retried; the error is
+  surfaced to the MCP client. The key is a secret and is never logged or returned.
+- Before signing, the paid client requires the 402 to come from the configured
+  server and a known paid route, on an allowlisted EVM network, to the
+  verify402 payee. It accepts only recognized default assets (USDC), caps the
+  amount at `MAX_PAYMENT_USD`, and refuses redirects.
+- The whole 402 challenge is checked, not just the option the client picks:
+  every offered requirement must use an allowlisted network, the configured
+  payee, the canonical USDC contract **and** the canonical EIP-712 domain for
+  that network, an `extra.assetTransferMethod` of `eip3009`, a
+  `maxTimeoutSeconds` that is a positive integer no greater than `300`, and an
+  amount inside the cap. A challenge that also offers another rail (for
+  example Base Sepolia testnet) is refused as a whole rather than filtered down
+  to the allowed option. The client also proves that the requirement it signs
+  is the exact object the server sent.
+- The allowlist can be narrowed or pointed at another deployment with
+  `VERIFY402_NETWORKS`, `VERIFY402_PAY_TO`, and `VERIFY402_RESOURCE_PREFIX`.
+  The bridge defaults are Base mainnet (`eip155:8453`) and the public verify402
+  payee. `VERIFY402_NETWORKS` is constrained to the supported map
+  (`eip155:8453`, `eip155:84532`); an explicitly empty value fails closed
+  instead of falling back to a default.
+- `MAX_PAYMENT_USD` is enforced inside the x402 client, before a signature
+  exists; removing it is a security regression. The caps limit what the bridge
+  can authorize; they do **not** protect a compromised private key.
+- The bridge sends `X-Verify402-Client: verify402-mcp/<version>` and the same
+  version in its User-Agent. This is an anonymous label for `/usage`, not an
+  account: it contains no wallet, key, or user id, and the server treats it as
+  self-declared and spoofable.
+- `preflight_gate` is a check, not a guarantee. Read `notChecked`: it does not
+  screen recipient reputation or sanctions, audit contracts, simulate full
+  balance deltas, audit the counterparty, independently prove payee ownership,
+  persist an obligation ledger across processes, scan tool descriptions or
+  responses for prompt injection, or protect against MEV. It catches the
+  measurable signing mistakes, not every scam.
+- Use the [reference executor](https://github.com/a32116150-ctrl/verify402/blob/master/examples/preflight-guard.mjs)
+  when you want enforcement rather than advice.
+
+## Dependencies and `npm audit`
+
+This package no longer depends on `@x402/axios` or `@x402/evm`. The x402 payer
+(PAYMENT-REQUIRED / PAYMENT-SIGNATURE / PAYMENT-RESPONSE, scheme `exact`,
+EIP-3009 authorization) is implemented here on `viem`, and the runtime
+dependency list is: the MCP SDK, axios, dotenv, viem, zod 4.
+
+Why: `@x402` 2.28.0 depended on `zod ^3.24.2`, which resolves into
+[GHSA-mrhx-c7xc-m3w5](https://github.com/advisories/GHSA-mrhx-c7xc-m3w5)
+(memory-exhaustion DoS while validating oversized arrays; the advisory covers
+all zod < 4.6.6, and no patched 3.x exists). npm ignores `overrides` declared
+inside a dependency, so installs of 1.0.8 and earlier showed a "high severity"
+audit banner. The upstream request is
+[x402-foundation/x402#3953](https://github.com/x402-foundation/x402/issues/3953).
+
+The current package, installed from its tarball:
+
+```console
+$ npm i verify402-mcp
+added 123 packages
+$ npm audit
+found 0 vulnerabilities
+```
+
+The bridge pays the same wire protocol. The only behavior change is cosmetic:
+`npm ls @x402` shows nothing, and the install is 5 packages smaller. The
+paid-call policy (network allowlist, configured payee, canonical USDC,
+per-payment cap, tool-bound resource) is unchanged and still runs before any
+signature exists, in `payment-policy.mjs`.
+
+## Using the live mainnet instance (explicit opt-in, not the demo)
+
+The service is live at https://vex402.online — Base + Solana mainnet, USDC,
+exact-x402, settled by the Coinbase CDP facilitator, always-on. It is
+operator-tested end to end; no external buyer has paid anything yet. Mainnet
+is the bridge default:
+
+```bash
+VERIFY402_URL=https://vex402.online      # default
+VERIFY402_NETWORKS=eip155:8453           # default
+```
+
+with a dedicated hot wallet holding a small amount of USDC on Base. The public
+testnet demo was retired on 2026-11-19; there is no public testnet endpoint.
+
+The rails never cross: a mainnet-only policy refuses the demo's `eip155:84532`
+challenge instead of silently spending, and a testnet policy refuses a
+mainnet-only challenge.
+
+## Development
+
+```bash
+npm pack --dry-run
+```
+
+## License
+
+Apache License 2.0. See `LICENSE` and `NOTICE`.
+
+You may use, modify, and distribute this package, including in commercial agent
+systems and bots. If you redistribute it or a product containing it, keep the
+copyright notice, the license text, and the `NOTICE` file. The `verify402` name
+and logo are not licensed for endorsement.

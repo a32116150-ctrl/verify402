@@ -4,25 +4,46 @@ Every post follows the same rule: the hook is that the service's most common
 answer is "no, this has no edge" - and it sells that answer. No profit
 promises anywhere. The credibility IS the negative result.
 
+## Proof stamps (attach to any post)
+
+> live URL: https://vex402.online (real-money mode: USDC on Base/Solana mainnet)
+> code: https://github.com/a32116150-ctrl/verify402 (public - run the tests yourself)
+> settlement receipt (end-to-end payment proven): buyer wallet signed,
+> facilitator settled on-chain: tx 0x11121007bafec47f132763f42e2f58af6ebba7fba9c7ed1b5980d3f595a9324a
+> (Base Sepolia / testnet USDC), buyer −$0.03, seller +$0.03, answer returned.
+> Free forever: /findings live on Ethereum majors, /info, /health,
+> /.well-known/agent-registration.json.
+
 ## 1. x402 Slack (`https://slack.x402.org`, join → post in showcase channel)
 
 **Show & tell:**
 > Built a first version of an x402 service agents can actually use more than
-> once: **verify402** — a per-call oracle for two questions agents routinely
+> once: **verify402** — a per-call oracle for the questions agents routinely
 > guess at:
 >
 > - `verify_arbitrage` ($0.05): is this claimed cross-venue arb real *right
 >   now*? Pinned-block quotes from Uniswap's QuoterV2 + each router's own
 >   math, flash-loan premium and gas netted. The honest answer is usually
 >   `no_edge` — that's the product.
-> - `check_token_safety` ($0.10): pre-trade gate before buying any token —
+> - `check_token_safety` ($0.02): pre-trade gate before buying any token —
 >   TRUST/CAUTION/AVOID with evidence: live contract calls, a USD-sized sell
->   probe against every venue (honeypot test done by actually quoting the
->   exit), round-trip cost at the intended size, phantom-price detection.
+>   quote-based sellability check across the configured venues (it asks
+>   quoters for a price; it does not execute a transfer), round-trip cost
+>   at the intended size, phantom-price detection. It does not check
+>   unconfigured venues, transfer tax, blacklist, pause, or
+>   max-transaction restrictions.
+> - `get_best_route` ($0.03) / `verify_quote_fairness` ($0.05): what the
+>   chain actually pays for a swap, and whether a number someone *offered*
+>   the agent is honest (fair / overpaying / too_good_to_be_true).
+> - `get_trade_depth` ($0.05): position sizing. "This pool has $2.7M
+>   liquidity" is marketing; the depth ladder measures what a real block
+>   gives you per size, entry AND exit, and returns the largest size that
+>   stays under your cost tolerance. Example: SHIB's real capacity is
+>   ~$1,000, not $2.7M.
 >
 > Free endpoints to evaluate it without paying: `/findings` (live verdicts on
-> ETH majors, always `no_edge`, fully reproducible against the venues'
-> own routers), `/.well-known/agent-registration.json`, `/info`.
+> ETH majors, always `no_edge`, with receipts whose hashes can be recomputed from the evidence
+> (paid check logic is hosted), `/.well-known/agent-registration.json`, `/info`.
 > MCP bridge included so it drops into Claude/OO/any MCP client.
 > Headers carry the bazaar schema. Would love harsh feedback.
 
@@ -43,8 +64,10 @@ promises anywhere. The credibility IS the negative result.
 > block quotes: Uniswap's canonical QuoterV2 for V3, each router's own
 > getAmountsOut for V2, flash-loan premium and gas netted. Safety verdicts
 > are a pre-trade gate: contract facts from the live chain, market liquidity
-> and sell-share, a USD-sized sell probe against every venue (honeypot means
-> "cannot be exited", so we ask the chain by quoting the exit — not a flag or
+> and sell-share, a quote-based sellability check across the configured
+> venues (it asks quoters for a price; it does not execute a transfer).
+> It does not check unconfigured venues, transfer tax, blacklist, pause,
+> or max-transaction restrictions.
 > a score), a round-trip cost at the agent's intended size, and phantom-price
 > detection vs chain consensus.
 >
@@ -56,7 +79,7 @@ promises anywhere. The credibility IS the negative result.
 > it. We publish the evidence with every response.
 >
 > Free: `/findings` (live majors, always no_edge), `/info`,
-> `/.well-known/agent-registration.json`. Paid: $0.05/verify, $0.10/safety.
+> `/.well-known/agent-registration.json`. Paid: $0.05/verify, $0.02/safety.
 > MCP tools included.
 
 ## 3. r/ethdev
@@ -77,8 +100,10 @@ promises anywhere. The credibility IS the negative result.
 
 2. > The more useful tool agents need before every swap:
    > check_token_safety. TRUST/CAUTION/AVOID + evidence: real contract
-   > facts, $25-sized sell probe across 10+ venues (honeypot = can't exit —
-   > quoted, not scored), round-trip cost, phantom-price check. $0.10.
+> facts, a quote-based sellability check across the configured venues
+> (quoted, not scored; it does not execute a transfer). It does not
+> check unconfigured venues, transfer tax, blacklist, pause, or
+> max-transaction restrictions.
 
 3. > Everything reproducible: /findings is free and always no_edge on ETH
    > majors — every number checkable against Uniswap's QuoterV2 and each
@@ -89,3 +114,8 @@ promises anywhere. The credibility IS the negative result.
 - Never add guaranteed/implied profit language. The negative result is the brand.
 - Post where the audience is builders (HN, r/ethdev, x402 slack), not traders.
 - Answer every reply — 90% of Show HN traction is the comment feed, first hour.
+- Depth-led variant (use if the arb angle feels stale in the current cycle):
+  the hook "your bot's dashboard said liquidity: $2.7M. The chain will only
+  give your $10k swap ~$1,000 of real capacity before the round trip eats
+  it." Same rules apply — the depth ladder's honest verdicts (small numbers)
+  ARE the credibility.

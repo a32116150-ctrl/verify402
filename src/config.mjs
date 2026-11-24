@@ -5,6 +5,8 @@
 // hardcoded address that has drifted is the quietest way for a service like
 // this to start lying.
 
+import { HttpError } from "./errors.mjs";
+
 export const CHAINS = {
   // ---------------------------------------------------------------- mainnet
   1: {
@@ -12,6 +14,12 @@ export const CHAINS = {
     viemChain: "mainnet",
     rpcEnv: "ETH_RPC_URL",
     rpcDefault: "https://ethereum-rpc.publicnode.com",
+    // Tried in order when no paid endpoint is configured. Failover is cheap on
+    // purpose: a throttled first provider must not eat the whole pair budget.
+    rpcFallbacks: [
+      "https://eth.drpc.org",
+      "https://eth.merkle.io",
+    ],
     // Canonical Uniswap V3 QuoterV2 on mainnet. An earlier edit swapped this
     // for 0x59b670e9... believing it was V2 - the all-venues-exist test then
     // showed THAT address has no bytecode and this one does. Verified live:
@@ -82,6 +90,32 @@ export const CHAINS = {
   },
 };
 
+// Readiness-only chains. This is deliberately separate from CHAINS: /ready
+// must be able to check the payment rail's chain (Base Sepolia) without making
+// that chain a paid-route measurement venue. Adding a chain here does not
+// grant it a quoter, tokens, or a route.
+export const READINESS_CHAINS = Object.freeze({
+  1: { name: "ethereum", viemChain: "mainnet", rpcEnv: "ETH_RPC_URL", rpcDefault: CHAINS[1].rpcDefault },
+  42161: { name: "arbitrum", viemChain: "arbitrum", rpcEnv: "ARB_RPC_URL", rpcDefault: CHAINS[42161].rpcDefault },
+  8453: { name: "base", viemChain: "base", rpcEnv: "BASE_RPC_URL", rpcDefault: CHAINS[8453].rpcDefault },
+  84532: {
+    name: "base-sepolia",
+    viemChain: "baseSepolia",
+    rpcEnv: "BASE_SEPOLIA_RPC_URL",
+    rpcDefault: "https://sepolia.base.org",
+  },
+});
+
+export function readinessChain(chainId) {
+  const c = READINESS_CHAINS[chainId];
+  if (!c) {
+    throw new Error(
+      `READY_CHAIN_ID ${chainId} is not a supported readiness chain; supported: ${Object.keys(READINESS_CHAINS).join(", ")}`,
+    );
+  }
+  return c;
+}
+
 // Default trade size, in whole units of the base token.
 export const DEFAULT_SIZE = 100_000;
 
@@ -98,6 +132,33 @@ export function chain(chainId) {
   const c = CHAINS[chainId];
   if (!c) throw new Error(`unsupported chainId ${chainId}; supported: ${Object.keys(CHAINS).join(", ")}`);
   return c;
+}
+
+/**
+ * Paid routes must name their chain. There is no silent Ethereum default: an
+ * agent on Base or Arbitrum that omits chainId used to get an Ethereum answer.
+ * Returns the numeric chain id or throws a typed 400.
+ */
+export function requireChainId(body) {
+  const value = body?.chainId;
+  if (value === undefined || value === null || value === "") {
+    throw new HttpError(
+      400,
+      "missing_chain",
+      `chainId is required; supported: ${Object.keys(CHAINS).join(", ")}`,
+    );
+  }
+  if (typeof value !== "number" || !Number.isInteger(value)) {
+    throw new HttpError(400, "invalid_chain", "chainId must be an integer JSON number");
+  }
+  if (!CHAINS[value]) {
+    throw new HttpError(
+      400,
+      "unsupported_chain",
+      `unsupported chainId ${value}; supported: ${Object.keys(CHAINS).join(", ")}`,
+    );
+  }
+  return value;
 }
 
 export function resolveToken(chainId, symbol) {

@@ -17,6 +17,7 @@ questions before committing money:
 | `POST /safety` | $0.10 | "Is this token safe to buy?" (honeypot / phantom price / exit cost) |
 | `POST /route` | $0.03 | "What would the chain ACTUALLY pay for this swap?" |
 | `POST /quotecheck` | $0.05 | "Someone offered me this number - is it honest?" (fair / overpaying / too_good_to_be_true) |
+| `POST /depth` | $0.05 | "How big can I trade here before the round trip eats me?" (capacity ladder) |
 
 Free surfaces: `/findings` (live no_edge verdicts on ETH majors), `/info`,
 `/health`, `/.well-known/agent-registration.json`.

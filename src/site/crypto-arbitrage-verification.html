@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crypto arbitrage verification before you trade · verify402</title>
+<meta name="description" content="Verify a claimed crypto arbitrage before funding it: pinned block, venue router math, flash-loan premium and gas, with a three-state verdict and recomputable evidence.">
+<link rel="canonical" href="https://vex402.online/crypto-arbitrage-verification">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Crypto arbitrage verification before you trade">
+<meta property="og:description" content="/verify measures a claimed cross-venue opportunity at one pinned block and says edge, no_edge, or no_edge_costs_ate_it. Not a profit promise.">
+<meta property="og:url" content="https://vex402.online/crypto-arbitrage-verification">
+<meta property="og:image" content="https://vex402.online/assets/logo-400.png">
+<meta name="twitter:card" content="summary">
+<meta name="google-site-verification" content="iGmI2QL110IkjnW0thU3DRZrdgQe_7mZsPWgkZVte7o">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/site.css">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebPage","name":"Crypto arbitrage verification before you trade","description":"How verify402 measures a claimed cross-venue arbitrage at a pinned block using venue router math, flash-loan premium and gas.","url":"https://vex402.online/crypto-arbitrage-verification","isPartOf":{"@type":"WebSite","name":"verify402","url":"https://vex402.online/"},"publisher":{"@type":"Organization","name":"verify402","url":"https://vex402.online/"}}</script>
+</head>
+<body>
+
+<header class="site-head">
+  <a class="brand" href="/" aria-label="verify402 home">verify<span>[</span>402<span>]</span></a>
+  <nav class="site-nav" aria-label="Primary">
+    <a href="/checks">Checks</a>
+    <a href="/preflight">Preflight</a>
+    <a href="/inspect">Inspect</a>
+    <a href="/directory">Directory</a>
+    <a href="/mcp">MCP</a>
+    <a href="/proof">Proof</a>
+    <a href="/activity">Activity</a>
+    <a href="/blog">Blog</a>
+    <a href="/board">Board</a>
+    <a href="/docs">Docs</a>
+  </nav>
+  <div class="site-actions">
+    <a class="site-status" href="/live"><span class="status-dot"></span><span data-block>snapshot · block —</span></a>
+    <a class="btn sm" href="/checks#verify">See /verify</a>
+    <details class="site-menu">
+      <summary>Menu</summary>
+      <nav aria-label="Menu">
+        <p class="menu-label">Start</p>
+        <a href="/preflight">Free gate</a>
+        <a href="/checks">Paid checks &amp; prices</a>
+        <a href="/start">Quickstart</a>
+        <a href="/mcp">MCP server</a>
+        <p class="menu-label">Explore</p>
+        <a href="/inspect">402 inspector</a>
+        <a href="/directory">402 directory</a>
+        <a href="/live">Live findings</a>
+        <a href="/activity">Activity</a>
+        <p class="menu-label">Trust</p>
+        <a href="/proof">Proof &amp; receipts</a>
+        <a href="/board">Public board</a>
+        <a href="/audit">Payment review</a>
+        <a href="/testers">Tester kit</a>
+        <p class="menu-label">Project</p>
+        <a href="/blog">Blog</a>
+        <a href="/docs">Documentation</a>
+        <a href="/donate">Donate</a>
+        <a href="/sponsor">Sponsor hosting</a>
+        <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">GitHub</a>
+      </nav>
+    </details>
+  </div>
+</header>
+
+<main>
+  <div class="wrap page-head">
+    <p class="eyebrow">Paid · $0.05 · mainnet measurement</p>
+    <h1>Verify the spread before you fund the trade.</h1>
+    <p class="lead">A claimed cross-venue arbitrage can be a stale quote, a gross spread that costs eat, or a real edge at one block only. verify402's <a class="textlink" href="/checks#verify">/verify</a> check measures the claim at a pinned block and prints one of three honest verdicts. It does not place a trade.</p>
+    <div class="btn-row" style="margin-top:24px">
+      <a class="btn" href="/checks#verify">See the request shape</a>
+      <a class="btn ghost" href="/proof">Read the receipts</a>
+    </div>
+  </div>
+
+  <section>
+    <div class="wrap stack">
+      <article id="how">
+        <p class="eyebrow">01 · How the measurement works</p>
+        <h2 style="margin-top:14px">Router math, not a back-of-envelope spread.</h2>
+        <p class="lead" style="margin-top:14px">At the pinned block, the check reads Uniswap's canonical QuoterV2 on one side and each venue's own router math on the other. It subtracts the flash-loan premium and gas before it answers. That order matters: a positive gross difference is not an edge if the costs are larger.</p>
+        <p class="small muted" style="margin-top:14px">All quotes come from the protocols' own contracts. verify402 does not reimplement venue mathematics from a whitepaper and does not invent a number when a call fails.</p>
+      </article>
+
+      <article id="verdicts">
+        <p class="eyebrow">02 · Three states, not one cheerleading flag</p>
+        <h2 style="margin-top:14px">edge, no_edge, no_edge_costs_ate_it.</h2>
+        <div class="table-wrap" data-ui style="margin-top:22px">
+          <table class="table">
+            <thead><tr><th>Verdict</th><th>Plain meaning</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">edge</td><td>The measured net survives the modeled costs at that block.</td></tr>
+              <tr><td class="mono">no_edge</td><td>The opportunity was not there at that block.</td></tr>
+              <tr><td class="mono">no_edge_costs_ate_it</td><td>A gross spread appeared, but premium and gas consumed it.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="small muted" style="margin-top:14px">The live feed often returns <code class="inline">no_edge</code>. That is not a bug. A falsification service earns trust by saying no clearly.</p>
+      </article>
+
+      <article id="bundle">
+        <p class="eyebrow">03 · The other four measurements</p>
+        <h2 style="margin-top:14px">A spread is only one part of the decision.</h2>
+        <p class="lead" style="margin-top:14px"><a class="textlink" href="/checks#route">/route</a> ($0.03) shows what the chain would actually pay across quoted venues. <a class="textlink" href="/checks#quotecheck">/quotecheck</a> ($0.05) audits a quote someone gave you. <a class="textlink" href="/checks#depth">/depth</a> ($0.05) builds a capacity ladder so you know when impact eats the plan. <a class="textlink" href="/checks#safety">/safety</a> ($0.02) is the lead token-safety check with quote-based sellability.</p>
+        <p class="small muted" style="margin-top:14px"><a class="textlink" href="/checks#assure">/assure</a> ($0.10) runs the checks you supply at one pinned block and returns one evidence record. It is accepted only when those checks cost at least $0.10 separately (parts total $0.12); unsupplied checks stay in <code class="inline">notChecked</code>.</p>
+      </article>
+
+      <article id="limits">
+        <p class="eyebrow">04 · What this is not</p>
+        <h2 style="margin-top:14px">A measurement is not an execution.</h2>
+        <p class="lead" style="margin-top:14px">The result is a quote about one block. Prices move, liquidity changes, and a transaction that lands later can see a different state. verify402 never holds your keys, signs your trade, guarantees profit, or manages money. It is a measurement service, not financial advice.</p>
+        <div class="callout good" style="margin-top:22px">
+          <h3>Recompute the evidence</h3>
+          <p>A paid response carries a request hash, a response hash and the pinned block. The <a class="textlink" href="/agent-payment-receipt">receipt guide</a> explains how those fields let a third party check the record instead of trusting the prose.</p>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="soft">
+    <div class="wrap">
+      <div class="sec-head">
+        <p class="eyebrow">Before the paid call</p>
+        <h2>Check the request your agent will sign.</h2>
+        <p class="lead">A paid measurement should not hide a bad payment request. Run the free gate first.</p>
+      </div>
+      <div class="btn-row" style="margin-top:28px">
+        <a class="btn" href="/preflight#try">Run free preflight</a>
+        <a class="btn ghost" href="/checks">All six checks</a>
+        <a class="btn ghost" href="/ai-agent-payment-security">Agent security guide</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-foot">
+  <div class="foot-mark" aria-hidden="true">verify<span>[402]</span></div>
+  <div class="foot-links">
+    <div>
+      <h2>Product</h2>
+      <a href="/inspect">402 inspector</a>
+      <a href="/directory">402 directory</a>
+      <a href="/preflight">Preflight gate</a>
+      <a href="/checks">The six checks</a>
+      <a href="/mcp">MCP server</a>
+      <a href="/live">Live findings</a>
+      <a href="/activity">Activity</a>
+      <a href="/testers">Tester kit</a>
+      <a href="/blog">Blog</a>
+      <a href="/start">Quickstart</a>
+    </div>
+    <div>
+      <h2>Project</h2>
+      <a href="/proof">Proof &amp; receipts</a>
+      <a href="/docs">Documentation</a>
+      <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">Open-source client &amp; gate</a>
+      <a href="https://github.com/x402-foundation/x402/issues/3847" rel="noopener">x402 proposal</a>
+    </div>
+    <div>
+      <h2>For machines</h2>
+      <a href="/.well-known/verify402.json">Service manifest</a>
+      <a href="/openapi.json">OpenAPI 3.1</a>
+      <a href="/llms.txt">llms.txt</a>
+      <a href="/findings">/findings</a>
+      <a href="/blog/rss.xml">RSS</a>
+    </div>
+    <div>
+      <h2>For teams</h2>
+      <p class="foot-note">Embedding a pre-signing check in a wallet, agent, or treasury workflow?</p>
+      <a href="mailto:a32116150@gmail.com?subject=verify402%20walkthrough">Talk to the builder</a>
+      <a href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener">npm package</a>
+    </div>
+  </div>
+  <p class="foot-legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data. The mainnet service is at vex402.online. Prices are per call, paid in USDC over x402; /preflight and /inspect are free.</p>
+</footer>
+
+<script src="/assets/site.js"></script>
+</body>
+</html>

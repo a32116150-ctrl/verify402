@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MCP server — verify402</title>
+<meta name="description" content="Put verify402's free preflight gate inside Claude Desktop, Cursor, OpenCode, or any agent. One MCP server: the free gate plus six paid x402 checks, paid per call over x402.">
+<meta name="google-site-verification" content="iGmI2QL110IkjnW0thU3DRZrdgQe_7mZsPWgkZVte7o">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+
+<header class="site-head">
+  <a class="brand" href="/" aria-label="verify402 home">verify<span>[</span>402<span>]</span></a>
+  <nav class="site-nav" aria-label="Primary">
+    <a href="/checks">Checks</a>
+    <a href="/preflight">Preflight</a>
+    <a href="/inspect">Inspect</a>
+    <a href="/directory">Directory</a>
+    <a href="/mcp">MCP</a>
+    <a href="/proof">Proof</a>
+    <a href="/activity">Activity</a>
+    <a href="/blog">Blog</a>
+    <a href="/board">Board</a>
+    <a href="/docs">Docs</a>
+  </nav>
+  <div class="site-actions">
+    <a class="site-status" href="/live"><span class="status-dot"></span><span data-block>snapshot · block —</span></a>
+    <a class="btn sm" href="/preflight#try">Run free check</a>
+    <details class="site-menu">
+      <summary>Menu</summary>
+      <nav aria-label="Menu">
+        <p class="menu-label">Start</p>
+        <a href="/preflight">Free gate</a>
+        <a href="/checks">Paid checks &amp; prices</a>
+        <a href="/start">Quickstart</a>
+        <a href="/mcp">MCP server</a>
+        <p class="menu-label">Explore</p>
+        <a href="/inspect">402 inspector</a>
+        <a href="/directory">402 directory</a>
+        <a href="/live">Live findings</a>
+        <a href="/activity">Activity</a>
+        <p class="menu-label">Trust</p>
+        <a href="/proof">Proof &amp; receipts</a>
+        <a href="/board">Public board</a>
+        <a href="/audit">Payment review</a>
+        <a href="/testers">Tester kit</a>
+        <p class="menu-label">Project</p>
+        <a href="/blog">Blog</a>
+        <a href="/docs">Documentation</a>
+        <a href="/donate">Donate</a>
+        <a href="/sponsor">Sponsor hosting</a>
+        <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">GitHub</a>
+      </nav>
+    </details>
+  </div>
+</header>
+
+<main>
+
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <p class="eyebrow">MCP · stdio · free gate</p>
+        <h1>Put the gate inside the bot.</h1>
+        <p class="lead">One MCP server gives Claude Desktop, Cursor, OpenCode, or any agent the <b>free preflight gate</b> plus six paid x402 checks. The free gate answers with a receipt; the paid checks settle per call over x402.</p>
+        <div class="btn-row">
+          <a class="btn" href="#install">Install it</a>
+          <a class="btn ghost" href="/start">5-minute quickstart</a>
+          <a class="btn ghost" href="#tools">See the tools</a>
+        </div>
+        <p class="hero-note">
+          <span><span class="dot"></span>Official MCP Registry: <a href="https://registry.modelcontextprotocol.io/" class="textlink" target="_blank" rel="noopener">see entry</a></span>
+          <span>npm: <a href="https://www.npmjs.com/package/verify402-mcp" class="textlink" target="_blank" rel="noopener">verify402-mcp v2.6.1</a></span>
+          <span>Mainnet live · <a href="https://vex402.online/info" class="textlink">vex402.online</a></span>
+          <span>Free gate · no wallet</span>
+        </p>
+      </div>
+      <aside>
+        <div class="vcard" data-ui>
+          <div class="vcard-head"><span>MCP · verify402</span><span class="ok">● active registry</span></div>
+          <div class="vcard-body">
+            <div class="vrow"><span class="pair">preflight_gate</span><span class="verdict">free</span><span class="meta">before the signature</span></div>
+            <div class="vrow"><span class="pair">verify_arbitrage</span><span class="verdict">$0.05</span><span class="meta">is it real?</span></div>
+            <div class="vrow"><span class="pair">check_token_safety</span><span class="verdict">$0.02</span><span class="meta">quote-based sellability</span></div>
+            <div class="vrow"><span class="pair">get_best_route</span><span class="verdict">$0.03</span><span class="meta">what the chain pays</span></div>
+            <div class="vrow"><span class="pair">verify_quote_fairness</span><span class="verdict">$0.05</span><span class="meta">is the quote honest?</span></div>
+            <div class="vrow"><span class="pair">get_trade_depth</span><span class="verdict">$0.05</span><span class="meta">how big can I trade?</span></div>
+            <div class="vrow"><span class="pair">get_assurance</span><span class="verdict">$0.10</span><span class="meta">one evidence bundle</span></div>
+          </div>
+          <div class="vcard-foot">No subscription · registry id: io.github.a32116150-ctrl/verify402-mcp</div>
+        </div>
+        <p class="small muted" style="margin-top:12px">The free gate runs before the signature. It is advice in the MCP layer; the executor enforces it.</p>
+      </aside>
+    </div>
+  </section>
+
+  <section id="tools">
+    <div class="wrap">
+      <div class="sec-head">
+        <p class="eyebrow">The tool surface</p>
+        <h2>One gate, six paid answers.</h2>
+        <p class="lead">The gate is free because it has to run before every signature. The paid tools answer the questions that need a measurement at a pinned block.</p>
+      </div>
+      <div class="table-wrap" data-ui style="margin-top:32px">
+        <table class="table">
+          <thead><tr><th>Tool</th><th>Price</th><th>Question</th><th>What comes back</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">preflight_gate</td><td class="mono">free</td><td>Should I sign this payment or transaction?</td><td>PASS / CAUTION / BLOCK, typed reasons, <code class="inline">checked</code> / <code class="inline">notChecked</code>, and a short-lived receipt</td></tr>
+            <tr><td class="mono">inspect_402</td><td class="mono">free</td><td>What does this 402 actually ask for?</td><td>Price, token, network, payee, the bound resource, and a PASS / CAUTION / BLOCK verdict from a read-only fetch</td></tr>
+            <tr><td class="mono">directory_402</td><td class="mono">free</td><td>What is the ecosystem asking for right now?</td><td>Watched public x402 endpoints with protocol and sign verdicts, plus recorded changes</td></tr>
+            <tr><td class="mono">verify_arbitrage</td><td class="mono">$0.05</td><td>Is this cross-venue arbitrage real, right now?</td><td>Verdict + evidence + <code class="inline">no_edge</code> when there is none</td></tr>
+            <tr><td class="mono">check_token_safety</td><td class="mono">$0.02</td><td>Can this token be sold on the configured venues?</td><td>TRUST / CAUTION / AVOID, live contract facts, liquidity, a quote-based sellability check</td></tr>
+            <tr><td class="mono">get_best_route</td><td class="mono">$0.03</td><td>What would the chain actually pay?</td><td>Every quoted venue at one pinned block, best first</td></tr>
+            <tr><td class="mono">verify_quote_fairness</td><td class="mono">$0.05</td><td>Is this quote someone gave me honest?</td><td>fair / overpaying / too_good_to_be_true, with the chain book</td></tr>
+            <tr><td class="mono">get_trade_depth</td><td class="mono">$0.05</td><td>How big can I trade before the round trip eats me?</td><td>Per-size impact, round-trip cost, and the largest size under your tolerance</td></tr>
+            <tr><td class="mono">get_assurance</td><td class="mono">$0.10</td><td>Can I bundle the paid checks into one evidence record?</td><td>One pinned block, a recomputable sha256, and supplied checks priced at least $0.10 separately</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="small muted" style="margin-top:20px">The live service is Base + Solana mainnet at https://vex402.online, real USDC via the Coinbase CDP facilitator, and the npm package defaults there. The public Base Sepolia testnet demo was retired on 2026-11-19. The bridge signs the payment only — it never signs or sends a trade — and it only pays a 402 from the configured server, on an allowlisted network, to the verify402 payee.</p>
+    </div>
+  </section>
+
+  <section class="soft" id="install">
+    <div class="wrap">
+      <div class="sec-head">
+        <p class="eyebrow">Install</p>
+        <h2>Start with the free gate. Add the wallet later.</h2>
+        <p class="lead">The npm package is published to the public registry, so you can run it directly with <code class="inline">npx</code> without cloning or building. The published version is <strong>2.6.1</strong>. It ships <code class="inline">instructions</code> in the MCP initialize response — agents are told how to use the free and paid tools and what PASS / CAUTION / BLOCK mean. It builds on 1.1.6 (paid-call default moved to mainnet), 1.1.5 (<code class="inline">instructions</code> in initialize), 1.1.4 (stdio framing fix) and 1.1.3 (documented the live mainnet instance); 1.1.2 carried the challenge's <code class="inline">extensions.bazaar</code> into the payment payload, so a settlement can be cataloged. The public Base Sepolia testnet demo was retired on 2026-11-19. The package itself defaults to the live mainnet service at https://vex402.online (settled end to end in real USDC; live counts at <a href="/stats">/stats</a>) — with the same spend caps.</p>
+      </div>
+
+      <div class="proof-grid" style="margin-top:40px">
+        <div class="pcard2">
+          <p class="tag"><span class="dot"></span>Mode 1 · no key</p>
+          <h3>Free gate only.</h3>
+          <p>Omit <code class="inline">EVM_PRIVATE_KEY</code>. The server lists all nine tools; the three free ones work as before, and the six paid ones refuse with a clear error — nothing can be charged. This is the safest way to try it.</p>
+        </div>
+        <div class="pcard2">
+          <p class="tag"><span class="dot"></span>Mode 2 · paid tools</p>
+          <h3>A dedicated hot wallet.</h3>
+          <p>For this instance, add a wallet with <strong>USDC on Base mainnet</strong> and leave <code class="inline">VERIFY402_NETWORKS=eip155:8453</code> (the default). The Base Sepolia testnet demo is explicit opt-in. <code class="inline">MAX_PAYMENT_USD</code> caps one payment at signature time; <code class="inline">MAX_DAILY_USD</code> caps the UTC day. Never use a main wallet. The public testnet demo was retired on 2026-11-19.</p>
+        </div>
+      </div>
+
+      <div style="margin-top:32px">
+        <p class="code-cap">Run via npx · no wallet required</p>
+<pre data-ui>npx -y verify402-mcp --help</pre>
+      </div>
+
+      <div class="callout good" style="margin-top:24px">
+        <h3>Official MCP Registry &amp; npm Distribution</h3>
+        <p>Published on npm as <a class="textlink" href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener"><strong>verify402-mcp</strong></a> (version 2.6.1). The official Model Context Protocol Registry lists the published entry as active. The repository source matches the published 2.6.1 package. Machine agents can also fetch the machine-readable <a class="textlink" href="/.well-known/verify402.json">service manifest</a> and <a class="textlink" href="/openapi.json">OpenAPI 3.1 specification</a>.</p>
+        <p style="margin-top:16px">
+          <a href="https://mcprush.com/a32116150-ctrl/verify402-mcp">
+            <img
+              width="380"
+              height="200"
+              src="https://mcprush.com/badge/verify402-mcp/card.svg"
+              alt="verify402 MCP server"
+              loading="lazy"
+              style="max-width:100%;height:auto"
+            />
+          </a>
+        </p>
+      </div>
+
+      <article id="claude" style="margin-top:44px">
+        <p class="eyebrow">Client · Claude Desktop / Cursor</p>
+        <h2 style="margin-top:14px">Paste one server block.</h2>
+        <p class="lead" style="margin-top:14px">Claude Desktop uses <code class="inline">claude_desktop_config.json</code>; Cursor uses <code class="inline">.cursor/mcp.json</code>. This block is free-only. For paid tools, add <code class="inline">EVM_PRIVATE_KEY</code>, <code class="inline">MAX_PAYMENT_USD</code> and optionally <code class="inline">MAX_DAILY_USD</code> to <code class="inline">env</code>.</p>
+        <div style="margin-top:24px">
+          <p class="code-cap">Free-only config</p>
+<pre data-ui>{
+  <span class="y">"mcpServers"</span>: {
+    <span class="y">"verify402"</span>: {
+      <span class="y">"command"</span>: <span class="g">"npx"</span>,
+      <span class="y">"args"</span>: [
+        <span class="g">"-y"</span>,
+        <span class="g">"verify402-mcp"</span>
+      ],
+      <span class="y">"env"</span>: {
+        <span class="y">"VERIFY402_URL"</span>: <span class="g">"https://vex402.online"</span>
+      }
+    }
+  }
+}</pre>
+        </div>
+      </article>
+
+      <article id="opencode">
+        <p class="eyebrow">Client · OpenCode V2</p>
+        <h2 style="margin-top:14px">Servers live under <span class="mono">mcp.servers</span>.</h2>
+        <p class="lead" style="margin-top:14px">Put this in <code class="inline">opencode.jsonc</code> or the global <code class="inline">~/.config/opencode/opencode.jsonc</code>. For paid tools, use <code class="inline">"EVM_PRIVATE_KEY": "{env:EVM_PRIVATE_KEY}"</code> and export the key in the environment that starts OpenCode — do not write it into the file.</p>
+        <div style="margin-top:24px">
+          <p class="code-cap">opencode.jsonc · free-only</p>
+<pre data-ui>{
+  <span class="y">"$schema"</span>: <span class="g">"https://opencode.ai/config.json"</span>,
+  <span class="y">"mcp"</span>: {
+    <span class="y">"servers"</span>: {
+      <span class="y">"verify402"</span>: {
+        <span class="y">"type"</span>: <span class="g">"local"</span>,
+        <span class="y">"command"</span>: [
+          <span class="g">"npx"</span>,
+          <span class="g">"-y"</span>,
+          <span class="g">"verify402-mcp"</span>
+        ],
+        <span class="y">"environment"</span>: {
+          <span class="y">"VERIFY402_URL"</span>: <span class="g">"https://vex402.online"</span>
+        }
+      }
+    }
+  }
+}</pre>
+        </div>
+        <p class="small muted" style="margin-top:16px">V2 uses <code class="inline">mcp.servers</code> and <code class="inline">disabled</code>; there is no <code class="inline">enabled</code> field. The server name prefixes its tools in OpenCode.</p>
+      </article>
+
+      <div class="callout" style="margin-top:32px">
+        <h3>Alternative install options</h3>
+        <p>If you prefer a pinned npm version: <code class="inline">npx -y verify402-mcp@2.6.1</code>. From source: <code class="inline">git clone https://github.com/a32116150-ctrl/verify402</code>, then <code class="inline">cd verify402/mcp-bridge &amp;&amp; npm ci</code>. The published npm tarball is <code class="inline">https://registry.npmjs.org/verify402-mcp/-/verify402-mcp-2.6.1.tgz</code>.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="sec-head">
+        <p class="eyebrow">The honesty boundary</p>
+        <h2>What it catches — and what it does not.</h2>
+      </div>
+      <div class="table-wrap" data-ui style="margin-top:32px">
+        <table class="table">
+          <thead><tr><th>It checks</th><th>It does not</th></tr></thead>
+          <tbody>
+            <tr><td>A swapped payee, a lookalike asset, a wrong amount, a bad network, an expired authorization</td><td>Whether the recipient is a scammer or a sanctioned address</td></tr>
+            <tr><td>Decoded calldata: transfers, approvals, permits, common V2/V3 swaps; unlimited approvals and spenders</td><td>Contract audits, proxy upgrades, owner privileges, or a token's intent</td></tr>
+            <tr><td>Contract bytecode, swap deadline, minimum output, output recipient, and an <code class="inline">eth_call</code> simulation from your wallet</td><td>Full balance-delta / state-change simulation; MEV and sandwich protection</td></tr>
+            <tr><td>The x402 payment itself: price, network, asset, payee, facilitator, before the caller signs</td><td>Counterparty identity, tool metadata, hidden instructions in tool output, or off-chain promises: “the seller will deliver after you pay”</td></tr>
+            <tr><td>Receipt integrity: HMAC, intent hash, pinned block, expiry</td><td>The agent ignoring the tool, or a signer that does not verify the receipt</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="small muted" style="margin-top:20px">A PASS means the left column passed at that block. It is not a guarantee that a token is safe, a trade will profit, or a counterparty will deliver. It is not a counterparty audit and does not scan tool descriptions or responses for prompt injection. It catches a class of measurable signing mistakes — not every scam.</p>
+      <div class="callout" style="margin-top:28px">
+        <h3>Enforcement, not advice</h3>
+        <p>The MCP tool is advisory: it cannot stop an agent that ignores the answer. Use the <a class="textlink" href="https://github.com/a32116150-ctrl/verify402/blob/master/examples/preflight-guard.mjs" rel="noopener">reference executor</a> to verify the receipt and refuse to call the signer without it. The full request shape is in <a class="textlink" href="/docs#preflight">/docs#preflight</a>.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="soft">
+    <div class="wrap">
+      <div class="sec-head">
+        <p class="eyebrow">Why a package</p>
+        <h2>Because a clone is friction.</h2>
+        <p class="lead">An MCP server is only in the path if installing it is one line. <code class="inline">npx</code> runs a versioned package on first use, your client config stays small, and updates are a version bump — not a git pull. The package is distribution, not another endpoint.</p>
+      </div>
+      <div class="steps" style="margin-top:40px">
+        <div class="step" data-ui>
+          <h3>Add the server</h3>
+          <p>One block in Claude, Cursor, or OpenCode. No build, no clone, no submodule.</p>
+        </div>
+        <div class="step" data-ui>
+          <h3>Call the gate</h3>
+          <p>Free, no wallet. The agent gets PASS / CAUTION / BLOCK and a receipt bound to the intent and block.</p>
+        </div>
+        <div class="step" data-ui>
+          <h3>Add paid depth</h3>
+          <p>When the agent needs a measurement, the same server pays per call over x402. No subscription.</p>
+        </div>
+      </div>
+      <p class="small muted" style="margin-top:24px">Install from the public npm registry with <code class="inline">npx -y verify402-mcp@latest</code>; the pinned npm version above is the reproducible alternative. Package name: <code class="inline">verify402-mcp</code>. License: Apache-2.0 — keep the copyright notice, license, and <code class="inline">NOTICE</code> file when redistributing. Source: <a class="textlink" href="https://github.com/a32116150-ctrl/verify402/tree/master/mcp-bridge" rel="noopener">mcp-bridge</a>.</p>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-foot">
+  <div class="foot-mark" aria-hidden="true">verify<span>[402]</span></div>
+  <div class="foot-links">
+    <div>
+      <h2>Product</h2>
+      <a href="/inspect">402 inspector</a>
+      <a href="/directory">402 directory</a>
+      <a href="/preflight">Preflight gate</a>
+      <a href="/checks">The six checks</a>
+      <a href="/mcp">MCP server</a>
+      <a href="/live">Live findings</a>
+      <a href="/activity">Activity</a>
+      <a href="/testers">Tester kit</a>
+      <a href="/blog">Blog</a>
+      <a href="/start">Quickstart</a>
+    </div>
+    <div>
+      <h2>Project</h2>
+      <a href="/proof">Proof &amp; receipts</a>
+      <a href="/docs">Documentation</a>
+      <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">Open-source client &amp; gate</a>
+      <a href="https://github.com/x402-foundation/x402/issues/3847" rel="noopener">x402 proposal</a>
+    </div>
+    <div>
+      <h2>For machines</h2>
+      <a href="/.well-known/verify402.json">Service manifest</a>
+      <a href="/openapi.json">OpenAPI 3.1</a>
+      <a href="/llms.txt">llms.txt</a>
+      <a href="/findings">/findings</a>
+      <a href="/blog/rss.xml">RSS</a>
+    </div>
+    <div>
+      <h2>For teams</h2>
+      <p class="foot-note">Embedding a pre-signing check in a wallet, agent, or treasury workflow?</p>
+      <a href="mailto:a32116150@gmail.com?subject=verify402%20walkthrough">Talk to the builder</a>
+      <a href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener">npm package</a>
+    </div>
+  </div>
+  <p class="foot-legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data. This instance settles real USDC on Base mainnet / Solana mainnet over x402. Real USDC has settled on Base mainnet, including payments from outside agents. Prices are per call, paid in USDC over x402; /preflight is free. The MCP server pays for calls only; it never signs a trade.</p>
+</footer>
+
+<script src="/assets/site.js"></script>
+</body>
+</html>

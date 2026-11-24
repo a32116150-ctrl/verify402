@@ -77,9 +77,10 @@ const registration = {
     "Machine-payable truth service for AI agents. POST /verify measures whether a claimed " +
     "cross-venue arbitrage is real (pinned-block quotes from Uniswap QuoterV2 and each " +
     "router's own math; the honest answer is usually no_edge). POST /safety is a pre-trade " +
-    "gate: contract facts, market liquidity and scam signals, a USD-sized sell probe across " +
-    "every venue (the honeypot test, answered against the chain), round-trip cost at the " +
-    "intended size, and phantom-price detection. TRUST / CAUTION / AVOID with evidence. " +
+    "gate: contract facts, market liquidity and scam signals, and a quote-based sellability " +
+    "check across the configured venues (it asks quoters for a price; it does not execute a " +
+    "transfer). It does not check unconfigured venues, transfer tax, blacklist, pause, or " +
+    "max-transaction restrictions. TRUST / CAUTION / AVOID with evidence. " +
     "Payment per call via x402 (USDC, Base or Solana). No profitability is ever promised; " +
     "the service reports what it measured.",
   image: `${AGENT_URL}/agent-icon.svg`,

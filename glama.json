@@ -1,0 +1,6 @@
+{
+  "$schema": "glama.ai/mcp/schemas/server.json",
+  "maintainers": [
+    "a32116150-ctrl"
+  ]
+}

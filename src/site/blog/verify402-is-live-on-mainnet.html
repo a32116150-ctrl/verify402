@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>verify402 is live on mainnet — here is the receipt · verify402</title>
+<meta name="description" content="verify402 now serves Base mainnet and Solana mainnet at vex402.online: exact-x402, USDC via the Coinbase CDP facilitator, settled end to end twice by the operator. Updated 19 November: the first two outside payments, 0.03 USDC each. The exact state of the claim, and what it does not prove.">
+<link rel="canonical" href="https://vex402.online/blog/verify402-is-live-on-mainnet">
+<meta property="og:type" content="article">
+<meta property="og:title" content="verify402 is live on mainnet — here is the receipt">
+<meta property="og:description" content="Exact-x402 on Base + Solana mainnet at vex402.online; two operator end-to-end USDC settlements, then two outside payments on 19 November. Chain-verifiable.">
+<meta property="og:url" content="https://vex402.online/blog/verify402-is-live-on-mainnet">
+<meta property="og:image" content="https://vex402.online/assets/logo-400.png">
+<meta name="twitter:card" content="summary">
+<meta name="google-site-verification" content="iGmI2QL110IkjnW0thU3DRZrdgQe_7mZsPWgkZVte7o">
+<link rel="alternate" type="application/rss+xml" title="verify402 blog" href="/blog/rss.xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/site.css">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "BlogPosting", "headline": "verify402 is live on mainnet — here is the receipt", "description": "verify402 serves Base mainnet and Solana mainnet at vex402.online. Two operator end-to-end USDC settlements, then two outside payments on 19 November. Chain-verifiable.", "datePublished": "2026-11-18", "dateModified": "2026-11-19", "author": {"@type": "Organization", "name": "verify402", "url": "https://vex402.online"}, "publisher": {"@type": "Organization", "name": "verify402", "url": "https://vex402.online"}, "mainEntityOfPage": "https://vex402.online/blog/verify402-is-live-on-mainnet", "image": "https://vex402.online/assets/logo-400.png"}</script>
+</head>
+<body>
+
+<header class="site-head">
+  <a class="brand" href="/" aria-label="verify402 home">verify<span>[</span>402<span>]</span></a>
+  <nav class="site-nav" aria-label="Primary">
+    <a href="/checks">Checks</a>
+    <a href="/preflight">Preflight</a>
+    <a href="/inspect">Inspect</a>
+    <a href="/directory">Directory</a>
+    <a href="/mcp">MCP</a>
+    <a href="/proof">Proof</a>
+    <a href="/activity">Activity</a>
+    <a href="/blog">Blog</a>
+    <a href="/board">Board</a>
+    <a href="/docs">Docs</a>
+  </nav>
+  <div class="site-actions">
+    <a class="site-status" href="/live"><span class="status-dot"></span><span data-block>snapshot · block —</span></a>
+    <a class="btn sm" href="/preflight#try">Run free check</a>
+    <details class="site-menu">
+      <summary>Menu</summary>
+      <nav aria-label="Menu">
+        <p class="menu-label">Start</p>
+        <a href="/preflight">Free gate</a>
+        <a href="/checks">Paid checks &amp; prices</a>
+        <a href="/start">Quickstart</a>
+        <a href="/mcp">MCP server</a>
+        <p class="menu-label">Explore</p>
+        <a href="/inspect">402 inspector</a>
+        <a href="/directory">402 directory</a>
+        <a href="/live">Live findings</a>
+        <a href="/activity">Activity</a>
+        <p class="menu-label">Trust</p>
+        <a href="/proof">Proof &amp; receipts</a>
+        <a href="/board">Public board</a>
+        <a href="/audit">Payment review</a>
+        <a href="/testers">Tester kit</a>
+        <p class="menu-label">Project</p>
+        <a href="/blog">Blog</a>
+        <a href="/docs">Documentation</a>
+        <a href="/donate">Donate</a>
+        <a href="/sponsor">Sponsor hosting</a>
+        <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">GitHub</a>
+      </nav>
+    </details>
+  </div>
+</header>
+
+<main>
+  <div class="wrap page-head">
+    <p class="eyebrow">Mainnet · 7 min read · Nov 18, 2026</p>
+    <h1>verify402 is live on mainnet — here is the receipt.</h1>
+    <p class="lead">The gate now serves Base mainnet and Solana mainnet at <code>vex402.online</code>, settling real USDC through the Coinbase CDP facilitator. Two end-to-end settlements had moved on-chain when this was published. On 19 November, two outside wallets paid; see the update below.</p>
+
+    <div class="callout good">
+      <h3>Update — first outside payments (Nov 19)</h3>
+      <p>On 19 November, two wallets the operator does not control each paid 0.03 USDC for a <code class="inline">/route</code> call: <a href="https://basescan.org/tx/0x5244036ebcce4d298865df45c4d116c2ba91508527c3601b1f972fa1f569e378" rel="noopener">0x5244…e378</a> at 06:02 UTC and <a href="https://basescan.org/tx/0x31cb184ef8e01b7db64f43f209d742b2f036c405b863015f1ef43255c1daadb9" rel="noopener">0x31cb…adb9</a> at 08:18 UTC. Both look like automated x402 agents. The live count, USDC total and outside-payer breakdown are on <a href="/stats">/stats</a>; receipts are on <a href="/proof">/proof</a>. The rest of this post is the 18 November record, kept as published.</p>
+    </div>
+
+    <div class="callout good">
+      <h3>Update — Glama: green</h3>
+      <p>Glama has evaluated the server. Dockerfile build is green (23.6s), the listing is claimed, <code class="inline">glama.json</code> is valid on master, license Apache-2.0, Discovery score 83%, and Glama TDQS A · 4/5.0 across the three free tools (all three graded A). npm 2.0.0 published; MCP Registry lists 2.0.0; the latest GitHub release is <code class="inline">mcp-v1.1.5</code>.</p>
+    </div>
+  </div>
+
+  <article class="wrap prose">
+    <p>This is the account of a mainnet cutover and not a milestone manufactured to look like one. Everything below is chain-verifiable; everything we did not do is also stated plainly.</p>
+
+    <h2>What changed, and what did not</h2>
+
+    <ul>
+      <li>The service was deployed to a dedicated always-on Linux host (not a free tier), running <code class="inline">node 22</code> with a durable SQLite recovery store — an idempotency record survives a restart. Reboot-tested.</li>
+      <li>It is served at <code class="inline">https://vex402.online</code> through an outbound tunnel; no inbound ports are open on the host beyond SSH, and SSH is key-only.</li>
+      <li>The 402 challenge advertises <code class="inline">eip155:8453</code> (Base mainnet) alongside Solana mainnet, paid in USDC, verified and settled by the Coinbase CDP facilitator.</li>
+      <li><code class="inline">/info</code> reports <code class="inline">mode: mainnet</code>; <code class="inline">/health</code> reports <code class="inline">recoveryStore: ok</code>. Chain-verifiable here: <code class="inline">https://vex402.online/health</code>.</li>
+      <li>Prices are unchanged. <code class="inline">/preflight</code>, <code class="inline">/inspect</code>, and <code class="inline">/directory</code> remain free. The public demo at <code class="inline">https://verify402.onrender.com</code> remains testnet — this page makes no claim about it beyond "it is a demo."</li>
+    </ul>
+
+    <h2>The receipts, precisely</h2>
+
+    <p>As of 18 November, two settlements had happened through the live path, both by the operator paying the service's own payee (the operator's Phantom base wallet). Both are $0.03 USDC. Both settled under CDP.</p>
+
+    <ul>
+      <li><code class="inline">/route</code> · block 59,146,773 · tx <code class="inline">0xcd61e0ec0a7b9ab80bcc0ecb01c7c155016e5a80d3caf650bb1ac9d047b27b5d</code> · payer 0x9a48…5AD4b → payee 0xAeEF…2df9cb</li>
+      <li><code class="inline">/route</code> · block 59,150,929 · tx <code class="inline">0x37e61b094133af984a30590e03f27f0daea67716e3650a9b16f3bb5aad734dfb</code> · same payer and payee; payee balance went 0.030041 → 0.060041 USDC</li>
+    </ul>
+
+    <h2>What the record shows</h2>
+
+    <ul>
+      <li>Outside usage exists: two payments from wallets the operator does not control arrived on 19 November. The ledger remains dated and public.</li>
+      <li>Not the Bazaar placement. We have not relisted <code class="inline">vex402.online</code> in the x402 catalog yet; the stale testnet listings at the old host are not evidence of mainnet traffic.</li>
+      <li>Not that the analysis is correct. The verdicts are measurements, not guarantees; /preflight exists precisely because "the model sounded sure" is not a check.</li>
+      <li>Not your money. As of 18 November, the only settled USDC was the operator's; the two outside payments on 19 November came from outside wallets. If you pay, you pay for what the challenge asks — check <code class="inline">eip155:8453</code> and the payee before you sign.</li>
+    </ul>
+
+    <h2>How to try it, honestly</h2>
+
+    <p>For humans and operators of agents: <code class="inline">POST https://vex402.online/preflight</code> is free — use it on anything you were about to sign. For builders who want a $0.03 receipt on public record: set <code class="inline">VERIFY402_URL=https://vex402.online</code> and <code class="inline">VERIFY402_NETWORKS=eip155:8453</code> and call any paid route from a dedicated hot wallet. The bridge pays the challenge only; it never signs or sends a trade.</p>
+
+    <div class="callout good">
+      <h3>Verification</h3>
+      <p>Both transactions are public on Base: <code class="inline">https://basescan.org/tx/0xcd61e0ec0a7b9ab80bcc0ecb01c7c155016e5a80d3caf650bb1ac9d047b27b5d</code> and <code class="inline">https://basescan.org/tx/0x37e61b094133af984a30590e03f27f0daea67716e3650a9b16f3bb5aad734dfb</code></p>
+    </div>
+
+    <div class="post-cta">
+      <p class="eyebrow">The ask</p>
+      <h2>If your agent pays this once for real — tell us what broke.</h2>
+      <p>Outside settlements are the first data point that this is a product and not a demo. If you pay and it fails, or it works, we want to know which. The board and GitHub are both open.</p>
+      <div class="btn-row">
+        <a class="btn" href="/mcp">MCP install page</a>
+        <a class="btn ghost" href="https://github.com/a32116150-ctrl/verify402">GitHub</a>
+      </div>
+    </div>
+
+    <p class="post-foot">Previous: <a class="textlink" href="/blog/verify402-cdp-facilitator-testnet">We settle through the Coinbase CDP facilitator — on testnet.</a> · <a class="textlink" href="/blog">All notes</a></p>
+  </article>
+</main>
+
+<footer class="site-foot">
+  <p class="foot-legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data. This instance settles real USDC on Base mainnet / Solana mainnet over x402. Real USDC has settled on Base mainnet, including payments from outside agents. Prices are per call, paid in USDC over x402; /preflight is free.</p>
+</footer>
+
+</body>
+</html>

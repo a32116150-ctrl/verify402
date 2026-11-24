@@ -1,0 +1,2731 @@
+// The pre-signing gate: one call an agent makes before it signs anything.
+//
+// Two intents, one contract:
+//
+//   payment     an x402 payment request (scheme, network, asset, amount,
+//               payTo, resource, timeout, authorization window).
+//   transaction a chain transaction (to, data, value, optional from).
+//
+// The answer is three-state on purpose. A binary "safe / unsafe" would force
+// honest uncertainty into a lie: an approval to an unvetted spender is not a
+// pass, and a call we could not simulate is not a block. So:
+//
+//   PASS     every check in `checked` passed at this block.
+//   CAUTION  at least one check needs a decision before signing.
+//   BLOCK    at least one hard check failed. Do not sign.
+//
+// Every answer carries a short-lived receipt bound to the exact intent, the
+// exact request body, and, when the chain is readable, a pinned block.
+// POST /preflight/verify recomputes the HMAC and both bindings, so an executor
+// can refuse a receipt it cannot verify. The request binding is additive within
+// @1; receipts issued before it are signature-valid but unbound.
+//
+// What this module deliberately does NOT do: reputation, sanctions, contract
+// audits, balance-delta simulation. Those need data or trace support we do not
+// have, and pretending otherwise is the one thing this service cannot afford.
+// They are listed in `notChecked` on every response.
+
+import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { lookup } from "node:dns/promises";
+import {
+  decodeErrorResult,
+  decodeFunctionData,
+  erc20Abi,
+  isAddress,
+  parseAbi,
+  verifyMessage,
+} from "viem";
+import { CHAINS } from "./config.mjs";
+import { clientFor } from "./measure.mjs";
+import { canonicalStable, sha256Hex } from "./recovery.mjs";
+import { findToken, STABLE } from "./tokens.mjs";
+
+export const PREFLIGHT_SPEC = "verify402/preflight@1";
+export const RECEIPT_SPEC = "verify402/preflight-receipt@1";
+export const DEFAULT_TTL_SECONDS = 90;
+export const MAX_TTL_SECONDS = 300;
+export const MIN_TTL_SECONDS = 15;
+// The supported EVM chains produce blocks every ~12s or faster. A block older
+// than 30s is worth surfacing; older than 120s is not a usable "latest" block.
+export const BLOCK_AGE_CAUTION_SECONDS = 30;
+export const BLOCK_AGE_BLOCK_SECONDS = 120;
+
+const MAX_DATA_BYTES = 32 * 1024;
+const MAX_UINT256 = 2n ** 256n - 1n;
+const UNLIMITED_THRESHOLD = 2n ** 255n;
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+const DEAD_ADDRESS = "0x000000000000000000000000000000000000dead";
+const MS = 1000;
+// Additive default: only applies when the caller supplies neither an explicit
+// maxAmountUsd nor a seller terms manifest. It is a caution, not a new BLOCK.
+const DEFAULT_PAYMENT_CAP_USD = 1;
+const SIWX_MIN_NONCE_LENGTH = 8;
+const SIWX_MAX_WINDOW_MS = 24 * 60 * 60 * MS;
+
+// Seller payout provenance. A caller-supplied address list is an allowlist,
+// not a binding. A binding requires a seller-signed manifest fetched from a
+// caller-pinned HTTPS origin, outside the 402 challenge itself.
+export const SELLER_PAYOUT_MANIFEST_SPEC = "verify402/seller-payout@1";
+// The"seller-signed terms" manifest: a seller publishes, once, what they
+// charge for each resource — and the gate can therefore refuse a challenge
+// whose price, asset, network or timeout drifted from that publication.
+// Same rules as the payout manifest: caller-pinned HTTPS origin, seller-
+// signed, expiry-checked, never certified by the 402 itself.
+export const SELLER_TERMS_MANIFEST_SPEC = "verify402/seller-terms@1";
+const SELLER_MANIFEST_MAX_BYTES = 64 * 1024;
+const SELLER_MANIFEST_TIMEOUT_MS = 3000;
+const SELLER_MANIFEST_FUTURE_SKEW_MS = 5 * 60 * 1000;
+
+// Testnet payment rails are accepted structurally even though the measurement
+// registry only carries mainnet. No block is pinned there; the receipt says so.
+const EXTRA_EVM = {
+  84532: { name: "base-sepolia", usdc: "0x036CbD53842c5426634e7929541eC2318f3dCF7e", decimals: 6 },
+  11155111: { name: "ethereum-sepolia", usdc: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238", decimals: 6 },
+};
+
+const SVM_MAINNET = {
+  name: "solana-mainnet",
+  genesis: "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
+  usdc: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+};
+const SVM_DEVNET = {
+  name: "solana-devnet",
+  genesis: "EtWTRABZaYq6iMfeYKouRu166VU2xqa1",
+  usdc: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
+};
+const SVM_BLOCKED_PAYEES = new Set([
+  "11111111111111111111111111111111", // system program
+  "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", // SPL token program
+  "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL", // associated token account program
+]);
+
+const NETWORK_ALIASES = {
+  base: "eip155:8453",
+  "base-mainnet": "eip155:8453",
+  "base-sepolia": "eip155:84532",
+  ethereum: "eip155:1",
+  mainnet: "eip155:1",
+  arbitrum: "eip155:42161",
+  solana: "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
+  "solana-mainnet": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
+  "solana-devnet": "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1",
+};
+
+// Used only in the unsupported-network reason. The distinction matters:
+// "eip155:56" is a real x402 chain, but this instance does not measure it.
+// Saying "not a known x402 network" sends the caller to fix the wrong thing.
+const SUPPORTED_NETWORK_HINTS = [
+  ...Object.entries(CHAINS).map(([id, c]) => `eip155:${id} (${c.name})`),
+  ...Object.entries(EXTRA_EVM).map(([id, x]) => `eip155:${id} (${x.name})`),
+  "Solana mainnet/devnet",
+].join(", ");
+
+// An ephemeral secret makes receipts verifiable only inside the current
+// process. That is acceptable for a 90-second gate, and fatal for a
+// multi-instance deployment, so /info says which mode is live.
+const RECEIPT_SECRET = process.env.PREFLIGHT_SECRET || randomBytes(32).toString("hex");
+export const RECEIPT_SECRET_SOURCE = process.env.PREFLIGHT_SECRET ? "env" : "ephemeral";
+
+export class PreflightError extends Error {
+  constructor(status, code, message) {
+    super(message);
+    this.name = "PreflightError";
+    this.status = status;
+    this.code = code;
+  }
+}
+
+// ---------------------------------------------------------------- helpers ---
+
+const block = (code, message) => ({ code, severity: "block", message });
+const caution = (code, message) => ({ code, severity: "caution", message });
+const unique = (arr) => [...new Set(arr)];
+
+// `notChecked` is the honest half of the answer. When a caller supplies state
+// that turns one of those named gaps into a real check, remove the stale line
+// rather than claiming both "checked" and "not checked" at once.
+function dropNotChecked(arr, item) {
+  const i = arr.indexOf(item);
+  if (i >= 0) arr.splice(i, 1);
+}
+
+function verdictOf(reasons) {
+  if (reasons.some((r) => r.severity === "block")) return "BLOCK";
+  if (reasons.some((r) => r.severity === "caution")) return "CAUTION";
+  return "PASS";
+}
+
+function summaryOf(verdict, reasons) {
+  const blocks = reasons.filter((r) => r.severity === "block").length;
+  const cautions = reasons.filter((r) => r.severity === "caution").length;
+  if (verdict === "BLOCK") {
+    return `BLOCK: ${blocks} hard check${blocks === 1 ? "" : "s"} failed. Do not sign.`;
+  }
+  if (verdict === "CAUTION") {
+    return `CAUTION: ${cautions} check${cautions === 1 ? "" : "s"} need attention. Read the reasons before signing.`;
+  }
+  return "PASS: every check in `checked` passed at this block. See `notChecked` for what was not covered.";
+}
+
+function errorMessage(e) {
+  if (e == null) return "unknown error";
+  return e.shortMessage || e.details || e.cause?.shortMessage || e.cause?.details
+    || e.cause?.reason || e.message || String(e);
+}
+
+function isRevert(e) {
+  const names = [e?.name, e?.cause?.name, e?.cause?.cause?.name].filter(Boolean);
+  if (names.includes("CallExecutionError")) return true;
+  const msg = errorMessage(e);
+  if (/rate limit|too many requests|timeout|timed out|fetch failed|network error|429|502|503|504/i.test(msg)) return false;
+  return /execution reverted|revert/i.test(msg);
+}
+
+const ERROR_ABI = parseAbi(["error Error(string)"]);
+const PANIC_ABI = parseAbi(["error Panic(uint256)"]);
+
+function revertReason(e) {
+  const data = e?.data || e?.cause?.data || e?.cause?.cause?.data;
+  if (typeof data === "string" && data.startsWith("0x") && data.length >= 10) {
+    for (const abi of [ERROR_ABI, PANIC_ABI]) {
+      try {
+        const decoded = decodeErrorResult({ abi, data });
+        if (decoded.errorName === "Error") return String(decoded.args[0]);
+        if (decoded.errorName === "Panic") return `Panic(0x${BigInt(decoded.args[0]).toString(16)})`;
+      } catch {
+        // Try the next shape; fall through to the provider message.
+      }
+    }
+  }
+  return errorMessage(e);
+}
+
+function parseRawAmount(value) {
+  if (typeof value === "bigint") {
+    if (value < 0n || value > MAX_UINT256) throw new Error("amount is outside uint256");
+    return value;
+  }
+  if (typeof value === "number") {
+    if (!Number.isSafeInteger(value) || value < 0) throw new Error("amount must be a positive integer");
+    return BigInt(value);
+  }
+  if (typeof value === "string" && /^\d+$/.test(value.trim())) {
+    const n = BigInt(value.trim());
+    if (n > MAX_UINT256) throw new Error("amount is outside uint256");
+    return n;
+  }
+  throw new Error("amount must be a positive integer in raw units (a decimal string)");
+}
+
+function parseWei(value) {
+  if (value == null || value === "") return 0n;
+  if (typeof value === "bigint") {
+    if (value < 0n) throw new Error("value must be non-negative");
+    return value;
+  }
+  if (typeof value === "number") {
+    if (!Number.isSafeInteger(value) || value < 0) throw new Error("value must be a non-negative integer");
+    return BigInt(value);
+  }
+  if (typeof value === "string" && /^\d+$/.test(value.trim())) return BigInt(value.trim());
+  throw new Error("value must be a non-negative integer string in wei");
+}
+
+function normalizeHex(value) {
+  if (value == null || value === "") return "0x";
+  if (typeof value !== "string") throw new Error("data must be a hex string");
+  const s = value.trim().toLowerCase();
+  if (!/^0x[0-9a-f]*$/.test(s) || s.length % 2 !== 0) throw new Error("data must be even-length hex");
+  if ((s.length - 2) / 2 > MAX_DATA_BYTES) throw new Error(`data exceeds ${MAX_DATA_BYTES} bytes`);
+  return s;
+}
+
+const BASE58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+
+function isSvmAddress(value) {
+  if (typeof value !== "string" || value.length < 32 || value.length > 44) return false;
+  let n = 0n;
+  for (const ch of value) {
+    const i = BASE58.indexOf(ch);
+    if (i < 0) return false;
+    n = n * 58n + BigInt(i);
+  }
+  let zeros = 0;
+  for (const ch of value) {
+    if (ch === "1") zeros++;
+    else break;
+  }
+  let bytes = 0;
+  for (let x = n; x > 0n; x >>= 8n) bytes++;
+  return zeros + bytes === 32;
+}
+
+// EIP-55 is a typo detector, not a chain rule. All-lowercase is valid; mixed
+// case must carry a correct checksum, because a mistyped address is exactly
+// the failure this gate exists to catch.
+function normalizeEvmAddress(value) {
+  if (typeof value !== "string" || !/^0x[0-9a-fA-F]{40}$/.test(value)) return null;
+  const body = value.slice(2);
+  const hasLower = /[a-f]/.test(body);
+  const hasUpper = /[A-F]/.test(body);
+  if (hasLower && hasUpper && !isAddress(value)) return null;
+  return value.toLowerCase();
+}
+
+function isPrivateManifestHost(hostname) {
+  const host = String(hostname || "").toLowerCase().replace(/^\[|\]$/g, "");
+  if (!host) return true;
+  if (host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local") || host.endsWith(".internal")) return true;
+  if (host === "0.0.0.0" || host === "::" || host === "::1") return true;
+  if (/^127\./.test(host) || /^10\./.test(host) || /^192\.168\./.test(host) || /^169\.254\./.test(host)) return true;
+  if (/^172\.(1[6-9]|2\d|3[01])\./.test(host)) return true;
+  if (/^fe80:/i.test(host) || /^fc[0-9a-f]{2}:/i.test(host) || /^fd[0-9a-f]{2}:/i.test(host)) return true;
+  return false;
+}
+
+function isPrivateIpAddress(address) {
+  const ip = String(address || "").toLowerCase();
+  if (!ip) return true;
+  if (ip.includes(":")) {
+    if (ip === "::" || ip === "::1") return true;
+    if (ip.startsWith("fe80:") || ip.startsWith("fc") || ip.startsWith("fd")) return true;
+    const mapped = ip.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
+    return mapped ? isPrivateIpAddress(mapped[1]) : false;
+  }
+  const parts = ip.split(".").map(Number);
+  if (parts.length !== 4 || parts.some((n) => !Number.isInteger(n) || n < 0 || n > 255)) return true;
+  if (parts[0] === 0 || parts[0] === 10 || parts[0] === 127) return true;
+  if (parts[0] === 169 && parts[1] === 254) return true;
+  if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true;
+  if (parts[0] === 192 && parts[1] === 168) return true;
+  if (parts[0] === 100 && parts[1] >= 64 && parts[1] <= 127) return true;
+  if (parts[0] >= 224) return true;
+  return false;
+}
+
+async function resolveManifestHost(hostname) {
+  const rows = await lookup(hostname, { all: true, verbatim: true });
+  return rows.map((row) => row.address);
+}
+
+async function readResponseTextLimited(response, maxBytes) {
+  if (!response.body || typeof response.body.getReader !== "function") {
+    const text = await response.text();
+    if (typeof text !== "string") throw new Error("manifest body is not text");
+    if (Buffer.byteLength(text, "utf8") > maxBytes) {
+      const error = new Error("manifest body is too large");
+      error.code = "too_large";
+      throw error;
+    }
+    return text;
+  }
+  const reader = response.body.getReader();
+  const chunks = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!(value instanceof Uint8Array)) throw new Error("manifest body is not bytes");
+      total += value.byteLength;
+      if (total > maxBytes) {
+        const error = new Error("manifest body is too large");
+        error.code = "too_large";
+        throw error;
+      }
+      chunks.push(value);
+    }
+  } finally {
+    try {
+      await reader.cancel();
+    } catch {
+      // The body is already closed or cancelled; nothing to do.
+    }
+  }
+  return new TextDecoder().decode(Buffer.concat(chunks));
+}
+
+function normalizeSellerPayoutManifest(raw) {
+  if (raw == null) return null;
+  if (typeof raw !== "object" || Array.isArray(raw)) {
+    throw new PreflightError(400, "invalid_policy", "policy.sellerPayoutManifest must be an object");
+  }
+  if (typeof raw.url !== "string" || raw.url.trim() === "") {
+    throw new PreflightError(400, "invalid_policy", "policy.sellerPayoutManifest.url must be a non-empty HTTPS URL");
+  }
+  let url;
+  try {
+    url = new URL(raw.url.trim());
+  } catch {
+    throw new PreflightError(400, "invalid_policy", "policy.sellerPayoutManifest.url must be a valid HTTPS URL");
+  }
+  if (url.protocol !== "https:") {
+    throw new PreflightError(400, "invalid_policy", "policy.sellerPayoutManifest.url must use HTTPS");
+  }
+  if (url.username || url.password) {
+    throw new PreflightError(400, "invalid_policy", "policy.sellerPayoutManifest.url must not contain credentials");
+  }
+  if (isPrivateManifestHost(url.hostname)) {
+    throw new PreflightError(400, "invalid_policy", "policy.sellerPayoutManifest.url must point to a public host");
+  }
+  const out = { url: url.toString() };
+  if (raw.expectedSigner != null) {
+    const signer = normalizeEvmAddress(String(raw.expectedSigner));
+    if (!signer) {
+      throw new PreflightError(400, "invalid_policy", "policy.sellerPayoutManifest.expectedSigner must be a valid EVM address");
+    }
+    out.expectedSigner = signer;
+  }
+  return out;
+}
+
+// terms: [{ resource, network, asset, amount, maxTimeoutSeconds }]
+function normalizeSellerTermsEntry(term, i, chainId) {
+  if (term == null || typeof term !== "object" || Array.isArray(term)) {
+    throw new PreflightError(400, "invalid_terms", `terms[${i}] must be an object`);
+  }
+  const resource = String(term.resource ?? "").trim();
+  let url;
+  try {
+    url = new URL(resource);
+  } catch {
+    throw new PreflightError(400, "invalid_terms", `terms[${i}].resource must be an absolute https URL`);
+  }
+  if (url.protocol !== "https:" || url.username || url.password) {
+    throw new PreflightError(400, "invalid_terms", `terms[${i}].resource must be an absolute https URL without credentials`);
+  }
+  if (isPrivateManifestHost(url.hostname)) {
+    throw new PreflightError(400, "invalid_terms", `terms[${i}].resource host must be public`);
+  }
+  const rawNet = String(term.network ?? "").trim();
+  if (!rawNet) throw new PreflightError(400, "invalid_terms", `terms[${i}].network must be a CAIP-2 network id`);
+  const asset = String(term.asset ?? "").trim();
+  if (!/^(0x[0-9a-fA-F]{40}|[1-9A-HJ-NP-Za-km-z]{32,44})$/.test(asset)) {
+    throw new PreflightError(400, "invalid_terms", `terms[${i}].asset must be an EVM address or Solana mint`);
+  }
+  const amount = String(term.amount ?? "").trim();
+  try {
+    const n = BigInt(amount);
+    if (n <= 0n) throw new Error("non-positive");
+  } catch {
+    throw new PreflightError(400, "invalid_terms", `terms[${i}].amount must be a positive integer in raw units`);
+  }
+  let maxTimeoutSeconds = null;
+  if (term.maxTimeoutSeconds != null) {
+    const t = Number(term.maxTimeoutSeconds);
+    if (!Number.isInteger(t) || t < 0) {
+      throw new PreflightError(400, "invalid_terms", `terms[${i}].maxTimeoutSeconds must be a non-negative integer`);
+    }
+    maxTimeoutSeconds = t;
+  }
+  return {
+    resource: url.toString(),
+    network: rawNet,
+    asset,
+    amount,
+    maxTimeoutSeconds,
+  };
+}
+
+function normalizeSellerTermsManifest(raw) {
+  if (raw == null) return null;
+  if (typeof raw !== "object" || Array.isArray(raw)) {
+    throw new PreflightError(400, "invalid_policy", "policy.sellerTermsManifest must be an object");
+  }
+  if (typeof raw.url !== "string" || raw.url.trim() === "") {
+    throw new PreflightError(400, "invalid_policy", "policy.sellerTermsManifest.url must be a non-empty HTTPS URL");
+  }
+  let url;
+  try {
+    url = new URL(raw.url.trim());
+  } catch {
+    throw new PreflightError(400, "invalid_policy", "policy.sellerTermsManifest.url must be a valid HTTPS URL");
+  }
+  if (url.protocol !== "https:") {
+    throw new PreflightError(400, "invalid_policy", "policy.sellerTermsManifest.url must use HTTPS");
+  }
+  if (url.username || url.password) {
+    throw new PreflightError(400, "invalid_policy", "policy.sellerTermsManifest.url must not contain credentials");
+  }
+  if (isPrivateManifestHost(url.hostname)) {
+    throw new PreflightError(400, "invalid_policy", "policy.sellerTermsManifest.url must point to a public host");
+  }
+  const out = { url: url.toString() };
+  if (raw.expectedSigner != null) {
+    const signer = normalizeEvmAddress(String(raw.expectedSigner));
+    if (!signer) {
+      throw new PreflightError(400, "invalid_policy", "policy.sellerTermsManifest.expectedSigner must be a valid EVM address");
+    }
+    out.expectedSigner = signer;
+  }
+  return out;
+}
+
+export function parseNetwork(raw) {
+  let s = String(raw ?? "").trim();
+  if (!s) return null;
+  s = NETWORK_ALIASES[s.toLowerCase()] || s;
+
+  if (s.startsWith("eip155:")) {
+    const chainId = Number(s.slice(7));
+    if (!Number.isInteger(chainId) || chainId <= 0) {
+      return { family: "evm", chainId, supported: false, name: null, usdc: null, decimals: null, measurement: false };
+    }
+    const c = CHAINS[chainId];
+    const x = EXTRA_EVM[chainId];
+    if (!c && !x) {
+      return { family: "evm", chainId, supported: false, name: null, usdc: null, decimals: null, measurement: false };
+    }
+    return {
+      family: "evm",
+      chainId,
+      supported: true,
+      name: c?.name ?? x.name,
+      usdc: c?.tokens?.USDC?.address ?? x.usdc,
+      decimals: 6,
+      measurement: Boolean(c),
+    };
+  }
+
+  if (s.startsWith("solana:")) {
+    const genesis = s.slice(7);
+    const known = genesis === SVM_MAINNET.genesis ? SVM_MAINNET
+      : genesis === SVM_DEVNET.genesis ? SVM_DEVNET : null;
+    return {
+      family: "svm",
+      chainId: null,
+      genesis,
+      supported: Boolean(known),
+      name: known?.name ?? null,
+      usdc: known?.usdc ?? null,
+      decimals: 6,
+      measurement: false,
+    };
+  }
+
+  return { family: "unknown", chainId: null, supported: false, name: null, usdc: null, decimals: null, measurement: false };
+}
+
+function networkKey(raw) {
+  const net = parseNetwork(raw);
+  if (!net) return "";
+  if (net.family === "evm") return `eip155:${net.chainId}`;
+  if (net.family === "svm") return `solana:${net.genesis}`;
+  return String(raw ?? "").toLowerCase();
+}
+
+export function canonicalUsdc(net) {
+  if (!net || !net.supported) return null;
+  if (net.family === "evm") {
+    return CHAINS[net.chainId]?.tokens?.USDC?.address ?? EXTRA_EVM[net.chainId]?.usdc ?? null;
+  }
+  if (net.family === "svm") return net.usdc;
+  return null;
+}
+
+function canonicalUsdcDecimals(net) {
+  if (!net || !net.supported) return null;
+  if (net.family === "evm") {
+    return CHAINS[net.chainId]?.tokens?.USDC?.decimals ?? EXTRA_EVM[net.chainId]?.decimals ?? null;
+  }
+  if (net.family === "svm") return 6;
+  return null;
+}
+
+function sameAsset(net, a, b) {
+  if (a == null || b == null) return false;
+  if (net?.family === "svm") return String(a) === String(b);
+  return String(a).toLowerCase() === String(b).toLowerCase();
+}
+
+function matchesList(list, value, net) {
+  if (!Array.isArray(list)) return true;
+  if (value == null) return false;
+  if (net?.family === "svm") return list.includes(value);
+  return list.some((x) => String(x).toLowerCase() === String(value).toLowerCase());
+}
+
+function normalizePolicy(p) {
+  if (p == null) return {};
+  if (typeof p !== "object" || Array.isArray(p)) {
+    throw new PreflightError(400, "invalid_policy", "policy must be an object");
+  }
+  const out = {};
+
+  if (p.maxAmountUsd != null) {
+    const n = Number(p.maxAmountUsd);
+    if (!Number.isFinite(n) || n < 0) throw new PreflightError(400, "invalid_policy", "policy.maxAmountUsd must be a non-negative number");
+    out.maxAmountUsd = n;
+  }
+  if (p.maxValueWei != null) {
+    let n;
+    try {
+      n = BigInt(String(p.maxValueWei));
+    } catch {
+      throw new PreflightError(400, "invalid_policy", "policy.maxValueWei must be a non-negative integer string");
+    }
+    if (n < 0n) throw new PreflightError(400, "invalid_policy", "policy.maxValueWei must be non-negative");
+    // Keep the normalized policy JSON-safe: a BigInt in the response would
+    // break res.json() and turn an honest BLOCK into a 503.
+    out.maxValueWei = n.toString();
+  }
+  if (p.maxValueEth != null) {
+    const n = Number(p.maxValueEth);
+    if (!Number.isFinite(n) || n < 0) throw new PreflightError(400, "invalid_policy", "policy.maxValueEth must be a non-negative number");
+    out.maxValueWei = BigInt(Math.round(n * 1e18)).toString();
+  }
+  if (p.maxTimeoutSeconds != null) {
+    const n = Number(p.maxTimeoutSeconds);
+    if (!Number.isFinite(n) || n <= 0) throw new PreflightError(400, "invalid_policy", "policy.maxTimeoutSeconds must be a positive number");
+    out.maxTimeoutSeconds = n;
+  }
+  for (const key of ["allowedNetworks", "allowedPayTo", "allowedTo", "allowedSpenders", "allowedAssets", "allowedFacilitators"]) {
+    if (p[key] != null) {
+      if (!Array.isArray(p[key])) throw new PreflightError(400, "invalid_policy", `policy.${key} must be an array`);
+      out[key] = p[key].map((x) => String(x));
+    }
+  }
+  // A caller-supplied seller payout list is an allowlist, not a binding. It
+  // lets an agent say "this is the address my seller told me to use" and fail
+  // closed on any other address, but it does not prove where that list came
+  // from. Provenance requires the separately fetched seller manifest below.
+  if (p.sellerPayoutWallets != null) {
+    if (!Array.isArray(p.sellerPayoutWallets) || !p.sellerPayoutWallets.every((x) => typeof x === "string")) {
+      throw new PreflightError(400, "invalid_policy", "policy.sellerPayoutWallets must be an array of strings");
+    }
+    const wallets = p.sellerPayoutWallets.map((x) => x.trim()).filter(Boolean);
+    if (wallets.length === 0) {
+      throw new PreflightError(400, "invalid_policy", "policy.sellerPayoutWallets must contain at least one address");
+    }
+    if (wallets.length > 200) {
+      throw new PreflightError(400, "invalid_policy", "policy.sellerPayoutWallets is limited to 200 addresses");
+    }
+    out.sellerPayoutWallets = wallets;
+  }
+  if (p.sellerPayoutManifest != null) {
+    out.sellerPayoutManifest = normalizeSellerPayoutManifest(p.sellerPayoutManifest);
+  }
+  if (p.sellerTermsManifest != null) {
+    out.sellerTermsManifest = normalizeSellerTermsManifest(p.sellerTermsManifest);
+  }
+  // Obligation state is supplied by the caller because this public gate does
+  // not keep a cross-process payment ledger. Supplying it turns the named
+  // `notChecked` gap into a real replay/cumulative-spend check for that caller.
+  if (p.obligation != null) {
+    if (typeof p.obligation !== "object" || Array.isArray(p.obligation)) {
+      throw new PreflightError(400, "invalid_policy", "policy.obligation must be an object");
+    }
+    const src = p.obligation;
+    const o = {};
+    if (src.settledKeys != null) {
+      if (!Array.isArray(src.settledKeys) || !src.settledKeys.every((x) => typeof x === "string")) {
+        throw new PreflightError(400, "invalid_policy", "policy.obligation.settledKeys must be an array of strings");
+      }
+      if (src.settledKeys.length > 500) {
+        throw new PreflightError(400, "invalid_policy", "policy.obligation.settledKeys is limited to 500 keys");
+      }
+      o.settledKeys = unique(src.settledKeys.map((x) => x.trim()).filter(Boolean));
+      for (const key of o.settledKeys) {
+        if (key.length > 256) {
+          throw new PreflightError(400, "invalid_policy", "policy.obligation.settledKeys entries are limited to 256 characters");
+        }
+      }
+    }
+    for (const key of ["spentUsd", "grantUsd"]) {
+      if (src[key] != null) {
+        if (typeof src[key] !== "number" && typeof src[key] !== "string") {
+          throw new PreflightError(400, "invalid_policy", `policy.obligation.${key} must be a non-negative number`);
+        }
+        const n = Number(src[key]);
+        if (!Number.isFinite(n) || n < 0) {
+          throw new PreflightError(400, "invalid_policy", `policy.obligation.${key} must be a non-negative number`);
+        }
+        o[key] = n;
+      }
+    }
+    if ((o.spentUsd == null) !== (o.grantUsd == null)) {
+      throw new PreflightError(400, "invalid_policy", "policy.obligation.spentUsd and grantUsd must be supplied together");
+    }
+    if (o.settledKeys == null && o.spentUsd == null) {
+      throw new PreflightError(400, "invalid_policy", "policy.obligation must include settledKeys or spentUsd + grantUsd");
+    }
+    out.obligation = o;
+  }
+  if (p.expectedResource != null) {
+    const s = String(p.expectedResource);
+    try {
+      new URL(s);
+    } catch {
+      throw new PreflightError(400, "invalid_policy", "policy.expectedResource must be a URL");
+    }
+    out.expectedResource = s;
+  }
+  if (p.allowedResourceHosts != null) {
+    if (!Array.isArray(p.allowedResourceHosts)) {
+      throw new PreflightError(400, "invalid_policy", "policy.allowedResourceHosts must be an array");
+    }
+    const hosts = p.allowedResourceHosts.map((x) => String(x).trim().toLowerCase());
+    for (const host of hosts) {
+      if (!/^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/.test(host)) {
+        throw new PreflightError(400, "invalid_policy", "policy.allowedResourceHosts entries must be bare hostnames");
+      }
+    }
+    out.allowedResourceHosts = hosts;
+  }
+  if (p.forbidUnlimitedApproval != null) out.forbidUnlimitedApproval = Boolean(p.forbidUnlimitedApproval);
+  return out;
+}
+
+function ttlOf(body) {
+  const n = Number(body?.ttlSeconds ?? DEFAULT_TTL_SECONDS);
+  if (!Number.isFinite(n)) return DEFAULT_TTL_SECONDS;
+  return Math.min(MAX_TTL_SECONDS, Math.max(MIN_TTL_SECONDS, Math.round(n)));
+}
+
+function normalizeKind(body) {
+  const k = String(body?.kind ?? "").trim().toLowerCase();
+  if (k) return k;
+  if (body?.signIn && typeof body.signIn === "object") return "sign-in";
+  if (typeof body?.message === "string" && /wants you to sign in/i.test(body.message)) return "sign-in";
+  if (body?.domain != null || body?.nonce != null || body?.expected?.host != null) return "sign-in";
+  if (body?.payment && typeof body.payment === "object") return "payment";
+  if (body?.transaction && typeof body.transaction === "object") return "transaction";
+  if (body?.to != null || body?.data != null || body?.value != null) return "transaction";
+  if (body?.payTo != null || body?.asset != null || body?.amount != null) return "payment";
+  return "";
+}
+
+function getClient(chainId, clientFactory) {
+  if (typeof clientFactory === "function") {
+    const client = clientFactory(chainId);
+    if (!client) throw new PreflightError(503, "chain_unavailable", `no client available for chainId ${chainId}`);
+    return client;
+  }
+  try {
+    return clientFor(chainId);
+  } catch (e) {
+    throw new PreflightError(503, "chain_unavailable", `no client available for chainId ${chainId}: ${errorMessage(e)}`);
+  }
+}
+
+async function getBlockSafe(client, chainId) {
+  try {
+    const b = await client.getBlock({ blockTag: "latest" });
+    if (!b || b.number == null || b.timestamp == null) {
+      throw new Error("the RPC returned a block without a number or timestamp");
+    }
+    return b;
+  } catch (e) {
+    if (e instanceof PreflightError) throw e;
+    throw new PreflightError(503, "chain_unavailable", `could not read chainId ${chainId} at a pinned block: ${errorMessage(e)}`);
+  }
+}
+
+// ------------------------------------------------------------- calldata -----
+
+const ABI_TRANSFER = parseAbi(["function transfer(address to, uint256 amount)"]);
+const ABI_APPROVE = parseAbi(["function approve(address spender, uint256 amount)"]);
+const ABI_TRANSFER_FROM = parseAbi(["function transferFrom(address from, address to, uint256 amount)"]);
+const ABI_V2_EXACT = parseAbi([
+  "function swapExactTokensForTokens(uint256 amountIn, uint256 amountOutMin, address[] path, address to, uint256 deadline) returns (uint256[] amounts)",
+  "function swapExactTokensForETH(uint256 amountIn, uint256 amountOutMin, address[] path, address to, uint256 deadline) returns (uint256[] amounts)",
+  "function swapExactTokensForTokensSupportingFeeOnTransferTokens(uint256 amountIn, uint256 amountOutMin, address[] path, address to, uint256 deadline)",
+  "function swapExactTokensForETHSupportingFeeOnTransferTokens(uint256 amountIn, uint256 amountOutMin, address[] path, address to, uint256 deadline)",
+]);
+const ABI_V2_ETH_IN = parseAbi([
+  "function swapExactETHForTokens(uint256 amountOutMin, address[] path, address to, uint256 deadline) payable returns (uint256[] amounts)",
+  "function swapExactETHForTokensSupportingFeeOnTransferTokens(uint256 amountOutMin, address[] path, address to, uint256 deadline) payable",
+]);
+const ABI_V3_EXACT_IN = parseAbi([
+  "function exactInputSingle((address tokenIn, address tokenOut, uint24 fee, address recipient, uint256 deadline, uint256 amountIn, uint256 amountOutMinimum, uint160 sqrtPriceLimitX96) params) payable returns (uint256 amountOut)",
+]);
+
+const V2_EXACT_SELECTORS = new Set(["0x38ed1739", "0x18cbafe5", "0x5c11d795", "0x791ac947"]);
+const V2_ETH_IN_SELECTORS = new Set(["0x7ff36ab5", "0xb6f9de95"]);
+const MULTICALL_SELECTORS = new Set(["0xac9650d8", "0x5ae401dc"]);
+const UNVERIFIED_SWAP_SELECTORS = new Set([
+  "0x8803dbee", "0x4a25d94a", "0xfb3bdb41", // V2 exact-out
+  "0xc04b8d59", "0xdb3e2198", "0xf28c0498", // V3 multi-hop / exact-out
+  "0x3593564c", // Universal Router execute
+]);
+
+export function decodeCalldata(data) {
+  const d = String(data).toLowerCase();
+  if (!/^0x[0-9a-f]*$/.test(d) || d.length < 10) throw new Error("calldata must begin with a 4-byte selector");
+  const selector = d.slice(0, 10);
+
+  if (selector === "0xa9059cbb") {
+    const { args } = decodeFunctionData({ abi: ABI_TRANSFER, data: d });
+    return { action: "transfer", recipient: args[0], amount: args[1].toString() };
+  }
+  if (selector === "0x095ea7b3") {
+    const { args } = decodeFunctionData({ abi: ABI_APPROVE, data: d });
+    return { action: "approve", spender: args[0], amount: args[1].toString() };
+  }
+  if (selector === "0x23b872dd") {
+    const { args } = decodeFunctionData({ abi: ABI_TRANSFER_FROM, data: d });
+    return { action: "transferFrom", from: args[0], to: args[1], amount: args[2].toString() };
+  }
+  if (selector === "0xd505accf") return { action: "permit", protocol: "eip-2612" };
+
+  if (V2_EXACT_SELECTORS.has(selector)) {
+    const { args } = decodeFunctionData({ abi: ABI_V2_EXACT, data: d });
+    return {
+      action: "swap",
+      protocol: "uniswap-v2",
+      amountIn: args[0].toString(),
+      amountOutMinimum: args[1].toString(),
+      path: args[2].map((a) => a.toLowerCase()),
+      recipient: args[3],
+      deadline: Number(args[4]),
+    };
+  }
+  if (V2_ETH_IN_SELECTORS.has(selector)) {
+    const { args } = decodeFunctionData({ abi: ABI_V2_ETH_IN, data: d });
+    return {
+      action: "swap",
+      protocol: "uniswap-v2-eth-in",
+      amountIn: null,
+      amountOutMinimum: args[0].toString(),
+      path: args[1].map((a) => a.toLowerCase()),
+      recipient: args[2],
+      deadline: Number(args[3]),
+    };
+  }
+  if (selector === "0x414bf389") {
+    const { args } = decodeFunctionData({ abi: ABI_V3_EXACT_IN, data: d });
+    const p = args[0];
+    return {
+      action: "swap",
+      protocol: "uniswap-v3",
+      tokenIn: p.tokenIn.toLowerCase(),
+      tokenOut: p.tokenOut.toLowerCase(),
+      fee: Number(p.fee),
+      recipient: p.recipient,
+      deadline: Number(p.deadline),
+      amountIn: p.amountIn.toString(),
+      amountOutMinimum: p.amountOutMinimum.toString(),
+    };
+  }
+  if (UNVERIFIED_SWAP_SELECTORS.has(selector)) return { action: "swap", protocol: "unverified", selector };
+  if (MULTICALL_SELECTORS.has(selector)) return { action: "multicall", selector };
+  return { action: "unknown", selector };
+}
+
+function checkDecoded(decoded, { from, policy, now, value }) {
+  const reasons = [];
+  const notChecked = [];
+  const fromLc = from?.toLowerCase() ?? null;
+  const addr = (a) => (typeof a === "string" ? a.toLowerCase() : null);
+
+  if (decoded.action === "transfer") {
+    if (decoded.amount === "0") reasons.push(caution("zero_amount", "transfer amount is zero"));
+    if ([ZERO_ADDRESS, DEAD_ADDRESS].includes(addr(decoded.recipient))) {
+      reasons.push(caution("burn_recipient", "transfer recipient is the zero or dead address"));
+    }
+    notChecked.push("recipient reputation");
+  } else if (decoded.action === "approve") {
+    const unlimited = BigInt(decoded.amount) >= UNLIMITED_THRESHOLD;
+    if (unlimited) {
+      if (policy.forbidUnlimitedApproval) {
+        reasons.push(block("unlimited_approval", "approve grants an unlimited allowance and policy.forbidUnlimitedApproval is set"));
+      } else {
+        reasons.push(caution("unlimited_approval", "approve grants an unlimited allowance; the spender can move the full balance"));
+      }
+    }
+    if (policy.allowedSpenders) {
+      if (!matchesList(policy.allowedSpenders, decoded.spender, { family: "evm" })) {
+        reasons.push(block("spender_not_allowed", "spender is outside policy.allowedSpenders"));
+      }
+    } else {
+      reasons.push(caution("approval_unverified_spender", "the spender has not been vetted by an allowlist; confirm the contract and the allowance"));
+    }
+    notChecked.push("spender reputation");
+  } else if (decoded.action === "transferFrom") {
+    if (fromLc && addr(decoded.from) !== fromLc) {
+      reasons.push(caution("transfer_from_third_party", "the transaction moves tokens owned by a different address"));
+    }
+    if (!fromLc) {
+      reasons.push(caution("transfer_from_unverified_owner", "no from address was supplied, so ownership and allowance were not checked"));
+    }
+    notChecked.push("allowance", "owner authorization");
+  } else if (decoded.action === "permit") {
+    reasons.push(caution("permit_risk", "an on-chain permit grants an allowance; verify the spender and value in the signed data"));
+    notChecked.push("permit signature intent");
+  } else if (decoded.action === "swap") {
+    if (decoded.deadline != null && decoded.deadline > 0 && Math.floor(now / MS) > decoded.deadline) {
+      reasons.push(block("swap_deadline_expired", `the swap deadline ${decoded.deadline} has passed`));
+    }
+    if (decoded.amountOutMinimum === "0") {
+      reasons.push(caution("zero_min_out", "amountOutMinimum is zero: the swap accepts any output and is exposed to sandwiching"));
+    } else if (decoded.amountOutMinimum != null && BigInt(decoded.amountOutMinimum) <= 1n) {
+      reasons.push(caution("minimal_min_out", "amountOutMinimum is 1 raw unit or less: the swap has effectively no slippage protection"));
+    }
+    if (fromLc && decoded.recipient && addr(decoded.recipient) !== fromLc) {
+      reasons.push(caution("swap_recipient_mismatch", "the swap output goes to a different address than the payer"));
+    }
+    if (decoded.amountIn === "0") reasons.push(caution("zero_amount_in", "the swap amountIn is zero"));
+    if (decoded.protocol === "unverified") {
+      reasons.push(caution("swap_route_unverified", "the swap was recognized only by selector; the route and minimum output were not decoded"));
+    }
+    if (decoded.protocol === "uniswap-v2-eth-in" && value === 0n) {
+      reasons.push(block("missing_value", "this ETH-in swap has value 0 and cannot execute"));
+    }
+    if (decoded.protocol !== "uniswap-v2-eth-in" && value > 0n) {
+      reasons.push(caution("value_with_token_swap", "a token swap carries native value; confirm the router expects it"));
+    }
+    notChecked.push("slippage beyond amountOutMinimum", "route quality", "mev/sandwich protection");
+  } else if (decoded.action === "multicall") {
+    reasons.push(caution("multicall_unverified", "multicall batches calls; the individual actions were not decoded"));
+    notChecked.push("inner calls");
+  } else {
+    reasons.push(caution("unrecognized_calldata", `selector ${decoded.selector} is not a known transfer, approval, permit or swap; only the simulation result is available`));
+    notChecked.push("calldata semantics");
+  }
+
+  return { reasons, notChecked };
+}
+
+// ---------------------------------------------------------------- receipt ---
+
+function makeReceipt({ kind, verdict, intentHash, requestHash, block: chainBlock, ttlSeconds, checked, notChecked, payeeBinding, termsBinding, now }) {
+  const payload = {
+    spec: RECEIPT_SPEC,
+    id: `pf_${randomBytes(8).toString("hex")}`,
+    kind,
+    verdict,
+    intentHash,
+    requestHash,
+    blockNumber: chainBlock ? Number(chainBlock.number) : null,
+    blockHash: chainBlock?.hash ?? null,
+    issuedAt: new Date(now).toISOString(),
+    expiresAt: new Date(now + ttlSeconds * MS).toISOString(),
+    ttlSeconds,
+    checked,
+    notChecked,
+    ...(payeeBinding ? { payeeBinding } : {}),
+    ...(termsBinding ? { termsBinding } : {}),
+    algorithm: "hmac-sha256",
+  };
+  const signature = createHmac("sha256", RECEIPT_SECRET).update(canonicalStable(payload)).digest("hex");
+  return { ...payload, signature };
+}
+
+const HEX64_RE = /^[0-9a-f]{64}$/i;
+
+function jsonSafe(value) {
+  try {
+    return JSON.parse(JSON.stringify(value));
+  } catch {
+    return null;
+  }
+}
+
+function canonicalJsonHash(value) {
+  const safe = jsonSafe(value);
+  if (safe == null || typeof safe !== "object" || Array.isArray(safe)) return null;
+  return sha256Hex(canonicalStable(safe));
+}
+
+// Exported so an executor can reproduce the binding locally without copying
+// the canonicalisation rules. `intent` is the normalized object returned by
+// /preflight; `request` is the exact request body the gate received.
+export function intentHash(intent) {
+  const hash = canonicalJsonHash(intent);
+  if (!hash) throw new Error("intent must be a JSON object");
+  return hash;
+}
+
+export function preflightRequestHash(request) {
+  const hash = canonicalJsonHash(request);
+  if (!hash) throw new Error("request must be a JSON object");
+  return hash;
+}
+
+function hashBinding(value, reason) {
+  const safe = jsonSafe(value);
+  if (safe == null || typeof safe !== "object" || Array.isArray(safe)) {
+    return { error: reason };
+  }
+  return { safe };
+}
+
+export function verifyReceipt(receipt, { now = Date.now(), intent, request } = {}) {
+  if (!receipt || typeof receipt !== "object" || Array.isArray(receipt)) {
+    return { valid: false, reason: "missing_receipt" };
+  }
+  const { signature, ...payload } = receipt;
+  if (payload.spec !== RECEIPT_SPEC) return { valid: false, reason: "unknown_spec" };
+  if (typeof signature !== "string" || !HEX64_RE.test(signature)) {
+    return { valid: false, reason: "missing_signature" };
+  }
+  const expected = createHmac("sha256", RECEIPT_SECRET).update(canonicalStable(payload)).digest("hex");
+  const a = Buffer.from(signature, "hex");
+  const b = Buffer.from(expected, "hex");
+  if (a.length !== b.length || !timingSafeEqual(a, b)) return { valid: false, reason: "bad_signature" };
+  if (typeof payload.intentHash !== "string" || !HEX64_RE.test(payload.intentHash)) {
+    return { valid: false, reason: "missing_intent_hash" };
+  }
+
+  const expires = Date.parse(payload.expiresAt);
+  if (!Number.isFinite(expires)) return { valid: false, reason: "bad_expiry" };
+  if (expires <= now) return { valid: false, reason: "expired", expiredAt: payload.expiresAt };
+
+  // Optional caller-side binding. Without it the old `{receipt}` call keeps
+  // working, but the result says it was not bound to local intent.
+  let intentBound = false;
+  if (intent !== undefined) {
+    const bound = hashBinding(intent, "invalid_intent");
+    if (bound.error) return { valid: false, reason: bound.error };
+    if (payload.kind !== bound.safe.kind) return { valid: false, reason: "intent_mismatch" };
+    const got = intentHash(bound.safe);
+    if (got !== payload.intentHash) return { valid: false, reason: "intent_mismatch" };
+    intentBound = true;
+  }
+
+  // Stronger binding: the caller re-supplies the original request body. The
+  // gate signed a hash of exactly that body, so no normalization has to be
+  // reimplemented here and no field can be changed after the gate ran.
+  let requestBound = false;
+  if (request !== undefined) {
+    if (typeof payload.requestHash !== "string" || !HEX64_RE.test(payload.requestHash)) {
+      return { valid: false, reason: "missing_request_hash" };
+    }
+    const bound = hashBinding(request, "invalid_request");
+    if (bound.error) return { valid: false, reason: bound.error };
+    const got = preflightRequestHash(bound.safe);
+    if (got !== payload.requestHash) return { valid: false, reason: "request_mismatch" };
+    requestBound = true;
+  }
+
+  return {
+    valid: true,
+    reason: null,
+    verdict: payload.verdict,
+    kind: payload.kind,
+    intentHash: payload.intentHash,
+    requestHash: payload.requestHash ?? null,
+    intentBound,
+    requestBound,
+    payeeBinding: payload.payeeBinding ?? null,
+    blockNumber: payload.blockNumber,
+    blockHash: payload.blockHash,
+    expiresAt: payload.expiresAt,
+  };
+}
+
+const NOTE = "A PASS is not a guarantee, a counterparty audit, or a prompt-injection filter. It means the checks listed in `checked` passed at this block; `notChecked` lists what was not examined, including tool metadata and response content. Receipts expire and are bound to the exact intent and request; older receipts without requestHash are unbound.";
+
+function finish({ kind, reasons, checked, notChecked, intent, request, block: chainBlock, simulation, decoded, payerBalance, obligation, payeeBinding, termsBinding, ttlSeconds, now, structuralOnly = false, structuralOnlyReasons = [] }) {
+  const reasonsFinal = [...reasons];
+  let blockAgeSeconds = null;
+  if (chainBlock?.timestamp != null) {
+    blockAgeSeconds = Math.max(0, Math.floor(now / 1000) - Number(chainBlock.timestamp));
+    checked.push("block_freshness");
+    if (blockAgeSeconds > BLOCK_AGE_BLOCK_SECONDS) {
+      reasonsFinal.push(block("stale_block", `the latest readable block is ${blockAgeSeconds}s old, above the ${BLOCK_AGE_BLOCK_SECONDS}s hard limit`));
+    } else if (blockAgeSeconds > BLOCK_AGE_CAUTION_SECONDS) {
+      reasonsFinal.push(caution("stale_block", `the latest readable block is ${blockAgeSeconds}s old; state may have moved`));
+    }
+  }
+  const verdict = verdictOf(reasonsFinal);
+  const checkedFinal = unique(checked);
+  const notCheckedFinal = unique(notChecked);
+  const boundIntentHash = intentHash(intent);
+  const boundRequestHash = preflightRequestHash(request);
+  const structuralReasonsFinal = unique(structuralOnlyReasons);
+  let summary = summaryOf(verdict, reasonsFinal);
+  if (structuralOnly) {
+    summary += " Structural only: " + structuralReasonsFinal.join("; ") + ".";
+  }
+  const receipt = makeReceipt({
+    kind,
+    verdict,
+    intentHash: boundIntentHash,
+    requestHash: boundRequestHash,
+    block: chainBlock,
+    ttlSeconds,
+    checked: checkedFinal,
+    notChecked: notCheckedFinal,
+    payeeBinding,
+    termsBinding,
+    now,
+  });
+  return {
+    ok: true,
+    spec: PREFLIGHT_SPEC,
+    kind,
+    verdict,
+    sign_allowed: verdict !== "BLOCK",
+    requires_ack: verdict === "CAUTION",
+    structural_only: Boolean(structuralOnly),
+    ...(structuralOnly ? { structural_only_reasons: structuralReasonsFinal } : {}),
+    summary,
+    reasons: reasonsFinal,
+    checked: checkedFinal,
+    notChecked: notCheckedFinal,
+    intent,
+    intentHash: boundIntentHash,
+    requestHash: boundRequestHash,
+    block: chainBlock ? {
+      number: Number(chainBlock.number),
+      hash: chainBlock.hash,
+      ...(chainBlock.timestamp != null
+        ? { timestamp: Number(chainBlock.timestamp), ageSeconds: blockAgeSeconds }
+        : {}),
+    } : null,
+    simulation: simulation ?? undefined,
+    decoded: decoded ?? undefined,
+    payerBalance: payerBalance ?? undefined,
+    obligation: obligation ?? undefined,
+    payeeBinding: payeeBinding ?? undefined,
+    termsBinding: termsBinding ?? undefined,
+    receipt,
+    note: NOTE,
+  };
+}
+
+// Fetch and verify a seller-signed payout manifest from a caller-pinned HTTPS
+// origin. The manifest must not be read from the 402 challenge itself: the
+// caller's policy is the trust anchor, and the signature is checked against
+// the manifest's declared signer (optionally pinned by the caller).
+async function verifySellerPayoutManifest(manifestPolicy, { net, payTo, now, fetchImpl, resolveHost }) {
+  const url = manifestPolicy.url;
+  const origin = new URL(url).origin;
+  // Literal private hosts are rejected during policy normalization. Resolve
+  // again here so a public name cannot point at a private address. DNS
+  // rebinding between this lookup and the fetch is a residual risk; redirects
+  // are disabled and the fetch has a hard deadline, but this is not a full
+  // network sandbox.
+  let resolved;
+  try {
+    resolved = await resolveHost(new URL(url).hostname);
+  } catch {
+    return {
+      ok: false,
+      severity: "caution",
+      code: "payee_manifest_unavailable",
+      message: "seller payout manifest host could not be resolved; payTo ownership is not checked",
+    };
+  }
+  if (!Array.isArray(resolved) || resolved.length === 0 || resolved.some((ip) => isPrivateIpAddress(ip))) {
+    return {
+      ok: false,
+      severity: "block",
+      code: "payee_manifest_invalid",
+      message: "seller payout manifest host resolves to a private or invalid address",
+    };
+  }
+  let response;
+  try {
+    response = await fetchImpl(url, {
+      headers: { accept: "application/json", "user-agent": "verify402-preflight/1" },
+      redirect: "error",
+      signal: AbortSignal.timeout(SELLER_MANIFEST_TIMEOUT_MS),
+    });
+  } catch {
+    return {
+      ok: false,
+      severity: "caution",
+      code: "payee_manifest_unavailable",
+      message: "seller payout manifest could not be fetched; payTo ownership is not checked",
+    };
+  }
+  if (!response?.ok) {
+    return {
+      ok: false,
+      severity: "caution",
+      code: "payee_manifest_unavailable",
+      message: "seller payout manifest returned a non-2xx response; payTo ownership is not checked",
+    };
+  }
+
+  let text;
+  try {
+    text = await readResponseTextLimited(response, SELLER_MANIFEST_MAX_BYTES);
+  } catch (e) {
+    if (e?.code === "too_large") {
+      return {
+        ok: false,
+        severity: "block",
+        code: "payee_manifest_invalid",
+        message: `seller payout manifest is larger than ${SELLER_MANIFEST_MAX_BYTES} bytes`,
+      };
+    }
+    return {
+      ok: false,
+      severity: "caution",
+      code: "payee_manifest_unavailable",
+      message: "seller payout manifest could not be read; payTo ownership is not checked",
+    };
+  }
+  if (typeof text !== "string") {
+    return {
+      ok: false,
+      severity: "block",
+      code: "payee_manifest_invalid",
+      message: "seller payout manifest is not text",
+    };
+  }
+
+  let raw;
+  try {
+    raw = JSON.parse(text);
+  } catch {
+    return {
+      ok: false,
+      severity: "block",
+      code: "payee_manifest_invalid",
+      message: "seller payout manifest is not valid JSON",
+    };
+  }
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return {
+      ok: false,
+      severity: "block",
+      code: "payee_manifest_invalid",
+      message: "seller payout manifest must be a JSON object",
+    };
+  }
+  if (raw.spec !== SELLER_PAYOUT_MANIFEST_SPEC) {
+    return {
+      ok: false,
+      severity: "block",
+      code: "payee_manifest_invalid",
+      message: `seller payout manifest spec must be ${SELLER_PAYOUT_MANIFEST_SPEC}`,
+    };
+  }
+
+  const chainId = Number(raw.chainId);
+  if (!Number.isInteger(chainId) || chainId <= 0) {
+    return {
+      ok: false,
+      severity: "block",
+      code: "payee_manifest_invalid",
+      message: "seller payout manifest chainId must be a positive integer",
+    };
+  }
+  const payToList = (Array.isArray(raw.payTo) ? raw.payTo : [raw.payTo])
+    .filter((x) => typeof x === "string" && x.trim() !== "")
+    .map((x) => x.trim());
+  if (payToList.length === 0 || payToList.length > 200) {
+    return {
+      ok: false,
+      severity: "block",
+      code: "payee_manifest_invalid",
+      message: "seller payout manifest payTo must contain between 1 and 200 addresses",
+    };
+  }
+  const signerRaw = typeof raw.signer === "string" ? raw.signer.trim() : "";
+  const signer = normalizeEvmAddress(signerRaw);
+  if (!signer) {
+    return {
+      ok: false,
+      severity: "block",
+      code: "payee_manifest_invalid",
+      message: "seller payout manifest signer must be a valid EVM address",
+    };
+  }
+  if (typeof raw.signature !== "string" || !/^0x[0-9a-fA-F]+$/.test(raw.signature)) {
+    return {
+      ok: false,
+      severity: "block",
+      code: "payee_manifest_invalid",
+      message: "seller payout manifest signature must be a 0x-prefixed hex string",
+    };
+  }
+  if (typeof raw.expiresAt !== "string") {
+    return {
+      ok: false,
+      severity: "block",
+      code: "payee_manifest_invalid",
+      message: "seller payout manifest expiresAt must be an ISO-8601 timestamp",
+    };
+  }
+  const expiresMs = Date.parse(raw.expiresAt);
+  if (!Number.isFinite(expiresMs)) {
+    return {
+      ok: false,
+      severity: "block",
+      code: "payee_manifest_invalid",
+      message: "seller payout manifest expiresAt must be an ISO-8601 timestamp",
+    };
+  }
+  const issuedAt = raw.issuedAt == null ? null : String(raw.issuedAt);
+  if (issuedAt != null) {
+    const issuedMs = Date.parse(issuedAt);
+    if (!Number.isFinite(issuedMs) || issuedMs > now + SELLER_MANIFEST_FUTURE_SKEW_MS) {
+      return {
+        ok: false,
+        severity: "block",
+        code: "payee_manifest_invalid",
+        message: "seller payout manifest issuedAt is invalid or in the future",
+      };
+    }
+  }
+
+  const payload = {
+    spec: SELLER_PAYOUT_MANIFEST_SPEC,
+    seller: typeof raw.seller === "string" ? raw.seller : null,
+    chainId,
+    payTo: payToList,
+    issuedAt,
+    expiresAt: raw.expiresAt,
+    signer: signerRaw,
+  };
+  const manifestHash = sha256Hex(canonicalStable(payload));
+  let signatureValid = false;
+  try {
+    signatureValid = await verifyMessage({
+      address: signerRaw,
+      message: canonicalStable(payload),
+      signature: raw.signature,
+    });
+  } catch {
+    signatureValid = false;
+  }
+  if (!signatureValid) {
+    return {
+      ok: false,
+      severity: "block",
+      code: "payee_manifest_signature_invalid",
+      message: "seller payout manifest signature does not match its signer",
+      origin,
+      signer,
+      expiresAt: raw.expiresAt,
+      manifestHash,
+    };
+  }
+  if (manifestPolicy.expectedSigner && signer !== manifestPolicy.expectedSigner) {
+    return {
+      ok: false,
+      severity: "block",
+      code: "payee_manifest_signer_mismatch",
+      message: "seller payout manifest signer does not match policy.sellerPayoutManifest.expectedSigner",
+      origin,
+      signer,
+      expiresAt: raw.expiresAt,
+      manifestHash,
+    };
+  }
+  if (chainId !== Number(net?.chainId)) {
+    return {
+      ok: false,
+      severity: "block",
+      code: "payee_manifest_chain_mismatch",
+      message: `seller payout manifest is for chain ${chainId}, not ${net?.chainId}`,
+      origin,
+      signer,
+      expiresAt: raw.expiresAt,
+      manifestHash,
+    };
+  }
+  if (expiresMs <= now) {
+    return {
+      ok: false,
+      severity: "block",
+      code: "payee_manifest_expired",
+      message: "seller payout manifest has expired",
+      origin,
+      signer,
+      expiresAt: raw.expiresAt,
+      manifestHash,
+    };
+  }
+  if (!matchesList(payToList, payTo, net)) {
+    return {
+      ok: false,
+      severity: "block",
+      code: "payee_not_payout_wallet",
+      message: "payTo is not in the seller-signed payout manifest",
+      origin,
+      signer,
+      expiresAt: raw.expiresAt,
+      manifestHash,
+      matched: false,
+    };
+  }
+  return {
+    ok: true,
+    origin,
+    seller: typeof raw.seller === "string" ? raw.seller : null,
+    signer,
+    expiresAt: raw.expiresAt,
+    manifestHash,
+  };
+}
+
+function netIdFor(net) {
+  if (!net) return null;
+  if (net.family === "evm") return `eip155:${net.chainId}`;
+  if (net.family === "svm") return `solana:${net.genesis}`;
+  return null;
+}
+
+async function verifySellerTermsManifest(manifestPolicy, { net, now, fetchImpl, resolveHost }) {
+  const url = manifestPolicy.url;
+  const origin = new URL(url).origin;
+  let resolved;
+  try {
+    resolved = await resolveHost(new URL(url).hostname);
+  } catch {
+    return {
+      ok: false,
+      severity: "caution",
+      code: "terms_manifest_unavailable",
+      message: "seller terms manifest host could not be resolved; published terms were not checked",
+      origin,
+    };
+  }
+  if (!Array.isArray(resolved) || resolved.length === 0 || resolved.some((ip) => isPrivateIpAddress(ip))) {
+    return {
+      ok: false,
+      severity: "block",
+      code: "terms_manifest_invalid",
+      message: "seller terms manifest host resolves to a private or invalid address",
+      origin,
+    };
+  }
+  let response;
+  try {
+    response = await fetchImpl(url, {
+      headers: { accept: "application/json", "user-agent": "verify402-preflight/1" },
+      redirect: "error",
+      signal: AbortSignal.timeout(SELLER_MANIFEST_TIMEOUT_MS),
+    });
+  } catch {
+    return {
+      ok: false,
+      severity: "caution",
+      code: "terms_manifest_unavailable",
+      message: "seller terms manifest could not be fetched; published terms were not checked",
+      origin,
+    };
+  }
+  if (!response?.ok) {
+    return {
+      ok: false,
+      severity: "caution",
+      code: "terms_manifest_unavailable",
+      message: "seller terms manifest returned a non-2xx response; published terms were not checked",
+      origin,
+    };
+  }
+  let text;
+  try {
+    text = await readResponseTextLimited(response, SELLER_MANIFEST_MAX_BYTES);
+  } catch (e) {
+    if (e?.code === "too_large") {
+      return {
+        ok: false,
+        severity: "block",
+        code: "terms_manifest_invalid",
+        message: `seller terms manifest is larger than ${SELLER_MANIFEST_MAX_BYTES} bytes`,
+        origin,
+      };
+    }
+    return {
+      ok: false,
+      severity: "caution",
+      code: "terms_manifest_unavailable",
+      message: "seller terms manifest could not be read; published terms were not checked",
+      origin,
+    };
+  }
+  if (typeof text !== "string") {
+    return {
+      ok: false,
+      severity: "block",
+      code: "terms_manifest_invalid",
+      message: "seller terms manifest is not text",
+      origin,
+    };
+  }
+  let raw;
+  try {
+    raw = JSON.parse(text);
+  } catch {
+    return {
+      ok: false,
+      severity: "block",
+      code: "terms_manifest_invalid",
+      message: "seller terms manifest is not valid JSON",
+      origin,
+    };
+  }
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return {
+      ok: false,
+      severity: "block",
+      code: "terms_manifest_invalid",
+      message: "seller terms manifest must be a JSON object",
+      origin,
+    };
+  }
+  if (raw.spec !== SELLER_TERMS_MANIFEST_SPEC) {
+    return {
+      ok: false,
+      severity: "block",
+      code: "terms_manifest_invalid",
+      message: `seller terms manifest spec must be ${SELLER_TERMS_MANIFEST_SPEC}`,
+      origin,
+    };
+  }
+  const chainId = Number(raw.chainId);
+  if (!Number.isInteger(chainId) || chainId <= 0) {
+    return {
+      ok: false,
+      severity: "block",
+      code: "terms_manifest_invalid",
+      message: "seller terms manifest chainId must be a positive integer",
+      origin,
+    };
+  }
+  if (!Array.isArray(raw.terms) || raw.terms.length === 0 || raw.terms.length > 200) {
+    return {
+      ok: false,
+      severity: "block",
+      code: "terms_manifest_invalid",
+      message: "seller terms manifest terms must contain between 1 and 200 entries",
+      origin,
+    };
+  }
+  const terms = [];
+  const seen = new Map();
+  for (let i = 0; i < raw.terms.length; i++) {
+    try {
+      terms.push(normalizeSellerTermsEntry(raw.terms[i], i, chainId));
+    } catch (e) {
+      return {
+        ok: false,
+        severity: "block",
+        code: "terms_manifest_invalid",
+        message: e instanceof PreflightError ? e.message : `terms[${i}] is invalid`,
+        origin,
+      };
+    }
+    const res = terms[i].resource;
+    if (seen.has(res)) {
+      return {
+        ok: false,
+        severity: "block",
+        code: "terms_manifest_invalid",
+        message: `seller terms manifest publishes terms[${i}] twice; publish one entry per resource`,
+        origin,
+      };
+    }
+    seen.set(res, true);
+  }
+  const signerRaw = typeof raw.signer === "string" ? raw.signer.trim() : "";
+  const signer = normalizeEvmAddress(signerRaw);
+  if (!signer) {
+    return {
+      ok: false,
+      severity: "block",
+      code: "terms_manifest_invalid",
+      message: "seller terms manifest signer must be a valid EVM address",
+      origin,
+    };
+  }
+  if (typeof raw.signature !== "string" || !/^0x[0-9a-fA-F]+$/.test(raw.signature)) {
+    return {
+      ok: false,
+      severity: "block",
+      code: "terms_manifest_invalid",
+      message: "seller terms manifest signature must be a 0x-prefixed hex string",
+      origin,
+    };
+  }
+  if (typeof raw.expiresAt !== "string") {
+    return {
+      ok: false,
+      severity: "block",
+      code: "terms_manifest_invalid",
+      message: "seller terms manifest expiresAt must be an ISO-8601 timestamp",
+      origin,
+    };
+  }
+  const expiresMs = Date.parse(raw.expiresAt);
+  if (!Number.isFinite(expiresMs)) {
+    return {
+      ok: false,
+      severity: "block",
+      code: "terms_manifest_invalid",
+      message: "seller terms manifest expiresAt must be an ISO-8601 timestamp",
+      origin,
+    };
+  }
+  const issuedAt = raw.issuedAt == null ? null : String(raw.issuedAt);
+  if (issuedAt != null) {
+    const issuedMs = Date.parse(issuedAt);
+    if (!Number.isFinite(issuedMs) || issuedMs > now + SELLER_MANIFEST_FUTURE_SKEW_MS) {
+      return {
+        ok: false,
+        severity: "block",
+        code: "terms_manifest_invalid",
+        message: "seller terms manifest issuedAt is invalid or in the future",
+        origin,
+      };
+    }
+  }
+  const payload = {
+    spec: SELLER_TERMS_MANIFEST_SPEC,
+    seller: typeof raw.seller === "string" ? raw.seller : null,
+    chainId,
+    terms: terms.map((t) => ({
+      resource: t.resource,
+      network: t.network,
+      asset: t.asset,
+      amount: t.amount,
+      maxTimeoutSeconds: t.maxTimeoutSeconds,
+    })),
+    issuedAt,
+    expiresAt: raw.expiresAt,
+    signer: signerRaw,
+  };
+  const manifestHash = sha256Hex(canonicalStable(payload));
+  let signatureValid = false;
+  try {
+    signatureValid = await verifyMessage({
+      address: signerRaw,
+      message: canonicalStable(payload),
+      signature: raw.signature,
+    });
+  } catch {
+    signatureValid = false;
+  }
+  if (!signatureValid) {
+    return {
+      ok: false,
+      severity: "block",
+      code: "terms_manifest_signature_invalid",
+      message: "seller terms manifest signature does not match its signer",
+      origin,
+      signer,
+      expiresAt: raw.expiresAt,
+      manifestHash,
+    };
+  }
+  if (manifestPolicy.expectedSigner && signer !== manifestPolicy.expectedSigner) {
+    return {
+      ok: false,
+      severity: "block",
+      code: "terms_manifest_signer_mismatch",
+      message: "seller terms manifest signer does not match policy.sellerTermsManifest.expectedSigner",
+      origin,
+      signer,
+      expiresAt: raw.expiresAt,
+      manifestHash,
+    };
+  }
+  if (chainId !== Number(net?.chainId)) {
+    return {
+      ok: false,
+      severity: "block",
+      code: "terms_manifest_chain_mismatch",
+      message: `seller terms manifest is for chain ${chainId}, not ${net?.chainId}`,
+      origin,
+      signer,
+      expiresAt: raw.expiresAt,
+      manifestHash,
+    };
+  }
+  if (expiresMs <= now) {
+    return {
+      ok: false,
+      severity: "block",
+      code: "terms_manifest_expired",
+      message: "seller terms manifest has expired",
+      origin,
+      signer,
+      expiresAt: raw.expiresAt,
+      manifestHash,
+    };
+  }
+  return {
+    ok: true,
+    origin,
+    seller: typeof raw.seller === "string" ? raw.seller : null,
+    signer,
+    expiresAt: raw.expiresAt,
+    manifestHash,
+    terms,
+  };
+}
+
+// --------------------------------------------------------------- sign-in ---
+
+const SIWX_FIELD_LABELS = {
+  uri: "uri",
+  version: "version",
+  "chain id": "chainId",
+  chainid: "chainId",
+  nonce: "nonce",
+  "issued at": "issuedAt",
+  issuedat: "issuedAt",
+  "expiration time": "expirationTime",
+  expirationtime: "expirationTime",
+  resources: "resources",
+};
+
+const SIWX_FIELDS = [
+  "domain", "address", "statement", "uri", "version",
+  "chainId", "nonce", "issuedAt", "expirationTime", "resources",
+];
+
+function parseSiwxMessage(text) {
+  if (typeof text !== "string" || !text.trim()) return null;
+  const lines = text.replace(/\r\n?/g, "\n").split("\n");
+  let i = 0;
+  while (i < lines.length && !lines[i].trim()) i += 1;
+  const header = lines[i]?.trim().match(/^(.+?)\s+wants you to sign in with your (?:[A-Za-z0-9_-]+\s+)?account:\s*$/i);
+  if (!header) return null;
+  const domain = header[1].trim();
+  i += 1;
+  while (i < lines.length && !lines[i].trim()) i += 1;
+  const address = lines[i]?.trim() || null;
+  i += 1;
+
+  const fields = {};
+  const statement = [];
+  for (; i < lines.length; i += 1) {
+    const line = lines[i].trimEnd();
+    if (!line.trim()) {
+      if (Object.keys(fields).length === 0) statement.push("");
+      continue;
+    }
+    const match = line.trim().match(/^([^:]+):\s*(.*)$/);
+    const label = match ? SIWX_FIELD_LABELS[match[1].trim().toLowerCase()] : null;
+    if (label) fields[label] = match[2].trim();
+    else if (Object.keys(fields).length === 0) statement.push(line.trim());
+  }
+  return {
+    domain,
+    address,
+    statement: statement.join("\n").trim() || null,
+    ...fields,
+  };
+}
+
+function normalizeSignInInput(body) {
+  const fromEnvelope = body?.signIn && typeof body.signIn === "object" && !Array.isArray(body.signIn)
+    ? body.signIn
+    : body;
+  const expectedRaw = body?.expected ?? fromEnvelope?.expected ?? {};
+  if (expectedRaw != null && (typeof expectedRaw !== "object" || Array.isArray(expectedRaw))) {
+    throw new PreflightError(400, "invalid_sign_in", "expected must be an object");
+  }
+  const expected = {
+    host: expectedRaw.host ?? null,
+    chainId: expectedRaw.chainId ?? null,
+    address: expectedRaw.address ?? null,
+  };
+
+  const message = fromEnvelope?.message ?? body?.message;
+  const parsed = typeof message === "string" ? parseSiwxMessage(message) : null;
+  if (typeof message === "string" && !parsed && !fromEnvelope?.domain && !fromEnvelope?.address && !fromEnvelope?.nonce) {
+    throw new PreflightError(400, "invalid_sign_in", "sign-in message is not a recognized EIP-4361 / CAIP-122 message");
+  }
+
+  const fields = {};
+  for (const field of SIWX_FIELDS) {
+    const parsedValue = parsed?.[field];
+    const structuredValue = fromEnvelope?.[field];
+    fields[field] = parsedValue != null && String(parsedValue).trim()
+      ? parsedValue
+      : (structuredValue ?? null);
+  }
+  if (!fields.domain && !fields.address && !fields.nonce && !fields.uri) {
+    throw new PreflightError(400, "invalid_sign_in", "supply signIn.message or structured sign-in fields");
+  }
+  return { fields, expected, source: parsed ? "message" : "structured" };
+}
+
+function normalizeHost(value) {
+  if (value == null) return null;
+  let s = String(value).trim();
+  if (!s) return null;
+  if (s.includes("://")) {
+    try {
+      return new URL(s).hostname.toLowerCase().replace(/\.$/, "") || null;
+    } catch {
+      return null;
+    }
+  }
+  s = s.replace(/^.*@/, "").split(/[/?#]/)[0].toLowerCase();
+  if (s.startsWith("[")) {
+    const end = s.indexOf("]");
+    return end >= 0 ? s.slice(0, end + 1) : null;
+  }
+  s = s.replace(/:\d+$/, "").replace(/\.$/, "");
+  return s || null;
+}
+
+function hostFromUri(value) {
+  if (value == null) return null;
+  try {
+    const url = new URL(String(value).trim());
+    if (!["http:", "https:"].includes(url.protocol)) return null;
+    return url.hostname.toLowerCase().replace(/\.$/, "") || null;
+  } catch {
+    return null;
+  }
+}
+
+function normalizeChainRef(value) {
+  if (value == null) return null;
+  const s = String(value).trim();
+  if (!s) return null;
+  const parts = s.split(":");
+  return parts.length > 1 ? (parts[parts.length - 1].trim() || null) : s;
+}
+
+function normalizeAccountAddress(value) {
+  if (value == null) return null;
+  let s = String(value).trim();
+  if (!s) return null;
+  if (s.includes(":")) {
+    const last = s.split(":").pop();
+    s = /^0x/i.test(last) ? last : "";
+  }
+  if (!s) return null;
+  return normalizeEvmAddress(s) ?? s.toLowerCase();
+}
+
+function parseTimeMs(value) {
+  if (value == null) return null;
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) return null;
+    return Math.abs(value) < 1e12 ? value * MS : value;
+  }
+  const s = String(value).trim();
+  if (!s) return null;
+  if (/^\d+(?:\.\d+)?$/.test(s)) {
+    const n = Number(s);
+    return Math.abs(n) < 1e12 ? n * MS : n;
+  }
+  const t = Date.parse(s);
+  return Number.isFinite(t) ? t : null;
+}
+
+async function signInPreflight(body, { now }) {
+  const { fields, expected, source } = normalizeSignInInput(body);
+  const reasons = [];
+  const checked = [];
+  const notChecked = [
+    "whether the site is legitimate",
+    "whether the nonce was issued by the server",
+    "replay state",
+    "what the login grants",
+  ];
+
+  const domain = normalizeHost(fields.domain);
+  const uri = fields.uri == null ? null : String(fields.uri).trim();
+  const uriHost = hostFromUri(uri);
+  const address = normalizeAccountAddress(fields.address);
+  const chainId = normalizeChainRef(fields.chainId);
+  const nonce = fields.nonce == null ? null : String(fields.nonce).trim();
+  const issuedMs = parseTimeMs(fields.issuedAt);
+  const expiresMs = parseTimeMs(fields.expirationTime);
+
+  checked.push(source === "message" ? "sign-in message" : "sign-in fields");
+  if (domain) checked.push("domain");
+  if (address) checked.push("address");
+  if (uri) {
+    if (uriHost) checked.push("uri");
+    else reasons.push(block("siwx_uri_origin_mismatch", "the message URI is not a parseable http(s) URL, so its host cannot be compared with the domain"));
+  }
+
+  if (expected.host != null) {
+    const want = normalizeHost(expected.host);
+    if (want && domain && want === domain) {
+      checked.push("expected host");
+    } else {
+      reasons.push(block("siwx_domain_mismatch", `message domain "${domain ?? "missing"}" does not match expected.host "${want ?? String(expected.host)}"`));
+    }
+  } else {
+    reasons.push(caution("siwx_domain_unbound", "no expected host was supplied; the message domain cannot be bound to the site that sent the request"));
+  }
+
+  if (uriHost && domain) {
+    if (uriHost === domain) checked.push("uri origin");
+    else reasons.push(block("siwx_uri_origin_mismatch", `URI host "${uriHost}" does not match message domain "${domain}"`));
+  }
+
+  if (nonce && new RegExp(`^[A-Za-z0-9]{${SIWX_MIN_NONCE_LENGTH},}$`).test(nonce)) {
+    checked.push("nonce");
+  } else {
+    reasons.push(caution("siwx_nonce_missing_or_weak", `nonce is missing or weak; EIP-4361 needs at least ${SIWX_MIN_NONCE_LENGTH} alphanumeric characters`));
+  }
+
+  let freshnessProblem = null;
+  if (issuedMs == null || expiresMs == null) {
+    freshnessProblem = "Issued At or Expiration Time is missing or not parseable; message freshness was not checked";
+  } else {
+    checked.push("issuedAt");
+    checked.push("expirationTime");
+    if (issuedMs > now) freshnessProblem = "the sign-in message was issued in the future";
+    else if (expiresMs <= now) freshnessProblem = "the sign-in message has expired";
+    else if (expiresMs - issuedMs > SIWX_MAX_WINDOW_MS) freshnessProblem = "the sign-in message is valid for more than 24 hours after issue";
+    else checked.push("time window");
+  }
+  if (freshnessProblem) reasons.push(caution("siwx_expired_or_stale", freshnessProblem));
+
+  if (expected.chainId != null) {
+    const want = normalizeChainRef(expected.chainId);
+    if (chainId && want && chainId === want) checked.push("expected chainId");
+    else reasons.push(caution("siwx_chain_mismatch", `chain ID "${chainId ?? "missing"}" does not match expected.chainId "${want ?? String(expected.chainId)}"`));
+  }
+  if (expected.address != null) {
+    const want = normalizeAccountAddress(expected.address);
+    if (address && want && address === want) checked.push("expected address");
+    else reasons.push(caution("siwx_address_mismatch", `address "${address ?? "missing"}" does not match expected.address "${want ?? String(expected.address)}"`));
+  }
+
+  const asStringOrNull = (value) => value == null ? null : String(value);
+  const intent = {
+    kind: "sign-in",
+    signIn: {
+      domain: asStringOrNull(domain ?? fields.domain),
+      address: asStringOrNull(address ?? fields.address),
+      statement: asStringOrNull(fields.statement),
+      uri,
+      version: asStringOrNull(fields.version),
+      chainId: asStringOrNull(chainId ?? fields.chainId),
+      nonce,
+      issuedAt: issuedMs == null ? asStringOrNull(fields.issuedAt) : new Date(issuedMs).toISOString(),
+      expirationTime: expiresMs == null ? asStringOrNull(fields.expirationTime) : new Date(expiresMs).toISOString(),
+    },
+    expected: {
+      host: asStringOrNull(expected.host),
+      chainId: asStringOrNull(expected.chainId),
+      address: asStringOrNull(expected.address),
+    },
+    source,
+  };
+
+  return finish({
+    kind: "sign-in",
+    reasons,
+    checked,
+    notChecked,
+    intent,
+    request: body,
+    ttlSeconds: ttlOf(body),
+    now,
+  });
+}
+
+// ---------------------------------------------------------------- payment ---
+
+async function paymentPreflight(body, { clientFactory, now, fetchImpl = globalThis.fetch, resolveHost = resolveManifestHost }) {
+  const raw = body.payment && typeof body.payment === "object" && !Array.isArray(body.payment)
+    ? body.payment
+    : body;
+  const policy = normalizePolicy(body.policy);
+  const reasons = [];
+  const checked = [];
+  const notChecked = [
+    "recipient reputation",
+    "sanctions screening",
+    "payment signature / signed payload",
+    "facilitator settlement",
+    "off-chain promises",
+    "counterparty identity / tool metadata",
+    "payTo ownership / proven seller payout wallet",
+    "obligation state (idempotency key, cumulative spend, grant balance)",
+    "prompt injection / hidden Unicode in tool output",
+  ];
+
+  const net = parseNetwork(raw.network);
+  const chainHint = body.chainId ?? raw.chainId ?? null;
+
+  // This key is the caller's local payment idempotency key, not the paid-route
+  // `x-idempotency-key` header. It is only useful when the caller also supplies
+  // its settlement ledger through policy.obligation.
+  const keyRaw = raw.idempotencyKey ?? body.idempotencyKey ?? null;
+  let idempotencyKey = null;
+  if (keyRaw != null) {
+    if (typeof keyRaw !== "string" || !keyRaw.trim()) {
+      reasons.push(block("invalid_obligation_key", "payment.idempotencyKey must be a non-empty string"));
+    } else if (keyRaw.trim().length > 256) {
+      reasons.push(block("invalid_obligation_key", "payment.idempotencyKey is limited to 256 characters"));
+    } else {
+      idempotencyKey = keyRaw.trim();
+    }
+  }
+
+  const scheme = raw.scheme == null ? null : String(raw.scheme).trim().toLowerCase();
+  if (!scheme) {
+    reasons.push(caution("missing_scheme", "the payment request does not name a scheme; x402 exact is expected"));
+  } else if (scheme !== "exact") {
+    reasons.push(caution("non_exact_scheme", `scheme "${scheme}" is not the x402 exact scheme; this preflight only understands exact`));
+  } else {
+    checked.push("scheme");
+  }
+
+  if (!raw.network) {
+    reasons.push(block("missing_network", "the payment request does not name a network"));
+  } else if (!net || !net.supported) {
+    reasons.push(block("unsupported_network", `network "${raw.network}" is not supported by this instance; supported: ${SUPPORTED_NETWORK_HINTS}`));
+  } else {
+    checked.push("network");
+    if (chainHint != null) {
+      if (net.family === "evm" && Number(chainHint) !== net.chainId) {
+        reasons.push(block("chain_mismatch", `chainId ${chainHint} does not match network ${raw.network}`));
+      }
+      if (net.family === "svm" && Number.isFinite(Number(chainHint))) {
+        reasons.push(block("chain_mismatch", `chainId ${chainHint} does not match a Solana network`));
+      }
+    }
+    if (policy.allowedNetworks && !policy.allowedNetworks.some((n) => networkKey(n) === networkKey(raw.network))) {
+      reasons.push(block("network_not_allowed", `network "${raw.network}" is outside policy.allowedNetworks`));
+    }
+  }
+
+  let asset = raw.asset == null ? null : String(raw.asset).trim();
+  if (asset && net?.supported && /^usdc$/i.test(asset)) asset = canonicalUsdc(net);
+  const assetNorm = net?.family === "evm" && asset ? normalizeEvmAddress(asset) : asset;
+  const assetValid = net?.family === "evm"
+    ? Boolean(assetNorm)
+    : net?.family === "svm"
+      ? (asset ? isSvmAddress(asset) : false)
+      : Boolean(asset);
+
+  if (!asset) {
+    reasons.push(block("missing_asset", "the payment request does not name an asset"));
+  } else if (net?.supported && net.family === "evm" && !assetNorm) {
+    reasons.push(block("invalid_asset", "asset is not a valid EVM address"));
+  } else if (net?.supported && net.family === "svm" && !isSvmAddress(asset)) {
+    reasons.push(block("invalid_asset", "asset is not a valid Solana mint address"));
+  } else {
+    const canon = canonicalUsdc(net);
+    const known = findToken(net, asset);
+    if (policy.allowedAssets && !policy.allowedAssets.some((a) => sameAsset(net, a, asset))) {
+      reasons.push(block("asset_not_allowed", `asset "${asset}" is outside policy.allowedAssets`));
+    } else if (known) {
+      // A recognized token on a chain we know: name it instead of flagging it.
+      checked.push("asset");
+      if (known.symbol !== "USDC") {
+        notChecked.push(`${known.symbol} token contract (not read on chain)`);
+        if (known.kind !== STABLE) {
+          reasons.push(caution("volatile_asset", `asset ${known.symbol} is not a dollar stable; the gate cannot price it in USD`));
+        } else {
+          notChecked.push(`${known.symbol} parity (assumed $1, not verified)`);
+        }
+      }
+    } else if (canon) {
+      reasons.push(caution("non_canonical_asset", `asset "${asset}" is not canonical USDC on ${net.name}; confirm the token is what the seller accepts`));
+    } else {
+      notChecked.push("asset canonicality");
+    }
+  }
+
+  let amount = null;
+  try {
+    amount = parseRawAmount(raw.amount);
+    if (amount <= 0n) throw new Error("amount must be greater than zero");
+    checked.push("amount");
+  } catch (e) {
+    reasons.push(block("invalid_amount", `amount must be a positive integer in raw units: ${e.message}`));
+  }
+
+  if (amount != null && policy.maxAmountUsd != null && assetValid && net?.supported) {
+    const canon = canonicalUsdc(net);
+    const token = findToken(net, asset);
+    if (canon && sameAsset(net, asset, canon)) {
+      const decimals = canonicalUsdcDecimals(net);
+      const usd = Number(amount) / 10 ** decimals;
+      if (usd > policy.maxAmountUsd) {
+        reasons.push(block("amount_over_policy", `amount is $${usd.toFixed(6)}, above policy.maxAmountUsd $${policy.maxAmountUsd}`));
+      }
+    } else if (token && token.kind === STABLE) {
+      // A known dollar stable: the decimals are known, but the $1 parity is
+      // assumed, so the cap is enforced on that assumption and says so.
+      const usd = Number(amount) / 10 ** token.decimals;
+      if (usd > policy.maxAmountUsd) {
+        reasons.push(block("amount_over_policy", `amount is ${usd.toFixed(6)} ${token.symbol} (parity assumed at $1), above policy.maxAmountUsd $${policy.maxAmountUsd}`));
+      } else {
+        checked.push("amount cap (parity assumed)");
+      }
+    } else if (token) {
+      reasons.push(block("amount_unit_unknown", `the asset ${token.symbol} is not a dollar stable, so policy.maxAmountUsd cannot be enforced`));
+    } else {
+      reasons.push(block("amount_unit_unknown", "policy.maxAmountUsd is set but the asset's decimals are unknown, so the cap cannot be enforced"));
+    }
+  } else if (amount != null && policy.maxAmountUsd != null) {
+    notChecked.push("amount cap");
+  }
+
+  // Additive default: only when the caller supplied neither an explicit cap
+  // nor a seller terms manifest. It never changes the existing BLOCK path.
+  if (amount != null && policy.maxAmountUsd == null && !policy.sellerTermsManifest && assetValid && net?.supported) {
+    const canon = canonicalUsdc(net);
+    const token = findToken(net, asset);
+    let usd = null;
+    if (canon && sameAsset(net, asset, canon)) {
+      const decimals = canonicalUsdcDecimals(net);
+      if (decimals != null) usd = Number(amount) / 10 ** decimals;
+    } else if (token && token.kind === STABLE) {
+      usd = Number(amount) / 10 ** token.decimals;
+    }
+    if (usd != null && usd > DEFAULT_PAYMENT_CAP_USD) {
+      reasons.push(caution("amount_above_default_cap", "no price cap supplied; amount exceeds the x402 SDK default per-payment cap of $1; set policy.maxAmountUsd to override"));
+    }
+  }
+
+  let payTo = null;
+  if (raw.payTo == null || raw.payTo === "") {
+    reasons.push(block("missing_payee", "the payment request does not name payTo"));
+  } else if (net?.supported && net.family === "evm") {
+    payTo = normalizeEvmAddress(String(raw.payTo));
+    if (!payTo) {
+      reasons.push(block("invalid_payee", "payTo is not a valid EVM address (or has a bad checksum)"));
+    } else {
+      checked.push("payee");
+      if (payTo === ZERO_ADDRESS || payTo === DEAD_ADDRESS) {
+        reasons.push(block("burn_address", "payTo is the zero or dead address"));
+      }
+      if (policy.allowedPayTo) {
+        if (!matchesList(policy.allowedPayTo, payTo, net)) {
+          reasons.push(block("payee_not_allowed", "payTo is outside policy.allowedPayTo"));
+        } else {
+          checked.push("payee_allowlist");
+        }
+      }
+    }
+  } else if (net?.supported && net.family === "svm") {
+    payTo = String(raw.payTo).trim();
+    if (!isSvmAddress(payTo)) {
+      reasons.push(block("invalid_payee", "payTo is not a valid Solana address"));
+    } else {
+      checked.push("payee");
+      if (SVM_BLOCKED_PAYEES.has(payTo)) {
+        reasons.push(block("burn_address", "payTo is a Solana system/token program, not a wallet"));
+      }
+      if (policy.allowedPayTo) {
+        if (!matchesList(policy.allowedPayTo, payTo, net)) {
+          reasons.push(block("payee_not_allowed", "payTo is outside policy.allowedPayTo"));
+        } else {
+          checked.push("payee_allowlist");
+        }
+      }
+    }
+  } else {
+    payTo = raw.payTo == null ? null : String(raw.payTo);
+    notChecked.push("payee format");
+  }
+
+  // A caller-supplied payout list is an allowlist, not provenance. A match
+  // adds `payee_payout_allowlist` and keeps payTo ownership in `notChecked`.
+  // Only a separately fetched, seller-signed manifest can add
+  // `payee_payout_binding`; the 402 is never allowed to certify its own payee.
+  let payeeBinding = null;
+  let allowlistMatched = null;
+  let termsBinding = null;
+  if (policy.sellerPayoutWallets && payTo) {
+    allowlistMatched = matchesList(policy.sellerPayoutWallets, payTo, net);
+    if (!allowlistMatched) {
+      reasons.push(block("payee_not_payout_wallet", "payTo is not in the caller-supplied seller payout allowlist"));
+    } else {
+      checked.push("payee_payout_allowlist");
+      notChecked.push("independent payee ownership proof (caller-supplied payout allowlist only)");
+    }
+    payeeBinding = { source: "caller_allowlist", matched: allowlistMatched };
+  }
+  if (policy.sellerPayoutManifest && payTo) {
+    const manifest = await verifySellerPayoutManifest(policy.sellerPayoutManifest, {
+      net,
+      payTo,
+      now,
+      fetchImpl,
+      resolveHost,
+    });
+    if (manifest.ok) {
+      checked.push("payee_payout_binding");
+      notChecked.push("payee wallet ownership (seller-signed manifest only)");
+      notChecked.push("seller manifest origin trust (caller-pinned URL; the gate cannot detect a URL copied from the 402)");
+      payeeBinding = {
+        source: "seller_manifest",
+        matched: true,
+        origin: manifest.origin,
+        signer: manifest.signer,
+        expiresAt: manifest.expiresAt,
+        manifestHash: manifest.manifestHash,
+        ...(manifest.seller ? { seller: manifest.seller } : {}),
+        ...(allowlistMatched != null ? { allowlistMatched } : {}),
+      };
+    } else {
+      reasons.push(manifest.severity === "block"
+        ? block(manifest.code, manifest.message)
+        : caution(manifest.code, manifest.message));
+      payeeBinding = {
+        source: "seller_manifest",
+        matched: false,
+        ...(manifest.origin ? { origin: manifest.origin } : {}),
+        ...(manifest.signer ? { signer: manifest.signer } : {}),
+        ...(manifest.expiresAt ? { expiresAt: manifest.expiresAt } : {}),
+        ...(manifest.manifestHash ? { manifestHash: manifest.manifestHash } : {}),
+        ...(allowlistMatched != null ? { allowlistMatched } : {}),
+      };
+    }
+  }
+
+  // Seller-signed terms: is the price, token, network and timeout exactly
+  // what this seller published, once, for this resource? A drift BLOCKs
+  // (that is the whole failure mode of a 402); an unlisted resource is a
+  // CAUTION (check the seller's publication manually); a bad or expired
+  // manifest degrades the same way the payout manifest does.
+  if (policy.sellerTermsManifest) {
+    const termsResource = raw.resource == null ? null : String(raw.resource);
+    const manifest = await verifySellerTermsManifest(policy.sellerTermsManifest, {
+      net,
+      now,
+      fetchImpl,
+      resolveHost,
+    });
+    if (manifest.ok) {
+      notChecked.push("seller terms accuracy (the gate cannot vouch for a seller's publication; it binds the challenge to the seller's own file)");
+      const term = termsResource ? manifest.terms.find((t) => t.resource === termsResource) : null;
+      if (!termsResource || !term) {
+        reasons.push(caution("terms_resource_unlisted", "the seller's manifest does not publish terms for this resource; the price, asset, network and timeout were not checked against a seller publication"));
+        termsBinding = {
+          source: "seller_terms_manifest",
+          matched: false,
+          resource: termsResource,
+          origin: manifest.origin,
+          signer: manifest.signer,
+          expiresAt: manifest.expiresAt,
+          manifestHash: manifest.manifestHash,
+          ...(manifest.seller ? { seller: manifest.seller } : {}),
+        };
+      } else {
+        const netId = netIdFor(net);
+        let field = null;
+        if (term.network !== netId) field = "network";
+        else if (!sameAsset(net, term.asset, asset)) field = "asset";
+        else if (String(term.amount) !== String(raw.amount)) field = "amount";
+        else if (term.maxTimeoutSeconds != null && Number(raw.maxTimeoutSeconds) > term.maxTimeoutSeconds) field = "maxTimeoutSeconds";
+        if (field) {
+          reasons.push(block("terms_mismatch", `the payment's ${field} does not match the seller's published terms for this resource`));
+          termsBinding = {
+            source: "seller_terms_manifest",
+            matched: false,
+            resource: term.resource,
+            field,
+            origin: manifest.origin,
+            signer: manifest.signer,
+            expiresAt: manifest.expiresAt,
+            manifestHash: manifest.manifestHash,
+            ...(manifest.seller ? { seller: manifest.seller } : {}),
+          };
+        } else {
+          checked.push("terms_match");
+          termsBinding = {
+            source: "seller_terms_manifest",
+            matched: true,
+            resource: term.resource,
+            origin: manifest.origin,
+            signer: manifest.signer,
+            expiresAt: manifest.expiresAt,
+            manifestHash: manifest.manifestHash,
+            ...(manifest.seller ? { seller: manifest.seller } : {}),
+          };
+        }
+      }
+    } else {
+      reasons.push(manifest.severity === "block" ? block(manifest.code, manifest.message) : caution(manifest.code, manifest.message));
+      termsBinding = {
+        source: "seller_terms_manifest",
+        matched: false,
+        ...(manifest.origin ? { origin: manifest.origin } : {}),
+        ...(manifest.signer ? { signer: manifest.signer } : {}),
+        ...(manifest.expiresAt ? { expiresAt: manifest.expiresAt } : {}),
+        ...(manifest.manifestHash ? { manifestHash: manifest.manifestHash } : {}),
+      };
+    }
+  } else {
+    notChecked.push("seller terms binding (price and asset vs. the seller's published terms; set policy.sellerTermsManifest to bind them)");
+  }
+
+  let obligation = null;
+  if (policy.obligation) {
+    const o = policy.obligation;
+    const settled = Boolean(idempotencyKey && o.settledKeys?.includes(idempotencyKey));
+    const obligationCanon = canonicalUsdc(net);
+    const canPrice = Boolean(
+      amount != null
+      && net?.supported
+      && obligationCanon
+      && sameAsset(net, asset, obligationCanon)
+    );
+    const round6 = (n) => Math.round(n * 1e6) / 1e6;
+    const currentUsd = canPrice ? round6(Number(amount) / 10 ** canonicalUsdcDecimals(net)) : null;
+    const priorSpent = o.spentUsd ?? null;
+    const grant = o.grantUsd ?? null;
+    let projected = null;
+    let remaining = null;
+
+    if (settled) {
+      reasons.push(block("obligation_already_settled", "the payment idempotency key is already settled in the caller-supplied obligation state"));
+    } else if (idempotencyKey) {
+      checked.push("obligation_key");
+    }
+
+    if (!idempotencyKey) {
+      notChecked.push("obligation key binding");
+      if (o.settledKeys && o.settledKeys.length > 0) {
+        reasons.push(caution("obligation_key_missing", "policy.obligation.settledKeys was supplied but payment.idempotencyKey is missing; replay was not checked"));
+      }
+    }
+    if (!o.settledKeys) notChecked.push("obligation replay ledger (no settledKeys supplied)");
+
+    if (priorSpent != null && grant != null) {
+      if (currentUsd == null) {
+        reasons.push(caution("obligation_amount_unavailable", "policy.obligation uses USD, but this asset's decimals are unknown; cumulative spend and grant were not checked"));
+        notChecked.push("obligation spend in USD");
+      } else {
+        projected = round6(priorSpent + currentUsd);
+        remaining = round6(grant - priorSpent);
+        // Compare at micro-dollar precision to avoid binary-float surprises.
+        const projectedMicro = BigInt(Math.round(projected * 1e6));
+        const grantMicro = BigInt(Math.round(grant * 1e6));
+        if (projectedMicro > grantMicro) {
+          reasons.push(block("cumulative_spend_over_grant", `adding $${currentUsd.toFixed(6)} to $${priorSpent.toFixed(6)} already spent would exceed the $${grant.toFixed(6)} grant`));
+        } else {
+          checked.push("cumulative_spend", "grant_balance");
+        }
+      }
+    }
+
+    dropNotChecked(notChecked, "obligation state (idempotency key, cumulative spend, grant balance)");
+    notChecked.push("obligation ledger persistence / cross-process enforcement");
+
+    obligation = {
+      source: "caller",
+      key: idempotencyKey,
+      settled,
+      priorSpentUsd: priorSpent,
+      currentUsd,
+      projectedSpentUsd: projected,
+      grantUsd: grant,
+      remainingUsd: remaining == null ? null : Math.max(0, remaining),
+    };
+  }
+
+  const resource = raw.resource == null ? null : String(raw.resource);
+  if (!resource) {
+    notChecked.push("resource identity");
+    reasons.push(caution("resource_missing", "the payment request carries no resource URL, so the agent cannot verify what it is paying for"));
+  } else {
+    try {
+      const url = new URL(resource);
+      if (!["http:", "https:"].includes(url.protocol)) {
+        reasons.push(block("invalid_resource", "resource must be an http(s) URL"));
+      } else {
+        // Syntax/protocol is not identity. Only claim `resource` or
+        // `resource_host` when a caller policy actually binds the URL or host.
+        checked.push("resource_url");
+        if (url.protocol === "http:") {
+          reasons.push(caution("non_https_resource", "resource is plain http; the payment request could have been altered in transit"));
+        }
+        let resourceBound = false;
+        if (policy.expectedResource) {
+          const expected = new URL(policy.expectedResource);
+          if (url.href.replace(/\/$/, "") !== expected.href.replace(/\/$/, "")) {
+            reasons.push(block("resource_mismatch", "resource does not match policy.expectedResource"));
+          } else {
+            checked.push("resource");
+            resourceBound = true;
+          }
+        }
+        if (policy.allowedResourceHosts) {
+          const host = url.hostname.toLowerCase();
+          if (!policy.allowedResourceHosts.includes(host)) {
+            reasons.push(block("resource_host_not_allowed", `resource host "${host}" is outside policy.allowedResourceHosts`));
+          } else {
+            checked.push("resource_host");
+            resourceBound = true;
+          }
+        }
+        if (!resourceBound && !policy.expectedResource && !policy.allowedResourceHosts) {
+          notChecked.push("resource identity");
+          reasons.push(caution("resource_identity_unverified", "the payment request names a resource, but no policy binds its identity; confirm the host before paying"));
+        }
+      }
+    } catch {
+      reasons.push(block("invalid_resource", "resource is not a parseable URL"));
+    }
+  }
+
+  if (raw.maxTimeoutSeconds != null) {
+    const timeout = Number(raw.maxTimeoutSeconds);
+    if (!Number.isInteger(timeout) || timeout <= 0) {
+      reasons.push(block("invalid_timeout", "maxTimeoutSeconds must be a positive integer"));
+    } else {
+      checked.push("timeout");
+      if (timeout > 900) reasons.push(caution("long_timeout", `maxTimeoutSeconds ${timeout} is longer than 15 minutes`));
+      if (policy.maxTimeoutSeconds != null && timeout > policy.maxTimeoutSeconds) {
+        reasons.push(caution("timeout_over_policy", `maxTimeoutSeconds ${timeout} is above policy.maxTimeoutSeconds ${policy.maxTimeoutSeconds}`));
+      }
+    }
+  }
+
+  const extra = raw.extra && typeof raw.extra === "object" && !Array.isArray(raw.extra) ? raw.extra : {};
+  const validBefore = extra.validBefore ?? raw.validBefore;
+  const validAfter = extra.validAfter ?? raw.validAfter;
+  if (validBefore != null) {
+    const t = Number(validBefore);
+    if (!Number.isFinite(t)) {
+      reasons.push(block("invalid_authorization", "validBefore must be a unix timestamp in seconds"));
+    } else if (t * MS <= now) {
+      reasons.push(block("authorization_expired", "the payment authorization has already expired"));
+    } else {
+      checked.push("authorization_window");
+    }
+  }
+  if (validAfter != null) {
+    const t = Number(validAfter);
+    if (Number.isFinite(t) && t * MS > now) {
+      reasons.push(caution("authorization_not_yet_valid", "the payment authorization is not valid yet"));
+    }
+  }
+
+  const facilitator = raw.facilitator ?? extra.facilitator;
+  if (facilitator != null) {
+    try {
+      const url = new URL(String(facilitator));
+      if (url.protocol !== "https:") {
+        reasons.push(caution("non_https_facilitator", "facilitator URL is not https"));
+      }
+      checked.push("facilitator");
+      if (policy.allowedFacilitators && !policy.allowedFacilitators.includes(String(facilitator))) {
+        reasons.push(caution("facilitator_not_allowed", "facilitator is outside policy.allowedFacilitators"));
+      }
+    } catch {
+      reasons.push(caution("invalid_facilitator", "facilitator is not a parseable URL"));
+    }
+  }
+
+  let from = null;
+  const fromRaw = body.from ?? raw.from ?? null;
+  if (fromRaw != null) {
+    if (net?.family === "svm") {
+      from = String(fromRaw).trim();
+      if (!isSvmAddress(from)) reasons.push(block("invalid_payer", "from is not a valid Solana address"));
+    } else {
+      from = normalizeEvmAddress(String(fromRaw));
+      if (!from) reasons.push(block("invalid_payer", "from is not a valid EVM address (or has a bad checksum)"));
+    }
+  }
+
+  let blockData = null;
+  let payerBalance = null;
+  const canon = canonicalUsdc(net);
+  const canReadBalance = net?.family === "evm" && net.measurement && from && canon && sameAsset(net, asset, canon);
+  if (net?.family === "evm" && net.measurement) {
+    const client = getClient(net.chainId, clientFactory);
+    const blockPromise = getBlockSafe(client, net.chainId);
+    const balancePromise = canReadBalance
+      ? client.readContract({ address: canon, abi: erc20Abi, functionName: "balanceOf", args: [from] })
+        .then((bal) => ({ bal }))
+        .catch((error) => ({ error }))
+      : Promise.resolve(null);
+    const [b, balanceResult] = await Promise.all([blockPromise, balancePromise]);
+    blockData = b;
+    if (balanceResult?.bal != null) {
+      const decimals = canonicalUsdcDecimals(net);
+      payerBalance = { raw: balanceResult.bal.toString(), usd: Number(balanceResult.bal) / 10 ** decimals };
+      checked.push("payer_balance");
+      if (amount != null && balanceResult.bal < amount) {
+        reasons.push(block("insufficient_balance", `payer holds ${payerBalance.usd} USDC, less than the requested ${Number(amount) / 10 ** decimals}`));
+      }
+    } else if (balanceResult?.error) {
+      reasons.push(caution("balance_unavailable", `could not read the payer's USDC balance: ${errorMessage(balanceResult.error)}`));
+      notChecked.push("payer_balance");
+    } else {
+      notChecked.push("payer_balance");
+    }
+  } else if (net?.family === "evm") {
+    notChecked.push("evm block binding (testnet chain)");
+    notChecked.push("payer_balance");
+  } else if (net?.family === "svm") {
+    notChecked.push("solana slot binding");
+    notChecked.push("payer_balance");
+  } else {
+    notChecked.push("network state");
+    notChecked.push("payer_balance");
+  }
+
+  const numberOrNull = (v) => {
+    if (v == null) return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  };
+
+  // M-5: a payment PREFLIGHT is a structural check unless the caller supplies
+  // both a payer address and a proof. Without them PASS would overstate what
+  // was verified, so keep the PASS (least breaking for existing callers) and
+  // mark it `structural_only`, with the exact missing pieces named.
+  const proofRaw = body.proof ?? body.paymentProof ?? raw.proof ?? raw.payload ?? raw.signature ?? null;
+  const structuralOnlyReasons = [];
+  if (!from) {
+    structuralOnlyReasons.push("no payer `from` address: payer balance, signature, and settlement were not checked");
+  }
+  if (proofRaw == null) {
+    structuralOnlyReasons.push("no payment proof/signature supplied: the request was checked structurally only");
+    notChecked.push("payment proof / signed payload");
+  }
+  if (net?.family === "evm" && net.measurement === false) {
+    structuralOnlyReasons.push(`testnet chain ${net.name}: no block binding or on-chain balance check`);
+  }
+  if (net?.family === "svm") {
+    structuralOnlyReasons.push("Solana payment preflight is structural: no slot binding and no balance check");
+  }
+
+  const intent = {
+    kind: "payment",
+    payment: {
+      scheme,
+      network: raw.network == null ? null : String(raw.network),
+      asset: assetNorm ?? asset ?? null,
+      amount: amount != null ? amount.toString() : (raw.amount == null ? null : String(raw.amount)),
+      payTo: payTo ?? (raw.payTo == null ? null : String(raw.payTo)),
+      resource,
+      idempotencyKey,
+      maxTimeoutSeconds: numberOrNull(raw.maxTimeoutSeconds),
+      extra: {
+        validAfter: numberOrNull(validAfter),
+        validBefore: numberOrNull(validBefore),
+        facilitator: facilitator == null ? null : String(facilitator),
+      },
+    },
+    from: from ?? (fromRaw == null ? null : String(fromRaw)),
+    policy,
+  };
+
+  return finish({
+    kind: "payment",
+    reasons,
+    checked,
+    notChecked,
+    intent,
+    request: body,
+    block: blockData,
+    payerBalance,
+    obligation,
+    payeeBinding,
+    termsBinding,
+    ttlSeconds: ttlOf(body),
+    now,
+    structuralOnly: structuralOnlyReasons.length > 0,
+    structuralOnlyReasons,
+  });
+}
+
+// ------------------------------------------------------------ transaction ---
+
+async function transactionPreflight(body, { clientFactory, now }) {
+  const raw = body.transaction && typeof body.transaction === "object" && !Array.isArray(body.transaction)
+    ? body.transaction
+    : body;
+  const policy = normalizePolicy(body.policy);
+  const reasons = [];
+  const checked = [];
+  const notChecked = [
+    "recipient reputation",
+    "sanctions screening",
+    "state-change/balance-delta simulation",
+    "gas price/limit chosen by the signer",
+    "raw signed transaction binding",
+    "contract audit",
+    "off-chain promises",
+    "counterparty identity / tool metadata",
+    "obligation state (idempotency key, cumulative spend, grant balance)",
+    "prompt injection / hidden Unicode in tool output",
+  ];
+
+  // H-4: a transaction intent must name its chain. A silent default to
+  // Ethereum is how a Base or Arbitrum transaction gets simulated against
+  // the wrong chain and produces a confident, wrong PASS/BLOCK.
+  const chainIdRaw = raw.chainId ?? body.chainId;
+  if (chainIdRaw === undefined || chainIdRaw === null || chainIdRaw === "") {
+    throw new PreflightError(400, "missing_chain", "chainId is required for transaction intents");
+  }
+  if (typeof chainIdRaw !== "number" || !Number.isInteger(chainIdRaw)) {
+    throw new PreflightError(400, "invalid_chain", "chainId must be an integer JSON number");
+  }
+  const chainId = chainIdRaw;
+  const c = CHAINS[chainId];
+  if (!c) {
+    throw new PreflightError(400, "unsupported_chain", `chainId ${chainId} is not in the measurement registry; supported: ${Object.keys(CHAINS).join(", ")}`);
+  }
+  checked.push("chain");
+
+  let from = null;
+  const fromRaw = body.from ?? raw.from ?? null;
+  if (fromRaw != null) {
+    from = normalizeEvmAddress(String(fromRaw));
+    if (!from) reasons.push(block("invalid_payer", "from is not a valid EVM address (or has a bad checksum)"));
+  }
+
+  let to = null;
+  const toRaw = raw.to ?? body.to ?? null;
+  if (toRaw == null || toRaw === "") {
+    reasons.push(block("missing_to", "to is required"));
+  } else {
+    to = normalizeEvmAddress(String(toRaw));
+    if (!to) {
+      reasons.push(block("invalid_to", "to is not a valid EVM address (or has a bad checksum)"));
+    } else {
+      checked.push("recipient");
+      if (to === ZERO_ADDRESS || to === DEAD_ADDRESS) reasons.push(block("burn_address", "to is the zero or dead address"));
+      if (policy.allowedTo && !matchesList(policy.allowedTo, to, { family: "evm" })) {
+        reasons.push(block("to_not_allowed", "to is outside policy.allowedTo"));
+      }
+    }
+  }
+
+  let data = "0x";
+  try {
+    data = normalizeHex(raw.data ?? body.data);
+  } catch (e) {
+    reasons.push(block("malformed_calldata", e.message));
+  }
+
+  let value = 0n;
+  try {
+    value = parseWei(raw.value ?? body.value);
+  } catch (e) {
+    reasons.push(block("invalid_value", e.message));
+  }
+  checked.push("value");
+  if (policy.maxValueWei != null && value > BigInt(policy.maxValueWei)) {
+    reasons.push(block("value_over_policy", `value ${value} wei is above policy.maxValueWei ${policy.maxValueWei}`));
+  }
+
+  let decoded = null;
+  if (data !== "0x") {
+    try {
+      decoded = decodeCalldata(data);
+      checked.push("calldata");
+    } catch (e) {
+      reasons.push(block("malformed_calldata", `calldata could not be decoded: ${e.message}`));
+    }
+  } else {
+    checked.push("calldata");
+    if (value === 0n) reasons.push(caution("noop_transaction", "the transaction has no calldata and no value; it would do nothing"));
+  }
+
+  if (decoded) {
+    const extra = checkDecoded(decoded, { from, policy, now, value });
+    reasons.push(...extra.reasons);
+    notChecked.push(...extra.notChecked);
+  }
+
+  let chainBlock = null;
+  let client = null;
+  let simulation = null;
+
+  if (c) {
+    client = getClient(chainId, clientFactory);
+    const codePromise = (to && data !== "0x")
+      ? client.getCode({ address: to }).then((code) => ({ code })).catch((error) => ({ error }))
+      : Promise.resolve(null);
+    const [b, codeResult] = await Promise.all([getBlockSafe(client, chainId), codePromise]);
+    chainBlock = b;
+
+    if (codeResult) {
+      if (codeResult.error) {
+        reasons.push(caution("contract_code_unavailable", `could not read code at ${to}: ${errorMessage(codeResult.error)}`));
+        notChecked.push("contract_code");
+      } else if (!codeResult.code || codeResult.code === "0x") {
+        reasons.push(block("target_not_contract", `to ${to} has no bytecode; calldata sent to an EOA does nothing`));
+      } else {
+        checked.push("contract_code");
+      }
+    }
+
+    if (decoded && ["transfer", "approve", "transferFrom"].includes(decoded.action) && to) {
+      try {
+        const [decimals, symbol] = await Promise.all([
+          client.readContract({ address: to, abi: erc20Abi, functionName: "decimals" }),
+          client.readContract({ address: to, abi: erc20Abi, functionName: "symbol" }),
+        ]);
+        decoded.token = { address: to, symbol: String(symbol), decimals: Number(decimals) };
+        checked.push("token_metadata");
+        if (!Number.isFinite(decoded.token.decimals) || decoded.token.decimals > 36) {
+          reasons.push(caution("implausible_token_metadata", "token decimals are outside a plausible range"));
+        }
+      } catch (e) {
+        reasons.push(caution("token_metadata_unavailable", `the target did not answer standard ERC-20 metadata calls: ${errorMessage(e)}`));
+        notChecked.push("token_metadata");
+      }
+    }
+
+    if (from) {
+      try {
+        await client.call({ account: from, to, data: data === "0x" ? undefined : data, value });
+        simulation = { status: "ok" };
+        checked.push("simulation");
+      } catch (e) {
+        const msg = errorMessage(e);
+        if (isRevert(e)) {
+          simulation = { status: "revert", reason: revertReason(e) };
+          reasons.push(block("simulation_revert", `the call reverted at this block: ${simulation.reason}`));
+        } else if (/insufficient funds/i.test(msg)) {
+          simulation = { status: "error", reason: msg };
+          reasons.push(block("insufficient_funds", `the payer cannot cover value + gas: ${msg}`));
+        } else {
+          simulation = { status: "unavailable", reason: msg };
+          reasons.push(caution("simulation_unavailable", `the call could not be simulated: ${msg}`));
+          notChecked.push("simulation");
+        }
+      }
+    } else {
+      simulation = { status: "skipped", reason: "no from address supplied" };
+      reasons.push(caution("simulation_skipped_no_from", "no from address was supplied, so the call was not simulated; pass the payer address to enable simulation"));
+      notChecked.push("simulation");
+    }
+  } else {
+    notChecked.push("simulation");
+    notChecked.push("block binding");
+  }
+
+  const intent = {
+    kind: "transaction",
+    chainId,
+    from: from ?? (fromRaw == null ? null : String(fromRaw)),
+    to: to ?? (toRaw == null ? null : String(toRaw)),
+    data,
+    value: value.toString(),
+    policy,
+  };
+
+  return finish({
+    kind: "transaction",
+    reasons,
+    checked,
+    notChecked,
+    intent,
+    request: body,
+    block: chainBlock,
+    simulation,
+    decoded,
+    ttlSeconds: ttlOf(body),
+    now,
+  });
+}
+
+// ---------------------------------------------------------------- entry -----
+
+export async function preflight(input, opts = {}) {
+  const body = input && typeof input === "object" && !Array.isArray(input) ? input : {};
+  const kind = normalizeKind(body);
+  const now = opts.now ?? Date.now();
+
+  if (kind === "payment") return paymentPreflight(body, { ...opts, now });
+  if (kind === "transaction") return transactionPreflight(body, { ...opts, now });
+  if (kind === "sign-in") return signInPreflight(body, { ...opts, now });
+  throw new PreflightError(400, "invalid_kind", "kind must be 'payment' or 'transaction' (or supply payment / transaction / to)");
+}

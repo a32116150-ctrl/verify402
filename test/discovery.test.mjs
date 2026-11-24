@@ -1,0 +1,377 @@
+// test/discovery.test.mjs
+// Validates machine-readable discovery specifications, manifests, schemas,
+// cross-component price parity, and HTTP discovery endpoints.
+
+import test from "node:test";
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+import { buildOpenapi } from "../src/openapi.mjs";
+import { buildServiceManifest } from "../src/manifest.mjs";
+import { RELEASE_VERSION } from "../src/version.mjs";
+import { DEFAULT_SIZE } from "../src/config.mjs";
+import { DEFAULT_PRICES } from "../mcp-bridge/budget.mjs";
+import {
+  PRICE_DEFAULTS,
+  PREFLIGHT_RATE_PER_MIN,
+  PREFLIGHT_MAX_IN_FLIGHT,
+  HEALTH_OK_KEYS,
+  READY_OK_KEYS,
+  READY_FAILURE_KEYS,
+  bannedClaimHits,
+} from "../src/contract.mjs";
+import { IDEMPOTENCY_MAX_REPLAYS, IDEMPOTENCY_TTL_MS } from "../src/recovery.mjs";
+import { DEFAULT_TTL_SECONDS, MAX_TTL_SECONDS, MIN_TTL_SECONDS } from "../src/preflight.mjs";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const ROOT = path.resolve(__dirname, "..");
+
+test("discovery: server.json complies with MCP Registry specification", () => {
+  const serverPath = path.join(ROOT, "server.json");
+  assert.ok(fs.existsSync(serverPath), "server.json must exist in root");
+
+  const server = JSON.parse(fs.readFileSync(serverPath, "utf8"));
+  assert.equal(server.name, "io.github.a32116150-ctrl/verify402-mcp");
+  assert.equal(server.version, RELEASE_VERSION);
+  assert.ok(server.description.length <= 100, `description length ${server.description.length} must be <= 100 chars`);
+  assert.equal(server.websiteUrl, "https://vex402.online");
+  assert.ok(Array.isArray(server.packages) && server.packages.length > 0);
+  assert.equal(server.packages[0].transport.type, "stdio");
+
+  const networkEnv = server.packages[0].environmentVariables?.find(
+    (entry) => entry.name === "VERIFY402_NETWORKS",
+  );
+  assert.ok(networkEnv, "server.json must document VERIFY402_NETWORKS");
+  assert.equal(Object.hasOwn(networkEnv, "default"), true, "server.json must declare the current default network");
+  assert.equal(networkEnv.default, "eip155:8453");
+  assert.equal(networkEnv.isRequired, false);
+  assert.match(networkEnv.description, /Base Sepolia/);
+  assert.match(networkEnv.description, /Base mainnet/);
+
+  const mcpPkg = JSON.parse(fs.readFileSync(path.join(ROOT, "mcp-bridge", "package.json"), "utf8"));
+  assert.equal(mcpPkg.mcpName, server.name, "mcp-bridge package.json mcpName must match server.json");
+  assert.equal(mcpPkg.version, server.version, "mcp-bridge package.json version must match server.json");
+
+  const lock = JSON.parse(fs.readFileSync(path.join(ROOT, "mcp-bridge", "package-lock.json"), "utf8"));
+  assert.equal(lock.version, mcpPkg.version, "mcp-bridge package-lock version must match package.json");
+  assert.equal(lock.packages[""].version, mcpPkg.version, "mcp-bridge lock root package version must match package.json");
+});
+
+test("discovery: canonical service manifest matches implemented tools and runtime pricing", () => {
+  const manifest = buildServiceManifest();
+
+  assert.equal(manifest.name, "verify402");
+  assert.equal(manifest.schemaVersion, "1.0.0");
+  assert.equal(manifest.version, RELEASE_VERSION);
+  assert.equal(manifest.canonicalUrl, "https://vex402.online");
+
+  const tools = manifest.integrations.mcp.tools;
+  assert.equal(tools.length, 9, "Must advertise exactly 9 MCP tools");
+
+  const freeTools = tools.filter((t) => t.type === "free");
+  assert.equal(freeTools.length, 3);
+  assert.deepEqual(
+    freeTools.map((t) => t.name),
+    ["preflight_gate", "inspect_402", "directory_402"],
+    "the three free tools must be advertised as free",
+  );
+
+  const paidTools = tools.filter((t) => t.type === "paid");
+  assert.equal(paidTools.length, 6);
+
+  const toolNames = new Set(tools.map((t) => t.name));
+  const expectedTools = [
+    "preflight_gate",
+    "inspect_402",
+    "directory_402",
+    "verify_arbitrage",
+    "check_token_safety",
+    "get_best_route",
+    "verify_quote_fairness",
+    "get_trade_depth",
+    "get_assurance",
+  ];
+  for (const expected of expectedTools) {
+    assert.ok(toolNames.has(expected), `Manifest must include tool ${expected}`);
+  }
+
+  // Pinned default prices: these literals are deliberately independent of PRICE_DEFAULTS.
+  // A price change must change this test deliberately; do not derive these from PRICE_DEFAULTS.
+  const pinnedDefaultPrices = {
+    verify: 0.05,
+    safety: 0.02,
+    route: 0.03,
+    quotecheck: 0.05,
+    depth: 0.05,
+    assure: 0.10,
+  };
+  assert.equal(PRICE_DEFAULTS.verify, "$0.05");
+  assert.equal(PRICE_DEFAULTS.safety, "$0.02");
+  assert.equal(PRICE_DEFAULTS.route, "$0.03");
+  assert.equal(PRICE_DEFAULTS.quotecheck, "$0.05");
+  assert.equal(PRICE_DEFAULTS.depth, "$0.05");
+  assert.equal(PRICE_DEFAULTS.assure, "$0.10");
+  for (const [key, expectedUsd] of Object.entries(pinnedDefaultPrices)) {
+    assert.equal(Number(PRICE_DEFAULTS[key].replace(/^\$/, "")), expectedUsd);
+  }
+
+  // Price parity comes from the same defaults the server and manifest use.
+  const expectedPrices = Object.fromEntries(
+    Object.entries(PRICE_DEFAULTS).map(([key, value]) => [key, Number(value.replace(/^\$/, ""))])
+  );
+
+  for (const [key, expectedUsd] of Object.entries(expectedPrices)) {
+    assert.equal(manifest.paymentRequirements.pricing[key].priceUsd, expectedUsd);
+    assert.equal(DEFAULT_PRICES[`/${key}`], expectedUsd);
+  }
+});
+
+test("discovery: openapi specification defines all public routes and response codes", () => {
+  const openapi = buildOpenapi(PRICE_DEFAULTS);
+
+  assert.equal(openapi.openapi, "3.1.0");
+  assert.equal(openapi.info.version, RELEASE_VERSION);
+  assert.equal(openapi.paths["/verify"].post.requestBody.content["application/json"].schema.properties.size.default, DEFAULT_SIZE);
+  assert.ok(openapi.info.title, "OpenAPI has title");
+
+  const requiredPaths = [
+    "/health",
+    "/ready",
+    "/info",
+    "/findings",
+    "/.well-known/verify402.json",
+    "/.well-known/x402",
+    "/llms.txt",
+    "/sitemap.xml",
+    "/preflight",
+    "/preflight/verify",
+    "/verify",
+    "/safety",
+    "/route",
+    "/quotecheck",
+    "/depth",
+  ];
+
+  for (const p of requiredPaths) {
+    assert.ok(openapi.paths[p], `OpenAPI must describe path ${p}`);
+  }
+
+  // Paid routes must declare 402, 400, 409, 429, 503 and x-idempotency-key
+  const paidRoutes = ["/verify", "/safety", "/route", "/quotecheck", "/depth"];
+  for (const r of paidRoutes) {
+    const postOp = openapi.paths[r].post;
+    assert.ok(postOp.responses["200"], `${r} must describe 200 response`);
+    assert.ok(postOp.responses["400"], `${r} must describe 400 response`);
+    assert.ok(postOp.responses["402"], `${r} must describe 402 response`);
+    assert.ok(postOp.responses["409"], `${r} must describe 409 response`);
+    assert.ok(postOp.responses["429"], `${r} must describe 429 response`);
+    assert.ok(postOp.responses["503"], `${r} must describe 503 response`);
+
+    const paramNames = postOp.parameters.map((p) => p.name);
+    assert.ok(paramNames.includes("x-idempotency-key"), `${r} must document x-idempotency-key`);
+    assert.ok(paramNames.includes("PAYMENT-SIGNATURE"), `${r} must document the x402 v2 payment proof header`);
+    assert.ok(paramNames.includes("x-payment"), `${r} must document the legacy x-payment header`);
+  }
+});
+
+test("discovery: manifest and OpenAPI derive TTL, limits, prices, and health shapes from shared sources", () => {
+  const manifest = buildServiceManifest();
+  const openapi = buildOpenapi(PRICE_DEFAULTS);
+  const ttlSeconds = IDEMPOTENCY_TTL_MS / 1000;
+
+  assert.equal(manifest.operationalPolicies.receipts.defaultTtlSeconds, DEFAULT_TTL_SECONDS);
+  assert.equal(manifest.operationalPolicies.receipts.rangeSeconds, `${MIN_TTL_SECONDS}-${MAX_TTL_SECONDS}`);
+  assert.match(manifest.operationalPolicies.idempotency.description, new RegExp(`${ttlSeconds}s`));
+  assert.match(manifest.operationalPolicies.idempotency.description, new RegExp(`max ${IDEMPOTENCY_MAX_REPLAYS} replays`));
+
+  const idem = openapi.paths["/verify"].post.parameters.find((p) => p.name === "x-idempotency-key");
+  assert.match(idem.description, new RegExp(`${ttlSeconds}s`));
+  assert.match(idem.description, new RegExp(`up to ${IDEMPOTENCY_MAX_REPLAYS} times`));
+
+  assert.match(manifest.operationalPolicies.rateLimits.preflight, new RegExp(`${PREFLIGHT_RATE_PER_MIN} requests/minute`));
+  assert.match(manifest.operationalPolicies.rateLimits.preflight, new RegExp(`max concurrency ${PREFLIGHT_MAX_IN_FLIGHT}`));
+  assert.match(openapi.paths["/preflight"].post.description, new RegExp(`max concurrency of ${PREFLIGHT_MAX_IN_FLIGHT}`));
+
+  for (const route of ["verify", "safety", "route", "quotecheck", "depth"]) {
+    const amount = PRICE_DEFAULTS[route].replace(/^\$/, "");
+    assert.equal(manifest.paymentRequirements.pricing[route].priceUsd, Number(amount));
+    assert.equal(openapi.paths[`/${route}`].post["x-payment-info"].price.amount, amount);
+  }
+
+  const healthSchema = openapi.paths["/health"].get.responses[200].content["application/json"].schema;
+  assert.deepEqual([...healthSchema.required].sort(), [...HEALTH_OK_KEYS].sort());
+  assert.deepEqual([...manifest.operationalPolicies.endpoints.health.fields].sort(), [...HEALTH_OK_KEYS].sort());
+  const readySchema = openapi.paths["/ready"].get.responses[200].content["application/json"].schema;
+  const readyFailSchema = openapi.paths["/ready"].get.responses[503].content["application/json"].schema;
+  assert.deepEqual([...readySchema.required].sort(), [...READY_OK_KEYS].sort());
+  assert.deepEqual([...readyFailSchema.required].sort(), [...READY_FAILURE_KEYS].sort());
+  assert.deepEqual([...manifest.operationalPolicies.endpoints.ready.successFields].sort(), [...READY_OK_KEYS].sort());
+  assert.deepEqual([...manifest.operationalPolicies.endpoints.ready.failureFields].sort(), [...READY_FAILURE_KEYS].sort());
+
+  assert.deepEqual(bannedClaimHits(JSON.stringify({ manifest, openapi })), []);
+});
+
+test("discovery: no secrets leaked in public discovery outputs", () => {
+  const manifest = buildServiceManifest();
+  const openapi = buildOpenapi(PRICE_DEFAULTS);
+  const serverJson = JSON.parse(fs.readFileSync(path.join(ROOT, "server.json"), "utf8"));
+
+  const jsonBlobs = [JSON.stringify(manifest), JSON.stringify(openapi), JSON.stringify(serverJson)];
+
+  const forbidden = [
+    /0x[0-9a-fA-F]{64}/g, // private key
+    /CDP_API_KEY_SECRET/g,
+    /["']?[A-Za-z0-9+/]{43,}=?["']?/g, // base64 secrets
+  ];
+
+  for (const blob of jsonBlobs) {
+    assert.doesNotMatch(blob, /0x[0-9a-fA-F]{64}/);
+    assert.doesNotMatch(blob, /CDP_API_KEY_SECRET/);
+  }
+});
+
+test("discovery: the published MCP package includes every local runtime import", () => {
+  const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, "mcp-bridge/package.json"), "utf8"));
+  const shipped = new Set(pkg.files || []);
+  const pending = [...shipped].filter((name) => name.endsWith(".mjs"));
+  const seen = new Set();
+  while (pending.length) {
+    const name = pending.pop();
+    if (seen.has(name)) continue;
+    seen.add(name);
+    const source = fs.readFileSync(path.join(ROOT, "mcp-bridge", name), "utf8");
+    for (const match of source.matchAll(/from\s+["']\.\/([^"']+)["']/g)) {
+      const dependency = match[1];
+      assert.ok(shipped.has(dependency), `${name} imports ${dependency}, but package.json files omits it`);
+      if (!seen.has(dependency)) pending.push(dependency);
+    }
+  }
+});
+
+test("discovery: google site verification meta tag and file are present for Search Console", () => {
+  const token = "iGmI2QL110IkjnW0thU3DRZrdgQe_7mZsPWgkZVte7o";
+  const expectedTag = `<meta name="google-site-verification" content="${token}">`;
+
+  const htmlFiles = [
+    path.join(ROOT, "src", "landing.html"),
+    path.join(ROOT, "src", "site", "start.html"),
+    path.join(ROOT, "src", "site", "checks.html"),
+    path.join(ROOT, "src", "site", "preflight.html"),
+    path.join(ROOT, "src", "site", "live.html"),
+    path.join(ROOT, "src", "site", "proof.html"),
+    path.join(ROOT, "src", "site", "docs.html"),
+    path.join(ROOT, "src", "site", "donate.html"),
+    path.join(ROOT, "src", "site", "sponsor.html"),
+    path.join(ROOT, "src", "site", "mcp.html"),
+    path.join(ROOT, "src", "site", "ai-agent-payment-security.html"),
+    path.join(ROOT, "src", "site", "x402-endpoint-checker.html"),
+    path.join(ROOT, "src", "site", "verify-usdc-payment-request.html"),
+    path.join(ROOT, "src", "site", "token-approval-checker.html"),
+    path.join(ROOT, "src", "site", "agent-payment-receipt.html"),
+    path.join(ROOT, "src", "site", "crypto-arbitrage-verification.html"),
+  ];
+
+  for (const f of htmlFiles) {
+    assert.ok(fs.existsSync(f), `HTML file ${f} must exist`);
+    const content = fs.readFileSync(f, "utf8");
+    assert.ok(content.includes(expectedTag), `${path.basename(f)} must contain Google site verification tag`);
+  }
+
+  for (const t of [token, "f4013a8965ac9859"]) {
+    const vf = path.join(ROOT, "src", "site", `google${t}.html`);
+    assert.ok(fs.existsSync(vf), `Google verification file google${t}.html must exist`);
+    const fc = fs.readFileSync(vf, "utf8");
+    assert.ok(fc.includes(`google-site-verification: google${t}.html`));
+  }
+});
+
+test("discovery: sitemap lists every public blog post", () => {
+  const server = fs.readFileSync(path.join(ROOT, "src", "server.mjs"), "utf8");
+  const posts = fs.readdirSync(path.join(ROOT, "src", "site", "blog"))
+    .filter((name) => name.endsWith(".html"))
+    .map((name) => `/blog/${name.replace(/\.html$/, "")}`);
+  for (const post of posts) {
+    assert.ok(server.includes(`https://vex402.online${post}</loc>`), `sitemap must list ${post}`);
+  }
+});
+
+test("discovery: landing structured data is valid and matches the visible FAQ", () => {
+  const landing = fs.readFileSync(path.join(ROOT, "src", "landing.html"), "utf8");
+  const blocks = [...landing.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)]
+    .map((match) => JSON.parse(match[1]));
+  assert.equal(blocks.length, 1);
+  const types = blocks[0]["@graph"].map((node) => node["@type"]);
+  for (const type of ["WebSite", "Organization", "SoftwareApplication", "FAQPage"]) {
+    assert.ok(types.includes(type), `structured data must include ${type}`);
+  }
+  const faq = blocks[0]["@graph"].find((node) => node["@type"] === "FAQPage");
+  assert.equal(faq.mainEntity.length, 6);
+  assert.ok(faq.mainEntity.every((q) => q.name && q.acceptedAnswer?.text));
+  assert.match(landing, /<link rel="canonical" href="https:\/\/vex402\.online\/">/);
+});
+
+test("discovery: long-tail guides are canonical, structured, and linked from hub pages", () => {
+  const guides = [
+    ["/ai-agent-payment-security", "ai-agent-payment-security.html", "AI agent payment security"],
+    ["/x402-endpoint-checker", "x402-endpoint-checker.html", "x402 endpoint checker"],
+    ["/verify-usdc-payment-request", "verify-usdc-payment-request.html", "Verify a USDC payment request"],
+    ["/token-approval-checker", "token-approval-checker.html", "Token approval checker"],
+    ["/agent-payment-receipt", "agent-payment-receipt.html", "Agent payment receipt"],
+    ["/crypto-arbitrage-verification", "crypto-arbitrage-verification.html", "Crypto arbitrage verification"],
+  ];
+  const server = fs.readFileSync(path.join(ROOT, "src", "server.mjs"), "utf8");
+  const llms = fs.readFileSync(path.join(ROOT, "src", "payment-mode.mjs"), "utf8");
+
+  for (const [slug, file, heading] of guides) {
+    const page = fs.readFileSync(path.join(ROOT, "src", "site", file), "utf8");
+    assert.match(page, new RegExp(`<title>[^<]*${heading.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&")}`, "i"), `${file} needs a descriptive title`);
+    assert.match(page, /<meta name="description" content="[^"]{80,}"/, `${file} needs a description`);
+    assert.match(page, /<h1[^>]*>[^<]+<\/h1>/, `${file} needs one H1`);
+    assert.equal((page.match(/<h1[^>]*>/g) || []).length, 1, `${file} must have exactly one H1`);
+    assert.equal(
+      page.includes(`<link rel="canonical" href="https://vex402.online${slug}">`),
+      true,
+      `${file} needs a canonical URL`,
+    );
+    assert.equal((page.match(/rel="canonical"/g) || []).length, 1, `${file} must not duplicate its canonical`);
+
+    const blocks = [...page.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)]
+      .map((match) => JSON.parse(match[1]));
+    assert.equal(blocks.length, 1, `${file} needs one structured-data block`);
+    assert.equal(blocks[0]["@type"], "WebPage", `${file} structured data must describe a WebPage`);
+    assert.equal(blocks[0].url, `https://vex402.online${slug}`);
+    assert.ok(blocks[0].name && blocks[0].description, `${file} structured data needs name and description`);
+
+    assert.ok(server.includes(`https://vex402.online${slug}</loc>`), `sitemap must list ${slug}`);
+    assert.ok(llms.includes(`Guide:` ) && llms.includes(slug), `llms.txt source must list ${slug}`);
+  }
+
+  for (const hub of ["checks.html", "preflight.html", "inspect.html", "docs.html"]) {
+    const page = fs.readFileSync(path.join(ROOT, "src", "site", hub), "utf8");
+    for (const [slug] of guides) {
+      assert.ok(page.includes(`href="${slug}"`), `${hub} must link ${slug}`);
+    }
+  }
+});
+
+test("discovery: /preflight ships a browser try-it panel for the free gate", () => {
+  const page = fs.readFileSync(path.join(ROOT, "src", "site", "preflight.html"), "utf8");
+  assert.match(page, /<section id="try"/);
+  assert.match(page, /id="preflight-form"/);
+  assert.match(page, /id="approval-form"/);
+  assert.match(page, /id="approval-token"/);
+  assert.match(page, /id="approval-spender"/);
+  assert.match(page, /Use Base USDC sample/);
+  assert.match(page, /src="\/assets\/preflight-demo\.js"/);
+
+  const script = fs.readFileSync(path.join(ROOT, "src", "site", "assets", "preflight-demo.js"), "utf8");
+  assert.match(script, /fetch\("\/preflight"/);
+  assert.match(script, /eip155:84532/);
+  assert.match(script, /forbidUnlimitedApproval/);
+  assert.match(script, /0x095ea7b3/);
+  assert.match(script, /runApprovalCheck/);
+  assert.match(script, /preflight-plain/);
+});
+

@@ -1,0 +1,1610 @@
+{
+ "url": "src/landing.html",
+ "at": "2026-10-18T16:37:11.300Z",
+ "allow": [],
+ "viewports": [
+  {
+   "width": 1440,
+   "height": 900,
+   "load": "load",
+   "screens": 6,
+   "filled": [
+    0.12,
+    0.33,
+    0.75,
+    0.88,
+    0.67,
+    0.68
+   ],
+   "motion": {
+    "elements": 35,
+    "css": 0,
+    "transitions": 35,
+    "scripted": 0,
+    "videos": 0,
+    "playingVideos": 0
+   },
+   "metrics": {
+    "viewport": {
+     "w": 1440,
+     "h": 900
+    },
+    "page": {
+     "height": 5154,
+     "screens": 5.7,
+     "words": 574,
+     "img": 0,
+     "video": 0,
+     "canvas": 0,
+     "svg": 1,
+     "sections": 4,
+     "horizontalOverflow": 0,
+     "overflowCulprits": [],
+     "uiFragments": 10,
+     "uiAbuse": false,
+     "realPictures": 0,
+     "videoCount": 0,
+     "uiPictures": 4,
+     "pictureSamples": [],
+     "blendText": 0,
+     "sideScrollers": 0,
+     "brokenImages": [],
+     "emoji": []
+    },
+    "hero": {
+     "text": "Agents shouldn't pay for hallucinated profit.",
+     "words": 6,
+     "chars": 45,
+     "lines": 2,
+     "size": 27,
+     "vw": 1.9,
+     "font": "League Spartan",
+     "weight": 700,
+     "tracking": -0.02,
+     "leading": 1.25,
+     "upper": false,
+     "italic": false,
+     "mono": false,
+     "align": "left",
+     "position": "left",
+     "widthRatio": 0.26,
+     "top": 240,
+     "tag": "h1",
+     "kind": "heading"
+    },
+    "h1": {
+     "text": "Agents shouldn't pay for hallucinated profit.",
+     "words": 6,
+     "lines": 2,
+     "size": 27,
+     "font": "League Spartan"
+    },
+    "headings": [
+     {
+      "text": "Is this arbitrage real?",
+      "words": 4,
+      "chars": 23,
+      "lines": 1,
+      "size": 32,
+      "vw": 2.2,
+      "font": "League Spartan",
+      "weight": 700,
+      "tracking": -0.02,
+      "leading": 1.14,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.81,
+      "top": 869,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "Is this token safe to buy?",
+      "words": 6,
+      "chars": 26,
+      "lines": 1,
+      "size": 32,
+      "vw": 2.2,
+      "font": "League Spartan",
+      "weight": 700,
+      "tracking": -0.02,
+      "leading": 1.14,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.81,
+      "top": 1058,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "What would the chain pay?",
+      "words": 5,
+      "chars": 25,
+      "lines": 1,
+      "size": 32,
+      "vw": 2.2,
+      "font": "League Spartan",
+      "weight": 700,
+      "tracking": -0.02,
+      "leading": 1.14,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.81,
+      "top": 1229,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "Whose quote am I trusting?",
+      "words": 5,
+      "chars": 26,
+      "lines": 1,
+      "size": 32,
+      "vw": 2.2,
+      "font": "League Spartan",
+      "weight": 700,
+      "tracking": -0.02,
+      "leading": 1.14,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.81,
+      "top": 1418,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "How deep can I trade?",
+      "words": 5,
+      "chars": 21,
+      "lines": 1,
+      "size": 32,
+      "vw": 2.2,
+      "font": "League Spartan",
+      "weight": 700,
+      "tracking": -0.02,
+      "leading": 1.14,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.81,
+      "top": 1598,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "Receipts, not promises.",
+      "words": 3,
+      "chars": 23,
+      "lines": 1,
+      "size": 32,
+      "vw": 2.2,
+      "font": "League Spartan",
+      "weight": 700,
+      "tracking": -0.02,
+      "leading": 1.05,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.45,
+      "top": 1886,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Run the first check.",
+      "words": 4,
+      "chars": 20,
+      "lines": 1,
+      "size": 32,
+      "vw": 2.2,
+      "font": "League Spartan",
+      "weight": 700,
+      "tracking": -0.02,
+      "leading": 1.2,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.39,
+      "top": 2628,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Ask before you pay ask",
+      "words": 5,
+      "chars": 22,
+      "lines": 1,
+      "size": 44,
+      "vw": 3.1,
+      "font": "League Spartan",
+      "weight": 700,
+      "tracking": -0.02,
+      "leading": 1.18,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.69,
+      "top": 4442,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "verify402",
+      "words": 1,
+      "chars": 9,
+      "lines": 1,
+      "size": 150,
+      "vw": 10.4,
+      "font": "League Spartan",
+      "weight": 700,
+      "tracking": -0.04,
+      "leading": 0.95,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.97,
+      "top": 4726,
+      "tag": "span",
+      "kind": "heading"
+     }
+    ],
+    "headingSummary": {
+     "count": 9,
+     "maxLines": 1,
+     "over2Lines": 0,
+     "statements": 6,
+     "centered": 0,
+     "medianWords": 5,
+     "mixedFontHeadings": 0
+    },
+    "type": {
+     "families": [
+      {
+       "family": "Figtree",
+       "share": 0.84,
+       "mono": false
+      },
+      {
+       "family": "League Spartan",
+       "share": 0.09,
+       "mono": false
+      },
+      {
+       "family": "ui-monospace",
+       "share": 0.07,
+       "mono": false
+      }
+     ],
+     "familyCount": 3,
+     "sizes": [
+      13,
+      15,
+      16,
+      20,
+      24,
+      27,
+      32,
+      44,
+      150
+     ],
+     "sizeCount": 9,
+     "notLoaded": [],
+     "body": {
+      "font": "Figtree",
+      "size": 16,
+      "leading": 1.5,
+      "weight": 400,
+      "tracking": 0,
+      "contrast": 19.8
+     },
+     "measureChars": 70,
+     "max": {
+      "size": 150,
+      "vw": 10.4,
+      "font": "League Spartan",
+      "text": "verify"
+     },
+     "monoShare": 0.07,
+     "monoProseShare": 0,
+     "monoFamilies": [
+      "ui-monospace"
+     ],
+     "monoSamples": [],
+     "microLabels": 0,
+     "microLabelShare": 0,
+     "microSamples": [],
+     "upperShare": 0.02,
+     "centerShare": 0,
+     "smallText": 0
+    },
+    "eyebrows": [],
+    "numbered": [],
+    "color": {
+     "bodyBg": "#ffffff",
+     "bodyBgHsl": {
+      "h": 0,
+      "s": 0,
+      "l": 1
+     },
+     "dark": false,
+     "sectionBgs": [
+      {
+       "color": "#f2f2f2",
+       "top": 2532,
+       "hsl": {
+        "h": 0,
+        "s": 0,
+        "l": 0.95
+       }
+      },
+      {
+       "color": "#000000",
+       "top": 4662,
+       "hsl": {
+        "h": 0,
+        "s": 0,
+        "l": 0
+       }
+      }
+     ],
+     "textColors": [
+      {
+       "color": "#0a0a0a",
+       "share": 0.43
+      },
+      {
+       "color": "#565656",
+       "share": 0.36
+      },
+      {
+       "color": "#ffffff",
+       "share": 0.17
+      },
+      {
+       "color": "#000000",
+       "share": 0.01
+      },
+      {
+       "color": "#d92b21",
+       "share": 0.01
+      }
+     ],
+     "button": {
+      "bg": "#0a0a0a",
+      "hsl": {
+       "h": 0,
+       "s": 0,
+       "l": 0.04
+      },
+      "fg": "#ffffff"
+     },
+     "lowContrast": []
+    },
+    "buttons": {
+     "count": 2,
+     "inHero": 1,
+     "radius": 4,
+     "height": 46,
+     "withShadow": 0,
+     "withGradient": 0,
+     "mono": 0,
+     "upper": 0,
+     "heroLabels": [
+      "Run the free check"
+     ]
+    },
+    "surfaces": {
+     "shadowStatic": 0,
+     "shadowOverlay": 0,
+     "shadowSamples": [],
+     "gradients": 0,
+     "scrims": 0,
+     "gradientSamples": [],
+     "gradientText": 0,
+     "hairlines": 0,
+     "hairlineSamples": [],
+     "outlinedBoxes": 0,
+     "dashed": 0,
+     "blurred": 0,
+     "roundedBoxes": 0,
+     "boxRadius": 0,
+     "squareMedia": 0,
+     "roundedMedia": 0,
+     "mediaRadius": 0,
+     "textShadow": 0,
+     "cardRows": []
+    },
+    "heroMedia": [],
+    "nav": {
+     "links": 2,
+     "fixed": false,
+     "height": 828,
+     "floatingPill": false,
+     "blur": false
+    },
+    "fontsLoaded": [
+     "figtree",
+     "league spartan"
+    ]
+   },
+   "consoleErrors": []
+  },
+  {
+   "width": 768,
+   "height": 1024,
+   "load": "load",
+   "screens": 6,
+   "filled": [
+    0.14,
+    0.33,
+    0.66,
+    0.73,
+    0.64,
+    0.67
+   ],
+   "motion": {
+    "elements": 35,
+    "css": 0,
+    "transitions": 35,
+    "scripted": 0,
+    "videos": 0,
+    "playingVideos": 0
+   },
+   "metrics": {
+    "viewport": {
+     "w": 768,
+     "h": 1024
+    },
+    "page": {
+     "height": 5773,
+     "screens": 5.6,
+     "words": 574,
+     "img": 0,
+     "video": 0,
+     "canvas": 0,
+     "svg": 1,
+     "sections": 4,
+     "horizontalOverflow": 0,
+     "overflowCulprits": [],
+     "uiFragments": 10,
+     "uiAbuse": false,
+     "realPictures": 0,
+     "videoCount": 0,
+     "uiPictures": 3,
+     "pictureSamples": [],
+     "blendText": 0,
+     "sideScrollers": 0,
+     "brokenImages": [],
+     "emoji": []
+    },
+    "hero": {
+     "text": "Agents shouldn't pay for hallucinated profit.",
+     "words": 6,
+     "chars": 45,
+     "lines": 2,
+     "size": 27,
+     "vw": 3.5,
+     "font": "League Spartan",
+     "weight": 700,
+     "tracking": -0.02,
+     "leading": 1.25,
+     "upper": false,
+     "italic": false,
+     "mono": false,
+     "align": "left",
+     "position": "center",
+     "widthRatio": 0.49,
+     "top": 240,
+     "tag": "h1",
+     "kind": "heading"
+    },
+    "h1": {
+     "text": "Agents shouldn't pay for hallucinated profit.",
+     "words": 6,
+     "lines": 2,
+     "size": 27,
+     "font": "League Spartan"
+    },
+    "headings": [
+     {
+      "text": "Agents shouldn't pay for hallucinated profit.",
+      "words": 6,
+      "chars": 45,
+      "lines": 2,
+      "size": 27,
+      "vw": 3.5,
+      "font": "League Spartan",
+      "weight": 700,
+      "tracking": -0.02,
+      "leading": 1.25,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.49,
+      "top": 240,
+      "tag": "h1",
+      "kind": "heading"
+     },
+     {
+      "text": "Is this arbitrage real?",
+      "words": 4,
+      "chars": 23,
+      "lines": 1,
+      "size": 32,
+      "vw": 4.2,
+      "font": "League Spartan",
+      "weight": 700,
+      "tracking": -0.02,
+      "leading": 1.14,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.78,
+      "top": 990,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "Is this token safe to buy?",
+      "words": 6,
+      "chars": 26,
+      "lines": 1,
+      "size": 32,
+      "vw": 4.2,
+      "font": "League Spartan",
+      "weight": 700,
+      "tracking": -0.02,
+      "leading": 1.14,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.78,
+      "top": 1203,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "What would the chain pay?",
+      "words": 5,
+      "chars": 25,
+      "lines": 1,
+      "size": 32,
+      "vw": 4.2,
+      "font": "League Spartan",
+      "weight": 700,
+      "tracking": -0.02,
+      "leading": 1.14,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.78,
+      "top": 1399,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "Whose quote am I trusting?",
+      "words": 5,
+      "chars": 26,
+      "lines": 1,
+      "size": 32,
+      "vw": 4.2,
+      "font": "League Spartan",
+      "weight": 700,
+      "tracking": -0.02,
+      "leading": 1.14,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.78,
+      "top": 1613,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "How deep can I trade?",
+      "words": 5,
+      "chars": 21,
+      "lines": 1,
+      "size": 32,
+      "vw": 4.2,
+      "font": "League Spartan",
+      "weight": 700,
+      "tracking": -0.02,
+      "leading": 1.14,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.78,
+      "top": 1817,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "Receipts, not promises.",
+      "words": 3,
+      "chars": 23,
+      "lines": 2,
+      "size": 32,
+      "vw": 4.2,
+      "font": "League Spartan",
+      "weight": 700,
+      "tracking": -0.02,
+      "leading": 1.05,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.35,
+      "top": 2124,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Run the first check.",
+      "words": 4,
+      "chars": 20,
+      "lines": 1,
+      "size": 32,
+      "vw": 4.2,
+      "font": "League Spartan",
+      "weight": 700,
+      "tracking": -0.02,
+      "leading": 1.2,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.7,
+      "top": 3113,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Ask before you pay ask",
+      "words": 5,
+      "chars": 22,
+      "lines": 1,
+      "size": 33.8,
+      "vw": 4.4,
+      "font": "League Spartan",
+      "weight": 700,
+      "tracking": -0.02,
+      "leading": 1.18,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.94,
+      "top": 4974,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "verify402",
+      "words": 1,
+      "chars": 9,
+      "lines": 1,
+      "size": 84.5,
+      "vw": 11,
+      "font": "League Spartan",
+      "weight": 700,
+      "tracking": -0.04,
+      "leading": 0.95,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.94,
+      "top": 5270,
+      "tag": "span",
+      "kind": "heading"
+     }
+    ],
+    "headingSummary": {
+     "count": 10,
+     "maxLines": 2,
+     "over2Lines": 0,
+     "statements": 6,
+     "centered": 0,
+     "medianWords": 5,
+     "mixedFontHeadings": 0
+    },
+    "type": {
+     "families": [
+      {
+       "family": "Figtree",
+       "share": 0.84,
+       "mono": false
+      },
+      {
+       "family": "League Spartan",
+       "share": 0.09,
+       "mono": false
+      },
+      {
+       "family": "ui-monospace",
+       "share": 0.07,
+       "mono": false
+      }
+     ],
+     "familyCount": 3,
+     "sizes": [
+      13,
+      15,
+      16,
+      20,
+      24,
+      27,
+      32,
+      34,
+      85
+     ],
+     "sizeCount": 9,
+     "notLoaded": [],
+     "body": {
+      "font": "Figtree",
+      "size": 16,
+      "leading": 1.5,
+      "weight": 400,
+      "tracking": 0,
+      "contrast": 19.8
+     },
+     "measureChars": 67,
+     "max": {
+      "size": 84.5,
+      "vw": 11,
+      "font": "League Spartan",
+      "text": "verify"
+     },
+     "monoShare": 0.07,
+     "monoProseShare": 0,
+     "monoFamilies": [
+      "ui-monospace"
+     ],
+     "monoSamples": [],
+     "microLabels": 0,
+     "microLabelShare": 0,
+     "microSamples": [],
+     "upperShare": 0.02,
+     "centerShare": 0,
+     "smallText": 0
+    },
+    "eyebrows": [],
+    "numbered": [],
+    "color": {
+     "bodyBg": "#ffffff",
+     "bodyBgHsl": {
+      "h": 0,
+      "s": 0,
+      "l": 1
+     },
+     "dark": false,
+     "sectionBgs": [
+      {
+       "color": "#f2f2f2",
+       "top": 3017,
+       "hsl": {
+        "h": 0,
+        "s": 0,
+        "l": 0.95
+       }
+      },
+      {
+       "color": "#000000",
+       "top": 5206,
+       "hsl": {
+        "h": 0,
+        "s": 0,
+        "l": 0
+       }
+      }
+     ],
+     "textColors": [
+      {
+       "color": "#0a0a0a",
+       "share": 0.43
+      },
+      {
+       "color": "#565656",
+       "share": 0.36
+      },
+      {
+       "color": "#ffffff",
+       "share": 0.17
+      },
+      {
+       "color": "#000000",
+       "share": 0.01
+      },
+      {
+       "color": "#d92b21",
+       "share": 0.01
+      }
+     ],
+     "button": {
+      "bg": "#0a0a0a",
+      "hsl": {
+       "h": 0,
+       "s": 0,
+       "l": 0.04
+      },
+      "fg": "#ffffff"
+     },
+     "lowContrast": []
+    },
+    "buttons": {
+     "count": 2,
+     "inHero": 1,
+     "radius": 4,
+     "height": 46,
+     "withShadow": 0,
+     "withGradient": 0,
+     "mono": 0,
+     "upper": 0,
+     "heroLabels": [
+      "Run the free check"
+     ]
+    },
+    "surfaces": {
+     "shadowStatic": 0,
+     "shadowOverlay": 0,
+     "shadowSamples": [],
+     "gradients": 0,
+     "scrims": 0,
+     "gradientSamples": [],
+     "gradientText": 0,
+     "hairlines": 0,
+     "hairlineSamples": [],
+     "outlinedBoxes": 0,
+     "dashed": 0,
+     "blurred": 0,
+     "roundedBoxes": 0,
+     "boxRadius": 0,
+     "squareMedia": 0,
+     "roundedMedia": 0,
+     "mediaRadius": 0,
+     "textShadow": 0,
+     "cardRows": []
+    },
+    "heroMedia": [],
+    "nav": {
+     "links": 2,
+     "fixed": false,
+     "height": 942,
+     "floatingPill": false,
+     "blur": false
+    },
+    "fontsLoaded": [
+     "figtree",
+     "league spartan"
+    ]
+   },
+   "consoleErrors": []
+  },
+  {
+   "width": 390,
+   "height": 844,
+   "load": "load",
+   "screens": 7,
+   "filled": [
+    0.51,
+    0.54,
+    0.79,
+    0.7,
+    0.78,
+    0.66,
+    0.87
+   ],
+   "motion": {
+    "elements": 35,
+    "css": 0,
+    "transitions": 35,
+    "scripted": 0,
+    "videos": 0,
+    "playingVideos": 0
+   },
+   "metrics": {
+    "viewport": {
+     "w": 396,
+     "h": 857
+    },
+    "page": {
+     "height": 5890,
+     "screens": 6.9,
+     "words": 574,
+     "img": 0,
+     "video": 0,
+     "canvas": 0,
+     "svg": 1,
+     "sections": 4,
+     "horizontalOverflow": 0,
+     "overflowCulprits": [],
+     "uiFragments": 10,
+     "uiAbuse": false,
+     "realPictures": 0,
+     "videoCount": 0,
+     "uiPictures": 3,
+     "pictureSamples": [],
+     "blendText": 0,
+     "sideScrollers": 0,
+     "brokenImages": [],
+     "emoji": []
+    },
+    "hero": {
+     "text": "Agents shouldn't pay for hallucinated profit.",
+     "words": 6,
+     "chars": 45,
+     "lines": 2,
+     "size": 24,
+     "vw": 6.1,
+     "font": "League Spartan",
+     "weight": 700,
+     "tracking": -0.02,
+     "leading": 1.25,
+     "upper": false,
+     "italic": false,
+     "mono": false,
+     "align": "left",
+     "position": "center",
+     "widthRatio": 0.86,
+     "top": 180,
+     "tag": "h1",
+     "kind": "heading"
+    },
+    "h1": {
+     "text": "Agents shouldn't pay for hallucinated profit.",
+     "words": 6,
+     "lines": 2,
+     "size": 24,
+     "font": "League Spartan"
+    },
+    "headings": [
+     {
+      "text": "Agents shouldn't pay for hallucinated profit.",
+      "words": 6,
+      "chars": 45,
+      "lines": 2,
+      "size": 24,
+      "vw": 6.1,
+      "font": "League Spartan",
+      "weight": 700,
+      "tracking": -0.02,
+      "leading": 1.25,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.86,
+      "top": 180,
+      "tag": "h1",
+      "kind": "heading"
+     },
+     {
+      "text": "Is this arbitrage real?",
+      "words": 4,
+      "chars": 23,
+      "lines": 1,
+      "size": 24,
+      "vw": 6.1,
+      "font": "League Spartan",
+      "weight": 700,
+      "tracking": -0.02,
+      "leading": 1.14,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.66,
+      "top": 652,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "Is this token safe to buy?",
+      "words": 6,
+      "chars": 26,
+      "lines": 1,
+      "size": 24,
+      "vw": 6.1,
+      "font": "League Spartan",
+      "weight": 700,
+      "tracking": -0.02,
+      "leading": 1.14,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.66,
+      "top": 807,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "What would the chain pay?",
+      "words": 5,
+      "chars": 25,
+      "lines": 2,
+      "size": 24,
+      "vw": 6.1,
+      "font": "League Spartan",
+      "weight": 700,
+      "tracking": -0.02,
+      "leading": 1.14,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.66,
+      "top": 930,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "Whose quote am I trusting?",
+      "words": 5,
+      "chars": 26,
+      "lines": 2,
+      "size": 24,
+      "vw": 6.1,
+      "font": "League Spartan",
+      "weight": 700,
+      "tracking": -0.02,
+      "leading": 1.14,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.66,
+      "top": 1106,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "How deep can I trade?",
+      "words": 5,
+      "chars": 21,
+      "lines": 1,
+      "size": 24,
+      "vw": 6.1,
+      "font": "League Spartan",
+      "weight": 700,
+      "tracking": -0.02,
+      "leading": 1.14,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.66,
+      "top": 1243,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "Receipts, not promises.",
+      "words": 3,
+      "chars": 23,
+      "lines": 1,
+      "size": 32,
+      "vw": 8.1,
+      "font": "League Spartan",
+      "weight": 700,
+      "tracking": -0.02,
+      "leading": 1.05,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.85,
+      "top": 1440,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "0x11121007…9324a",
+      "words": 1,
+      "chars": 16,
+      "lines": 2,
+      "size": 24,
+      "vw": 6.1,
+      "font": "League Spartan",
+      "weight": 700,
+      "tracking": -0.02,
+      "leading": 1.2,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.32,
+      "top": 1556,
+      "tag": "div",
+      "kind": "heading"
+     },
+     {
+      "text": "evidence_bundle",
+      "words": 1,
+      "chars": 15,
+      "lines": 1,
+      "size": 24,
+      "vw": 6.1,
+      "font": "League Spartan",
+      "weight": 700,
+      "tracking": -0.02,
+      "leading": 1.2,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.42,
+      "top": 1556,
+      "tag": "div",
+      "kind": "heading"
+     },
+     {
+      "text": "no_edge",
+      "words": 1,
+      "chars": 7,
+      "lines": 1,
+      "size": 24,
+      "vw": 6.1,
+      "font": "League Spartan",
+      "weight": 700,
+      "tracking": -0.02,
+      "leading": 1.2,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.32,
+      "top": 1754,
+      "tag": "div",
+      "kind": "heading"
+     },
+     {
+      "text": "x402",
+      "words": 1,
+      "chars": 4,
+      "lines": 1,
+      "size": 24,
+      "vw": 6.1,
+      "font": "League Spartan",
+      "weight": 700,
+      "tracking": -0.02,
+      "leading": 1.2,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.42,
+      "top": 1754,
+      "tag": "div",
+      "kind": "heading"
+     },
+     {
+      "text": "replay, free",
+      "words": 2,
+      "chars": 12,
+      "lines": 1,
+      "size": 24,
+      "vw": 6.1,
+      "font": "League Spartan",
+      "weight": 700,
+      "tracking": -0.02,
+      "leading": 1.2,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.32,
+      "top": 1900,
+      "tag": "div",
+      "kind": "heading"
+     },
+     {
+      "text": "tests",
+      "words": 1,
+      "chars": 5,
+      "lines": 1,
+      "size": 24,
+      "vw": 6.1,
+      "font": "League Spartan",
+      "weight": 700,
+      "tracking": -0.02,
+      "leading": 1.2,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.85,
+      "top": 2249,
+      "tag": "div",
+      "kind": "heading"
+     },
+     {
+      "text": "ten lines",
+      "words": 2,
+      "chars": 9,
+      "lines": 1,
+      "size": 24,
+      "vw": 6.1,
+      "font": "League Spartan",
+      "weight": 700,
+      "tracking": -0.02,
+      "leading": 1.2,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.32,
+      "top": 2359,
+      "tag": "div",
+      "kind": "heading"
+     },
+     {
+      "text": "Run the first check.",
+      "words": 4,
+      "chars": 20,
+      "lines": 1,
+      "size": 27,
+      "vw": 6.8,
+      "font": "League Spartan",
+      "weight": 700,
+      "tracking": -0.02,
+      "leading": 1.2,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.86,
+      "top": 2718,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Ask before you pay ask",
+      "words": 5,
+      "chars": 22,
+      "lines": 2,
+      "size": 24,
+      "vw": 6.1,
+      "font": "League Spartan",
+      "weight": 700,
+      "tracking": -0.02,
+      "leading": 1.18,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.86,
+      "top": 4850,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "verify402",
+      "words": 1,
+      "chars": 9,
+      "lines": 1,
+      "size": 52,
+      "vw": 13.1,
+      "font": "League Spartan",
+      "weight": 700,
+      "tracking": -0.04,
+      "leading": 0.95,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.86,
+      "top": 5234,
+      "tag": "span",
+      "kind": "heading"
+     }
+    ],
+    "headingSummary": {
+     "count": 17,
+     "maxLines": 2,
+     "over2Lines": 0,
+     "statements": 6,
+     "centered": 0,
+     "medianWords": 3,
+     "mixedFontHeadings": 0
+    },
+    "type": {
+     "families": [
+      {
+       "family": "Figtree",
+       "share": 0.84,
+       "mono": false
+      },
+      {
+       "family": "League Spartan",
+       "share": 0.09,
+       "mono": false
+      },
+      {
+       "family": "ui-monospace",
+       "share": 0.07,
+       "mono": false
+      }
+     ],
+     "familyCount": 3,
+     "sizes": [
+      13,
+      15,
+      16,
+      20,
+      24,
+      27,
+      32,
+      52
+     ],
+     "sizeCount": 8,
+     "notLoaded": [],
+     "body": {
+      "font": "Figtree",
+      "size": 16,
+      "leading": 1.5,
+      "weight": 400,
+      "tracking": 0,
+      "contrast": 19.8
+     },
+     "measureChars": 42,
+     "max": {
+      "size": 52,
+      "vw": 13.1,
+      "font": "League Spartan",
+      "text": "verify"
+     },
+     "monoShare": 0.07,
+     "monoProseShare": 0,
+     "monoFamilies": [
+      "ui-monospace"
+     ],
+     "monoSamples": [],
+     "microLabels": 0,
+     "microLabelShare": 0,
+     "microSamples": [],
+     "upperShare": 0.02,
+     "centerShare": 0,
+     "smallText": 0
+    },
+    "eyebrows": [],
+    "numbered": [],
+    "color": {
+     "bodyBg": "#ffffff",
+     "bodyBgHsl": {
+      "h": 0,
+      "s": 0,
+      "l": 1
+     },
+     "dark": false,
+     "sectionBgs": [
+      {
+       "color": "#f2f2f2",
+       "top": 2622,
+       "hsl": {
+        "h": 0,
+        "s": 0,
+        "l": 0.95
+       }
+      },
+      {
+       "color": "#ffffff",
+       "top": 3923,
+       "hsl": {
+        "h": 0,
+        "s": 0,
+        "l": 1
+       }
+      },
+      {
+       "color": "#000000",
+       "top": 5170,
+       "hsl": {
+        "h": 0,
+        "s": 0,
+        "l": 0
+       }
+      }
+     ],
+     "textColors": [
+      {
+       "color": "#0a0a0a",
+       "share": 0.43
+      },
+      {
+       "color": "#565656",
+       "share": 0.36
+      },
+      {
+       "color": "#ffffff",
+       "share": 0.17
+      },
+      {
+       "color": "#000000",
+       "share": 0.01
+      },
+      {
+       "color": "#d92b21",
+       "share": 0.01
+      }
+     ],
+     "button": {
+      "bg": "#0a0a0a",
+      "hsl": {
+       "h": 0,
+       "s": 0,
+       "l": 0.04
+      },
+      "fg": "#ffffff"
+     },
+     "lowContrast": []
+    },
+    "buttons": {
+     "count": 1,
+     "inHero": 1,
+     "radius": 4,
+     "height": 46,
+     "withShadow": 0,
+     "withGradient": 0,
+     "mono": 0,
+     "upper": 0,
+     "heroLabels": [
+      "Run the free check"
+     ]
+    },
+    "surfaces": {
+     "shadowStatic": 0,
+     "shadowOverlay": 0,
+     "shadowSamples": [],
+     "gradients": 0,
+     "scrims": 0,
+     "gradientSamples": [],
+     "gradientText": 0,
+     "hairlines": 0,
+     "hairlineSamples": [],
+     "outlinedBoxes": 0,
+     "dashed": 0,
+     "blurred": 0,
+     "roundedBoxes": 0,
+     "boxRadius": 0,
+     "squareMedia": 0,
+     "roundedMedia": 0,
+     "mediaRadius": 0,
+     "textShadow": 0,
+     "cardRows": [
+      {
+       "count": 4,
+       "iconTopped": false,
+       "rounded": false,
+       "top": 1538
+      }
+     ]
+    },
+    "heroMedia": [],
+    "nav": {
+     "links": 2,
+     "fixed": false,
+     "height": 626,
+     "floatingPill": false,
+     "blur": false
+    },
+    "fontsLoaded": [
+     "figtree",
+     "league spartan"
+    ]
+   },
+   "consoleErrors": []
+  }
+ ],
+ "findings": [
+  {
+   "level": "WARN",
+   "id": "font-count",
+   "width": 1440,
+   "message": "3 typefaces in use (Figtree, League Spartan, ui-monospace).",
+   "fix": "Two at most.",
+   "alsoAt": [
+    768,
+    390
+   ]
+  },
+  {
+   "level": "WARN",
+   "id": "no-real-pictures",
+   "width": 1440,
+   "message": "Only 0 real photograph(s) or clip(s); the rest are interface fragments.",
+   "fix": "Add two or more real pictures of the customer's world from scripts/assets.mjs, not stock of people at laptops."
+  },
+  {
+   "level": "WARN",
+   "id": "no-footage",
+   "width": 1440,
+   "message": "No video anywhere on the page.",
+   "fix": "Look for one honest clip with scripts/assets.mjs --video (the place, the material, the process) and use it as a muted loop with a poster frame. Defend its absence only if no clip fits the subject."
+  }
+ ],
+ "images": [
+  {
+   "viewport": "desktop",
+   "width": 1440,
+   "fold": "/Users/mac/Desktop/verify402/.taste-skill/inspect/desktop-fold.jpg",
+   "pages": [
+    "/Users/mac/Desktop/verify402/.taste-skill/inspect/desktop-page-01.jpg",
+    "/Users/mac/Desktop/verify402/.taste-skill/inspect/desktop-page-02.jpg"
+   ]
+  },
+  {
+   "viewport": "tablet",
+   "width": 768,
+   "fold": "/Users/mac/Desktop/verify402/.taste-skill/inspect/tablet-fold.jpg",
+   "pages": [
+    "/Users/mac/Desktop/verify402/.taste-skill/inspect/tablet-page-01.jpg"
+   ]
+  },
+  {
+   "viewport": "mobile",
+   "width": 390,
+   "fold": "/Users/mac/Desktop/verify402/.taste-skill/inspect/mobile-fold.jpg",
+   "pages": [
+    "/Users/mac/Desktop/verify402/.taste-skill/inspect/mobile-page-01.jpg"
+   ]
+  }
+ ]
+}

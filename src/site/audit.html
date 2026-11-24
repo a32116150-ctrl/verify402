@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Payment-flow review — find the window where you charge and deliver nothing · verify402</title>
+<meta name="description" content="A fixed-fee review of one x402 payment path: what is durable before settlement, what a retry gets, and where a crash leaves a charge with no response. 48-hour check or five-day full review. Findings with reproductions and fixes.">
+<meta name="google-site-verification" content="iGmI2QL110IkjnW0thU3DRZrdgQe_7mZsPWgkZVte7o">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+
+<header class="site-head">
+  <a class="brand" href="/" aria-label="verify402 home">verify<span>[</span>402<span>]</span></a>
+  <nav class="site-nav" aria-label="Primary">
+    <a href="/checks">Checks</a>
+    <a href="/preflight">Preflight</a>
+    <a href="/inspect">Inspect</a>
+    <a href="/directory">Directory</a>
+    <a href="/mcp">MCP</a>
+    <a href="/proof">Proof</a>
+    <a href="/activity">Activity</a>
+    <a href="/blog">Blog</a>
+    <a href="/board">Board</a>
+    <a href="/docs">Docs</a>
+  </nav>
+  <div class="site-actions">
+    <a class="site-status" href="/live"><span class="status-dot"></span><span data-block>snapshot · block —</span></a>
+    <a class="btn sm" href="/preflight#try">Run free check</a>
+    <details class="site-menu">
+      <summary>Menu</summary>
+      <nav aria-label="Menu">
+        <p class="menu-label">Start</p>
+        <a href="/preflight">Free gate</a>
+        <a href="/checks">Paid checks &amp; prices</a>
+        <a href="/start">Quickstart</a>
+        <a href="/mcp">MCP server</a>
+        <p class="menu-label">Explore</p>
+        <a href="/inspect">402 inspector</a>
+        <a href="/directory">402 directory</a>
+        <a href="/live">Live findings</a>
+        <a href="/activity">Activity</a>
+        <p class="menu-label">Trust</p>
+        <a href="/proof">Proof &amp; receipts</a>
+        <a href="/board">Public board</a>
+        <a href="/audit">Payment review</a>
+        <a href="/testers">Tester kit</a>
+        <p class="menu-label">Project</p>
+        <a href="/blog">Blog</a>
+        <a href="/docs">Documentation</a>
+        <a href="/donate">Donate</a>
+        <a href="/sponsor">Sponsor hosting</a>
+        <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">GitHub</a>
+      </nav>
+    </details>
+  </div>
+</header>
+
+<main>
+  <div class="wrap page-head">
+    <p class="eyebrow">x402 payment review · 48-hour option · fixed fee</p>
+    <h1>Your service can take the money<br>and deliver nothing.</h1>
+    <p class="lead">Not through a bug in USDC, and not through the facilitator. Through <b>ordering</b>: what is durable before the settle call, what a retry is allowed to be answered with, and what happens to a response nobody can find. I review one payment path and name the windows that cost you money — with a reproduction for each one.</p>
+    <div class="btn-row" style="margin-top:24px">
+      <a class="btn" href="#start">Start with a Route Check — $190</a>
+      <a class="btn ghost" href="#selfcheck">Test yourself first — six questions</a>
+    </div>
+    <p class="small muted" style="margin-top:14px">Reply within one business day · NDA signed before any access · no production keys, ever</p>
+  </div>
+
+  <section class="tight" id="selfcheck">
+    <div class="wrap">
+      <div class="sec-head">
+        <p class="eyebrow">Before you pay me anything</p>
+        <h2>Six questions. "Don't know" is the finding.</h2>
+        <p class="lead">Answer these about your own service. You do not need me to do this part — you need me if any answer is a guess.</p>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <span class="n">QUESTION 01</span>
+          <h3>Die between settle and record</h3>
+          <p>The rail accepts the payment. The process dies before anything about that payment is durable. When the payer retries, what do they get — the response, a charge with nothing behind it, or a fresh 402?</p>
+        </div>
+        <div class="step">
+          <span class="n">QUESTION 02</span>
+          <h3>Two copies, same payment</h3>
+          <p>Verification is read-only. Send the same signed payment three times at once. How many times does your handler run? If the answer is "once, because we have a lock", where is the lock written down?</p>
+        </div>
+        <div class="step">
+          <span class="n">QUESTION 03</span>
+          <h3>The answer while it is unknown</h3>
+          <p>A retry arrives and you cannot yet tell whether the settlement landed. What status code goes back, and does that answer ever invite the caller to sign a second payment for the same purchase?</p>
+        </div>
+        <div class="step">
+          <span class="n">QUESTION 04</span>
+          <h3>What deletes a paid response</h3>
+          <p>A timer, a deploy, a cache eviction, a TTL. Which one removes the stored response for a payment that already settled — and how long after the caller last asked?</p>
+        </div>
+        <div class="step">
+          <span class="n">QUESTION 05</span>
+          <h3>If it ends stuck</h3>
+          <p>The outcome never resolves. Is the record kept, the key blocked, and a human told — or does it quietly become <code>void</code> so the dashboard stays green?</p>
+        </div>
+        <div class="step">
+          <span class="n">QUESTION 06</span>
+          <h3>Who else can prove it</h3>
+          <p>If I asked you to show me the crash test that kills the process at each of those points, could you run it in the next ten minutes?</p>
+        </div>
+      </div>
+      <div class="callout warn" style="margin-top:24px">
+        <h3>Six questions, one honest answer</h3>
+        <p>Most services can answer one or two of these. The ones nobody can answer are where a payer loses money and stops trusting the endpoint. That gap is the entire engagement.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="offers">
+    <div class="wrap">
+      <div class="sec-head">
+        <p class="eyebrow">Four ways in</p>
+        <h2>Small, fast, and priced to say yes to.</h2>
+        <p class="lead">No discovery phase, no hourly billing, no retainer. Pick a scope, get a written quote and a date, and the work is one path — not an open-ended audit. Every price below is fixed; the scope on each card is the whole scope.</p>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <span class="n">24 HOURS</span>
+          <h3>Route Check — $190</h3>
+          <p>One route. One page. One answer: can this route take a payment and fail to deliver it — on a crash, on a concurrent retry, or on a lost reply — and exactly where. Plus the test that pins it.</p>
+          <p class="small muted">One route, one test, one page of findings. A second route is a second check. This is the cheap way to find out whether the rest is worth buying.</p>
+          <div class="btn-row" style="margin-top:16px"><a class="btn sm" href="mailto:a32116150@gmail.com?subject=Route%20Check%20%E2%80%94%20%24190&amp;body=Route%3A%0AWhere%20settlement%20happens%20(inline%2C%20async%2C%20or%20facilitator)%3A%0AWhat%20worries%20me%3A">Book a Route Check</a></div>
+        </div>
+        <div class="step">
+          <span class="n">48 HOURS</span>
+          <h3>Service Review — $590</h3>
+          <p>Every route on one service, one interleaving matrix. The six questions above answered with evidence, the exact sequence that loses a payment named, and a crash test for each route that shares the path.</p>
+          <p class="small muted">Written verdict either way: "the window is closed and here is why" is a real result. Most services stop here, because the fix is usually one ordering change.</p>
+          <div class="btn-row" style="margin-top:16px"><a class="btn sm" href="mailto:a32116150@gmail.com?subject=Service%20Review%20%E2%80%94%20%24590&amp;body=Service%3A%0ARoutes%20and%20prices%3A%0AWhere%20settlement%20happens%3A%0AWhat%20worries%20me%3A">Book a Service Review</a></div>
+        </div>
+        <div class="step">
+          <span class="n">5 WORKING DAYS</span>
+          <h3>Full Path Review — $1,290</h3>
+          <p>All eight checks: ordering, gating, idempotency identity, concurrency, every crash window, retry semantics, expiry and void, and the operator path. Written findings with severity, the interleaving, the symptom, and a fix for each — plus the walkthrough call.</p>
+          <p class="small muted">For a service with real volume or real money at stake per call. A test per finding, and a scoping call before it starts.</p>
+          <div class="btn-row" style="margin-top:16px"><a class="btn sm" href="mailto:a32116150@gmail.com?subject=Full%20Path%20Review%20%E2%80%94%20%241%2C290&amp;body=Service%3A%0AWhere%20settlement%20happens%3A%0AWhat%20worries%20me%3A">Book the full review</a></div>
+        </div>
+      </div>
+      <div class="callout" style="margin-top:24px">
+        <h3>Fix &amp; Tests — from $2,500, after a review</h3>
+        <p>I implement the ordering change in your repo, write the crash tests that pin it, and re-run every kill point until the invariants hold. Delivered as a pull request you can read, not a black box. Offered only after a review, so the fix is written against findings instead of guesses — and never sold before you have seen the findings.</p>
+      </div>
+      <p class="small muted" style="margin-top:18px">Founding rates: these prices are for the first five engagements, in exchange for a named reference — or an anonymous one, your call. After that they go up, because the case study will exist and I will not need to explain myself this much.</p>
+    </div>
+  </section>
+
+  <section class="soft" id="start">
+    <div class="wrap">
+      <div class="sec-head">
+        <p class="eyebrow">How it runs</p>
+        <h2>From email to answer in one week.</h2>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <span class="n">01 · SAME DAY</span>
+          <h3>You send one paragraph</h3>
+          <p>What the endpoint sells, where settlement happens, and the failure that worries you. No form, no discovery call required. Email <a class="textlink" href="mailto:a32116150@gmail.com?subject=Payment%20review">a32116150@gmail.com</a>.</p>
+        </div>
+        <div class="step">
+          <span class="n">02 · NEXT DAY</span>
+          <h3>Written scope and date</h3>
+          <p>One page: what is in scope, what is not, the fixed price, and the day you get the report. You approve it or you do not. Nothing is charged before that.</p>
+        </div>
+        <div class="step">
+          <span class="n">03 · ON ACCESS</span>
+          <h3>Read-only, no keys</h3>
+          <p>Repo access to the payment path, or a staging endpoint, or — if neither exists — a 20-line description of the flow. Mutual NDA signed first if you want one. I never ask for production credentials.</p>
+        </div>
+        <div class="step">
+          <span class="n">04 · ON THE DATE</span>
+          <h3>Findings, then a call</h3>
+          <p>The report arrives on the date quoted. Each finding has a reproduction. Then 30 minutes to walk it, argue with it, and decide what to fix first.</p>
+        </div>
+      </div>
+      <div class="callout good" style="margin-top:24px">
+        <h3>What I need from you, minimum</h3>
+        <p>If you cannot share code, a diagram of the request path plus the exact order of these five writes is enough to start: <b>claim → handler → store response → settle → receipt</b>. If you cannot produce that order confidently, that is already the first finding.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="sec-head">
+        <p class="eyebrow">Why this person</p>
+        <h2>This is the exact thing I work on.</h2>
+      </div>
+      <div class="proof-grid">
+        <div class="pcard2">
+          <p class="tag"><span class="dot"></span>Specification · under review</p>
+          <h3>The recovery extension in x402</h3>
+          <p>I wrote <a class="textlink" href="https://github.com/x402-foundation/x402/pull/3848" rel="noopener">x402-foundation/x402#3848</a>: when a retry may be served for free, what must be durable before settlement, and how a retry is answered while the outcome is unknown. Two independent engineers reviewed it across two rounds — including the crash window that broke the first version.</p>
+        </div>
+        <div class="pcard2">
+          <p class="tag"><span class="dot"></span>Adversarial record</p>
+          <h3>Two real defects, reproduced in public</h3>
+          <p>The naive version of this design was reproduced with two defects: recovery before settlement, and promotion by response hash alone. Both are in the spec's version history with the reviewers named. I would rather show you where I was wrong than sell you certainty.</p>
+        </div>
+        <div class="pcard2">
+          <p class="tag"><span class="dot"></span>Harness · 29 kill points</p>
+          <h3>Crash conformance, results published</h3>
+          <p>I built a harness that kills a service at 29 points and compares the state that comes back out. The full result table is published in the repository, <a class="textlink" href="https://github.com/a32116150-ctrl/verify402/blob/master/docs/control-12-conformance.md" rel="noopener">docs/control-12-conformance.md</a> — <b>including the vectors where my own implementation diverges, with the reason for each</b>. Most of those are deliberate design differences, and saying which is which is the whole point. A review that only shows you its passes is not a review.</p>
+        </div>
+        <div class="pcard2">
+          <p class="tag"><span class="dot gray"></span>Evidence first</p>
+          <h3>Evidence before logos.</h3>
+          <p>Two outside automated payers have settled, 0.03 USDC each. What it has is a reviewed specification, a public conformance record, and a reference implementation you can read line by line. Every claim can be checked before you commit to it.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="soft">
+    <div class="wrap">
+      <div class="sec-head">
+        <p class="eyebrow">Boundaries</p>
+        <h2>What this is not.</h2>
+      </div>
+      <div class="hero-grid" style="align-items:start">
+        <div class="callout warn">
+          <h3>Not a network or infrastructure pentest</h3>
+          <p>I do not test your servers, your firewall, your cloud configuration, or your network perimeter. I do not attack you. If you need that, I will say so and point you at people who do it properly — a payment review is not a substitute for one.</p>
+        </div>
+        <div class="callout">
+          <h3>Not a smart-contract audit</h3>
+          <p>I do not review Solidity or move funds. The scope is your service layer: the code that receives a payment, decides what to do, records it, and answers the retry. If your bug is in a contract or a bridge, it is out of scope and I will tell you in the first email.</p>
+        </div>
+        <div class="callout">
+          <h3>Not a rewrite</h3>
+          <p>I name windows and give fixes. If implementing them means re-architecting your service, that is your call, your team, and a separate piece of work — I will not sell you a rewrite disguised as a review.</p>
+        </div>
+        <div class="callout good">
+          <h3>What it is</h3>
+          <p>A short, fixed-price, evidence-backed answer to one question: <b>can this service take money and fail to deliver, and if so exactly how?</b> For a team selling to agents, that answer is the difference between a support incident and a business that agents return to.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="sec-head">
+        <p class="eyebrow">Objections, answered</p>
+        <h2>The questions you are about to ask.</h2>
+      </div>
+      <div>
+        <details class="request" data-ui>
+          <summary>"We use a facilitator — doesn't that handle this?"</summary>
+          <p>The facilitator executes the settlement. It cannot know what your process did before the call, what it did after, or whether the record survived. The window between your settle call and your durable write is yours, not theirs. That is precisely where a payer gets charged twice or charged for nothing.</p>
+        </details>
+        <details class="request" data-ui>
+          <summary>"We have tests. The suite is green."</summary>
+          <p>Tests that do not kill the process mid-write cannot cross the window. A green suite tells you the happy path is intact; it says nothing about the four milliseconds between the rail accepting a payment and your store knowing about it. That is the only thing I test.</p>
+        </details>
+        <details class="request" data-ui>
+          <summary>"Our volume is tiny. Why would anyone bother?"</summary>
+          <p>A double charge is not a volume problem, it is a trust problem. The agent that got charged twice does not file a complaint — it stops calling, and so does its owner. One lost payer costs more than this review.</p>
+        </details>
+        <details class="request" data-ui>
+          <summary>"Can you sign an NDA? Can we limit what you see?"</summary>
+          <p>Yes, mutual NDA before any access. Scope can be one file, one module, or a redacted diagram. I do not need your users' data, your keys, or your production environment — and I will not ask for them.</p>
+        </details>
+        <details class="request" data-ui>
+          <summary>"What if you find nothing?"</summary>
+          <p>You get a written statement of what was checked, why it holds, and which assumptions would break it. That document is worth having: it is the thing you show a customer who asks whether your endpoint can lose their payment. Fees are not refunded, and the statement is the deliverable.</p>
+        </details>
+        <details class="request" data-ui>
+          <summary>"How do we pay, and when?"</summary>
+          <p>Invoice on approval of the written scope, before work starts. Bank transfer or USDC. No subscription, no auto-renew, no card on file. If the report is late, you do not pay until it arrives.</p>
+        </details>
+        <details class="request" data-ui>
+          <summary>"Is this for solo builders or for teams?"</summary>
+          <p>Either, but the economics differ. A solo builder usually wants the $190 route check before shipping. A team with a paid endpoint and real volume wants the full review, because one incident costs more than the fee. If you are pre-revenue, say so in the email and I will tell you honestly whether it is worth your money yet.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <section class="tight">
+    <div class="wrap">
+      <div class="callout">
+        <h3>One email, one paragraph, one answer</h3>
+        <p>Write to <a class="textlink" href="mailto:a32116150@gmail.com?subject=Payment%20review%20%E2%80%94%20one%20endpoint&amp;body=Endpoint%3A%0AWhere%20settlement%20happens%20(inline%2C%20async%2C%20or%20via%20a%20facilitator)%3A%0AThe%20failure%20I%20am%20worried%20about%3A%0AOur%20volume%20(optional)%3A">a32116150@gmail.com</a> with the endpoint, where settlement happens, and the failure that worries you. You get a real reply within one business day — including "this is not worth your money yet" if that is the honest answer.</p>
+        <div class="btn-row" style="margin-top:18px">
+          <a class="btn" href="mailto:a32116150@gmail.com?subject=Payment%20review%20%E2%80%94%20one%20endpoint&amp;body=Endpoint%3A%0AWhere%20settlement%20happens%20(inline%2C%20async%2C%20or%20via%20a%20facilitator)%3A%0AThe%20failure%20I%20am%20worried%20about%3A%0AOur%20volume%20(optional)%3A">Email the endpoint</a>
+          <button class="btn ghost" data-copy="Endpoint:&#10;Where settlement happens (inline, async, or via a facilitator):&#10;The failure I am worried about:&#10;Our volume (optional):">Copy the email template</button>
+        </div>
+      </div>
+      <p class="small muted" style="margin-top:16px">Invoiced on approval of scope. No account, no form, no tracking pixel. Read the source first if you prefer: <a class="textlink" href="https://github.com/a32116150-ctrl/verify402" rel="noopener">github.com/a32116150-ctrl/verify402</a>.</p>
+    </div>
+  </section>
+</main>
+
+<footer class="site-foot">
+  <div class="foot-mark" aria-hidden="true">verify<span>[402]</span></div>
+  <div class="foot-links">
+    <div>
+      <h2>Product</h2>
+      <a href="/inspect">402 inspector</a>
+      <a href="/directory">402 directory</a>
+      <a href="/preflight">Preflight gate</a>
+      <a href="/checks">The six checks</a>
+      <a href="/mcp">MCP server</a>
+      <a href="/live">Live findings</a>
+      <a href="/activity">Activity</a>
+      <a href="/testers">Tester kit</a>
+      <a href="/blog">Blog</a>
+      <a href="/start">Quickstart</a>
+    </div>
+    <div>
+      <h2>Project</h2>
+      <a href="/proof">Proof &amp; receipts</a>
+      <a href="/docs">Documentation</a>
+      <a href="/donate">Donate</a>
+      <a href="/sponsor">Sponsor hosting</a>
+      <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">Open-source client &amp; gate</a>
+      <a href="https://github.com/x402-foundation/x402/issues/3847" rel="noopener">x402 proposal</a>
+    </div>
+    <div>
+      <h2>For machines</h2>
+      <a href="/.well-known/verify402.json">Service manifest</a>
+      <a href="/openapi.json">OpenAPI 3.1</a>
+      <a href="/llms.txt">llms.txt</a>
+      <a href="/findings">/findings</a>
+      <a href="/blog/rss.xml">RSS</a>
+    </div>
+    <div>
+      <h2>For teams</h2>
+      <p class="foot-note">Running a paid x402 endpoint and not sure what happens when settlement lands and the response does not?</p>
+      <a href="/audit">Payment-flow review</a>
+      <a href="mailto:a32116150@gmail.com?subject=verify402%20walkthrough">Talk to the builder</a>
+      <a href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener">npm package</a>
+    </div>
+  </div>
+  <p class="foot-legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data. This instance settles real USDC on Base mainnet / Solana mainnet over x402. Real USDC has settled on Base mainnet, including payments from outside agents. Sponsorship is voluntary and buys no product, priority, token, equity, or verdict. Payment reviews are consulting work, not a guarantee that a service is secure.</p>
+</footer>
+
+<script src="/assets/site.js"></script>
+</body>
+</html>

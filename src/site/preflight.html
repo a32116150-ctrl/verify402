@@ -1,0 +1,507 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Preflight — verify402</title>
+<meta name="description" content="The free pre-signing gate for AI agents and users: paste a token address and spender to check an approval, or validate an x402 payment request or chain transaction, get PASS / CAUTION / BLOCK with typed reasons, and a short-lived receipt bound to the exact intent and block.">
+<meta name="google-site-verification" content="iGmI2QL110IkjnW0thU3DRZrdgQe_7mZsPWgkZVte7o">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/site.css">
+<link rel="modulepreload" href="/assets/hairline.js">
+</head>
+<body>
+
+<header class="site-head">
+  <a class="brand" href="/" aria-label="verify402 home">verify<span>[</span>402<span>]</span></a>
+  <nav class="site-nav" aria-label="Primary">
+    <a href="/checks">Checks</a>
+    <a href="/preflight">Preflight</a>
+    <a href="/inspect">Inspect</a>
+    <a href="/directory">Directory</a>
+    <a href="/mcp">MCP</a>
+    <a href="/proof">Proof</a>
+    <a href="/activity">Activity</a>
+    <a href="/blog">Blog</a>
+    <a href="/board">Board</a>
+    <a href="/docs">Docs</a>
+  </nav>
+  <div class="site-actions">
+    <a class="site-status" href="/live"><span class="status-dot"></span><span data-block>snapshot · block —</span></a>
+    <a class="btn sm" href="/preflight#try">Run free check</a>
+    <details class="site-menu">
+      <summary>Menu</summary>
+      <nav aria-label="Menu">
+        <p class="menu-label">Start</p>
+        <a href="/preflight">Free gate</a>
+        <a href="/checks">Paid checks &amp; prices</a>
+        <a href="/start">Quickstart</a>
+        <a href="/mcp">MCP server</a>
+        <p class="menu-label">Explore</p>
+        <a href="/inspect">402 inspector</a>
+        <a href="/directory">402 directory</a>
+        <a href="/live">Live findings</a>
+        <a href="/activity">Activity</a>
+        <p class="menu-label">Trust</p>
+        <a href="/proof">Proof &amp; receipts</a>
+        <a href="/board">Public board</a>
+        <a href="/audit">Payment review</a>
+        <a href="/testers">Tester kit</a>
+        <p class="menu-label">Project</p>
+        <a href="/blog">Blog</a>
+        <a href="/docs">Documentation</a>
+        <a href="/donate">Donate</a>
+        <a href="/sponsor">Sponsor hosting</a>
+        <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">GitHub</a>
+      </nav>
+    </details>
+  </div>
+</header>
+
+<main>
+
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <p class="eyebrow">Free · before the signature</p>
+        <h1>The check before the signature.</h1>
+        <p class="lead">One call for any x402 payment request or chain transaction. It returns <b>PASS / CAUTION / BLOCK</b>, the reasons, the checks that actually ran, and a short-lived receipt bound to the exact intent — so an executor can refuse to sign without one.</p>
+        <div class="btn-row">
+          <a class="btn" href="#try">Try a free check</a>
+          <a class="btn ghost" href="/docs#preflight">The request shape</a>
+          <a class="btn ghost" href="/start">5-minute quickstart</a>
+        </div>
+        <p class="hero-note">
+          <span><span class="dot"></span>Free · no wallet</span>
+          <span>Payments: Base mainnet</span>
+          <span>Analysis: mainnet chain data</span>
+          <span>Fail-closed</span>
+        </p>
+      </div>
+      <aside>
+        <div class="vcard" data-ui>
+          <div class="vcard-head"><span>POST /preflight · free</span><span class="ok">● gate</span></div>
+          <div class="vcard-body">
+            <div class="vrow"><span class="pair">payment</span><span class="verdict">PASS</span><span class="meta">canonical USDC · payee ok</span></div>
+            <div class="vrow"><span class="pair">approve</span><span class="verdict warn">CAUTION</span><span class="meta">unlimited spender</span></div>
+            <div class="vrow"><span class="pair">swap</span><span class="verdict bad">BLOCK</span><span class="meta">simulation reverted</span></div>
+          </div>
+          <div class="vcard-foot">Receipt bound to the intent + block · expires in 90s</div>
+        </div>
+        <p class="small muted" style="margin-top:12px">A captcha verifies the agent. This verifies the <b>transaction</b> — and it says when it cannot.</p>
+      </aside>
+    </div>
+  </section>
+
+  <section id="try" class="tight">
+    <div class="wrap">
+      <div class="try-shell">
+        <div class="try-head">
+          <div>
+            <p class="eyebrow">Try it · free · no wallet</p>
+            <h2>Check an approval before you sign it.</h2>
+            <p class="lead">Paste the token and spender. We build the unlimited approval and ask the live gate whether it should be signed. Nothing is signed or paid.</p>
+          </div>
+          <div class="try-badges" aria-label="Test properties">
+            <span class="chip">Live chain data</span>
+            <span class="chip">No wallet</span>
+            <span class="chip">Fail-closed</span>
+          </div>
+        </div>
+
+        <div class="try-grid">
+          <div class="try-panel">
+            <form id="approval-form" class="try-approval" novalidate>
+              <p class="try-kicker">Simple check</p>
+              <h3>Paste a token address. Check the approval.</h3>
+              <p class="try-help">We build an unlimited approval and ask the live gate whether it should be signed. No wallet, no payment.</p>
+              <div class="try-fields">
+                <div class="try-field">
+                  <label for="approval-token">Token address</label>
+                  <input id="approval-token" class="try-input-sm" type="text" inputmode="text" autocomplete="off" spellcheck="false" placeholder="0x…" aria-describedby="approval-help">
+                </div>
+                <div class="try-field">
+                  <label for="approval-spender">Spender address</label>
+                  <input id="approval-spender" class="try-input-sm" type="text" inputmode="text" autocomplete="off" spellcheck="false" placeholder="0x…" aria-describedby="approval-help">
+                </div>
+                <div class="try-field try-field-network">
+                  <label for="approval-chain">Network</label>
+                  <select id="approval-chain" class="try-input-sm" aria-describedby="approval-help">
+                    <option value="8453" selected>Base</option>
+                    <option value="1">Ethereum</option>
+                    <option value="42161">Arbitrum One</option>
+                  </select>
+                </div>
+              </div>
+              <div class="try-actions">
+                <button class="btn" id="approval-run" type="submit">Check approval</button>
+                <button class="try-linkbtn" id="approval-sample" type="button">Use Base USDC sample</button>
+                <span class="try-status" id="approval-status" role="status" aria-live="polite"></span>
+              </div>
+              <p class="try-help" id="approval-help">The spender is the contract asking for permission to move your tokens — it appears as “spender” in the signature prompt. This checks the token contract, the spender, the calldata, and the block. It is not a token safety or sellability rating. The token must exist on the selected network.</p>
+            </form>
+
+            <details class="try-advanced">
+              <summary>Advanced: paste the raw JSON</summary>
+              <form id="preflight-form" novalidate>
+              <div class="try-presets" role="group" aria-label="Sample requests">
+                <button type="button" class="try-preset is-active" data-preflight-sample="payment">Payment · expect PASS</button>
+                <button type="button" class="try-preset" data-preflight-sample="block">Unlimited approval · expect BLOCK</button>
+              </div>
+              <label class="try-label" for="preflight-request">Request JSON</label>
+              <textarea id="preflight-request" class="try-input" rows="16" maxlength="60000" spellcheck="false" autocapitalize="off" autocomplete="off" aria-describedby="preflight-help"></textarea>
+              <p class="try-help" id="preflight-help">This sends the JSON to <code class="inline">POST /preflight</code>. Do not paste private keys or seed phrases. The first call after idle can take ~30s; rate limits apply.</p>
+              <div class="try-actions">
+                <button class="btn" id="preflight-run" type="submit">Run free check</button>
+                <button class="btn ghost" id="preflight-reset" type="button">Reset sample</button>
+                <span class="try-status" id="preflight-status" role="status" aria-live="polite">Ready</span>
+              </div>
+              </form>
+              <noscript><p class="small muted" style="margin-top:10px">JavaScript is off. Use the curl examples below, or enable JavaScript for the in-browser check.</p></noscript>
+            </details>
+          </div>
+
+          <div class="try-result" id="preflight-result" aria-live="polite" data-ui>
+            <div id="preflight-empty">
+              <p class="try-empty-title">Ready when you are.</p>
+              <p class="small muted">Run a check to see the verdict, the reasons, the checks that ran, and the receipt.</p>
+            </div>
+            <div id="preflight-output" hidden>
+              <div class="try-verdict-row">
+                <div>
+                  <p class="try-kicker">Verdict</p>
+                  <p class="try-verdict" id="preflight-verdict">—</p>
+                </div>
+                <p class="try-meta" id="preflight-meta"></p>
+              </div>
+              <p class="try-plain" id="preflight-plain"></p>
+              <dl class="try-kv">
+                <dt>Block</dt><dd id="preflight-block">—</dd>
+                <dt>Receipt</dt><dd id="preflight-receipt">—</dd>
+                <dt>Expires</dt><dd id="preflight-expires">—</dd>
+              </dl>
+              <div class="try-section">
+                <p class="try-kicker">Reasons</p>
+                <ul class="try-reasons" id="preflight-reasons"></ul>
+              </div>
+              <div class="try-section">
+                <p class="try-kicker">Checked</p>
+                <p class="try-pills" id="preflight-checked">—</p>
+              </div>
+              <div class="try-section">
+                <p class="try-kicker">Not checked</p>
+                <p class="try-pills muted" id="preflight-notchecked">—</p>
+              </div>
+              <details class="try-raw">
+                <summary>Raw response</summary>
+                <pre id="preflight-raw"></pre>
+              </details>
+              <div class="try-actions">
+                <button class="btn ghost" id="preflight-copy" type="button">Copy JSON</button>
+                <a class="btn ghost" id="preflight-report" href="https://github.com/a32116150-ctrl/verify402/issues/new?template=tester-feedback.yml" target="_blank" rel="noopener">Report this result</a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="try-feedback">
+          <p><b>3 testers wanted.</b> Tell us about setup friction or a false PASS. <a class="textlink" href="https://github.com/a32116150-ctrl/verify402/blob/master/TESTING.md" rel="noopener">5-minute tester guide</a> · <a class="textlink" href="https://github.com/a32116150-ctrl/verify402/issues/new?template=tester-feedback.yml" rel="noopener">Send feedback</a></p>
+          <p class="small muted">No wallet, account, or paid call. The gate never moves funds.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="sec-head with-figure">
+        <div class="sec-copy">
+          <p class="eyebrow">Two intents, one verdict</p>
+          <h2>One gate for both.</h2>
+          <p class="lead">“If I sign this, what will the chain do — and is that what I think it is?” The gate answers the part that is measurable at a block, and names the part that is not.</p>
+        </div>
+        <figure class="hairline-block">
+          <div class="hairline-figure" data-hairline-figure="query" data-intensity="0.55" data-label="A question mark built as a bent bar over a loose ball."></div>
+          <figcaption>Ask before you sign.</figcaption>
+        </figure>
+      </div>
+      <div class="proof-grid" style="margin-top:40px">
+        <div class="pcard2">
+          <p class="tag"><span class="dot"></span>Intent · payment</p>
+          <h3>Validate the 402 before you pay it.</h3>
+          <p>Checks the scheme, CAIP-2 network, the payment asset (canonical USDC, or another recognized dollar stable such as USDT, DAI, or USDG, named instead of flagged), raw amount, <code class="inline">payTo</code>, resource URL, timeout and authorization window. On EVM it also reads the payer's USDC balance. A swapped <code class="inline">payTo</code> or a lookalike asset is exactly the failure this catches.</p>
+        </div>
+        <div class="pcard2">
+          <p class="tag"><span class="dot"></span>Intent · transaction</p>
+          <h3>Simulate the call, decode the calldata.</h3>
+          <p>Decodes <code class="inline">transfer</code>, <code class="inline">approve</code>, <code class="inline">transferFrom</code>, <code class="inline">permit</code>, and common V2/V3 swap selectors. Checks unlimited approvals, spenders, swap deadlines, zero minimum output and the output recipient. Then simulates the call from your wallet at the current block. <b>EVM only today</b> (Ethereum, Arbitrum, Base).</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="soft">
+    <div class="wrap">
+      <div class="sec-head">
+        <p class="eyebrow">What it answers</p>
+        <h2>Three verdicts, because two would lie.</h2>
+      </div>
+      <div class="table-wrap" style="margin-top:32px">
+        <table class="table">
+          <thead><tr><th>Verdict</th><th>Meaning</th><th>What an agent should do</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">PASS</td><td>Every check in <code class="inline">checked</code> passed at this fresh pinned block. On EVM, &gt;30s is CAUTION and &gt;120s is BLOCK.</td><td>Proceed. Still read <code class="inline">notChecked</code>.</td></tr>
+            <tr><td class="mono">CAUTION</td><td>A check needs a decision: an unvetted spender, a non-canonical asset, unknown calldata, no <code class="inline">from</code> to simulate.</td><td>Surface the reasons to the operator. Sign only with explicit acknowledgement.</td></tr>
+            <tr><td class="mono">BLOCK</td><td>A hard check failed: a revert, a wrong asset, an expired authorization, a non-contract target, an allowlist mismatch.</td><td>Do not sign. Change the transaction, not the gate.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout" style="margin-top:28px">
+        <h3>Fail-closed is part of the contract</h3>
+        <p>If the chain cannot be read, the gate returns <b>503</b> and issues no receipt. An executor should refuse to sign without a verifiable receipt — a fast wrong answer is worse than a slow honest one.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <article id="request">
+        <p class="eyebrow">01 · Payment</p>
+        <h2 style="margin-top:14px">Check the 402 challenge.</h2>
+        <p class="lead" style="margin-top:14px">Pass the challenge as your agent received it. <code class="inline">from</code> is optional, but supplying it enables the balance check and makes the verdict stronger.</p>
+        <div style="margin-top:24px">
+          <p class="code-cap">Request</p>
+<pre><span class="c">curl -X POST</span> https://vex402.online/preflight \
+  -H <span class="g">"Content-Type: application/json"</span> \
+  -d <span class="y">'{
+    "kind": "payment",
+    "payment": {
+      "scheme": "exact",
+      "network": "eip155:8453",
+      "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "amount": "10000",
+      "payTo": "0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb",
+      "resource": "https://vex402.online/verify",
+      "maxTimeoutSeconds": 60
+    },
+    "policy": { "maxAmountUsd": 0.25, "allowedResourceHosts": ["vex402.online"] }
+  }'</span></pre>
+        </div>
+        <div class="callout" style="margin-top:24px">
+          <h3>Optional: bind the payout wallet and local obligation state</h3>
+          <p>The public gate has no cross-process payment ledger. If your agent already keeps one, pass it in:</p>
+<pre>{
+  <span class="y">"payment"</span>: {
+    <span class="y">"idempotencyKey"</span>: <span class="g">"pay-2026-10-24-001"</span>,
+    <span class="y">"payTo"</span>: <span class="g">"0x…"</span>,
+    …
+  },
+  <span class="y">"policy"</span>: {
+    <span class="y">"sellerPayoutWallets"</span>: [<span class="g">"0xSellerPayout"</span>],
+    <span class="y">"sellerPayoutManifest"</span>: {
+      <span class="y">"url"</span>: <span class="g">"https://seller.example/.well-known/verify402.json"</span>,
+      <span class="y">"expectedSigner"</span>: <span class="g">"0xSellerSigner"</span>
+    },
+    <span class="y">"obligation"</span>: {
+      <span class="y">"settledKeys"</span>: [<span class="g">"pay-2026-10-23-014"</span>],
+      <span class="y">"spentUsd"</span>: <span class="g">0.24</span>,
+      <span class="y">"grantUsd"</span>: <span class="g">0.25</span>
+    }
+  }
+}</pre>
+          <p><code class="inline">sellerPayoutWallets</code> is only a caller-supplied allowlist. A match adds <code class="inline">payee_payout_allowlist</code>, not a binding. <code class="inline">sellerPayoutManifest</code> fetches a seller-signed manifest from a caller-pinned HTTPS origin outside the 402; only a verified manifest match adds <code class="inline">payee_payout_binding</code>. A settled key is <b>BLOCK</b>; adding this payment to <code class="inline">spentUsd</code> above <code class="inline">grantUsd</code> is <b>BLOCK</b>. Without this state, both gaps stay named in <code class="inline">notChecked</code>.</p>
+        </div>
+        <div style="margin-top:24px">
+          <p class="code-cap">Response · abbreviated</p>
+<pre>{
+  <span class="y">"verdict"</span>: <span class="g">"PASS"</span>,
+  <span class="y">"sign_allowed"</span>: <span class="g">true</span>,
+  <span class="y">"requires_ack"</span>: <span class="g">false</span>,
+  <span class="y">"reasons"</span>: [],
+  <span class="y">"checked"</span>: [<span class="g">"scheme"</span>, <span class="g">"network"</span>, <span class="g">"asset"</span>, <span class="g">"amount"</span>, <span class="g">"payee"</span>, <span class="g">"resource_url"</span>, <span class="g">"resource_host"</span>, <span class="g">"payer_balance"</span>, <span class="g">"block_freshness"</span>],
+  <span class="y">"notChecked"</span>: [<span class="g">"recipient reputation"</span>, <span class="g">"sanctions screening"</span>, <span class="g">"payment signature / signed payload"</span>, <span class="g">"facilitator settlement"</span>, <span class="g">"off-chain promises"</span>, <span class="g">"counterparty identity / tool metadata"</span>, <span class="g">"payTo ownership / proven seller payout wallet"</span>, <span class="g">"payee wallet ownership (seller-signed manifest only)"</span>, <span class="g">"obligation state (idempotency key, cumulative spend, grant balance)"</span>, <span class="g">"prompt injection / hidden Unicode in tool output"</span>],
+  <span class="y">"payeeBinding"</span>: {
+    <span class="y">"source"</span>: <span class="g">"seller_manifest"</span>,
+    <span class="y">"matched"</span>: <span class="g">true</span>,
+    <span class="y">"origin"</span>: <span class="g">"https://seller.example"</span>,
+    <span class="y">"signer"</span>: <span class="g">"0xSellerSigner"</span>,
+    <span class="y">"expiresAt"</span>: <span class="g">"2026-11-24T00:00:00Z"</span>,
+    <span class="y">"manifestHash"</span>: <span class="g">"…"</span>
+  },
+  <span class="y">"receipt"</span>: {
+    <span class="y">"spec"</span>: <span class="g">"verify402/preflight-receipt@1"</span>,
+    <span class="y">"intentHash"</span>: <span class="g">"…"</span>,
+    <span class="y">"requestHash"</span>: <span class="g">"…"</span>,
+    <span class="y">"blockNumber"</span>: <span class="g">48277717</span>,
+    <span class="y">"expiresAt"</span>: <span class="g">"2026-10-19T…Z"</span>,
+    <span class="y">"signature"</span>: <span class="g">"…"</span>
+  }
+}</pre>
+        </div>
+      </article>
+
+      <article id="transaction">
+        <p class="eyebrow">02 · Transaction</p>
+        <h2 style="margin-top:14px">Check the calldata and the simulation.</h2>
+        <p class="lead" style="margin-top:14px">EVM only today (Ethereum, Arbitrum, Base). If <code class="inline">from</code> is present, the gate simulates the call at the current block. Without it, simulation is skipped and the verdict is at most <b>CAUTION</b> — because a call from the zero address proves nothing.</p>
+        <div style="margin-top:24px">
+          <p class="code-cap">Request</p>
+<pre><span class="c">POST</span> /preflight
+{
+  <span class="y">"kind"</span>: <span class="g">"transaction"</span>,
+  <span class="y">"chainId"</span>: 8453,
+  <span class="y">"to"</span>: <span class="g">"0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"</span>,
+  <span class="y">"data"</span>: <span class="g">"0x095ea7b3…"</span>,
+  <span class="y">"value"</span>: <span class="g">"0"</span>,
+  <span class="y">"policy"</span>: {
+    <span class="y">"forbidUnlimitedApproval"</span>: <span class="g">true</span>,
+    <span class="y">"allowedSpenders"</span>: [<span class="g">"0x…"</span>]
+  }
+}</pre>
+        </div>
+        <p class="small muted" style="margin-top:18px">Decoded actions: <code class="inline">transfer</code>, <code class="inline">approve</code>, <code class="inline">transferFrom</code>, <code class="inline">permit</code>, Uniswap V2 exact-in and V3 <code class="inline">exactInputSingle</code>. Unrecognized selectors are a <b>CAUTION</b>, never a silent pass.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="soft">
+    <div class="wrap">
+      <div class="sec-head">
+        <p class="eyebrow">The honesty boundary</p>
+        <h2>Checked, and deliberately not checked.</h2>
+      </div>
+      <div class="table-wrap" style="margin-top:32px">
+        <table class="table">
+          <thead><tr><th>Checked</th><th>Not checked</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>Network, asset, amount, payee, resource URL, resource host when policy binds it, timeout, authorization window; payout allowlist when the caller supplies <code class="inline">sellerPayoutWallets</code>; signed payout binding when a verified <code class="inline">sellerPayoutManifest</code> matches</td>
+              <td>Whether the recipient is a scammer or a sanctioned address; independent proof that the seller controls the payout wallet</td>
+            </tr>
+            <tr>
+              <td>EVM block freshness: &gt;30s CAUTION, &gt;120s BLOCK</td>
+              <td>Gas price/limit chosen by the signer; raw signed-transaction binding</td>
+            </tr>
+            <tr>
+              <td>Payment request fields and authorization window</td>
+              <td>Payment signature/signed payload; facilitator settlement</td>
+            </tr>
+            <tr>
+              <td>Canonical USDC and a sane raw amount; payer balance on the payment network when a payer is supplied</td>
+              <td>Contract audits, proxy upgrades, owner privileges</td>
+            </tr>
+            <tr>
+              <td>Calldata decode, contract bytecode, and a <code class="inline">eth_call</code> simulation</td>
+              <td>Full balance-delta / state-change simulation</td>
+            </tr>
+            <tr>
+              <td>Unlimited approvals, spender allowlists, swap deadline, minimum output, output recipient</td>
+              <td>MEV, sandwich protection, route quality beyond the decoded minimum</td>
+            </tr>
+            <tr>
+              <td>Receipt integrity: HMAC, intent hash, block, expiry; settled idempotency key and cumulative spend/grant when the caller supplies <code class="inline">policy.obligation</code></td>
+              <td>Counterparty identity, tool metadata, obligation ledger persistence across processes, independent payTo ownership proof, hidden Unicode / prompt injection in tool output, or off-chain promises: “the seller will deliver after you pay”</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="small muted" style="margin-top:20px">A PASS means the left column passed at that fresh block. A block with no timestamp is a 503, not a pass. It is not a guarantee that the transaction will execute, settle, or be honest, and it is not a counterparty audit or prompt-injection filter. The right column is named on every response so nobody has to infer it.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="sec-head">
+        <p class="eyebrow">Receipts</p>
+        <h2>A receipt an executor can actually check.</h2>
+        <p class="lead">Every response carries a short-lived HMAC-signed receipt. The intent hash binds the exact normalized request, the request hash binds the original body, the fresh block pins the chain state, and the expiry bounds reuse.</p>
+      </div>
+      <div class="steps" style="margin-top:40px">
+        <div class="step" data-ui>
+          <h3>Call the gate</h3>
+          <p>One request, one verdict, reasons and a receipt. Free, rate-limited, and fail-closed.</p>
+        </div>
+        <div class="step" data-ui>
+          <h3>Verify the receipt</h3>
+          <p><code class="inline">POST /preflight/verify</code> recomputes the HMAC, checks the expiry, and re-hashes the caller's normalized <code class="inline">intent</code> and original <code class="inline">request</code>. Require both <code class="inline">intentBound</code> and <code class="inline">requestBound</code>; a receipt-only check stays compatible but is unbound. No chain call.</p>
+        </div>
+        <div class="step" data-ui>
+          <h3>Sign or refuse</h3>
+          <p>An executor should require <code class="inline">sign_allowed</code>. A <b>CAUTION</b> is an explicit decision, not a pass. <a class="textlink" href="https://github.com/a32116150-ctrl/verify402/blob/master/examples/preflight-guard.mjs" rel="noopener">Reference guard</a>. Put the gate in an agent with the <a class="textlink" href="/mcp">MCP server</a>.</p>
+        </div>
+      </div>
+      <div class="callout good" style="margin-top:32px">
+        <h3>Why is the gate free?</h3>
+        <p>Because it has to be in the path before every signature. A toll booth there would be a tax on safety. The deep measurements — <b>/verify</b>, <b>/safety</b>, <b>/route</b>, <b>/quotecheck</b>, <b>/depth</b> — remain paid. The gate is the front door, not a replacement for them.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="soft">
+    <div class="wrap">
+      <div class="sec-head">
+        <p class="eyebrow">Related guides</p>
+        <h2>Go deeper on the request in front of you.</h2>
+        <p class="lead">Each guide starts from a real endpoint and states what the check does not cover.</p>
+      </div>
+      <div class="proof-grid" style="margin-top:32px">
+        <div class="pcard2"><p class="tag">Agents</p><h3><a class="textlink" href="/ai-agent-payment-security">AI agent payment security</a></h3><p>The pre-signing gate, MCP payment safety, and what the executor must enforce.</p></div>
+        <div class="pcard2"><p class="tag">USDC</p><h3><a class="textlink" href="/verify-usdc-payment-request">Verify a USDC payment request</a></h3><p>Network, asset, amount, payee, resource, timeout and the short-lived receipt.</p></div>
+        <div class="pcard2"><p class="tag">Approvals</p><h3><a class="textlink" href="/token-approval-checker">Token approval checker</a></h3><p>Decode an unlimited approval before the wallet asks you to sign it.</p></div>
+        <div class="pcard2"><p class="tag">Receipts</p><h3><a class="textlink" href="/agent-payment-receipt">Agent payment receipt</a></h3><p>What a receipt binds, how to verify it, and why it is not a guarantee.</p></div>
+        <div class="pcard2"><p class="tag">Endpoints</p><h3><a class="textlink" href="/x402-endpoint-checker">x402 endpoint checker</a></h3><p>Read a live 402 before an agent pays it. No wallet, no signature.</p></div>
+        <div class="pcard2"><p class="tag">Trading</p><h3><a class="textlink" href="/crypto-arbitrage-verification">Crypto arbitrage verification</a></h3><p>Pinned block, router math, flash-loan premium and gas — before you fund a trade.</p></div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-foot">
+  <div class="foot-mark" aria-hidden="true">verify<span>[402]</span></div>
+  <div class="foot-links">
+    <div>
+      <h2>Product</h2>
+      <a href="/inspect">402 inspector</a>
+      <a href="/directory">402 directory</a>
+      <a href="/preflight">Preflight gate</a>
+      <a href="/checks">The six checks</a>
+      <a href="/mcp">MCP server</a>
+      <a href="/live">Live findings</a>
+      <a href="/activity">Activity</a>
+      <a href="/testers">Tester kit</a>
+      <a href="/blog">Blog</a>
+      <a href="/start">Quickstart</a>
+    </div>
+    <div>
+      <h2>Project</h2>
+      <a href="/proof">Proof &amp; receipts</a>
+      <a href="/docs">Documentation</a>
+      <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">Open-source client &amp; gate</a>
+      <a href="https://github.com/x402-foundation/x402/issues/3847" rel="noopener">x402 proposal</a>
+    </div>
+    <div>
+      <h2>For machines</h2>
+      <a href="/.well-known/verify402.json">Service manifest</a>
+      <a href="/openapi.json">OpenAPI 3.1</a>
+      <a href="/llms.txt">llms.txt</a>
+      <a href="/findings">/findings</a>
+      <a href="/blog/rss.xml">RSS</a>
+    </div>
+    <div>
+      <h2>For teams</h2>
+      <p class="foot-note">Embedding a pre-signing check in a wallet, agent, or treasury workflow?</p>
+      <a href="mailto:a32116150@gmail.com?subject=verify402%20walkthrough">Talk to the builder</a>
+      <a href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener">npm package</a>
+    </div>
+  </div>
+  <p class="foot-legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data. This instance settles real USDC on Base mainnet / Solana mainnet over x402. Real USDC has settled on Base mainnet, including payments from outside agents. Prices are per call, paid in USDC over x402; /preflight is free.</p>
+</footer>
+
+<script src="/assets/site.js"></script>
+<script src="/assets/preflight-demo.js"></script>
+</body>
+</html>

@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Proof & receipts — verify402</title>
+<meta name="description" content="What verify402 has proven, what it has not, and the public traces behind both: a testnet settlement, an independent audit, and an x402 extension proposal.">
+<meta name="google-site-verification" content="iGmI2QL110IkjnW0thU3DRZrdgQe_7mZsPWgkZVte7o">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+
+<header class="site-head">
+  <a class="brand" href="/" aria-label="verify402 home">verify<span>[</span>402<span>]</span></a>
+  <nav class="site-nav" aria-label="Primary">
+    <a href="/checks">Checks</a>
+    <a href="/preflight">Preflight</a>
+    <a href="/inspect">Inspect</a>
+    <a href="/directory">Directory</a>
+    <a href="/mcp">MCP</a>
+    <a href="/proof">Proof</a>
+    <a href="/activity">Activity</a>
+    <a href="/blog">Blog</a>
+    <a href="/board">Board</a>
+    <a href="/docs">Docs</a>
+  </nav>
+  <div class="site-actions">
+    <a class="site-status" href="/live"><span class="status-dot"></span><span data-block>snapshot · block —</span></a>
+    <a class="btn sm" href="/preflight#try">Run free check</a>
+    <details class="site-menu">
+      <summary>Menu</summary>
+      <nav aria-label="Menu">
+        <p class="menu-label">Start</p>
+        <a href="/preflight">Free gate</a>
+        <a href="/checks">Paid checks &amp; prices</a>
+        <a href="/start">Quickstart</a>
+        <a href="/mcp">MCP server</a>
+        <p class="menu-label">Explore</p>
+        <a href="/inspect">402 inspector</a>
+        <a href="/directory">402 directory</a>
+        <a href="/live">Live findings</a>
+        <a href="/activity">Activity</a>
+        <p class="menu-label">Trust</p>
+        <a href="/proof">Proof &amp; receipts</a>
+        <a href="/board">Public board</a>
+        <a href="/audit">Payment review</a>
+        <a href="/testers">Tester kit</a>
+        <p class="menu-label">Project</p>
+        <a href="/blog">Blog</a>
+        <a href="/docs">Documentation</a>
+        <a href="/donate">Donate</a>
+        <a href="/sponsor">Sponsor hosting</a>
+        <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">GitHub</a>
+      </nav>
+    </details>
+  </div>
+</header>
+
+<main>
+  <div class="wrap page-head">
+    <h1>What is proven, what is not.</h1>
+    <p class="lead">A truth service has to apply its own standard to itself. This page lists every claim the project makes and the public evidence behind it — including the claims that are still false.</p>
+    <div class="btn-row" style="margin-top:24px">
+      <a class="btn" href="#recompute">Read the evidence</a>
+      <a class="btn ghost" href="https://github.com/a32116150-ctrl/verify402" rel="noopener">Open the source</a>
+    </div>
+  </div>
+
+  <section>
+    <div class="wrap">
+
+      <article>
+        <h2>Proven on-chain: paid calls on Base mainnet</h2>
+        <p class="lead" style="margin-top:14px">Exact-x402 payments have settled in real USDC to the payee. The live count, USDC total and outside-payer breakdown are published at <a href="/stats">/stats</a>. The receipts below are a public sample. The public Base Sepolia testnet demo was retired on 2026-11-19.</p>
+        <div class="callout good" style="margin-top:22px">
+          <h3>Receipts</h3>
+          <p><a href="https://basescan.org/tx/0xcd61e0ec0a7b9ab80bcc0ecb01c7c155016e5a80d3caf650bb1ac9d047b27b5d" rel="noopener">0xcd61…b27b5d</a> · block 59,146,773 · <code class="inline">/route</code> · operator<br>
+          <a href="https://basescan.org/tx/0x37e61b094133af984a30590e03f27f0daea67716e3650a9b16f3bb5aad734dfb" rel="noopener">0x37e6…34dfb</a> · block 59,150,929 · <code class="inline">/route</code> · operator<br>
+          <a href="https://basescan.org/tx/0x5244036ebcce4d298865df45c4d116c2ba91508527c3601b1f972fa1f569e378" rel="noopener">0x5244…e378</a> · block 59,388,774 · <code class="inline">/route</code> · outside<br>
+          <a href="https://basescan.org/tx/0x31cb184ef8e01b7db64f43f209d742b2f036c405b863015f1ef43255c1daadb9" rel="noopener">0x31cb…adb9</a> · block 59,429,646 · <code class="inline">/route</code> · outside<br>
+          Base · payTo <code class="inline">0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb</code></p>
+          <p class="small muted" style="margin-top:10px">The four other operator calls are at blocks 59,157,271–59,157,334; the <a class="textlink" href="/activity">activity page</a> lists every on-chain transfer the index has seen.</p>
+        </div>
+      </article>
+
+      <article>
+        <h2>Proven on-chain, earlier: one testnet settlement</h2>
+        <p class="lead" style="margin-top:14px">A payer paid, the seller received, and the verdict travelled inside the settlement receipt. It was the operator's own funds on the testnet — the scope of the proof.</p>
+        <p class="small muted" style="margin-top:12px">The <a class="textlink" href="/activity">activity page</a> lists this call and the three later testnet calls read live from the chain, with explorer links.</p>
+        <div class="callout good" style="margin-top:22px">
+          <h3>Receipt</h3>
+          <p><a href="https://sepolia.basescan.org/tx/0x11121007bafec47f132763f42e2f58af6ebba7fba9c7ed1b5980d3f595a9324a" rel="noopener">0x11121007…a9324a</a><br>
+          Base Sepolia · payTo <code class="inline">0xAeEF086DD4e436c69d6d0F684b4c9F43392df9cb</code></p>
+        </div>
+      </article>
+
+      <article>
+        <h2>Audited. It lost.</h2>
+        <p class="lead" style="margin-top:14px">An independent agent built a harness against the source and publicly reproduced two defects in the paid-recovery contract: recovery was recorded before settlement success, and a companion alias could borrow a second budget. Both were verified against the source and fixed the same day; the companion alias was later removed entirely because a public content hash must never be a replay credential. The regression tests remain in the suite.</p>
+        <div class="proof-grid" data-ui style="margin-top:24px">
+          <div class="pcard2" data-ui>
+            <h3>The audit trace: public harness, public failure</h3>
+            <p><a href="https://gist.github.com/epistemedeus/e08c29a2dbf0ba67cb8777315c979e29" rel="noopener">The gist</a> runs against commit <code class="inline">cd59b105</code> and shows the naive contract returning 200 where it should have stopped at the paywall.</p>
+          </div>
+          <div class="pcard2" data-ui>
+            <h3>The fix: fail-closed, then re-tested</h3>
+            <p>Commit <a href="https://github.com/a32116150-ctrl/verify402/commit/4bf3c9c" rel="noopener">4bf3c9c</a>: settlement stages inert, promotion only on the official <code class="inline">onAfterSettle</code> hook matched on the actual response bytes; one projection everywhere; per-operation replay cap. Suite 34/34.</p>
+          </div>
+        </div>
+      </article>
+
+      <article>
+        <h2>Proposed, not adopted: an x402 extension</h2>
+        <p class="lead" style="margin-top:14px">The recovery contract was written up as an optional extension to the x402 spec: declared evidence projection plus settled-response retry recovery, with the fail-closed rule as the normative core. It is a proposal, not a standard.</p>
+        <p class="small muted" style="margin-top:16px"><a class="textlink" href="https://github.com/x402-foundation/x402/issues/3847" rel="noopener">Issue #3847</a> · <a class="textlink" href="https://github.com/x402-foundation/x402/pull/3848" rel="noopener">Draft spec PR #3848</a> — pending maintainer review. If it is rejected, this page will say so.</p>
+      </article>
+
+      <article>
+        <h2>Outside demand — two paid calls, on the record.</h2>
+        <p class="lead" style="margin-top:14px">Two outside wallets have paid for a call — 0.03 USDC each, from automated x402 agents. The free tier and the RPC calls are operator-funded. The first outside payments are recorded above, with their transactions, on the day they landed.</p>
+        <div class="callout warn" style="margin-top:22px">
+          <h3>Donation ledger</h3>
+          <p><b>Hosting ledger.</b> Every contribution will be acknowledged here with a transaction link, if the donor wants it named. <a href="/donate">Donation options</a> · <a href="/sponsor">Sponsor one month of hosting — $7</a>.</p>
+        </div>
+
+        <h3 id="traction" style="margin-top:34px">Traction ledger — dated, monthly</h3>
+        <p class="small muted" style="margin-top:8px">The numbers to check before believing the ledger: a paid call counts only when the payer is not the operator; a repeat payer is an outside payer with two or more settled calls; a disputed verdict is one a payer formally contested with evidence. Counts come from settlement records reviewed by hand, so a zero month stays visible instead of being quietly dropped.</p>
+        <div class="table-wrap" style="margin-top:18px">
+          <table class="table">
+            <thead><tr><th>Month</th><th>Outside paid calls</th><th>Repeat payers</th><th>Disputed verdicts</th><th>Records checked</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">2026-10 <span class="muted">(from 19 Oct)</span></td><td class="mono">0</td><td class="mono">0</td><td class="mono">0</td><td class="muted">2026-11-10</td></tr>
+              <tr><td class="mono">2026-11 <span class="muted">(to 10 Nov)</span></td><td class="mono">0</td><td class="mono">0</td><td class="mono">0</td><td class="muted">2026-11-10</td></tr>
+              <tr><td class="mono">2026-11 <span class="muted">(11–19 Nov)</span></td><td class="mono">2</td><td class="mono">0</td><td class="mono">0</td><td class="muted">2026-11-19</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="small muted" style="margin-top:12px">First published 10 November 2026, after the 1 November date first promised in public. The first outside payments landed on 19 November 2026; both transactions are above. This table is maintained from reviewed settlement records, not read from a dashboard, so a zero month stays visible.</p>
+      </article>
+
+      <article id="recompute">
+        <h2>Reproduce it: don't trust this page.</h2>
+        <p class="lead" style="margin-top:14px">Everything here is public: the source, the tests, the chain. The suite runs offline against recorded fixtures, and the settlement is on a public explorer.</p>
+        <div class="btn-row" style="margin-top:22px">
+          <a class="btn" href="https://github.com/a32116150-ctrl/verify402" rel="noopener">Open the source</a>
+          <a class="btn ghost" href="/live">Watch it answer live</a>
+        </div>
+        <figure class="proof-receipt">
+          <img src="/assets/preflight-receipt.png" alt="A verify402 receipt showing a BLOCK verdict, with the intent, spender, allowance and pinned block." width="445" height="650">
+          <figcaption>A preflight receipt. A settlement carries the same intent, request, block and expiry fields.</figcaption>
+        </figure>
+      </article>
+
+    </div>
+  </section>
+</main>
+
+<footer class="site-foot">
+  <div class="foot-mark" aria-hidden="true">verify<span>[402]</span></div>
+  <div class="foot-links">
+    <div>
+      <h2>Product</h2>
+      <a href="/inspect">402 inspector</a>
+      <a href="/directory">402 directory</a>
+      <a href="/preflight">Preflight gate</a>
+      <a href="/checks">The six checks</a>
+      <a href="/mcp">MCP server</a>
+      <a href="/live">Live findings</a>
+      <a href="/activity">Activity</a>
+      <a href="/testers">Tester kit</a>
+      <a href="/blog">Blog</a>
+      <a href="/start">Quickstart</a>
+    </div>
+    <div>
+      <h2>Project</h2>
+      <a href="/proof">Proof &amp; receipts</a>
+      <a href="/docs">Documentation</a>
+      <a href="/donate">Donate</a>
+      <a href="/sponsor">Sponsor hosting</a>
+      <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">Open-source client &amp; gate</a>
+      <a href="https://github.com/x402-foundation/x402/issues/3847" rel="noopener">x402 proposal</a>
+    </div>
+    <div>
+      <h2>For machines</h2>
+      <a href="/.well-known/verify402.json">Service manifest</a>
+      <a href="/openapi.json">OpenAPI 3.1</a>
+      <a href="/llms.txt">llms.txt</a>
+      <a href="/findings">/findings</a>
+      <a href="/blog/rss.xml">RSS</a>
+    </div>
+    <div>
+      <h2>For teams</h2>
+      <p class="foot-note">Embedding a pre-signing check in a wallet, agent, or treasury workflow?</p>
+      <a href="mailto:a32116150@gmail.com?subject=verify402%20walkthrough">Talk to the builder</a>
+      <a href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener">npm package</a>
+    </div>
+  </div>
+  <p class="foot-legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data. This instance settles real USDC on Base mainnet / Solana mainnet over x402. Real USDC has settled on Base mainnet, including payments from outside agents. Prices are per call, paid in USDC over x402.</p>
+</footer>
+
+<script src="/assets/site.js"></script>
+</body>
+</html>

@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>x402 endpoint checker — read a 402 before you pay · verify402</title>
+<meta name="description" content="A free x402 endpoint checker: read a 402 challenge before payment and see price, token, network, payee, resource and a PASS / CAUTION / BLOCK verdict. No wallet, no signature.">
+<link rel="canonical" href="https://vex402.online/x402-endpoint-checker">
+<meta property="og:type" content="website">
+<meta property="og:title" content="x402 endpoint checker — read a 402 before you pay">
+<meta property="og:description" content="Paste a URL or a pasted 402 challenge. See what the endpoint asks for and whether the payment request passes structural preflight.">
+<meta property="og:url" content="https://vex402.online/x402-endpoint-checker">
+<meta property="og:image" content="https://vex402.online/assets/logo-400.png">
+<meta name="twitter:card" content="summary">
+<meta name="google-site-verification" content="iGmI2QL110IkjnW0thU3DRZrdgQe_7mZsPWgkZVte7o">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/site.css">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebPage","name":"x402 endpoint checker — read a 402 before you pay","description":"A free tool that fetches an x402 402 challenge and runs structural payment preflight on every payment option before an agent pays.","url":"https://vex402.online/x402-endpoint-checker","isPartOf":{"@type":"WebSite","name":"verify402","url":"https://vex402.online/"},"publisher":{"@type":"Organization","name":"verify402","url":"https://vex402.online/"}}</script>
+</head>
+<body>
+
+<header class="site-head">
+  <a class="brand" href="/" aria-label="verify402 home">verify<span>[</span>402<span>]</span></a>
+  <nav class="site-nav" aria-label="Primary">
+    <a href="/checks">Checks</a>
+    <a href="/preflight">Preflight</a>
+    <a href="/inspect">Inspect</a>
+    <a href="/directory">Directory</a>
+    <a href="/mcp">MCP</a>
+    <a href="/proof">Proof</a>
+    <a href="/activity">Activity</a>
+    <a href="/blog">Blog</a>
+    <a href="/board">Board</a>
+    <a href="/docs">Docs</a>
+  </nav>
+  <div class="site-actions">
+    <a class="site-status" href="/live"><span class="status-dot"></span><span data-block>snapshot · block —</span></a>
+    <a class="btn sm" href="/inspect#try">Inspect a URL</a>
+    <details class="site-menu">
+      <summary>Menu</summary>
+      <nav aria-label="Menu">
+        <p class="menu-label">Start</p>
+        <a href="/preflight">Free gate</a>
+        <a href="/checks">Paid checks &amp; prices</a>
+        <a href="/start">Quickstart</a>
+        <a href="/mcp">MCP server</a>
+        <p class="menu-label">Explore</p>
+        <a href="/inspect">402 inspector</a>
+        <a href="/directory">402 directory</a>
+        <a href="/live">Live findings</a>
+        <a href="/activity">Activity</a>
+        <p class="menu-label">Trust</p>
+        <a href="/proof">Proof &amp; receipts</a>
+        <a href="/board">Public board</a>
+        <a href="/audit">Payment review</a>
+        <a href="/testers">Tester kit</a>
+        <p class="menu-label">Project</p>
+        <a href="/blog">Blog</a>
+        <a href="/docs">Documentation</a>
+        <a href="/donate">Donate</a>
+        <a href="/sponsor">Sponsor hosting</a>
+        <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">GitHub</a>
+      </nav>
+    </details>
+  </div>
+</header>
+
+<main>
+  <div class="wrap page-head">
+    <p class="eyebrow">Free · read-only · no wallet</p>
+    <h1>Check the 402 before your agent pays it.</h1>
+    <p class="lead">An x402 endpoint asks for money by returning HTTP 402 with a payment challenge. The <a class="textlink" href="/inspect">verify402 inspector</a> fetches that challenge once, reads every payment option, and runs the same structural payment preflight an agent should run. Nothing is signed, paid or settled.</p>
+    <div class="btn-row" style="margin-top:24px">
+      <a class="btn" href="/inspect#try">Inspect an endpoint</a>
+      <a class="btn ghost" href="/verify-usdc-payment-request">Verify a USDC request</a>
+    </div>
+  </div>
+
+  <section>
+    <div class="wrap stack">
+      <article id="why">
+        <p class="eyebrow">01 · Why inspect first</p>
+        <h2 style="margin-top:14px">A 402 is a request from a server you do not control.</h2>
+        <p class="lead" style="margin-top:14px">The challenge names a price, asset, network, payee and resource. Those fields can be wrong, stale, or aimed at a different service. A browser shows a price tag; an agent sees instructions. The inspector turns those instructions into a plain verdict before the wallet does anything.</p>
+        <p class="small muted" style="margin-top:14px">The public sample points at this service's own paid endpoint, so you can see a real 402 without setting anything up. You can also paste a challenge you already captured with <code class="inline">curl -i</code>.</p>
+      </article>
+
+      <article id="reads">
+        <p class="eyebrow">02 · What it reads</p>
+        <h2 style="margin-top:14px">Price, token, network, payee, expiry, resource.</h2>
+        <p class="lead" style="margin-top:14px">For each payment option, the inspector reports the amount and token, the CAIP-2 network, the payee address, the resource, the timeout and expiry, and the structural verdict. It uses canonical USDC recognition, a payee allowlist, resource-identity policy and block freshness where available. It lists <code class="inline">checked</code> and <code class="inline">notChecked</code> on every result.</p>
+        <div class="table-wrap" data-ui style="margin-top:22px">
+          <table class="table">
+            <thead><tr><th>Verdict</th><th>Plain meaning</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">PASS</td><td>The listed structural checks passed at that moment. Not a seller audit.</td></tr>
+              <tr><td class="mono">CAUTION</td><td>Something could not be bound or was outside policy. A human or agent must decide.</td></tr>
+              <tr><td class="mono">BLOCK</td><td>The request failed a hard rule, such as payee mismatch or a burn address.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <article id="safe">
+        <p class="eyebrow">03 · Safe by construction</p>
+        <h2 style="margin-top:14px">One fetch. No redirects. No private hosts.</h2>
+        <p class="lead" style="margin-top:14px">The URL mode fetches a public http(s) host once, refuses localhost and private ranges, refuses redirects, caps the response at 64 KB, and does not forward cookies or auth headers. If the endpoint is slow or unreachable, you get a clear error instead of a guessed verdict.</p>
+        <p class="small muted" style="margin-top:14px">Paste mode makes no network request at all. It reads the JSON challenge or the base64 <code class="inline">PAYMENT-REQUIRED</code> header you supply.</p>
+      </article>
+
+      <article id="limits">
+        <p class="eyebrow">04 · Honest limits</p>
+        <h2 style="margin-top:14px">A 402 is not a receipt and not a promise.</h2>
+        <p class="lead" style="margin-top:14px">The inspector reads one moment. The endpoint can change its challenge a second later. It does not prove that the seller controls the payee wallet, that the resource will be delivered, that the token is safe to sell, or that settlement succeeded. For the exact request you are about to sign, run it through <a class="textlink" href="/verify-usdc-payment-request">the payment preflight gate</a> with your own policy.</p>
+        <div class="callout warn" style="margin-top:22px">
+          <h3>Do not paste secrets</h3>
+          <p>Use a public endpoint URL or a challenge header. Never paste private keys, seed phrases, wallet signatures or authenticated session tokens into the inspector.</p>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="soft">
+    <div class="wrap">
+      <div class="sec-head">
+        <p class="eyebrow">Keep going</p>
+        <h2>Inspect, then gate, then sign.</h2>
+        <p class="lead">The checker is the first read. The pre-signing gate is the decision your executor can verify.</p>
+      </div>
+      <div class="btn-row" style="margin-top:28px">
+        <a class="btn" href="/inspect#try">Inspect an endpoint</a>
+        <a class="btn ghost" href="/preflight">Run the gate</a>
+        <a class="btn ghost" href="/directory">See watched endpoints</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-foot">
+  <div class="foot-mark" aria-hidden="true">verify<span>[402]</span></div>
+  <div class="foot-links">
+    <div>
+      <h2>Product</h2>
+      <a href="/inspect">402 inspector</a>
+      <a href="/directory">402 directory</a>
+      <a href="/preflight">Preflight gate</a>
+      <a href="/checks">The six checks</a>
+      <a href="/mcp">MCP server</a>
+      <a href="/live">Live findings</a>
+      <a href="/activity">Activity</a>
+      <a href="/testers">Tester kit</a>
+      <a href="/blog">Blog</a>
+      <a href="/start">Quickstart</a>
+    </div>
+    <div>
+      <h2>Project</h2>
+      <a href="/proof">Proof &amp; receipts</a>
+      <a href="/docs">Documentation</a>
+      <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">Open-source client &amp; gate</a>
+      <a href="https://github.com/x402-foundation/x402/issues/3847" rel="noopener">x402 proposal</a>
+    </div>
+    <div>
+      <h2>For machines</h2>
+      <a href="/.well-known/verify402.json">Service manifest</a>
+      <a href="/openapi.json">OpenAPI 3.1</a>
+      <a href="/llms.txt">llms.txt</a>
+      <a href="/findings">/findings</a>
+      <a href="/blog/rss.xml">RSS</a>
+    </div>
+    <div>
+      <h2>For teams</h2>
+      <p class="foot-note">Embedding a pre-signing check in a wallet, agent, or treasury workflow?</p>
+      <a href="mailto:a32116150@gmail.com?subject=verify402%20walkthrough">Talk to the builder</a>
+      <a href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener">npm package</a>
+    </div>
+  </div>
+  <p class="foot-legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data. The mainnet service is at vex402.online. Prices are per call, paid in USDC over x402; /preflight and /inspect are free.</p>
+</footer>
+
+<script src="/assets/site.js"></script>
+</body>
+</html>

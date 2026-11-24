@@ -1,0 +1,91 @@
+name: Tester feedback
+description: Report a verify402 free-preflight test result
+title: "[Tester] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for testing the free preflight gate. Please redact addresses and amounts if needed. Do not include private keys, seed phrases, or unredacted wallet data.
+
+        The public demo uses Base Sepolia testnet only. A PASS is not a safety guarantee; read `notChecked`.
+  - type: input
+    id: client
+    attributes:
+      label: Client or agent
+      description: Claude Desktop, Cursor, custom agent, curl, etc.
+      placeholder: "Cursor + custom x402 agent"
+    validations:
+      required: true
+  - type: dropdown
+    id: intent_type
+    attributes:
+      label: Intent type
+      options:
+        - x402 payment
+        - EVM transaction
+        - Both
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: intent
+    attributes:
+      label: Redacted intent
+      description: The request body sent to /preflight.
+      render: json
+      placeholder: |
+        {
+          "kind": "payment",
+          "payment": { ... },
+          "policy": { ... }
+        }
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: Verdict and reasons
+      description: Paste the verdict, reasons, checked, and notChecked. Remove secrets.
+      render: json
+    validations:
+      required: true
+  - type: dropdown
+    id: outcome
+    attributes:
+      label: What happened?
+      options:
+        - Correct PASS
+        - Correct CAUTION
+        - Correct BLOCK
+        - False PASS
+        - False BLOCK
+        - Unclear or other
+    validations:
+      required: true
+  - type: textarea
+    id: false_pass
+    attributes:
+      label: If false PASS, why is it unsafe?
+      description: Explain what the gate missed.
+      placeholder: "The gate passed X because ..."
+  - type: textarea
+    id: setup
+    attributes:
+      label: Setup friction
+      description: What was confusing, slow, or broken?
+  - type: textarea
+    id: integration
+    attributes:
+      label: What would make it worth integrating?
+      description: Be blunt. "Not useful for my workflow" is useful.
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety confirmation
+      options:
+        - label: I did not include private keys, seed phrases, or unredacted wallet data.
+          required: true
+        - label: I understand this is a Base Sepolia testnet demo, not a mainnet payment service.
+          required: true
