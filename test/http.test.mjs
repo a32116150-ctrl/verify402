@@ -41,7 +41,7 @@ const { PAID_TOOL_ROUTES } = await import("../mcp-bridge/index.mjs");
 const {
   recordSettlement, requestHash, lookupRecovery, reserveRecovery, releaseRecovery,
   IDEMPOTENCY_TTL_MS, IDEMPOTENCY_MAX_REPLAYS, IDEMPOTENCY_STAGE_TTL_MS,
-  reconcileStagedEntry, markSettling, setRecoveryPaymentChecker, _setNow,
+  reconcileStagedEntry, reconciliationState, markSettling, setRecoveryPaymentChecker, _setNow,
 } = await import("../src/recovery.mjs");
 const { isDefinitiveSettlementFailure, registerRecoveryHooks } = await import("../src/settlement-recovery.mjs");
 const { app, paymentRefFromRequest } = await import("../src/server.mjs");
@@ -1031,6 +1031,42 @@ await check("503: a stuck operation answers payment_unresolved with no Retry-Aft
   assert.equal(r.body.retry, "same_payment");
   assert.equal(r.headers.get("retry-after"), null, "the block is not time-based");
   assert.equal(typeof r.body.requestId, "string");
+});
+
+await check("503: retries keep reconciling after a failed rail read and escalate to stuck", async () => {
+  // Regression: a `failed` reconciliation used to be terminal for retries, so a
+  // persistently unreadable rail pinned the key at 409 and never reached 503.
+  const key = randomUUID();
+  const nonce = "0x" + "6b".repeat(32);
+  setRecoveryPaymentChecker(async () => { throw new Error("rail read failed (test)"); });
+  const t0 = Date.now();
+  _setNow(() => t0);
+  const staged = recordSettlement(key, { ok: true, verdict: "PASS", railFaultProbe: true }, null, {
+    settledNow: false,
+    paymentRef: { nonce, network: "eip155:84532", validBefore: null },
+  });
+  markSettling({ payload: { authorization: { nonce } } });
+  const statuses = [];
+  try {
+    const afterTtl = t0 + IDEMPOTENCY_STAGE_TTL_MS + 1;
+    for (const offset of [0, 3 * 60 * 1000, 5 * 60 * 1000 + 1, 5 * 60 * 1000 + 2]) {
+      _setNow(() => afterTtl + offset);
+      const r = await post("/verify", { chainId: 8453 }, { "x-idempotency-key": key });
+      statuses.push(r.status);
+      await new Promise((resolve) => setTimeout(resolve, 20)); // let the kicked reconciliation finish
+    }
+    assert.equal(reconciliationState(staged.operationId), "stuck");
+    const r = await post("/verify", { chainId: 8453 }, { "x-idempotency-key": key });
+    statuses.push(r.status);
+    assert.equal(r.status, 503);
+    assert.equal(r.body.code, "payment_unresolved");
+    assert.equal(r.headers.get("retry-after"), null);
+    assert.match(r.body.reason, /rail read failed/);
+  } finally {
+    setRecoveryPaymentChecker(null);
+    _setNow(() => Date.now());
+  }
+  assert.deepEqual(statuses.slice(0, 3), [409, 409, 409], `retries before escalation stay 409 (got ${statuses})`);
 });
 
 await check("info: recovery observability surfaces the stuck counter", async () => {

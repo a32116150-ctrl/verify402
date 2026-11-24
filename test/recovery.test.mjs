@@ -17,7 +17,7 @@ import {
   IDEMPOTENCY_TTL_MS, IDEMPOTENCY_MAX_REPLAYS, IDEMPOTENCY_STAGE_TTL_MS,
   sha256Hex, _setNow,
   projectionCore, markSettling, reconciliationState, recoveryObservability,
-  reconcileStagedEntry,
+  reconcileStagedEntry, setRecoveryPaymentChecker,
 } from "../src/recovery.mjs";
 
 let passed = 0;
@@ -642,6 +642,42 @@ await checkAsync("a stuck operation answers payment_unresolved and stays counted
   _setNow(() => 43_000_000 + (3 * IDEMPOTENCY_STAGE_TTL_MS));
   const again = lookupRecovery({ key: "stuck-key" });
   assert(again && again.pending === "payment_unresolved", "record retained, key still blocked");
+  _setNow(() => Date.now());
+
+});
+
+await checkAsync("staging rail fault: a dispatched settlement with an unreadable rail escalates 409 -> 503 stuck", async () => {
+
+  // What VERIFY402_STAGING_RAIL_FAULT=1 does on the staging instance: the
+  // checker is wired, a paymentRef exists, and every rail read throws. Unlike
+  // the no-checker case, this is never an unreadable-rail replay: it must stay
+  // pending (409) until escalation, then answer 503 payment_unresolved.
+  setRecoveryPaymentChecker(async () => { throw new Error("staging rail fault injected (VERIFY402_STAGING_RAIL_FAULT=1)"); });
+  const t0 = 50_000_000;
+  _setNow(() => t0);
+  const key = "staging-rail-fault-key";
+  const nonce = "0x" + "5a".repeat(32);
+  const staged = recordSettlement(key, { ok: true, verdict: "PASS", n: 9 }, null, {
+    settledNow: false,
+    paymentRef: { nonce, network: "eip155:84532", validBefore: null },
+  });
+  markSettling({ payload: { authorization: { nonce } } });
+
+  const early = lookupRecovery({ key });
+  assert(!early?.hit, "never replayed while the rail cannot be read and a checker exists");
+  assert(early?.pending !== "payment_unresolved", "not 503 before escalation");
+
+  const afterTtl = t0 + IDEMPOTENCY_STAGE_TTL_MS + 1;
+  const outcomes = [];
+  for (const offset of [0, 3 * 60 * 1000, 5 * 60 * 1000 + 1]) {
+    _setNow(() => afterTtl + offset);
+    outcomes.push(await reconcileStagedEntry(staged.operationId));
+  }
+  assert(JSON.stringify(outcomes) === JSON.stringify(["failed", "failed", "stuck"]), `escalation sequence (got ${outcomes})`);
+  const found = lookupRecovery({ key });
+  assert(found?.pending === "payment_unresolved", "retries now get 503 payment_unresolved");
+  assert(/staging rail fault/.test(found.reason), "the reason names the injected fault");
+  setRecoveryPaymentChecker(null);
   _setNow(() => Date.now());
 
 });
