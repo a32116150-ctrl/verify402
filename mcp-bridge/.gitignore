@@ -2,3 +2,4 @@
 .spend-ledger-test.json
 node_modules/
 .env
+.moltbook-key
