@@ -39,6 +39,7 @@ import { CHAINS } from "./config.mjs";
 import { clientFor } from "./measure.mjs";
 import { canonicalStable, sha256Hex } from "./recovery.mjs";
 import { findToken, STABLE } from "./tokens.mjs";
+import { knownRouter, decodeLcxCall, bindQuote } from "./routers.mjs";
 
 export const PREFLIGHT_SPEC = "verify402/preflight@1";
 export const RECEIPT_SPEC = "verify402/preflight-receipt@1";
@@ -871,10 +872,21 @@ function checkDecoded(decoded, { from, policy, now, value }) {
     if (decoded.protocol === "uniswap-v2-eth-in" && value === 0n) {
       reasons.push(block("missing_value", "this ETH-in swap has value 0 and cannot execute"));
     }
-    if (decoded.protocol !== "uniswap-v2-eth-in" && value > 0n) {
+    // LCX's router wraps native ETH itself (quote.nativeIn), so value on an
+    // LCX swap is expected rather than suspicious.
+    if (decoded.protocol !== "uniswap-v2-eth-in" && decoded.protocol !== "lcx-liberty" && value > 0n) {
       reasons.push(caution("value_with_token_swap", "a token swap carries native value; confirm the router expects it"));
     }
+    if (decoded.protocol === "lcx-liberty") {
+      notChecked.push("LCX route legs (venues and split) are not decoded; only the swap terms are");
+    }
     notChecked.push("slippage beyond amountOutMinimum", "route quality", "mev/sandwich protection");
+  } else if (decoded.action === "router_call") {
+    reasons.push(caution(
+      "router_call_not_decoded",
+      `this is a call to the ${decoded.router?.name ?? "known"} router, but method ${decoded.selector} was not decoded; tokens, amounts and minimum output were not checked`,
+    ));
+    notChecked.push("calldata semantics");
   } else if (decoded.action === "multicall") {
     reasons.push(caution("multicall_unverified", "multicall batches calls; the individual actions were not decoded"));
     notChecked.push("inner calls");
@@ -2604,10 +2616,25 @@ async function transactionPreflight(body, { clientFactory, now }) {
     reasons.push(block("value_over_policy", `value ${value} wei is above policy.maxValueWei ${policy.maxValueWei}`));
   }
 
+  // A known router is identified by (chain, address), never by selector alone.
+  const router = to ? knownRouter(chainId, to) : null;
+  if (router) {
+    checked.push("known_router");
+    if (router.upgradeable) {
+      notChecked.push(`${router.name} router is an upgradeable proxy: its logic can change after this check`);
+    }
+  }
+
   let decoded = null;
   if (data !== "0x") {
     try {
-      decoded = decodeCalldata(data);
+      decoded = (router?.id === "lcx" ? decodeLcxCall(data) : null) ?? decodeCalldata(data);
+      if (router) {
+        decoded.router = { id: router.id, name: router.name, address: router.address };
+        // A call to a known router that is not a decoded swap is named as
+        // such, not reported as an anonymous unknown selector.
+        if (decoded.action === "unknown") decoded.action = "router_call";
+      }
       checked.push("calldata");
     } catch (e) {
       reasons.push(block("malformed_calldata", `calldata could not be decoded: ${e.message}`));
@@ -2621,6 +2648,18 @@ async function transactionPreflight(body, { clientFactory, now }) {
     const extra = checkDecoded(decoded, { from, policy, now, value });
     reasons.push(...extra.reasons);
     notChecked.push(...extra.notChecked);
+  }
+
+  // Optional: the quote the transaction was built from (e.g. LCX POST /v1/swap
+  // returns both). Binding proves the bytes to be signed are the quoted terms.
+  const quoteRaw = body.quote ?? raw.quote;
+  if (quoteRaw !== undefined && quoteRaw !== null) {
+    const binding = bindQuote(quoteRaw, { to, decoded, nowMs: now });
+    for (const p of binding.problems) {
+      reasons.push(p.severity === "block" ? block(p.code, p.message) : caution(p.code, p.message));
+    }
+    if (binding.bound) checked.push("quote_binding");
+    else notChecked.push("quote_binding");
   }
 
   let chainBlock = null;

@@ -526,7 +526,7 @@ export function lookupRecovery({
     if (entry.state === "settling" && entry.payload
         && nowFn() - entry.stagedAt <= IDEMPOTENCY_STAGE_TTL_MS
         && settleOutcomeOf(entry) === "unknown"
-        && (!paymentChecker || !entry.paymentRef)) {
+        && (!paymentChecker || !isCheckablePaymentRef(entry.paymentRef))) {
       const ref = entry.paymentRef ?? {};
       const t = nowFn();
       entry.settleOutcome = "unknown";
@@ -628,9 +628,10 @@ export function expiredRecoveryInfo(key) {
 // free view call. Consumed => the payment moved (promote to settled); not
 // consumed AFTER validBefore => the authorization can never settle now
 // (definitively safe to expire). Before validBefore the outcome is genuinely
-// unknown and the record stays pending. Solana staged records carry no
-// checkable payment reference and fail closed (stay pending; the route answers
-// recovery_unavailable) — no equivalent check exists in this codebase.
+// unknown and the record stays pending. Solana staged records are re-checked
+// by the payer's signature and the transaction's blockhash expiry
+// (solana-payment.mjs); a Solana record without those fields (older records,
+// undecodable transactions) still fails closed (stays pending).
 //
 // The checker is injected (server.mjs wires the viem public client); tests
 // inject a stub. It receives the paymentRef recorded at stage time and
@@ -638,6 +639,19 @@ export function expiredRecoveryInfo(key) {
 let paymentChecker = null;
 export function setRecoveryPaymentChecker(fn) {
   paymentChecker = fn;
+}
+
+// A reference the checker can actually answer for. EVM needs the EIP-3009
+// authorization; Solana needs the payer's signature and the blockhash
+// (server.mjs + solana-payment.mjs). A Solana record staged with only a
+// txHash (older records, or a transaction that could not be decoded) is
+// treated exactly as before: unreadable rail, fail closed.
+export function isCheckablePaymentRef(ref) {
+  if (!ref) return false;
+  if (ref.rail === "svm" || (ref.txHash && !ref.nonce)) {
+    return Boolean(ref.payerSigner && ref.payerSignature && ref.recentBlockhash);
+  }
+  return true;
 }
 
 const reconciling = new Set();     // operationIds with an attempt in flight
@@ -823,7 +837,7 @@ export async function reconcileStagedEntry(operationId) {
   if (!entry) return "settled_or_gone";
   const ref = entry.paymentRef;
   const pastTtl = nowFn() - entry.stagedAt > IDEMPOTENCY_STAGE_TTL_MS;
-  if (!ref || !paymentChecker) {
+  if (!isCheckablePaymentRef(ref) || !paymentChecker) {
     const reason = "this rail's payment cannot be re-checked (no reconciliable reference for the operation)";
     reconcileFailures.set(operationId, reason);
     if (pastTtl) {
@@ -839,10 +853,19 @@ export async function reconcileStagedEntry(operationId) {
     const deadlineMs = Number.isFinite(ref.validBefore) && ref.validBefore > 0
       ? ref.validBefore * 1000
       : null;
-    const pastDeadline = deadlineMs !== null && t >= deadlineMs;
+    let pastDeadline = deadlineMs !== null && t >= deadlineMs;
     let consumed;
     try {
-      consumed = Boolean(await paymentChecker(ref));
+      // true = settled; "expired" = the rail proved it can never settle
+      // (Solana: blockhash dead at finalized and not found); anything else
+      // falsy = unknown, still pending.
+      const answer = await paymentChecker(ref);
+      if (answer === "expired") {
+        consumed = false;
+        pastDeadline = true;
+      } else {
+        consumed = Boolean(answer);
+      }
     } catch (e) {
       const reason = e?.message ?? String(e);
       reconcileFailures.set(operationId, reason);

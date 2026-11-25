@@ -93,7 +93,9 @@ import {
 } from "./errors.mjs";
 import { paidHonesty, honestFailure, unconfiguredVenues, isPaidRoute } from "./honesty.mjs";
 import { installConsoleRedaction, logInfo, logWarn, logError } from "./log.mjs";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
+import { rateLimitSubject } from "./rate-limit.mjs";
+import { checkSolanaPayment, solanaPaymentRef, solanaRpcUrl } from "./solana-payment.mjs";
 
 // Install before any startup/config log can run. This also wraps direct
 // console.* calls made by dependencies or future code.
@@ -101,6 +103,12 @@ installConsoleRedaction();
 
 // ---------------------------------------------------------------- config ----
 const MODE = process.env.X402_MODE === "mainnet" ? "mainnet" : "testnet";
+
+// Local preview only: serve the live mainnet /stats payload so the homepage
+// cards show the real chain numbers instead of offline dashes. Never honoured
+// in mainnet: a public instance must report its own settlements, not a proxy.
+const LOCAL_LIVE_STATS = process.env.VERIFY402_LOCAL_LIVE_STATS === "1" && MODE !== "mainnet";
+const LOCAL_LIVE_STATS_TIMEOUT_MS = 5000;
 
 // The agent card is an identity document, not a reflection of the request.
 // Mainnet must pin its public origin; every other mode falls back to a Host
@@ -699,14 +707,32 @@ export function paymentRefFromRequest(req, core) {
     // network inside the proof envelope.
     const tx = env?.payload?.transaction;
     if (typeof tx === "string" && tx && typeof auth?.nonce !== "string") {
+      // The payer's signature and the transaction's blockhash are what make a
+      // Solana payment re-checkable after a lost settle outcome (see
+      // solana-payment.mjs). A transaction we cannot decode still stages with
+      // txHash only, and recovery then fails closed exactly as before.
+      let svm = null;
+      try {
+        svm = solanaPaymentRef(tx);
+      } catch {
+        svm = null;
+      }
+      const svmNetwork = [env?.accepted?.network, env?.x402?.network, env?.network]
+        .find((n) => typeof n === "string" && n.startsWith("solana:")) ?? NETWORKS.svm;
       return {
+        rail: "svm",
         chainId: Number.isFinite(chainId) ? chainId : null,
         token: null,
-        payer: typeof env?.payload?.from === "string" ? env.payload.from : null,
+        payer: svm?.payerSigner ?? (typeof env?.payload?.from === "string" ? env.payload.from : null),
         nonce: null,
         validBefore: null,
-        network,
+        network: svmNetwork,
         txHash: sha256Hex(tx),
+        payerSigner: svm?.payerSigner ?? null,
+        payerSignature: svm?.payerSignature ?? null,
+        recentBlockhash: svm?.recentBlockhash ?? null,
+        durableNonce: svm?.durableNonce ?? null,
+        observedAt: Date.now(),
         proofHash,
         envHash,
       };
@@ -746,7 +772,13 @@ const EIP3009_AUTHORIZATION_STATE_ABI = [{
   ],
   outputs: [{ name: "used", type: "bool" }],
 }];
-setRecoveryPaymentChecker(async ({ chainId, token, payer, nonce }) => {
+setRecoveryPaymentChecker(async (ref) => {
+  // Solana: payer signature + blockhash expiry (solana-payment.mjs). Only the
+  // server's own SVM rail is ever accepted, so its network picks the RPC.
+  if (ref?.rail === "svm") {
+    return checkSolanaPayment(ref, { rpcUrl: solanaRpcUrl(NETWORKS.svm) });
+  }
+  const { chainId, token, payer, nonce } = ref;
   readinessChain(chainId);
   const client = readinessClientFor(chainId);
   const used = await client.readContract({
@@ -1773,8 +1805,8 @@ function perIpRateLimit({ max, label }) {
   return function rateLimit(req, res, next) {
     // trust proxy=1 makes req.ip the rightmost untrusted hop (the client
     // address appended by Render), not a client-supplied leftmost
-    // X-Forwarded-For value.
-    const ip = req.ip || req.socket?.remoteAddress || "unknown";
+    // X-Forwarded-For value. IPv6 is counted per /64 (see rate-limit.mjs).
+    const ip = rateLimitSubject(req.ip || req.socket?.remoteAddress);
     const now = Date.now();
     const bucket = buckets.get(ip);
     if (!bucket || now - bucket.at >= 60_000) {
@@ -1808,21 +1840,32 @@ const FREE_API_KEYS = new Set(
     .filter(Boolean),
 );
 
+// Hard ceiling on tracked subjects so a flood of distinct addresses cannot
+// grow memory for the whole day. The oldest subject is dropped first.
+const FREE_GATE_MAX_SUBJECTS = 50_000;
+
 function freeGateRateLimit() {
   const buckets = new Map();
   let sweptAt = 0;
   return function rateLimit(req, res, next) {
-    const ip = req.ip || req.socket?.remoteAddress || "unknown";
+    const ip = rateLimitSubject(req.ip || req.socket?.remoteAddress);
     const now = Date.now();
     const day = new Date(now).toISOString().slice(0, 10);
     const presentedKey = String(req.get("x-verify402-key") || "").trim();
     const keyed = presentedKey.length > 0 && FREE_API_KEYS.has(presentedKey);
     const dailyMax = keyed ? FREE_API_KEY_DAILY_LIMIT : FREE_GATE_DAILY_LIMIT;
+    // A valid key is counted as itself, wherever it calls from; everyone else
+    // is counted by address. The key is hashed so it is never held as a map key.
+    const subject = keyed
+      ? `key:${createHash("sha256").update(presentedKey).digest("hex").slice(0, 32)}`
+      : `ip:${ip}`;
 
-    let bucket = buckets.get(ip);
+    let bucket = buckets.get(subject);
     if (!bucket || bucket.day !== day) {
       bucket = { day, minuteAt: now, minuteN: 0, dayN: 0 };
-      buckets.set(ip, bucket);
+      buckets.delete(subject);
+      if (buckets.size >= FREE_GATE_MAX_SUBJECTS) buckets.delete(buckets.keys().next().value);
+      buckets.set(subject, bucket);
     }
     if (bucket.dayN >= dailyMax) {
       const midnight = Date.parse(`${day}T00:00:00.000Z`) + 86_400_000;
@@ -1831,7 +1874,9 @@ function freeGateRateLimit() {
       return res.status(429).json({
         error: "rate_limited",
         code: "free_gate_daily_limit",
-        message: `max ${dailyMax} free gate calls per day per IP${keyed ? " for this API key" : ""}`,
+        message: keyed
+          ? `max ${dailyMax} free gate calls per day for this API key`
+          : `max ${dailyMax} free gate calls per day per IP`,
         requestId: req.requestId,
       });
     }
@@ -2004,6 +2049,20 @@ function ensureStats() {
 }
 
 app.get("/stats", async (_req, res) => {
+  if (LOCAL_LIVE_STATS) {
+    try {
+      const upstream = await fetch("https://vex402.online/stats", {
+        signal: AbortSignal.timeout(LOCAL_LIVE_STATS_TIMEOUT_MS),
+      });
+      if (upstream.ok) {
+        const payload = await upstream.json();
+        res.set("Cache-Control", "no-store");
+        return res.json(payload);
+      }
+    } catch (error) {
+      logError("[stats] local live-stats proxy failed", error);
+    }
+  }
   const now = Date.now();
   if (statsSnap && now - statsAt < STATS_TTL_MS) {
     res.set("Cache-Control", "public, max-age=30");
@@ -2997,6 +3056,11 @@ app.post("/assure", async (req, res) => {
       sections.safety = result;
       for (const item of result.checked ?? []) checked.push(`safety:${item}`);
       for (const item of result.notChecked ?? []) notChecked.add(item);
+    } else if (safetyInput) {
+      // The price guard counted this section, so it must run or the request
+      // must be refused (400 cancels settlement). Skipping it silently would
+      // charge the bundle price for fewer checks than were priced.
+      return badRequest(req, res, "missing_tokenAddress", "safety.tokenAddress is required");
     } else {
       notChecked.add("safety: not requested");
     }
