@@ -60,3 +60,8 @@ test("the public MCP page lists the free tools", () => {
     assert.ok(page.includes(tool), `${tool} must be listed on the /mcp page`);
   }
 });
+
+test("preflight_gate forwards a caller-supplied quote to the gate", async () => {
+  assert.match(source, /quote: z\.object\(/);
+  assert.match(source, /quote: args\.quote,/);
+});

@@ -582,6 +582,28 @@ Check the MCP Registry and npm for `2.5.0`.
 
 Deployed after the registry and npm versions were verified. Superseded by 2.6.0.
 
+## Release verify402-mcp 3.0.0 — for me
+
+Solana payment recovery, LCX Liberty DEX decoding, and `quote` on preflight_gate.
+
+## Validate and inspect the release
+Run `npm run test:offline` and inspect the release metadata before changing anything.
+
+## Create and verify the npm 3.0.0 artifact
+Build and verify the npm tarball for `verify402-mcp@3.0.0`.
+
+## Publish npm 3.0.0
+Publish to npm with the authenticator code. This step runs only when the npm 3.0.0 artifact exists and is verified.
+
+## Transition the release metadata to published 3.0.0
+Update `src/version.mjs`, `PUBLISHED_VERSION`, and the MCP Registry entry only after npm succeeds.
+
+## Verify the actual 3.0.0 registry version
+Check the MCP Registry and npm for `3.0.0`.
+
+## Deploy only after
+Deploy only after the registry and npm versions are verified.
+
 ## Release verify402-mcp 2.6.1 — for me
 
 Price defaults and public copy match the live $0.02 / $0.10 service.

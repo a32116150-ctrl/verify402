@@ -13,7 +13,7 @@ wallet. The analysis reads mainnet chain data. The public Base Sepolia testnet d
 retired on 2026-11-19 — the live service at https://vex402.online is the only
 public endpoint. The bridge never signs or sends a trade.
 
-> **Published package note:** `verify402-mcp@2.6.1` is published to npm. The
+> **Published package note:** `verify402-mcp@3.0.0` is published to npm. The
 > full tool surface is listed for every install (free tools work immediately;
 > the six paid tools refuse with a clear error until `EVM_PRIVATE_KEY` is
 > set). The public testnet demo was retired on 2026-11-19; the live service is
