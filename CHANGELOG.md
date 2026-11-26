@@ -3,6 +3,26 @@
 All notable changes to verify402. This file records repository changes; it does
 not imply a deploy or an npm publish.
 
+## 3.0.1 — 2026-11-26
+
+Solana payments with recovery, quote binding in the free gate, and billing
+and abuse hardening.
+
+- Solana: a staged Solana payment whose settle outcome was lost is re-checked
+  on chain (found by the payer's signature, or proven expired) instead of
+  staying stuck; legacy, v0 and v1 transactions are read. `SOLANA_RPC_URL`
+  selects the RPC.
+- `preflight_gate` takes an optional `quote` (the quote a transaction came
+  with); any difference between the decoded transaction and the quote is
+  BLOCK. Known routers can be added as operator plug-ins
+  (`VERIFY402_ROUTER_PLUGINS`).
+- /assure refuses an empty `safety` section instead of pricing it and
+  skipping it, so a bundle can no longer be paid for checks that do not run.
+- Free-gate limits count IPv6 per /64 and API keys per key; the private
+  engine token only travels over HTTPS or to localhost.
+Published as `verify402-mcp@3.0.1`; npm, the MCP Registry and the GitHub
+release carry the same identity.
+
 ## 2.6.1 — 2026-11-22
 
 Public copy now matches the market-aligned prices served by the 402 challenges.

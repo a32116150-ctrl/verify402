@@ -24,6 +24,26 @@ function bigintRevive(_key, value) {
   return value;
 }
 
+const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
+
+/**
+ * The engine token is a bearer secret, so it may only travel over HTTPS, or
+ * over plain HTTP to this same machine. Returns null when the URL is
+ * acceptable, otherwise a short reason. Never echoes the URL itself.
+ */
+export function engineUrlProblem(base) {
+  let parsed;
+  try {
+    parsed = new URL(String(base));
+  } catch {
+    return "not a valid URL";
+  }
+  if (parsed.username || parsed.password) return "credentials in URL";
+  if (parsed.protocol === "https:") return null;
+  if (parsed.protocol === "http:" && LOOPBACK_HOSTS.has(parsed.hostname)) return null;
+  return "must be https (plain http is allowed only for localhost)";
+}
+
 /** True when this process is configured to send paid work to the private service. */
 export function remoteEngineConfigured() {
   return Boolean(process.env.VERIFY402_ENGINE_URL && process.env.VERIFY402_ENGINE_TOKEN);
@@ -38,6 +58,12 @@ export async function remoteEngine(name, chainId, opts = {}) {
   const token = process.env.VERIFY402_ENGINE_TOKEN;
   if (!base || !token) return null;
 
+  const problem = engineUrlProblem(base);
+  if (problem) {
+    const error = new Error(`private engine URL refused: ${problem}`);
+    error.code = "engine_service_unavailable";
+    throw error;
+  }
   const url = `${base.replace(/\/+$/, "")}/internal/engine/${encodeURIComponent(name)}`;
   let response;
   try {

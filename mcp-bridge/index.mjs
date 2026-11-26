@@ -249,7 +249,8 @@ const DESCRIPTIONS = {
     "PASS with structural_only:true and names what was not checked. " +
     "Optional caller-supplied checks: policy.sellerPayoutWallets is a payout allowlist, not provenance; " +
     "policy.sellerPayoutManifest fetches a seller-signed manifest from a caller-pinned HTTPS origin and is the only source of payee_payout_binding; " +
-    "policy.obligation checks a local settled-key ledger and cumulative spend against a grant. The gate does not persist either state.",
+    "policy.obligation checks a local settled-key ledger and cumulative spend against a grant. The gate does not persist either state. " +
+    "If the transaction came with a quote from a swap API, pass it as `quote`: any difference between the decoded transaction and the quote is BLOCK.",
   inspect_402:
     "Read an x402 402 challenge BEFORE paying it. Pass a public endpoint URL (or the challenge you already have) " +
     "and get back the price, token, network, payee, the bound resource, and a PASS / CAUTION / BLOCK verdict " +
@@ -397,6 +398,19 @@ async function main() {
         maxTimeoutSeconds: z.number().optional().describe("Reject challenges with a longer timeout"),
       }).optional().describe("Operator policy. Omit for structural checks only."),
       ttlSeconds: z.number().optional().describe("Receipt lifetime in seconds, 15-300 (default 90)"),
+      quote: z.object({
+        spender: z.string().optional().describe("The contract the quote says to approve and call (must equal `to`)"),
+        input: z.object({
+          amount: z.string().optional().describe("RAW amount in"),
+          token: z.union([z.string(), z.object({ address: z.string() }).passthrough()]).optional(),
+        }).passthrough().optional(),
+        output: z.object({
+          amount: z.string().optional().describe("RAW quoted amount out"),
+          minimumAmount: z.string().optional().describe("RAW guaranteed minimum out"),
+          token: z.union([z.string(), z.object({ address: z.string() }).passthrough()]).optional(),
+        }).passthrough().optional(),
+        expiresAt: z.number().optional().describe("Unix seconds when the quote expires"),
+      }).passthrough().optional().describe("kind=transaction: the quote the transaction was built from, passed verbatim. The gate checks the calldata matches it."),
     },
     async (args) => {
       const payload = {
@@ -411,6 +425,7 @@ async function main() {
         value: args.value,
         policy: args.policy,
         ttlSeconds: args.ttlSeconds,
+        quote: args.quote,
       };
       try {
         const res = await freeApi.post("/preflight", payload);
