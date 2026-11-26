@@ -1324,6 +1324,7 @@ app.get("/sitemap.xml", (_req, res) => {
   <url><loc>https://vex402.online/token-approval-checker</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://vex402.online/agent-payment-receipt</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://vex402.online/crypto-arbitrage-verification</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://vex402.online/solana-x402-payments</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://vex402.online/mcp</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
   <url><loc>https://vex402.online/preflight</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://vex402.online/inspect</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>

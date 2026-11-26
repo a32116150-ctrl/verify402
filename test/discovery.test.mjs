@@ -322,6 +322,7 @@ test("discovery: long-tail guides are canonical, structured, and linked from hub
     ["/token-approval-checker", "token-approval-checker.html", "Token approval checker"],
     ["/agent-payment-receipt", "agent-payment-receipt.html", "Agent payment receipt"],
     ["/crypto-arbitrage-verification", "crypto-arbitrage-verification.html", "Crypto arbitrage verification"],
+    ["/solana-x402-payments", "solana-x402-payments.html", "Solana x402 payments"],
   ];
   const server = fs.readFileSync(path.join(ROOT, "src", "server.mjs"), "utf8");
   const llms = fs.readFileSync(path.join(ROOT, "src", "payment-mode.mjs"), "utf8");

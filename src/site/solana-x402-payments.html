@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Solana x402 payments with verify402 · verify402</title>
+<meta name="description" content="Pay for verify402 checks in USDC on Solana mainnet, check a Solana x402 payment request for free before signing, and see how a lost Solana settlement is recovered from the chain instead of charged twice.">
+<link rel="canonical" href="https://vex402.online/solana-x402-payments">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Solana x402 payments with verify402">
+<meta property="og:description" content="Solana USDC on every paid check, a free structural check for Solana x402 payment requests, and on-chain recovery for lost settlements.">
+<meta property="og:url" content="https://vex402.online/solana-x402-payments">
+<meta property="og:image" content="https://vex402.online/assets/logo-400.png">
+<meta name="twitter:card" content="summary">
+<meta name="google-site-verification" content="iGmI2QL110IkjnW0thU3DRZrdgQe_7mZsPWgkZVte7o">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/site.css">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebPage","name":"Solana x402 payments with verify402","description":"How to pay for verify402 checks in Solana USDC, check a Solana x402 payment request before signing, and how lost Solana settlements are recovered from the chain.","url":"https://vex402.online/solana-x402-payments","isPartOf":{"@type":"WebSite","name":"verify402","url":"https://vex402.online/"},"publisher":{"@type":"Organization","name":"verify402","url":"https://vex402.online/"}}</script>
+</head>
+<body>
+
+<header class="site-head">
+  <a class="brand" href="/" aria-label="verify402 home">verify<span>[</span>402<span>]</span></a>
+  <nav class="site-nav" aria-label="Primary">
+    <a href="/checks">Checks</a>
+    <a href="/preflight">Preflight</a>
+    <a href="/inspect">Inspect</a>
+    <a href="/directory">Directory</a>
+    <a href="/mcp">MCP</a>
+    <a href="/proof">Proof</a>
+    <a href="/activity">Activity</a>
+    <a href="/blog">Blog</a>
+    <a href="/board">Board</a>
+    <a href="/docs">Docs</a>
+  </nav>
+  <div class="site-actions">
+    <a class="site-status" href="/live"><span class="status-dot"></span><span data-block>snapshot · block —</span></a>
+    <a class="btn sm" href="/preflight#try">Run free check</a>
+    <details class="site-menu">
+      <summary>Menu</summary>
+      <nav aria-label="Menu">
+        <p class="menu-label">Start</p>
+        <a href="/preflight">Free gate</a>
+        <a href="/checks">Paid checks &amp; prices</a>
+        <a href="/start">Quickstart</a>
+        <a href="/mcp">MCP server</a>
+        <p class="menu-label">Explore</p>
+        <a href="/inspect">402 inspector</a>
+        <a href="/directory">402 directory</a>
+        <a href="/live">Live findings</a>
+        <a href="/activity">Activity</a>
+        <p class="menu-label">Trust</p>
+        <a href="/proof">Proof &amp; receipts</a>
+        <a href="/board">Public board</a>
+        <a href="/audit">Payment review</a>
+        <a href="/testers">Tester kit</a>
+        <p class="menu-label">Project</p>
+        <a href="/blog">Blog</a>
+        <a href="/docs">Documentation</a>
+        <a href="/donate">Donate</a>
+        <a href="/sponsor">Sponsor hosting</a>
+        <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">GitHub</a>
+      </nav>
+    </details>
+  </div>
+</header>
+
+<main>
+  <div class="wrap page-head">
+    <p class="eyebrow">Solana mainnet · USDC · x402</p>
+    <h1>Solana x402 payments with verify402.</h1>
+    <p class="lead">Every paid verify402 check can be paid in USDC on Solana mainnet, at the same price as on Base. Before an agent pays a Solana x402 request, anywhere, the free <a class="textlink" href="/preflight">/preflight</a> gate checks the request. And if a Solana payment's confirmation is lost on the way back, the outcome is settled from the chain, not guessed.</p>
+    <div class="btn-row" style="margin-top:24px">
+      <a class="btn" href="#check">Check a Solana payment request</a>
+      <a class="btn ghost" href="/checks">See the paid checks</a>
+    </div>
+  </div>
+
+  <section>
+    <div class="wrap stack">
+      <article id="pay">
+        <p class="eyebrow">01 · Pay in Solana USDC</p>
+        <h2 style="margin-top:14px">Two ways to pay, one price.</h2>
+        <p class="lead" style="margin-top:14px">Each paid route answers with an HTTP 402 that offers two options: USDC on Base and USDC on Solana. Pick either; the price is the same, from $0.02 to $0.10 per call. Payments settle through the Coinbase CDP facilitator.</p>
+        <div class="table-wrap" data-ui style="margin-top:22px">
+          <table class="table">
+            <thead><tr><th>Option</th><th>Network</th><th>Asset</th></tr></thead>
+            <tbody>
+              <tr><td>Base</td><td class="mono">eip155:8453</td><td class="mono">USDC 0x8335…2913</td></tr>
+              <tr><td>Solana</td><td class="mono">solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp</td><td class="mono">USDC EPjFWdd5…Dt1v</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="small muted" style="margin-top:14px">To pay on Solana, use an x402 client that can sign Solana payments. The <a class="textlink" href="/mcp">verify402 MCP server</a> pays on Base today. Always take the network, asset and price from the live 402 challenge: it is the authority, not this page.</p>
+      </article>
+
+      <article id="check">
+        <p class="eyebrow">02 · Free check before you pay</p>
+        <h2 style="margin-top:14px">Check a Solana x402 request, field by field.</h2>
+        <p class="lead" style="margin-top:14px">Pass the Solana payment request your agent received to <code class="inline">POST /preflight</code>. The gate checks the scheme, that the network is Solana mainnet, that the asset is the canonical USDC mint, the amount against your cap, the payee (a system or token program as payee is a BLOCK), the resource URL and host, and the timeout.</p>
+        <div style="margin-top:24px">
+          <p class="code-cap">Request</p>
+<pre><span class="c">POST</span> /preflight
+{
+  <span class="y">"kind"</span>: <span class="g">"payment"</span>,
+  <span class="y">"payment"</span>: {
+    <span class="y">"scheme"</span>: <span class="g">"exact"</span>,
+    <span class="y">"network"</span>: <span class="g">"solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"</span>,
+    <span class="y">"asset"</span>: <span class="g">"EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"</span>,
+    <span class="y">"amount"</span>: <span class="g">"20000"</span>,
+    <span class="y">"payTo"</span>: <span class="g">"&lt;payee from the 402&gt;"</span>,
+    <span class="y">"resource"</span>: <span class="g">"https://vex402.online/safety"</span>,
+    <span class="y">"maxTimeoutSeconds"</span>: 60
+  },
+  <span class="y">"policy"</span>: { <span class="y">"maxAmountUsd"</span>: 0.05, <span class="y">"allowedResourceHosts"</span>: [<span class="g">"vex402.online"</span>] }
+}</pre>
+        </div>
+        <div style="margin-top:18px">
+          <p class="code-cap">Response (trimmed, from the live gate)</p>
+<pre>{
+  <span class="y">"verdict"</span>: <span class="g">"PASS"</span>,
+  <span class="y">"structural_only"</span>: <span class="g">true</span>,
+  <span class="y">"checked"</span>: [<span class="g">"scheme"</span>, <span class="g">"network"</span>, <span class="g">"asset"</span>, <span class="g">"amount"</span>, <span class="g">"payee"</span>, <span class="g">"resource_url"</span>, <span class="g">"resource_host"</span>, <span class="g">"timeout"</span>],
+  <span class="y">"structural_only_reasons"</span>: [<span class="g">"Solana payment preflight is structural: no slot binding and no balance check"</span>, …],
+  <span class="y">"notChecked"</span>: [<span class="g">"solana slot binding"</span>, <span class="g">"payer_balance"</span>, <span class="g">"payment proof / signed payload"</span>, …],
+  <span class="y">"receipt"</span>: { … }
+}</pre>
+        </div>
+        <div class="callout warn" style="margin-top:22px">
+          <h3>On Solana, a PASS means the request is well-formed</h3>
+          <p>The response says so itself with <code class="inline">structural_only: true</code>. On Solana the gate does not read the payer's balance, bind the answer to a slot, or check a signed payment. Those stay in <code class="inline">notChecked</code> on every answer.</p>
+        </div>
+      </article>
+
+      <article id="recovery">
+        <p class="eyebrow">03 · Payment recovery</p>
+        <h2 style="margin-top:14px">A lost confirmation is settled from the chain.</h2>
+        <p class="lead" style="margin-top:14px">Sometimes a payment goes through but the confirmation never makes it back, for example when a connection drops. On Solana there is no single “was this used?” call, so verify402 checks the chain two ways: it looks for the payer's own signature in the payer's recent transactions, and it checks whether the transaction's recent blockhash has expired, after which it can never land.</p>
+        <div class="table-wrap" data-ui style="margin-top:22px">
+          <table class="table">
+            <thead><tr><th>The chain shows</th><th>What happens</th></tr></thead>
+            <tbody>
+              <tr><td>The payment landed</td><td>It counts. Retry with the same idempotency key within 10 minutes and the answer is served without paying again.</td></tr>
+              <tr><td>The payment can no longer land</td><td>Nothing was charged. The request can be paid again.</td></tr>
+              <tr><td>Not sure yet</td><td>The key stays blocked until the chain gives a definite answer. It never guesses.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="small muted" style="margin-top:14px">Legacy and versioned Solana transactions are read. The recovery design is written up in the <a class="textlink" href="/audit">payment review</a> and the x402 recovery proposal.</p>
+      </article>
+
+      <article id="limits">
+        <p class="eyebrow">04 · Honest limits</p>
+        <h2 style="margin-top:14px">What verify402 does not do on Solana yet.</h2>
+        <p class="lead" style="margin-top:14px">Solana support today is about payments. verify402 does not check Solana transactions such as swaps or token delegations, and it does not scan Solana tokens. The transaction gate, its plain-language advice, the dollar risk and the risk limit, and the paid market checks all measure Ethereum, Base and Arbitrum. Solana is a way to pay for them, and a payment request the free gate can read.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="soft">
+    <div class="wrap">
+      <div class="sec-head">
+        <p class="eyebrow">One more read</p>
+        <h2>Check the request before the signature.</h2>
+        <p class="lead">The free gate takes the same Solana request your agent received. No account, no API key, no wallet needed.</p>
+      </div>
+      <div class="btn-row" style="margin-top:28px">
+        <a class="btn" href="/preflight#try">Run the gate</a>
+        <a class="btn ghost" href="/verify-usdc-payment-request">Verify a USDC payment request</a>
+        <a class="btn ghost" href="/inspect">Inspect a live 402</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-foot">
+  <div class="foot-mark" aria-hidden="true">verify<span>[402]</span></div>
+  <div class="foot-links">
+    <div>
+      <h2>Product</h2>
+      <a href="/inspect">402 inspector</a>
+      <a href="/directory">402 directory</a>
+      <a href="/preflight">Preflight gate</a>
+      <a href="/checks">The six checks</a>
+      <a href="/mcp">MCP server</a>
+      <a href="/live">Live findings</a>
+      <a href="/activity">Activity</a>
+      <a href="/testers">Tester kit</a>
+      <a href="/blog">Blog</a>
+      <a href="/start">Quickstart</a>
+    </div>
+    <div>
+      <h2>Project</h2>
+      <a href="/proof">Proof &amp; receipts</a>
+      <a href="/docs">Documentation</a>
+      <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">Open-source client &amp; gate</a>
+      <a href="https://github.com/x402-foundation/x402/issues/3847" rel="noopener">x402 proposal</a>
+    </div>
+    <div>
+      <h2>For machines</h2>
+      <a href="/.well-known/verify402.json">Service manifest</a>
+      <a href="/openapi.json">OpenAPI 3.1</a>
+      <a href="/llms.txt">llms.txt</a>
+      <a href="/findings">/findings</a>
+      <a href="/blog/rss.xml">RSS</a>
+    </div>
+    <div>
+      <h2>For teams</h2>
+      <p class="foot-note">Embedding a pre-signing check in a wallet, agent, or treasury workflow?</p>
+      <a href="mailto:a32116150@gmail.com?subject=verify402%20walkthrough">Talk to the builder</a>
+      <a href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener">npm package</a>
+    </div>
+  </div>
+  <p class="foot-legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data. The mainnet service is at vex402.online. Prices are per call, paid in USDC over x402; /preflight and /inspect are free.</p>
+</footer>
+
+<script src="/assets/site.js"></script>
+</body>
+</html>

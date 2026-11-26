@@ -179,6 +179,7 @@ export function buildLlmsText({
     `Guide: token approval checker — ${baseUrl}/token-approval-checker`,
     `Guide: agent payment receipt — ${baseUrl}/agent-payment-receipt`,
     `Guide: crypto arbitrage verification — ${baseUrl}/crypto-arbitrage-verification`,
+    `Guide: Solana x402 payments — ${baseUrl}/solana-x402-payments`,
     `Board: ${baseUrl}/board — daily structural read of public x402 endpoints`,
     `Directory: ${baseUrl}/directory`,
     `Interactive Docs: ${baseUrl}/docs`,
