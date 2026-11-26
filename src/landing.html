@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>verify402 — don’t sign blind</title>
-<meta name="description" content="Token safety check for AI agents before they swap: quote-based sellability, round-trip cost, TRUST / CAUTION / AVOID. $0.02 per call, free pre-signing gate included. Supporting paid checks settle in USDC over x402 at vex402.online.">
+<meta name="description" content="verify402 checks what an AI agent is about to sign (a payment, a swap or a token approval) on Ethereum, Base and Arbitrum, and answers in plain words: go, pause or stop, the dollars at risk, and how to fix it. Free gate; paid token and trade checks from $0.02 in USDC on Base or Solana.">
 <link rel="canonical" href="https://vex402.online/">
 <meta name="google-site-verification" content="iGmI2QL110IkjnW0thU3DRZrdgQe_7mZsPWgkZVte7o">
 <script type="application/ld+json">
@@ -16,7 +16,7 @@
       "@id": "https://vex402.online/#website",
       "url": "https://vex402.online/",
       "name": "verify402",
-      "description": "Token safety check for AI agents before they swap: quote-based sellability, TRUST / CAUTION / AVOID. $0.02 per call with a free pre-signing gate.",
+      "description": "Pre-signing checks for AI agents on Ethereum, Base and Arbitrum: a free gate that explains what is about to be signed, the dollars at risk and how to fix it, plus paid token and trade checks from $0.02 in USDC on Base or Solana.",
       "publisher": { "@id": "https://vex402.online/#organization" }
     },
     {
@@ -32,7 +32,7 @@
       "applicationCategory": "SecurityApplication",
       "operatingSystem": "Web",
       "url": "https://vex402.online/",
-      "description": "Token safety check for AI agents before they swap: quote-based sellability, round-trip cost, TRUST / CAUTION / AVOID. $0.02 per call, free pre-signing gate included.",
+      "description": "Pre-signing checks for AI agents: a free gate for payments, swaps and token approvals on Ethereum, Base and Arbitrum, and paid token and trade checks from $0.02, payable in USDC on Base or Solana.",
       "provider": { "@id": "https://vex402.online/#organization" }
     },
     {
@@ -186,7 +186,7 @@
         <span class="line"><span>Don’t</span></span>
         <span class="line"><span>sign blind.</span></span>
       </h1>
-      <p class="hero-lead">Token safety check for AI agents before they swap: quote-based sellability, round-trip cost, TRUST / CAUTION / AVOID. $0.02 per call, free pre-signing gate included. Quote-based, not a honeypot proof — transfer restrictions stay in <code>notChecked</code>.</p>
+      <p class="hero-lead">verify402 checks what an AI agent is about to sign (a payment, a swap or a token approval) and answers in plain words: go, pause or stop, how much money is at risk, and how to fix it. The check is free. Paid token and trade checks start at $0.02.</p>
       <div class="hero-actions">
         <a class="btn" href="/preflight#try">Run a free preflight</a>
         <a class="hero-link" href="/inspect">Inspect a 402 before paying →</a>
@@ -197,6 +197,13 @@
         <li>Receipt expires in 90 seconds</li>
         <li>Works over MCP or HTTP</li>
       </ul>
+      <div class="hero-chains" aria-label="Networks">
+        <span class="hero-chains-label">Works on</span>
+        <a class="chain-chip" href="#networks"><img src="/assets/logos/ethereum.svg" alt="" width="22" height="22">Ethereum</a>
+        <a class="chain-chip" href="#networks"><img src="/assets/logos/base.svg" alt="" width="22" height="22">Base</a>
+        <a class="chain-chip" href="#networks"><img src="/assets/logos/arbitrum.svg" alt="" width="22" height="22">Arbitrum</a>
+        <a class="chain-chip" href="/solana-x402-payments"><img src="/assets/logos/solana.svg" alt="" width="22" height="22">Solana</a>
+      </div>
     </div>
 
     <div class="hero-art">
@@ -230,10 +237,66 @@
 
   <div class="ticker" aria-label="What verify402 checks">
     <div class="ticker-track">
-      <span>Payment requests</span><span>Token approvals</span><span>Swaps</span><span>x402</span><span>MCP</span><span>Base mainnet</span><span>Mainnet analysis</span>
-      <span>Payment requests</span><span>Token approvals</span><span>Swaps</span><span>x402</span><span>MCP</span><span>Base mainnet</span><span>Mainnet analysis</span>
+      <span>Payment requests</span><span>Token approvals</span><span>Swaps</span><span>Ethereum</span><span>Base</span><span>Arbitrum</span><span>Solana</span><span>USDC</span><span>x402</span><span>MCP</span>
+      <span>Payment requests</span><span>Token approvals</span><span>Swaps</span><span>Ethereum</span><span>Base</span><span>Arbitrum</span><span>Solana</span><span>USDC</span><span>x402</span><span>MCP</span>
     </div>
   </div>
+
+  <section class="networks" id="networks">
+    <div class="wrap">
+      <div class="networks-head">
+        <h2 data-reveal>Four networks.<br>The coins agents move.</h2>
+        <p data-reveal>The free gate and the paid checks read live data on Ethereum, Base and Arbitrum. Pay for a check in USDC on Base or on Solana, at the same price.</p>
+      </div>
+      <div class="network-grid" data-ui>
+        <div class="network-card" data-reveal>
+          <div class="network-name"><img src="/assets/logos/ethereum.svg" alt="" width="36" height="36">Ethereum</div>
+          <ul>
+            <li>Free check of payments, swaps and approvals</li>
+            <li>Plain-words advice, dollars at risk, risk limit</li>
+            <li>Paid token and trade checks</li>
+          </ul>
+        </div>
+        <div class="network-card" data-reveal>
+          <div class="network-name"><img src="/assets/logos/base.svg" alt="" width="36" height="36">Base</div>
+          <ul>
+            <li>Free check of payments, swaps and approvals</li>
+            <li>Plain-words advice, dollars at risk, risk limit</li>
+            <li>Paid token and trade checks</li>
+            <li class="pay">Pay for checks in USDC</li>
+          </ul>
+        </div>
+        <div class="network-card" data-reveal>
+          <div class="network-name"><img src="/assets/logos/arbitrum.svg" alt="" width="36" height="36">Arbitrum</div>
+          <ul>
+            <li>Free check of payments, swaps and approvals</li>
+            <li>Plain-words advice, dollars at risk, risk limit</li>
+            <li>Paid token and trade checks</li>
+          </ul>
+        </div>
+        <a class="network-card" href="/solana-x402-payments" data-reveal>
+          <div class="network-name"><img src="/assets/logos/solana.svg" alt="" width="36" height="36">Solana</div>
+          <ul>
+            <li class="pay">Pay for checks in USDC</li>
+            <li>Free check of x402 payment requests</li>
+            <li>Lost payments recovered from the chain</li>
+            <li class="soon">Swap and token checks: not yet</li>
+          </ul>
+        </a>
+      </div>
+      <div class="coin-row" data-ui>
+        <span class="coin-label">Coins it knows by name</span>
+        <span class="coin"><img src="/assets/logos/usdc.svg" alt="" width="26" height="26">USDC</span>
+        <span class="coin"><img src="/assets/logos/usdt.svg" alt="" width="26" height="26">USDT</span>
+        <span class="coin"><img src="/assets/logos/dai.svg" alt="" width="26" height="26">DAI</span>
+        <span class="coin"><img src="/assets/logos/eth.svg" alt="" width="26" height="26">ETH / WETH</span>
+        <span class="coin"><img src="/assets/logos/wbtc.svg" alt="" width="26" height="26">WBTC</span>
+        <span class="coin"><img src="/assets/logos/cbbtc.svg" alt="" width="26" height="26">cbBTC</span>
+        <span class="coin"><img src="/assets/logos/arbitrum.svg" alt="" width="26" height="26">ARB</span>
+      </div>
+      <p class="coin-note">Known coins are matched to their official contracts, so a look-alike token is not mistaken for the real one. The paid token check works on any token address on Ethereum, Base and Arbitrum. Logos belong to their owners and are shown only to name the networks and coins.</p>
+    </div>
+  </section>
 
   <section class="film" id="film">
     <div class="wrap film-grid">
