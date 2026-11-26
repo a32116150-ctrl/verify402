@@ -2,7 +2,7 @@
 // The published npm package has its own package.json; the release-consistency
 // test asserts that this constant, mcp-bridge/package.json, server.json,
 // package-lock.json, the manifest, OpenAPI, and the /mcp page agree.
-export const RELEASE_VERSION = "3.0.1";
+export const RELEASE_VERSION = "3.1.0";
 
 // The version a user can actually install from the public npm registry today.
 // 2.0.0 is the v2 release (assure bundle, six paid tools); 2.0.1 a consistency
@@ -10,7 +10,8 @@ export const RELEASE_VERSION = "3.0.1";
 // 2.6.0 lists all nine tools for every install (paid tools refuse without EVM_PRIVATE_KEY);
 // 2.6.1 aligns the bridge's price defaults and public copy with the live service.
 // 3.0.1 adds an optional quote to preflight_gate; the service adds Solana payment recovery.
-export const PUBLISHED_VERSION = "3.0.1";
+// 3.1.0 adds advice to transaction preflights: explanation, wallet preview, fixes, paid hints.
+export const PUBLISHED_VERSION = "3.1.0";
 
 // Machine-readable statement of where this source tree sits in the release
 // process. "published" means the npm artifact exists and was verified:

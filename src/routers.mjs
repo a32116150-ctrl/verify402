@@ -1,8 +1,10 @@
-// Known-router plug-ins for the free gate, and quote binding.
+// Free-gate plug-ins (known routers and advice enrichers), and quote binding.
 //
-// The public tree ships no router definitions. An operator can load private
-// definitions with VERIFY402_ROUTER_PLUGINS=/path/a.mjs,/path/b.mjs; each
-// module exports `routers`, an array of:
+// The public tree ships no plug-ins. An operator can load private modules with
+// VERIFY402_ROUTER_PLUGINS=/path/a.mjs,/path/b.mjs. A module may export
+// `enrichers`, an array of async functions (ctx) => ({ involved?, risk? }) that
+// add advice to a transaction preflight (they never change the verdict), and/or
+// `routers`, an array of:
 //   {
 //     id, name,
 //     upgradeable?: boolean,                 // disclosed in notChecked
@@ -14,7 +16,17 @@
 // trusted router's decoding.
 
 const registry = new Map();
+const enricherList = [];
 let pluginsLoaded = null;
+
+export function registerEnricher(fn) {
+  if (typeof fn !== "function") throw new Error("an enricher must be a function");
+  enricherList.push(fn);
+}
+
+export function enrichers() {
+  return [...enricherList];
+}
 
 export function registerRouter(def) {
   if (!def || typeof def.id !== "string" || !def.deployments) throw new Error("router plug-in needs id and deployments");
@@ -23,6 +35,7 @@ export function registerRouter(def) {
 
 export function clearRouters() {
   registry.clear();
+  enricherList.length = 0;
 }
 
 /** Load VERIFY402_ROUTER_PLUGINS once. A plug-in that fails to load is skipped and reported. */
@@ -34,6 +47,7 @@ export function loadRouterPlugins(spec = process.env.VERIFY402_ROUTER_PLUGINS) {
       try {
         const mod = await import(p.startsWith("file:") ? p : `file://${p}`);
         for (const def of mod.routers || []) registerRouter(def);
+        for (const fn of mod.enrichers || []) registerEnricher(fn);
       } catch (e) {
         console.error(JSON.stringify({ event: "verify402.router_plugin_failed", error: e.message }));
       }

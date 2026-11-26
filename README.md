@@ -44,7 +44,7 @@ curl -sS -X POST https://vex402.online/preflight \
 
 This example uses the **live Base mainnet USDC rail** (`eip155:8453`). The free gate is only validating the request shape; it is not a payment. The public Base Sepolia testnet demo was retired on 2026-11-19; every paid call on the live service settles on mainnet in real USDC.
 
-Returns `PASS` / `CAUTION` / `BLOCK`, typed reasons, exact `checked` and `notChecked` lists, pinned block number, and a verifiable 90-second HMAC receipt.
+Returns `PASS` / `CAUTION` / `BLOCK`, typed reasons, exact `checked` and `notChecked` lists, pinned block number, and a verifiable 90-second HMAC receipt. For transactions it also returns `advice`: a plain-language explanation, a preview of what leaves and enters the wallet, and fixes for anything flagged.
 
 A `PASS` means the listed checks passed at that block. It does **not** mean the
 transaction is safe or cannot drain funds, and the paid token check is a
@@ -331,6 +331,34 @@ Response: `PASS` / `CAUTION` / `BLOCK`, `reasons[]`, `checked[]`,
   `503`, not a PASS.
 - **Fail-closed:** if the chain cannot be read, the endpoint returns `503` and
   no receipt. An executor must refuse to sign without a verifiable receipt.
+- **Advice (transactions):** the response also carries `advice`, which explains
+  the transaction and how to repair it. It never changes the verdict and is
+  not covered by the receipt.
+  - `explanation`: one plain sentence, e.g. *"Swap 100 USDC for at least
+    0.0589 WETH via uniswap-v3, paid to your wallet. It must execute within
+    about 5 minutes. No problems found in the checks that ran."*
+  - `preview.effects`: what leaves and enters the wallet (`send`,
+    `receive_at_least`, `receive_expected` from a supplied quote, `allow`), in
+    raw and human units, with dollars for known stables; `preview.networkFee`
+    when the call was simulated for `from`.
+  - `fixes`: one entry per flagged problem, with the action to take and, where
+    possible, suggested values (`amountOutMinimum`, `recipient`) or the exact
+    fields that differ from the quote.
+  - `upgrades`: optional paid checks that fit this transaction (for example
+    `check_token_safety` for an output token verify402 does not know).
+  - Optional `quote` (the quote a transaction came with: `spender`,
+    `input {amount, token}`, `output {amount, minimumAmount, token}`,
+    `expiresAt`) binds the transaction to it; any difference is `BLOCK`.
+  - The hosted service may add `involved` (who the transaction touches) and
+    `risk` (dollar exposure) from operator plug-ins.
+- **Risk limit (`policy.maxRiskUsd`):** the owner's dollar limit for one
+  transaction. The gate measures what is at risk (what leaves the wallet, or
+  what an approved spender could take) and compares it to the limit: within
+  adds `risk_limit` to `checked`; over is `BLOCK` (`risk_over_limit`); not
+  measurable (no reliable price) is `CAUTION` (`risk_unmeasured`), never a
+  guess. `advice.riskLimit` shows `limitUsd`, `atRiskUsd`, `basis` and
+  `within`. Prices are estimates at that moment; this is a limit on what the
+  agent may sign without asking, not insurance or a guarantee.
 - **Optional caller-supplied state:** the gate has no cross-process payment
   ledger, so it can only check obligation state the caller supplies:
   - `payment.idempotencyKey` plus `policy.obligation.settledKeys` catches a
@@ -524,13 +552,13 @@ or any MCP client.
   separate MCP bridge calls from generic HTTP. Labels are self-declared and
   spoofable, not identities.
 - **Install:** `npx -y verify402-mcp@latest` from the public npm registry
-  (currently `3.0.1`). For a pinned install of the published package, use
-  `npx -y verify402-mcp@3.0.1`; its npm tarball is
-  `https://registry.npmjs.org/verify402-mcp/-/verify402-mcp-3.0.1.tgz`. `1.1.6`
+  (currently `3.1.0`). For a pinned install of the published package, use
+  `npx -y verify402-mcp@3.1.0`; its npm tarball is
+  `https://registry.npmjs.org/verify402-mcp/-/verify402-mcp-3.1.0.tgz`. `1.1.6`
   moved the paid-call default to the live Base mainnet rail (`eip155:8453`,
   real USDC), with the same spend caps; the retired Base Sepolia testnet demo
   (`eip155:84532`) is an explicit opt-in via `VERIFY402_URL` and
-  `VERIFY402_NETWORKS`. `3.0.1` adds optional quote binding to preflight_gate and ships with Solana payment recovery on the live service; `2.6.1` aligns the bridge's price defaults and public copy with the live service; `2.6.0` lists all nine tools for every install — paid tools refuse without a wallet; `2.5.0` retired the testnet demo — paid calls are mainnet-only (real USDC); `2.0.0` added the paid assurance endpoint and the hash-bound evidence bundle; `1.1.7` was a metadata-only correction so the MCP
+  `VERIFY402_NETWORKS`. `3.1.0` adds `advice` (explanation, wallet preview, fixes) to preflight_gate; `3.0.1` adds optional quote binding to preflight_gate and ships with Solana payment recovery on the live service; `2.6.1` aligns the bridge's price defaults and public copy with the live service; `2.6.0` lists all nine tools for every install — paid tools refuse without a wallet; `2.5.0` retired the testnet demo — paid calls are mainnet-only (real USDC); `2.0.0` added the paid assurance endpoint and the hash-bound evidence bundle; `1.1.7` was a metadata-only correction so the MCP
   Registry advertises that same mainnet default. No npm account is required to
   run the published package. Client configs, the exact OpenCode V2 shape, and
   the release command are at [`/mcp`](https://vex402.online/mcp). The immutable

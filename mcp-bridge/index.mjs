@@ -250,7 +250,10 @@ const DESCRIPTIONS = {
     "Optional caller-supplied checks: policy.sellerPayoutWallets is a payout allowlist, not provenance; " +
     "policy.sellerPayoutManifest fetches a seller-signed manifest from a caller-pinned HTTPS origin and is the only source of payee_payout_binding; " +
     "policy.obligation checks a local settled-key ledger and cumulative spend against a grant. The gate does not persist either state. " +
-    "If the transaction came with a quote from a swap API, pass it as `quote`: any difference between the decoded transaction and the quote is BLOCK.",
+    "If the transaction came with a quote from a swap API, pass it as `quote`: any difference between the decoded transaction and the quote is BLOCK. " +
+    "For kind=transaction the response also carries `advice`: `explanation` (one plain sentence to show your user), `preview.effects` " +
+    "(what leaves and enters the wallet, the minimum received, and the network fee when `from` is given), `fixes` (how to repair each flagged problem, " +
+    "with suggested values) and `upgrades` (optional paid checks that fit this transaction). Advice never changes the verdict.",
   inspect_402:
     "Read an x402 402 challenge BEFORE paying it. Pass a public endpoint URL (or the challenge you already have) " +
     "and get back the price, token, network, payee, the bound resource, and a PASS / CAUTION / BLOCK verdict " +
@@ -298,6 +301,7 @@ const INSTRUCTIONS = `verify402 leads with a $0.02 token safety check for AI age
 
 Free tools (no wallet needed, nothing can be charged):
 - preflight_gate: call BEFORE signing ANY payment, approval, transaction, or sign-in message. It returns PASS / CAUTION / BLOCK with typed reasons. sign_allowed:false means STOP. requires_ack:true means the human must acknowledge the reasons before signing.
+- For transactions, read preflight_gate's advice: show advice.explanation to the user, apply advice.fixes (they include suggested values) and call preflight_gate again on the repaired transaction.
 - inspect_402: read a 402 challenge BEFORE paying it (price, token, payee, timeout).
 - directory_402: list the watched public x402 endpoints and what changed.
 
@@ -376,6 +380,7 @@ async function main() {
         maxAmountUsd: z.number().optional().describe("Reject payments above this USD value"),
         maxValueWei: z.string().optional().describe("Reject native value above this wei amount"),
         maxValueEth: z.number().optional().describe("Reject native value above this ETH amount"),
+        maxRiskUsd: z.number().positive().optional().describe("Owner's risk limit in USD for kind=transaction: more at risk than this (what leaves the wallet, or what an approved spender could take) is BLOCK; risk that cannot be priced is CAUTION. Ask the owner before signing either"),
         allowedNetworks: z.array(z.string()).optional().describe("Allowlist of CAIP-2 networks"),
         allowedPayTo: z.array(z.string()).optional().describe("Allowlist of payment recipients"),
         allowedTo: z.array(z.string()).optional().describe("Allowlist of transaction targets"),

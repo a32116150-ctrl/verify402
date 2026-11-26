@@ -3,6 +3,29 @@
 All notable changes to verify402. This file records repository changes; it does
 not imply a deploy or an npm publish.
 
+## 3.1.0 — 2026-11-26
+
+The free gate now explains a transaction and says how to fix it, not only
+whether to sign it.
+
+- Transaction preflights return `advice`: a one-sentence `explanation`, a
+  `preview` of what leaves and enters the wallet (minimum received, quoted
+  output, dollars for known stables, the network fee when `from` is given),
+  `fixes` for every flagged problem (with suggested values such as a minimum
+  output or recipient, and the exact fields that differ from a quote), and
+  `upgrades` naming the paid check that fits.
+- Operator plug-ins can add `involved` (who the transaction touches) and
+  `risk` (dollar exposure) to the advice.
+- New `policy.maxRiskUsd`: the owner's dollar risk limit. More at risk than
+  the limit is BLOCK (`risk_over_limit`); risk that cannot be priced is
+  CAUTION (`risk_unmeasured`). `advice.riskLimit` shows the figures.
+- Apart from the risk limit, advice never changes the verdict and is not
+  covered by the receipt.
+- `preflight_gate` in verify402-mcp tells agents to show the explanation and
+  apply the fixes.
+Published as `verify402-mcp@3.1.0`; npm, the MCP Registry and the GitHub
+release carry the same identity.
+
 ## 3.0.1 — 2026-11-26
 
 Solana payments with recovery, quote binding in the free gate, and billing

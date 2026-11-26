@@ -40,6 +40,7 @@ import { clientFor } from "./measure.mjs";
 import { canonicalStable, sha256Hex } from "./recovery.mjs";
 import { findToken, STABLE } from "./tokens.mjs";
 import { knownRouter, loadRouterPlugins, bindQuote } from "./routers.mjs";
+import { prepareAdvice, finishAdvice, valueAtRiskUsd } from "./preflight-advice.mjs";
 
 export const PREFLIGHT_SPEC = "verify402/preflight@1";
 export const RECEIPT_SPEC = "verify402/preflight-receipt@1";
@@ -574,6 +575,11 @@ function normalizePolicy(p) {
     const n = Number(p.maxValueEth);
     if (!Number.isFinite(n) || n < 0) throw new PreflightError(400, "invalid_policy", "policy.maxValueEth must be a non-negative number");
     out.maxValueWei = BigInt(Math.round(n * 1e18)).toString();
+  }
+  if (p.maxRiskUsd != null) {
+    const n = Number(p.maxRiskUsd);
+    if (!Number.isFinite(n) || n <= 0) throw new PreflightError(400, "invalid_policy", "policy.maxRiskUsd must be a positive number of US dollars");
+    out.maxRiskUsd = n;
   }
   if (p.maxTimeoutSeconds != null) {
     const n = Number(p.maxTimeoutSeconds);
@@ -2731,6 +2737,36 @@ async function transactionPreflight(body, { clientFactory, now }) {
     notChecked.push("block binding");
   }
 
+  // Advice, phase 1 (preview and plug-in enrichers). It runs before the
+  // verdict so a caller's dollar risk limit can use it.
+  let prepared = null;
+  try {
+    prepared = await prepareAdvice({
+      decoded, chainId, from, to, data, value,
+      quote: quoteRaw && typeof quoteRaw === "object" ? quoteRaw : null,
+      simulation, client, now,
+    });
+  } catch {
+    prepared = null;
+  }
+  let riskLimit = null;
+  if (policy.maxRiskUsd != null) {
+    const atRisk = prepared ? valueAtRiskUsd(prepared) : null;
+    riskLimit = { limitUsd: policy.maxRiskUsd, atRiskUsd: atRisk?.usd ?? null, basis: atRisk?.basis ?? null };
+    if (atRisk == null) {
+      riskLimit.within = null;
+      reasons.push(caution("risk_unmeasured", `policy.maxRiskUsd is $${policy.maxRiskUsd}, but the dollars at risk could not be measured; ask the owner before signing`));
+      notChecked.push("risk_limit");
+    } else if (atRisk.usd > policy.maxRiskUsd) {
+      riskLimit.within = false;
+      reasons.push(block("risk_over_limit", `about $${atRisk.usd} is at risk (${atRisk.basis}), above the $${policy.maxRiskUsd} limit in policy.maxRiskUsd; ask the owner before signing`));
+      checked.push("risk_limit");
+    } else {
+      riskLimit.within = true;
+      checked.push("risk_limit");
+    }
+  }
+
   const intent = {
     kind: "transaction",
     chainId,
@@ -2741,7 +2777,7 @@ async function transactionPreflight(body, { clientFactory, now }) {
     policy,
   };
 
-  return finish({
+  const result = finish({
     kind: "transaction",
     reasons,
     checked,
@@ -2754,6 +2790,16 @@ async function transactionPreflight(body, { clientFactory, now }) {
     ttlSeconds: ttlOf(body),
     now,
   });
+  // Advice, phase 2: wording from the final verdict. Best effort.
+  if (prepared) {
+    try {
+      result.advice = finishAdvice(prepared, { verdict: result.verdict, reasons: result.reasons });
+      if (riskLimit) result.advice.riskLimit = riskLimit;
+    } catch {
+      // The verdict stands without advice.
+    }
+  }
+  return result;
 }
 
 // ---------------------------------------------------------------- entry -----
