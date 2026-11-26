@@ -56,6 +56,18 @@ const EVM_CHAINS = {
       "0x4200000000000000000000000000000000000006": { symbol: "WETH", decimals: 18, kind: VOLATILE },
     },
   },
+  // OP Mainnet: transaction gate only (no x402 payment rail, no paid routes).
+  "eip155:10": {
+    name: "optimism",
+    gateOnly: true,
+    tokens: {
+      "0x0b2c639c533813f4aa9d7837caf62653d097ff85": { symbol: "USDC", decimals: 6, kind: STABLE },
+      "0x7f5c764cbc14f9669b88837ca1490cca17c31607": { symbol: "USDC.e", decimals: 6, kind: STABLE },
+      "0x94b008aa00579c1307b0ef2c499ad98a8ce58e58": { symbol: "USDT", decimals: 6, kind: STABLE },
+      "0xda10009cbd5d07dd0cecc66161fc93d7c9000da1": { symbol: "DAI", decimals: 18, kind: STABLE },
+      "0x4200000000000000000000000000000000000006": { symbol: "WETH", decimals: 18, kind: VOLATILE },
+    },
+  },
   "eip155:84532": {
     name: "base-sepolia",
     tokens: {
@@ -139,9 +151,11 @@ export function tokenLabel(net, asset) {
   return value.length > 12 ? `${value.slice(0, 8)}…${value.slice(-4)}` : value;
 }
 
-// Every chain the registry knows about, for docs and the directory page.
+// Every payment network the registry knows about, for docs and the directory
+// page. Gate-only chains (tokens named in transaction previews, but no 402
+// payment rail) are left out so they are not advertised as payment networks.
 export function knownNetworks() {
-  return Object.entries(TOKEN_REGISTRY).map(([id, entry]) => ({
+  return Object.entries(TOKEN_REGISTRY).filter(([, entry]) => !entry.gateOnly).map(([id, entry]) => ({
     id,
     name: entry.name,
     tokens: Object.values(entry.tokens).map((token) => token.symbol),

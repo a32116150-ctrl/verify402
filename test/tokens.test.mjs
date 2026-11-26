@@ -79,7 +79,8 @@ test("networkIdOf maps parsed networks to registry ids", () => {
 
 test("knownNetworks lists every chain with its tokens", () => {
   const networks = knownNetworks();
-  assert.equal(networks.length, Object.keys(TOKEN_REGISTRY).length);
+  assert.equal(networks.length, Object.values(TOKEN_REGISTRY).filter((e) => !e.gateOnly).length);
+  assert.ok(!networks.some((n) => n.id === "eip155:10"), "gate-only OP Mainnet is not a payment network");
   const base = networks.find((n) => n.id === "eip155:8453");
   assert.ok(base.tokens.includes("USDC"));
   assert.ok(base.tokens.includes("USDT"));

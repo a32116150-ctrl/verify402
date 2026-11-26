@@ -35,8 +35,8 @@ import {
   parseAbi,
   verifyMessage,
 } from "viem";
-import { CHAINS } from "./config.mjs";
-import { clientFor } from "./measure.mjs";
+import { CHAINS, gateChain, gateChainIds } from "./config.mjs";
+import { gateClientFor } from "./measure.mjs";
 import { canonicalStable, sha256Hex } from "./recovery.mjs";
 import { findToken, STABLE } from "./tokens.mjs";
 import { knownRouter, loadRouterPlugins, bindQuote } from "./routers.mjs";
@@ -709,7 +709,7 @@ function getClient(chainId, clientFactory) {
     return client;
   }
   try {
-    return clientFor(chainId);
+    return gateClientFor(chainId);
   } catch (e) {
     throw new PreflightError(503, "chain_unavailable", `no client available for chainId ${chainId}: ${errorMessage(e)}`);
   }
@@ -2573,9 +2573,9 @@ async function transactionPreflight(body, { clientFactory, now }) {
     throw new PreflightError(400, "invalid_chain", "chainId must be an integer JSON number");
   }
   const chainId = chainIdRaw;
-  const c = CHAINS[chainId];
+  const c = gateChain(chainId);
   if (!c) {
-    throw new PreflightError(400, "unsupported_chain", `chainId ${chainId} is not in the measurement registry; supported: ${Object.keys(CHAINS).join(", ")}`);
+    throw new PreflightError(400, "unsupported_chain", `chainId ${chainId} is not a chain the gate can read; supported: ${gateChainIds().join(", ")}`);
   }
   checked.push("chain");
 

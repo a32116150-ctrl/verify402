@@ -128,6 +128,36 @@ export const DEFAULT_GAS_UNITS = 320_000n;
 // reported as an edge. Zero means "must be profitable at all".
 export const DEFAULT_MIN_NET = 0;
 
+// Free-gate-only chains. The transaction preflight can read these (block,
+// contract code, simulation), but they are NOT measurement venues: no quoter,
+// no venues, no paid route accepts them. Kept apart from CHAINS on purpose,
+// like READINESS_CHAINS, so adding a chain here never makes a paid route
+// pretend to quote on it. RPCs and token addresses were checked by hand
+// against live chain state when added (OP Mainnet: 2026-11-26).
+export const GATE_CHAINS = Object.freeze({
+  10: {
+    name: "optimism",
+    viemChain: "optimism",
+    rpcEnv: "OP_RPC_URL",
+    rpcDefault: "https://mainnet.optimism.io",
+    rpcFallbacks: [
+      "https://optimism-rpc.publicnode.com",
+      "https://optimism.drpc.org",
+    ],
+    nativeSymbol: "ETH",
+  },
+});
+
+/** A chain the free transaction gate can read (measurement or gate-only), or null. */
+export function gateChain(chainId) {
+  return CHAINS[chainId] ?? GATE_CHAINS[chainId] ?? null;
+}
+
+/** Chain ids the free transaction gate accepts. */
+export function gateChainIds() {
+  return [...Object.keys(CHAINS), ...Object.keys(GATE_CHAINS)].map(Number);
+}
+
 export function chain(chainId) {
   const c = CHAINS[chainId];
   if (!c) throw new Error(`unsupported chainId ${chainId}; supported: ${Object.keys(CHAINS).join(", ")}`);

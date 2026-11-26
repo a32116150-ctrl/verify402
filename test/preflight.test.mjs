@@ -1014,6 +1014,32 @@ test("H-4: contract code is read on the named chain, not a default chain", async
   assert.ok(onMainnet.reasons.some((r) => r.code === "target_not_contract"), "mainnet sees an EOA at the same address");
 });
 
+// --- Gate-only chains (OP Mainnet) ------------------------------------------
+
+test("OP Mainnet (10): a transaction intent is read and simulated on chain 10", async () => {
+  const data = encodeFunctionData({ abi: ABI_TRANSFER, functionName: "transfer", args: [RECIPIENT, 1n] });
+  const asked = [];
+  const clientFor = (chainId) => { asked.push(chainId); return fakeClient(); };
+  const out = await preflight(tx(data, { chainId: 10 }), { clientFactory: clientFor, now: NOW });
+  assert.deepEqual([...new Set(asked)], [10], "only chain 10 is read");
+  assert.ok(out.checked.includes("chain"));
+  assert.ok(out.checked.includes("contract_code"));
+  assert.ok(!out.reasons.some((r) => r.code === "unsupported_chain"));
+});
+
+test("OP Mainnet (10) stays gate-only: paid routes and payment rails refuse it", async () => {
+  const { requireChainId, gateChain, GATE_CHAINS, CHAINS } = await import("../src/config.mjs");
+  const { clientFor, gateClientFor } = await import("../src/measure.mjs");
+  assert.ok(gateChain(10), "the gate can read OP Mainnet");
+  assert.throws(() => requireChainId({ chainId: 10 }), (e) => e.code === "unsupported_chain", "paid routes refuse chain 10");
+  assert.throws(() => clientFor(10), /unsupported chainId 10/, "no measurement client for chain 10");
+  assert.equal(gateClientFor(10).chain.id, 10, "the gate client targets chain 10");
+  for (const id of Object.keys(GATE_CHAINS)) assert.ok(!CHAINS[id], `gate-only chain ${id} is not a measurement venue`);
+  const out = await run(payment({ payment: { network: "eip155:10" } }));
+  assert.equal(out.verdict, "BLOCK");
+  assert.ok(out.reasons.some((r) => r.code === "unsupported_network"), "chain 10 is not an x402 payment rail");
+});
+
 // --- M-5: payment PASS must disclose that it is structural-only -------------
 
 test("M-5: payment with no from is PASS but structural_only and names the gap", async () => {

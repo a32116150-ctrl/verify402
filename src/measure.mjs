@@ -6,7 +6,7 @@
 
 import { createPublicClient, http, fallback } from "viem";
 import * as viemChains from "viem/chains";
-import { chain, readinessChain } from "./config.mjs";
+import { chain, readinessChain, GATE_CHAINS } from "./config.mjs";
 import { requirePaidLicense } from "./license.mjs";
 import { remoteEngine } from "./engine-client.mjs";
 
@@ -14,7 +14,25 @@ const clients = new Map();
 
 export function clientFor(chainId) {
   if (clients.has(chainId)) return clients.get(chainId);
-  const c = chain(chainId);
+  const client = buildClient(chain(chainId));
+  clients.set(chainId, client);
+  return client;
+}
+
+// The free transaction gate also reads gate-only chains (GATE_CHAINS). They get
+// their own cache so a gate-only chain can never be handed to a paid route
+// through clientFor.
+const gateClients = new Map();
+
+export function gateClientFor(chainId) {
+  if (!GATE_CHAINS[chainId]) return clientFor(chainId);
+  if (gateClients.has(chainId)) return gateClients.get(chainId);
+  const client = buildClient(GATE_CHAINS[chainId]);
+  gateClients.set(chainId, client);
+  return client;
+}
+
+function buildClient(c) {
   const offline = process.env.TEST_OFFLINE === "1";
   const offlineUrl = process.env.TEST_OFFLINE_RPC_URL || "http://127.0.0.1:1/offline-rpc";
   const configured = process.env[c.rpcEnv];
@@ -40,9 +58,7 @@ export function clientFor(chainId) {
           urls.map((url) => http(url, { retryCount: 0, timeout: 5_000 })),
           { rank: false },
         );
-  const client = createPublicClient({ chain: viemChain, transport });
-  clients.set(chainId, client);
-  return client;
+  return createPublicClient({ chain: viemChain, transport });
 }
 
 // Readiness has its own client cache and its own chain map. It must not share

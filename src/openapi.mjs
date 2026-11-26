@@ -201,7 +201,7 @@ function paidOperation({ price, operationId, summary, tag, inputSchema, outputSc
 
 const chainId = {
   type: "integer",
-  description: "Required EVM chain id for paid measurement and preflight transaction intents: 1 Ethereum mainnet, 42161 Arbitrum One, 8453 Base. There is no silent default; missing => 400 missing_chain. Base Sepolia (84532) is readiness-only and is not a paid-route chain.",
+  description: "Required EVM chain id for paid measurement and preflight transaction intents: 1 Ethereum mainnet, 42161 Arbitrum One, 8453 Base. Preflight transaction intents also accept 10 OP Mainnet (free gate only; no paid route measures it). There is no silent default; missing => 400 missing_chain. Base Sepolia (84532) is readiness-only and is not a paid-route chain.",
 };
 
 export function buildOpenapi(prices, { mode = "testnet", baseUrl = DEMO_BASE_URL } = {}) {
