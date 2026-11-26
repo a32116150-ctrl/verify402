@@ -127,6 +127,14 @@
                   <label for="approval-spender">Spender address</label>
                   <input id="approval-spender" class="try-input-sm" type="text" inputmode="text" autocomplete="off" spellcheck="false" placeholder="0x…" aria-describedby="approval-help">
                 </div>
+                <div class="try-field">
+                  <label for="approval-from">Your wallet <span class="muted">(optional)</span></label>
+                  <input id="approval-from" class="try-input-sm" type="text" inputmode="text" autocomplete="off" spellcheck="false" placeholder="0x… shows the dollars at risk" aria-describedby="approval-help">
+                </div>
+                <div class="try-field">
+                  <label for="approval-limit">Risk limit in $ <span class="muted">(optional)</span></label>
+                  <input id="approval-limit" class="try-input-sm" type="number" inputmode="decimal" min="0.01" step="any" autocomplete="off" placeholder="e.g. 500" aria-describedby="approval-help">
+                </div>
                 <div class="try-field try-field-network">
                   <label for="approval-chain">Network</label>
                   <select id="approval-chain" class="try-input-sm" aria-describedby="approval-help">
@@ -141,7 +149,7 @@
                 <button class="try-linkbtn" id="approval-sample" type="button">Use Base USDC sample</button>
                 <span class="try-status" id="approval-status" role="status" aria-live="polite"></span>
               </div>
-              <p class="try-help" id="approval-help">The spender is the contract asking for permission to move your tokens — it appears as “spender” in the signature prompt. This checks the token contract, the spender, the calldata, and the block. It is not a token safety or sellability rating. The token must exist on the selected network.</p>
+              <p class="try-help" id="approval-help">The spender is the contract asking for permission to move your tokens — it appears as “spender” in the signature prompt. Add your wallet address (public, never a key) to see how many dollars the spender could take; add a risk limit to see the gate stop anything above it. This checks the token contract, the spender, the calldata, and the block. It is not a token safety or sellability rating. The token must exist on the selected network.</p>
             </form>
 
             <details class="try-advanced">
@@ -167,7 +175,7 @@
           <div class="try-result" id="preflight-result" aria-live="polite" data-ui>
             <div id="preflight-empty">
               <p class="try-empty-title">Ready when you are.</p>
-              <p class="small muted">Run a check to see the verdict, the reasons, the checks that ran, and the receipt.</p>
+              <p class="small muted">Run a check to see the verdict, a plain-words explanation, how to fix what was flagged, the checks that ran, and the receipt.</p>
             </div>
             <div id="preflight-output" hidden>
               <div class="try-verdict-row">
@@ -178,6 +186,20 @@
                 <p class="try-meta" id="preflight-meta"></p>
               </div>
               <p class="try-plain" id="preflight-plain"></p>
+              <div class="try-section" id="preflight-advice" hidden>
+                <p class="try-kicker">In plain words</p>
+                <p id="preflight-explanation"></p>
+                <p id="preflight-risk" hidden><b>Dollars at risk:</b> <span id="preflight-risk-text"></span></p>
+                <p id="preflight-limit" hidden><b>Risk limit:</b> <span id="preflight-limit-text"></span></p>
+                <div id="preflight-involved-wrap" hidden>
+                  <p class="try-kicker" style="margin-top:14px">Who is involved</p>
+                  <ul class="try-reasons" id="preflight-involved"></ul>
+                </div>
+                <div id="preflight-fixes-wrap" hidden>
+                  <p class="try-kicker" style="margin-top:14px">How to fix it</p>
+                  <ul class="try-reasons" id="preflight-fixes"></ul>
+                </div>
+              </div>
               <dl class="try-kv">
                 <dt>Block</dt><dd id="preflight-block">—</dd>
                 <dt>Receipt</dt><dd id="preflight-receipt">—</dd>
@@ -356,13 +378,29 @@
   <span class="y">"to"</span>: <span class="g">"0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"</span>,
   <span class="y">"data"</span>: <span class="g">"0x095ea7b3…"</span>,
   <span class="y">"value"</span>: <span class="g">"0"</span>,
+  <span class="y">"from"</span>: <span class="g">"0x…your wallet"</span>,
   <span class="y">"policy"</span>: {
     <span class="y">"forbidUnlimitedApproval"</span>: <span class="g">true</span>,
-    <span class="y">"allowedSpenders"</span>: [<span class="g">"0x…"</span>]
+    <span class="y">"allowedSpenders"</span>: [<span class="g">"0x…"</span>],
+    <span class="y">"maxRiskUsd"</span>: 500
   }
 }</pre>
         </div>
         <p class="small muted" style="margin-top:18px">Decoded actions: <code class="inline">transfer</code>, <code class="inline">approve</code>, <code class="inline">transferFrom</code>, <code class="inline">permit</code>, Uniswap V2 exact-in and V3 <code class="inline">exactInputSingle</code>. Unrecognized selectors are a <b>CAUTION</b>, never a silent pass.</p>
+
+        <h3 style="margin-top:28px">Not only a verdict: what it means and how to fix it</h3>
+        <p style="margin-top:10px">Every transaction check also returns <code class="inline">advice</code>, written so an agent can show it to its user:</p>
+        <ul style="margin-top:10px">
+          <li><b>Explanation</b>: one plain sentence, e.g. <i>“Swap 100 USDC for at least 0.0589 WETH via uniswap-v3, paid to your wallet. It must execute within about 5 minutes.”</i></li>
+          <li><b>Wallet preview</b>: what leaves and enters the wallet, the minimum you receive, and the network fee.</li>
+          <li><b>Fixes</b>: how to repair each problem, with suggested values: a safe minimum output, the right recipient, or the exact fields that differ from the quote.</li>
+          <li><b>Who is involved</b>: known protocols by name, upgradeable contracts, unknown contracts, and spenders that are plain wallets (a common drainer pattern).</li>
+          <li><b>Dollars at risk</b>: the worst case of a swap in dollars, or what an approved spender could take from your current balance.</li>
+          <li><b>Next check</b>: the optional paid check that fits, such as token safety for a token verify402 does not know.</li>
+        </ul>
+        <h3 style="margin-top:28px">Risk limit: the owner sets one number</h3>
+        <p style="margin-top:10px">Add <code class="inline">"maxRiskUsd": 500</code> to the policy. If more than $500 is at risk, the verdict is <b>BLOCK</b> (<code class="inline">risk_over_limit</code>) and the agent must ask its owner. If the risk cannot be priced, it is <b>CAUTION</b> (<code class="inline">risk_unmeasured</code>); the gate never guesses. Prices are estimates at that moment: this limits what an agent may sign without asking. It is not insurance, and verify402 never holds or refunds funds.</p>
+        <p class="small muted" style="margin-top:10px">Apart from the risk limit, advice never changes the verdict and is not covered by the receipt.</p>
       </article>
     </div>
   </section>

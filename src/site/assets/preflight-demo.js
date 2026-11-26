@@ -28,6 +28,18 @@
   var block = document.getElementById("preflight-block");
   var receipt = document.getElementById("preflight-receipt");
   var expires = document.getElementById("preflight-expires");
+  var approvalFrom = document.getElementById("approval-from");
+  var approvalLimit = document.getElementById("approval-limit");
+  var adviceBox = document.getElementById("preflight-advice");
+  var adviceExplanation = document.getElementById("preflight-explanation");
+  var adviceRisk = document.getElementById("preflight-risk");
+  var adviceRiskText = document.getElementById("preflight-risk-text");
+  var adviceLimit = document.getElementById("preflight-limit");
+  var adviceLimitText = document.getElementById("preflight-limit-text");
+  var adviceInvolvedWrap = document.getElementById("preflight-involved-wrap");
+  var adviceInvolved = document.getElementById("preflight-involved");
+  var adviceFixesWrap = document.getElementById("preflight-fixes-wrap");
+  var adviceFixes = document.getElementById("preflight-fixes");
   var copy = document.getElementById("preflight-copy");
   var report = document.getElementById("preflight-report");
   var presets = Array.prototype.slice.call(document.querySelectorAll("[data-preflight-sample]"));
@@ -120,6 +132,7 @@
     reasons.textContent = "";
     raw.textContent = "";
     plain.textContent = "";
+    adviceBox.hidden = true;
     lastJson = "";
     if (resetStatus !== false) setStatus("Ready", false);
   }
@@ -162,8 +175,66 @@
     reasons.appendChild(li);
   }
 
+  function shortAddr(a) {
+    a = String(a || "");
+    return a.length > 12 ? a.slice(0, 6) + "…" + a.slice(-4) : a;
+  }
+
+  function addItem(list, title, text) {
+    var li = document.createElement("li");
+    li.className = "try-reason";
+    if (title) {
+      var head = document.createElement("div");
+      head.className = "try-reason-head";
+      var b = document.createElement("b");
+      b.textContent = title;
+      head.appendChild(b);
+      li.appendChild(head);
+    }
+    var p = document.createElement("p");
+    p.textContent = text || "";
+    li.appendChild(p);
+    list.appendChild(li);
+  }
+
+  function renderAdvice(data) {
+    var a = data && data.advice;
+    adviceInvolved.textContent = "";
+    adviceFixes.textContent = "";
+    if (!a || typeof a !== "object") { adviceBox.hidden = true; return; }
+    adviceBox.hidden = false;
+    adviceExplanation.textContent = a.explanation || "";
+
+    var risk = a.risk && a.risk.summary;
+    adviceRisk.hidden = !risk;
+    adviceRiskText.textContent = risk || "";
+
+    var rl = a.riskLimit;
+    adviceLimit.hidden = !rl;
+    if (rl) {
+      adviceLimitText.textContent = rl.within === true
+        ? "about $" + rl.atRiskUsd + " at risk, within your $" + rl.limitUsd + " limit."
+        : rl.within === false
+          ? "about $" + rl.atRiskUsd + " at risk, above your $" + rl.limitUsd + " limit. Ask the owner before signing."
+          : "the dollars at risk could not be measured, so the $" + rl.limitUsd + " limit could not be applied. Ask the owner before signing.";
+    }
+
+    var inv = Array.isArray(a.involved) ? a.involved : [];
+    inv.forEach(function (x) {
+      var title = (x.label || shortAddr(x.address)) + (x.kind && x.kind !== "unknown" ? " · " + x.kind : "") + (x.roles && x.roles.length ? " · " + x.roles.join(", ") : "");
+      var flags = Array.isArray(x.flags) && x.flags.length ? x.flags.join(". ") + "." : "Nothing unusual found.";
+      addItem(adviceInvolved, title, flags);
+    });
+    adviceInvolvedWrap.hidden = inv.length === 0;
+
+    var fixes = Array.isArray(a.fixes) ? a.fixes : [];
+    fixes.forEach(function (f) { addItem(adviceFixes, null, String(f.action || "").replace(/`/g, "")); });
+    adviceFixesWrap.hidden = fixes.length === 0;
+  }
+
   function render(data) {
     var verdict = String(data.verdict || "UNKNOWN").toUpperCase();
+    renderAdvice(data);
 
     lastJson = JSON.stringify(data, null, 2);
     empty.hidden = true;
@@ -355,14 +426,33 @@
       return;
     }
 
+    var from = approvalFrom.value.trim();
+    if (from && !isAddress(from)) {
+      clearResult(false);
+      setStatusEl(approvalStatus, "Your wallet must be a public address: 0x plus 40 hex characters. Never paste a private key.", true);
+      approvalFrom.focus();
+      return;
+    }
+    var limitRaw = approvalLimit.value.trim();
+    var limit = limitRaw ? Number(limitRaw) : null;
+    if (limitRaw && !(limit > 0)) {
+      clearResult(false);
+      setStatusEl(approvalStatus, "The risk limit must be a positive dollar amount.", true);
+      approvalLimit.focus();
+      return;
+    }
+
+    var policy = { forbidUnlimitedApproval: true };
+    if (limit) policy.maxRiskUsd = limit;
     var payload = {
       kind: "transaction",
       chainId: Number(approvalChain.value),
       to: token,
       data: "0x095ea7b3" + padAddress(spender) + "f".repeat(64),
       value: "0",
-      policy: { forbidUnlimitedApproval: true }
+      policy: policy
     };
+    if (from) payload.from = from;
 
     input.value = JSON.stringify(payload, null, 2);
     runCheck(payload, approvalStatus);
@@ -393,7 +483,7 @@
     setStatusEl(approvalStatus, "Base USDC sample loaded. Run the check.", false);
   });
 
-  [approvalToken, approvalSpender].forEach(function (field) {
+  [approvalToken, approvalSpender, approvalFrom, approvalLimit].forEach(function (field) {
     field.addEventListener("input", onApprovalEdit);
   });
   approvalChain.addEventListener("change", onApprovalEdit);

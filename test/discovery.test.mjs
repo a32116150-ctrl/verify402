@@ -307,7 +307,9 @@ test("discovery: landing structured data is valid and matches the visible FAQ", 
     assert.ok(types.includes(type), `structured data must include ${type}`);
   }
   const faq = blocks[0]["@graph"].find((node) => node["@type"] === "FAQPage");
-  assert.equal(faq.mainEntity.length, 6);
+  const visible = [...landing.matchAll(/<details class="faq-item"[^>]*>\s*<summary>([\s\S]*?)<\/summary>/g)].map((m) => m[1].trim());
+  assert.ok(visible.length >= 6);
+  assert.deepEqual(faq.mainEntity.map((q) => q.name), visible, "structured FAQ must match the visible FAQ, in order");
   assert.ok(faq.mainEntity.every((q) => q.name && q.acceptedAnswer?.text));
   assert.match(landing, /<link rel="canonical" href="https:\/\/vex402\.online\/">/);
 });

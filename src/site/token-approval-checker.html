@@ -96,6 +96,10 @@
           <h3>With the sample, expect a BLOCK</h3>
           <p>The simple form builds an unlimited approval. With <code class="inline">forbidUnlimitedApproval</code> set, the gate returns <b>BLOCK</b> <code class="inline">unlimited_approval</code>. With an unknown spender you also get <code class="inline">approval_unverified_spender</code>; without a <code class="inline">from</code> address simulation is skipped and named as such. That is the gate telling the truth about its reach.</p>
         </div>
+        <div class="callout" style="margin-top:16px">
+          <h3>See it in dollars, with the fix</h3>
+          <p>Add your public wallet address and the answer also says, in plain words, how much the spender could take today (for example <i>“the spender could take your whole USDC balance: about $1.97 today, and anything you receive later”</i>), whether the spender is a known protocol, an unknown contract, or a plain wallet (a common drainer pattern), and how to fix it: approve only the amount you need. Add a dollar risk limit and anything above it is a <b>BLOCK</b>.</p>
+        </div>
       </article>
 
       <article id="verdict">

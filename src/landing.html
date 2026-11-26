@@ -49,6 +49,30 @@
         },
         {
           "@type": "Question",
+          "name": "What does the gate return besides the verdict?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "For transactions it also returns advice: a plain-language explanation, a preview of what leaves and enters the wallet, fixes with suggested values for anything flagged, who the transaction involves, the dollars at risk, and the paid check that fits next."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I set a spending risk limit for my agent?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Add maxRiskUsd to the policy. A transaction that puts more than that many dollars at risk is BLOCK, and one whose risk cannot be priced is CAUTION, so the agent asks its owner first. It limits what the agent signs; it is not insurance."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does verify402 refund losses?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No. verify402 warns before a signature; it never holds, moves, insures or refunds funds, and a signed transaction cannot be undone."
+          }
+        },
+        {
+          "@type": "Question",
           "name": "What does it cost?",
           "acceptedAnswer": {
             "@type": "Answer",
@@ -268,7 +292,7 @@
       <div class="check-list" data-ui>
         <a class="check-row is-free" href="/preflight">
           <span class="check-name">/preflight</span>
-          <span class="check-q">Is this safe to sign?</span>
+          <span class="check-q">Should I sign this, and how do I fix it?</span>
           <span class="check-price">Free</span>
         </a>
         <a class="check-row" href="/checks#verify">
@@ -322,14 +346,14 @@
         </div>
         <div class="stage" data-reveal>
           <div class="stage-word">Gate</div>
-          <p>PASS, CAUTION, or BLOCK at a fresh block, with typed reasons and a list of what was not checked.</p>
+          <p>PASS, CAUTION, or BLOCK at a fresh block, with typed reasons, what was not checked, a plain-words explanation, the dollars at risk, and how to fix what was flagged.</p>
         </div>
         <div class="stage" data-reveal>
           <div class="stage-word">Receipt</div>
           <p>Verify the short-lived receipt against the intent. Then sign, or stop. The choice stays with the executor.</p>
         </div>
       </div>
-      <p class="how-foot" data-reveal>Free. No account, API key, or wallet. The paid checks are optional.</p>
+      <p class="how-foot" data-reveal>Free. No account, API key, or wallet. Set a dollar risk limit and the gate stops anything above it. The paid checks are optional.</p>
     </div>
   </section>
 
@@ -402,6 +426,18 @@
         <details class="faq-item" data-reveal>
           <summary>Does PASS mean the transaction is safe?</summary>
           <p>No. PASS means the listed checks passed at that block. Read <code class="inline">notChecked</code> for what the gate did not verify, including counterparty reputation, sanctions, settlement, and off-chain promises. A PASS is a measurement, not a guarantee.</p>
+        </details>
+        <details class="faq-item" data-reveal>
+          <summary>What does the gate return besides the verdict?</summary>
+          <p>For transactions it also returns <code class="inline">advice</code>: a plain-language explanation, a preview of what leaves and enters the wallet, fixes with suggested values for anything flagged, who the transaction involves, the dollars at risk, and the paid check that fits next.</p>
+        </details>
+        <details class="faq-item" data-reveal>
+          <summary>Can I set a spending risk limit for my agent?</summary>
+          <p>Yes. Add <code class="inline">maxRiskUsd</code> to the policy. A transaction that puts more than that many dollars at risk is BLOCK, and one whose risk cannot be priced is CAUTION, so the agent asks its owner first. It limits what the agent signs; it is not insurance.</p>
+        </details>
+        <details class="faq-item" data-reveal>
+          <summary>Does verify402 refund losses?</summary>
+          <p>No. verify402 warns before a signature; it never holds, moves, insures or refunds funds, and a signed transaction cannot be undone.</p>
         </details>
         <details class="faq-item" data-reveal>
           <summary>What does it cost?</summary>
