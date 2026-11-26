@@ -68,7 +68,7 @@
       <div>
         <p class="eyebrow">Free · before the signature</p>
         <h1>The check before the signature.</h1>
-        <p class="lead">One call for any x402 payment request or chain transaction. It returns <b>PASS / CAUTION / BLOCK</b>, the reasons, the checks that actually ran, and a short-lived receipt bound to the exact intent — so an executor can refuse to sign without one.</p>
+        <p class="lead">One call for any x402 payment request or chain transaction. It returns <b>PASS / CAUTION / BLOCK</b>, the reasons, the checks that actually ran, and a short-lived receipt bound to the exact intent — so an executor can refuse to sign without one. For a transaction it also says, in plain words, what is about to happen, how many dollars are at risk, and how to fix what was flagged.</p>
         <div class="btn-row">
           <a class="btn" href="#try">Try a free check</a>
           <a class="btn ghost" href="/docs#preflight">The request shape</a>
@@ -393,7 +393,7 @@
         <ul style="margin-top:10px">
           <li><b>Explanation</b>: one plain sentence, e.g. <i>“Swap 100 USDC for at least 0.0589 WETH via uniswap-v3, paid to your wallet. It must execute within about 5 minutes.”</i></li>
           <li><b>Wallet preview</b>: what leaves and enters the wallet, the minimum you receive, and the network fee.</li>
-          <li><b>Fixes</b>: how to repair each problem, with suggested values: a safe minimum output, the right recipient, or the exact fields that differ from the quote.</li>
+          <li><b>Fixes</b>: how to repair each problem, with suggested values: a minimum output close to the quote, the right recipient, or the exact fields that differ from the quote.</li>
           <li><b>Who is involved</b>: known protocols by name, upgradeable contracts, unknown contracts, and spenders that are plain wallets (a common drainer pattern).</li>
           <li><b>Dollars at risk</b>: the worst case of a swap in dollars, or what an approved spender could take from your current balance.</li>
           <li><b>Next check</b>: the optional paid check that fits, such as token safety for a token verify402 does not know.</li>

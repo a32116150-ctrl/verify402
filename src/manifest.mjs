@@ -135,7 +135,7 @@ export function buildServiceManifest({
           {
             name: "preflight_gate",
             type: "free",
-            description: "Advisory pre-signing check for payments and transactions. Evaluates limits, allowances, recipient and freshness. Returns PASS/CAUTION/BLOCK with HMAC receipt.",
+            description: "Advisory pre-signing check for payments and transactions. Evaluates limits, allowances, recipient and freshness. Returns PASS/CAUTION/BLOCK with HMAC receipt; transactions also get plain-language advice, fixes, and an optional dollar risk limit (policy.maxRiskUsd).",
           },
           {
             name: "inspect_402",

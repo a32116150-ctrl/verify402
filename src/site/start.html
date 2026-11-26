@@ -212,7 +212,7 @@
         <p class="small muted" style="margin-top:14px">The gate is free and rate-limited. The six paid checks — <a class="textlink" href="/checks">/verify, /safety, /route, /quotecheck, /depth, /assure</a> — are separate and not needed for this test.</p>
         <div class="callout warn" style="margin-top:24px">
           <h3>What the gate does not do</h3>
-          <p>It catches measurable signing mistakes: wrong network, non-canonical asset, amount over your cap, payee outside your allowlist, unlimited approval, a reverting call, a stale block. It does not screen reputation or sanctions, audit a contract, simulate full balance deltas, audit the counterparty, scan tool output for hidden instructions, or guarantee a token is safe. Those limits are printed in <code class="inline">notChecked</code> on every response. A PASS means the checks in <code class="inline">checked</code> passed at that block — nothing more.</p>
+          <p>It catches measurable signing mistakes: wrong network, non-canonical asset, amount over your cap, payee outside your allowlist, unlimited approval, a reverting call, a stale block, a swap that does not match its quote, more dollars at risk than your <code class="inline">policy.maxRiskUsd</code>. For transactions it also explains, in plain words, what the agent is about to sign and how to fix what was flagged. It does not screen reputation or sanctions, audit a contract, simulate full balance deltas, audit the counterparty, scan tool output for hidden instructions, or guarantee a token is safe. Those limits are printed in <code class="inline">notChecked</code> on every response. A PASS means the checks in <code class="inline">checked</code> passed at that block — nothing more.</p>
         </div>
       </article>
 

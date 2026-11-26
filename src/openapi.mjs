@@ -215,7 +215,7 @@ export function buildOpenapi(prices, { mode = "testnet", baseUrl = DEMO_BASE_URL
       version: RELEASE_VERSION,
       description: rail.openapiDescription,
       "x-guidance":
-        "Call POST /preflight for free before signing any payment request or raw transaction. It answers PASS/CAUTION/BLOCK with typed reasons, checked/notChecked lists, and a 90-second HMAC receipt. For market truth questions, use the paid POST routes (/verify, /safety, /route, /quotecheck, /depth). Paid routes use x402 exact settlement (0.02-0.10 USDC) and return an evidence_bundle with pinnedBlock, requestHash, and responseHash for cryptographic auditability. The 402 challenge is authoritative for prices and the payment network. CORS: free read-only discovery GET/HEAD/OPTIONS routes allow any origin; POST /preflight and paid routes send no Access-Control-Allow-Origin, so browser-based agents must use a server-side client, the MCP bridge, or an SDK.",
+        "Call POST /preflight for free before signing any payment request or raw transaction. It answers PASS/CAUTION/BLOCK with typed reasons, checked/notChecked lists, and a 90-second HMAC receipt; transactions also get `advice` (plain explanation, wallet preview, fixes) and an optional dollar risk limit (policy.maxRiskUsd). For market truth questions, use the paid POST routes (/verify, /safety, /route, /quotecheck, /depth). Paid routes use x402 exact settlement (0.02-0.10 USDC) and return an evidence_bundle with pinnedBlock, requestHash, and responseHash for cryptographic auditability. The 402 challenge is authoritative for prices and the payment network. CORS: free read-only discovery GET/HEAD/OPTIONS routes allow any origin; POST /preflight and paid routes send no Access-Control-Allow-Origin, so browser-based agents must use a server-side client, the MCP bridge, or an SDK.",
       "x-state-persistence": statePersistence().warning,
       contact: {
         name: "verify402 Maintainers",
@@ -509,6 +509,7 @@ export function buildOpenapi(prices, { mode = "testnet", baseUrl = DEMO_BASE_URL
             "Evaluates structural validity, recipient allowlists, spend caps, approval limits, revert simulation, block freshness, and sign-in domain / URI / nonce / time / chain / address binding.",
             "Optional caller-supplied checks: policy.sellerPayoutWallets is a payout allowlist (not a binding); policy.sellerPayoutManifest fetches a seller-signed manifest from a caller-pinned HTTPS origin and is the only source of payee_payout_binding; policy.obligation checks a local settled-key ledger and cumulative spend against a grant. The gate does not persist either state.",
             "Returns PASS / CAUTION / BLOCK with typed reasons, checked/notChecked lists, pinned block number, and an HMAC receipt (valid for 90s).",
+            "For kind=transaction the response also carries `advice`: a one-sentence `explanation`, a `preview` of what leaves and enters the wallet (with the network fee when `from` is given), `fixes` with suggested values for each flagged problem, and `upgrades` naming the paid check that fits. The hosted service may add `involved` (who the transaction touches) and `risk` (dollars at risk). policy.maxRiskUsd sets the owner's dollar limit: more at risk is BLOCK risk_over_limit, risk that cannot be priced is CAUTION risk_unmeasured. An optional `quote` binds a swap transaction to the quote it came with; any difference is BLOCK quote_terms_mismatch. Apart from the risk limit, advice never changes the verdict and is not covered by the receipt.",
             "\n**Security disclaimer:** A PASS indicates that the specific checks in `checked` passed. It is not an audit, does not screen sanctions, does not audit the counterparty, does not scan tool descriptions or responses for prompt injection, and does not guarantee the intent is safe. Always inspect `notChecked`.",
             `\n**Rate limits:** ${PREFLIGHT_RATE_PER_MIN} requests/minute per IP, max concurrency of ${PREFLIGHT_MAX_IN_FLIGHT}.`,
           ].join("\n"),
@@ -575,6 +576,7 @@ export function buildOpenapi(prices, { mode = "testnet", baseUrl = DEMO_BASE_URL
                       properties: {
                         maxAmountUsd: { type: "number", description: "Maximum allowed payment amount in USD." },
                         forbidUnlimitedApproval: { type: "boolean", description: "If true, approve(..., 2^256-1) yields BLOCK instead of CAUTION." },
+                        maxRiskUsd: { type: "number", exclusiveMinimum: 0, description: "kind=transaction: the owner's dollar risk limit. More at risk (what leaves the wallet, or what an approved spender could take) is BLOCK risk_over_limit; risk that cannot be priced is CAUTION risk_unmeasured. Prices are estimates; this is a signing limit, not insurance." },
                         allowedNetworks: { type: "array", items: { type: "string" } },
                         allowedPayTo: { type: "array", items: { type: "string" } },
                         allowedTo: { type: "array", items: { type: "string" } },
@@ -605,6 +607,17 @@ export function buildOpenapi(prices, { mode = "testnet", baseUrl = DEMO_BASE_URL
                       additionalProperties: true,
                     },
                     ttlSeconds: { type: "integer", default: DEFAULT_TTL_SECONDS, minimum: MIN_TTL_SECONDS, maximum: MAX_TTL_SECONDS, description: "Receipt lifetime in seconds." },
+                    quote: {
+                      type: "object",
+                      description: "kind=transaction: the swap-API quote the transaction came with. The decoded swap must match it; any difference is BLOCK quote_terms_mismatch. Tokens may be addresses or {address}.",
+                      properties: {
+                        spender: { type: "string", description: "Contract the quote says to call." },
+                        input: { type: "object", properties: { amount: { type: "string" }, token: { type: ["string", "object"] } } },
+                        output: { type: "object", properties: { amount: { type: "string" }, minimumAmount: { type: "string" }, token: { type: ["string", "object"] } } },
+                        expiresAt: { type: "integer", description: "Unix seconds; an expired quote is CAUTION quote_expired." },
+                      },
+                      additionalProperties: true,
+                    },
                   },
                   additionalProperties: true,
                   allOf: [
@@ -654,6 +667,20 @@ export function buildOpenapi(prices, { mode = "testnet", baseUrl = DEMO_BASE_URL
                       },
                       checked: { type: "array", items: { type: "string" }, description: "Specific checks that were executed." },
                       notChecked: { type: "array", items: { type: "string" }, description: "Limitations and checks that were skipped." },
+                      advice: {
+                        type: "object",
+                        description: "kind=transaction only. Explains the transaction and how to repair it. Apart from policy.maxRiskUsd it never changes the verdict, and it is not covered by the receipt.",
+                        properties: {
+                          explanation: { type: "string", description: "One plain sentence to show the user." },
+                          preview: { type: "object", description: "effects[] (send, receive_at_least, receive_expected, allow, move) in raw and human units, with usd for known stables; networkFee when simulated for `from`." },
+                          fixes: { type: "array", items: { type: "object", properties: { for: { type: "string", description: "Reason code this fixes." }, action: { type: "string" }, suggested: { type: "object" }, differences: { type: "array", items: { type: "object" } } } } },
+                          upgrades: { type: "array", items: { type: "object", properties: { tool: { type: "string" }, route: { type: "string" }, price: { type: "string" }, why: { type: "string" }, input: { type: "object" } } } },
+                          involved: { type: "array", items: { type: "object" }, description: "Hosted service only: addresses the transaction touches, with labels and flags." },
+                          risk: { type: "object", description: "Hosted service only: dollar figures such as worstCaseLossUsd or exposureUsd, and a summary." },
+                          riskLimit: { type: "object", description: "Present when policy.maxRiskUsd was set.", properties: { limitUsd: { type: "number" }, atRiskUsd: { type: ["number", "null"] }, basis: { type: ["string", "null"] }, within: { type: ["boolean", "null"] } } },
+                          note: { type: "string" },
+                        },
+                      },
                       obligation: {
                         type: "object",
                         description: "Present only when the caller supplied policy.obligation. This is caller-supplied state, not a server ledger; it is echoed for audit and receipt binding.",
