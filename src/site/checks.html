@@ -159,6 +159,13 @@
 { <span class="y">"chainId"</span>: 1, <span class="y">"safety"</span>: { <span class="y">"tokenAddress"</span>: <span class="g">"WETH"</span>, <span class="y">"intendedUsd"</span>: 500 }, <span class="y">"route"</span>: { <span class="y">"tokenIn"</span>: <span class="g">"USDC"</span>, <span class="y">"tokenOut"</span>: <span class="g">"WETH"</span>, <span class="y">"amountIn"</span>: <span class="g">"1000000"</span> }, <span class="y">"quotecheck"</span>: { <span class="y">"tokenIn"</span>: <span class="g">"USDC"</span>, <span class="y">"tokenOut"</span>: <span class="g">"WETH"</span>, <span class="y">"amountIn"</span>: <span class="g">"1000000"</span>, <span class="y">"quotedOut"</span>: <span class="g">"326000000000000000"</span> }, <span class="y">"depth"</span>: { <span class="y">"tokenAddress"</span>: <span class="g">"WETH"</span>, <span class="y">"sizesUsd"</span>: [100, 1000] } }</pre>
       </article>
 
+      <article id="watch">
+        <h2>/watch — $0.50 · tell me if this contract changes</h2>
+        <p class="lead" style="margin-top:14px">One payment watches one contract for <b>30 days</b>. About once an hour we re-read its code, its proxy implementation (and that code), who can upgrade it, <code class="inline">owner()</code> and <code class="inline">paused()</code>. If anything changes, your <b>https webhook</b> gets one signed event with the old and new values. Status is free at <code class="inline">GET /watch/{watchId}</code>. This reports a change after it happens; it cannot stop one. Role grants, timelock queues and multisig signer changes are not watched.</p>
+        <pre><span class="c">POST</span> /watch
+{ <span class="y">"chainId"</span>: 8453, <span class="y">"address"</span>: <span class="g">"0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"</span>, <span class="y">"webhookUrl"</span>: <span class="g">"https://your-agent.example/hooks/verify402"</span>, <span class="y">"label"</span>: <span class="g">"USDC on Base"</span> }</pre>
+      </article>
+
     </div>
   </section>
 
@@ -178,6 +185,7 @@
             <tr><td class="mono">/quotecheck</td><td>Is the quote honest?</td><td class="mono">$0.05</td><td>fair / overpaying / too_good_to_be_true</td></tr>
             <tr><td class="mono">/depth</td><td>How big can I trade?</td><td class="mono">$0.05</td><td>Capacity ladder across sizes</td></tr>
             <tr><td class="mono">/assure</td><td>One evidence bundle</td><td class="mono">$0.10</td><td>All supplied checks at one pinned block · accepted only when they cost ≥ $0.10 separately</td></tr>
+            <tr><td class="mono">/watch</td><td>Tell me if this contract changes</td><td class="mono">$0.50</td><td>30 days · hourly re-read · signed webhook on any change</td></tr>
             <tr><td class="mono">/findings</td><td>Show me honest verdicts</td><td class="mono">free</td><td>Ethereum majors, pinned block</td></tr>
           </tbody>
         </table>

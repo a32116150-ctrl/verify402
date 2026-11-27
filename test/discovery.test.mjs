@@ -106,6 +106,7 @@ test("discovery: canonical service manifest matches implemented tools and runtim
     quotecheck: 0.05,
     depth: 0.05,
     assure: 0.10,
+    watch: 0.50,
   };
   assert.equal(PRICE_DEFAULTS.verify, "$0.05");
   assert.equal(PRICE_DEFAULTS.safety, "$0.02");

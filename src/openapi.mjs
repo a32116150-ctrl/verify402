@@ -993,6 +993,42 @@ export function buildOpenapi(prices, { mode = "testnet", baseUrl = DEMO_BASE_URL
           },
         }),
       },
+      "/watch": {
+        post: paidOperation({
+          rail,
+          price: usd(prices.watch ?? "0.50"),
+          operationId: "watchContract",
+          summary: "Watch one contract for 30 days; signed webhook on any change",
+          tag: "Truth",
+          guidance:
+            "One payment watches one contract for 30 days. About once an hour the service re-reads its bytecode hash, EIP-1967 / ZeppelinOS proxy implementation and that implementation's bytecode hash, the upgrade controller, owner() and paused(). On any change it POSTs one JSON event (type contract_changed, with the old and new value of each changed field) to your https webhook, signed like every paid answer (key at /.well-known/verify402-signing-key), with one retry. The webhook must be a public https URL; it is checked before payment. Detection after the fact, not prevention. Not watched: AccessControl role grants, timelock or governance queues before execution, multisig signer changes, diamond facets and custom proxies. Status: GET /watch/{watchId}.",
+          inputSchema: {
+            type: "object",
+            required: ["chainId", "address", "webhookUrl"],
+            properties: {
+              chainId,
+              address: { type: "string", pattern: "^0x[0-9a-fA-F]{40}$", description: "The contract to watch." },
+              webhookUrl: { type: "string", format: "uri", description: "Public https URL that receives change events." },
+              label: { type: "string", maxLength: 80, description: "Optional name echoed back in events." },
+            },
+            additionalProperties: false,
+          },
+          exampleRequest: { chainId: 8453, address: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", webhookUrl: "https://your-agent.example/hooks/verify402", label: "USDC on Base" },
+        }),
+      },
+      "/watch/{watchId}": {
+        get: {
+          tags: ["Truth"],
+          operationId: "getWatch",
+          summary: "Status of one contract watch (free)",
+          description: "Current facts, last check, expiry, changes detected and the last 20 events of one watch. The webhook URL itself is never shown, only its host.",
+          parameters: [{ name: "watchId", in: "path", required: true, schema: { type: "string", pattern: "^w_[0-9a-f]{32}$" } }],
+          responses: {
+            200: { description: "Watch status.", content: { "application/json": { schema: { type: "object", additionalProperties: true } } } },
+            404: { description: "No such watch.", content: { "application/json": { schema: { type: "object", additionalProperties: true } } } },
+          },
+        },
+      },
       "/depth": {
         post: paidOperation({
           rail,

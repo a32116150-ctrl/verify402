@@ -66,6 +66,10 @@ import {
 import { inspectUrl, inspectPaymentChallenge, extractChallenge, InspectError } from "./inspect.mjs";
 import { loadBoard, renderBoardPage, renderBadgeSvg, badgeFor, BOARD_SOURCE } from "./board.mjs";
 import { loadAccuracy, renderAccuracyPage } from "./accuracy.mjs";
+import {
+  openWatchStore, readSnapshot, validateWebhook, runWatchCycle, publicWatch, WatchError,
+  WATCH_DAYS, WATCH_MAX_ACTIVE, WATCH_CHECKED, WATCH_NOT_CHECKED, WATCH_SPEC,
+} from "./watch.mjs";
 import { renderFindingPage, findingPermalink } from "./finding-page.mjs";
 import { cdpAuthHeaders, isCdpFacilitatorUrl } from "./cdp-auth.mjs";
 import { createDirectory } from "./directory.mjs";
@@ -213,6 +217,8 @@ const QUOTECHECK_PRICE = process.env.QUOTECHECK_PRICE || PRICE_DEFAULTS.quoteche
 // Sizing: the decision that happens BEFORE every trade after a route is known.
 const DEPTH_PRICE = process.env.DEPTH_PRICE || PRICE_DEFAULTS.depth;
 const ASSURE_PRICE = process.env.ASSURE_PRICE || PRICE_DEFAULTS.assure;
+// Contract watch: one payment covers one contract for WATCH_DAYS.
+const WATCH_PRICE = process.env.WATCH_PRICE || PRICE_DEFAULTS.watch;
 
 // `/assure` is only honest when the bundle costs no more than buying its checks
 // one by one. These parse the same constants the rest of the file uses, so a
@@ -1003,6 +1009,51 @@ app.use((req, res, next) => {
   return badRequest(req, res, problem.code, problem.message, problem.extra);
 });
 
+// Contract watch storage. Next to the recovery journal when that is set, so it
+// survives restarts; in memory otherwise (local runs and tests).
+const WATCH_DB_PATH = process.env.WATCH_DB_PATH
+  || (process.env.RECOVERY_DB_PATH ? `${process.env.RECOVERY_DB_PATH.replace(/[^/]*$/, "")}watch.sqlite` : ":memory:");
+const watchStore = openWatchStore(WATCH_DB_PATH);
+if (WATCH_DB_PATH === ":memory:") logWarn("contract watches are process-local (no WATCH_DB_PATH or RECOVERY_DB_PATH): they reset on restart");
+
+// Everything a /watch request needs, checked BEFORE the payment wall so a
+// caller never pays for a watch that cannot be created. Same helper in the
+// handler, so the two cannot drift.
+async function watchRequestProblem(body) {
+  const chainId = requireChainId(body);
+  const address = String(body.address ?? "").trim();
+  if (!/^0x[0-9a-fA-F]{40}$/.test(address)) {
+    throw new HttpError(400, "invalid_address", "address must be a 0x contract address (40 hex characters)");
+  }
+  const label = body.label == null ? null : String(body.label).slice(0, 80);
+  let webhook;
+  try {
+    webhook = await validateWebhook(body.webhookUrl);
+  } catch (e) {
+    if (e instanceof WatchError) throw new HttpError(e.status, e.code, e.message);
+    throw e;
+  }
+  if (watchStore.activeCount() >= WATCH_MAX_ACTIVE) {
+    throw new HttpError(503, "watch_capacity", "the service is watching its maximum number of contracts; try again later");
+  }
+  return { chainId, address: address.toLowerCase(), webhook, label };
+}
+
+// An empty body is left to the paywall: discovery probes must still see the 402.
+app.use(async (req, res, next) => {
+  if (req.method !== "POST") return next();
+  const path = req.path.length > 1 ? req.path.replace(/\/+$/, "") : req.path;
+  if (path !== "/watch") return next();
+  const body = req.body || {};
+  if (!Object.keys(body).length) return next();
+  try {
+    await watchRequestProblem(body);
+    return next();
+  } catch (e) {
+    return paidCatch(req, res, e);
+  }
+});
+
 // Middleware stays compiled but UNMOUNTED in bypass mode: one loud warning,
 // no protection, and no possibility of the two configs disagreeing.
 if (!BYPASS_PAYMENT) app.use(
@@ -1205,6 +1256,41 @@ if (!BYPASS_PAYMENT) app.use(
                 depth: { type: "object", description: "Position sizing ladder (tokenAddress, baseSymbol, sizesUsd, maxRoundTripPct)" },
               },
               required: ["chainId"],
+            },
+          }),
+        },
+      },
+      "POST /watch": {
+        accepts: accepts(WATCH_PRICE),
+        iconUrl: "https://vex402.online/logo-400.png",
+        description:
+          `Watch one contract for ${WATCH_DAYS} days: its code, proxy implementation, upgrade controller, owner and paused flag are re-read every hour, and any change is POSTed to your https webhook as a signed event. Detection after the fact, not prevention; role grants, timelock queues and multisig signer changes are not watched.`,
+        mimeType: "application/json",
+        extensions: {
+          ...declareDiscoveryExtension({
+            method: "POST",
+            bodyType: "json",
+            input: { chainId: 8453, address: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", webhookUrl: "https://your-agent.example/hooks/verify402", label: "USDC on Base" },
+            output: {
+              example: {
+                ok: true,
+                spec: WATCH_SPEC,
+                watchId: "w_0123456789abcdef0123456789abcdef",
+                status: "https://vex402.online/watch/w_0123456789abcdef0123456789abcdef",
+                expiresAt: "2026-12-27T12:00:00.000Z",
+                facts: { upgradeable: true, pattern: "transparent", implementation: "0x…", owner: null, paused: false },
+                checked: [...WATCH_CHECKED],
+                notChecked: [...WATCH_NOT_CHECKED],
+              },
+            },
+            inputSchema: {
+              properties: {
+                chainId: { type: "integer", description: "1 Ethereum, 42161 Arbitrum, 8453 Base, 10 OP Mainnet, 56 BNB Chain, 137 Polygon, 43114 Avalanche" },
+                address: { type: "string", description: "The contract to watch (0x address)" },
+                webhookUrl: { type: "string", description: "Your public https URL; change events are POSTed here, signed with the key at /.well-known/verify402-signing-key" },
+                label: { type: "string", description: "Optional name echoed back in events (max 80 characters)" },
+              },
+              required: ["chainId", "address", "webhookUrl"],
             },
           }),
         },
@@ -3109,6 +3195,42 @@ app.post("/depth", async (req, res) => {
 // an HTML page with a stack trace and the server's file paths. Every endpoint
 // here speaks JSON, so those failures answer in the same envelope as the rest:
 // a stable code plus the request id, and nothing about the process.
+app.post("/watch", async (req, res) => {
+  try {
+    const { chainId, address, webhook, label } = await watchRequestProblem(req.body || {});
+    let snapshot;
+    try {
+      snapshot = await readSnapshot(clientFor(chainId), address);
+    } catch (e) {
+      return paidCatch(req, res, e);
+    }
+    if (!snapshot.ok) {
+      return badRequest(req, res, "not_a_contract", "there is no contract code at this address on this chain; nothing to watch");
+    }
+    const w = watchStore.add({ chainId, address, webhook, label, snapshot });
+    const view = publicWatch(w, []);
+    return emitPaid(req, res, {
+      ok: true,
+      ...view,
+      status: `${PUBLIC_BASE_URL}/watch/${w.id}`,
+      blockNumber: snapshot.blockNumber,
+      delivery: "On any change, one POST to webhookUrl with a JSON event of type contract_changed, signed like every paid answer (verify with /.well-known/verify402-signing-key). One retry on failure.",
+    });
+  } catch (e) {
+    return paidCatch(req, res, e);
+  }
+});
+
+// Free status of one watch. The id is an unguessable capability; the webhook
+// URL itself is never shown.
+app.get("/watch/:id", (req, res) => {
+  const id = String(req.params.id || "");
+  const w = /^w_[0-9a-f]{32}$/.test(id) ? watchStore.get(id) : null;
+  if (!w) return res.status(404).json({ ok: false, error: "watch_not_found" });
+  res.set("Cache-Control", "no-store");
+  return res.json({ ok: true, ...publicWatch(w, watchStore.events(id)) });
+});
+
 app.post("/assure", async (req, res) => {
   const started = Date.now();
   try {
@@ -3427,6 +3549,19 @@ if (IS_MAIN) {
       refreshFindings().catch((e) => logWarn("findings warmer failed", e));
     }, 240_000);
     warmer.unref?.();
+
+    // Contract watches: every few minutes, check the watches that are due
+    // (each is re-read about once an hour). One cycle at a time.
+    let watchBusy = false;
+    const watchTimer = setInterval(() => {
+      if (watchBusy) return;
+      watchBusy = true;
+      runWatchCycle({ store: watchStore, clientFor, signer })
+        .then((r) => { if (r.changed) logInfo(`watch: ${r.checked} checked, ${r.changed} changed`); })
+        .catch((e) => logWarn("watch cycle failed", e))
+        .finally(() => { watchBusy = false; });
+    }, 5 * 60_000);
+    watchTimer.unref?.();
   });
 
   // Graceful shutdown: stop accepting new connections immediately, let active

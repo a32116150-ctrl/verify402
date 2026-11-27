@@ -25,6 +25,7 @@ export const DEFAULT_PRICES = {
   "/quotecheck": 0.05,
   "/depth": 0.05,
   "/assure": 0.10,
+  "/watch": 0.50,
 };
 
 const dayKey = () => new Date().toISOString().slice(0, 10);

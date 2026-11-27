@@ -11,6 +11,7 @@ export const PRICE_DEFAULTS = Object.freeze({
   quotecheck: "$0.05",
   depth: "$0.05",
   assure: "$0.10",
+  watch: "$0.50",
 });
 
 export const PREFLIGHT_RATE_PER_MIN = 60;

@@ -259,6 +259,7 @@ export function buildServiceManifest({
         quotecheck: { route: "/quotecheck", priceUsd: numPrice(prices.quotecheck), atomicAmountUsdc: atomicUsdc(prices.quotecheck) },
         depth: { route: "/depth", priceUsd: numPrice(prices.depth), atomicAmountUsdc: atomicUsdc(prices.depth) },
         assure: { route: "/assure", priceUsd: numPrice(prices.assure ?? PRICE_DEFAULTS.assure), atomicAmountUsdc: atomicUsdc(prices.assure ?? PRICE_DEFAULTS.assure) },
+        watch: { route: "/watch", priceUsd: numPrice(prices.watch ?? PRICE_DEFAULTS.watch), atomicAmountUsdc: atomicUsdc(prices.watch ?? PRICE_DEFAULTS.watch), coversDays: 30 },
       },
       settlementHeaders: {
         paymentRequired: "WWW-Authenticate: x402",

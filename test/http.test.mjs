@@ -968,6 +968,29 @@ await check("search: www, http, .html and trailing slash 301 to one clean https 
   assert.notEqual(local.status, 301, "other hosts are left alone");
 });
 
+await check("watch: bad input is refused before payment, with a typed 400", async () => {
+  const post = (body) => fetch(`${base}/watch`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+  const cases = [
+    [{ address: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", webhookUrl: "https://hooks.example/x" }, "missing_chain"],
+    [{ chainId: 8453, address: "not-an-address", webhookUrl: "https://hooks.example/x" }, "invalid_address"],
+    [{ chainId: 8453, address: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", webhookUrl: "http://hooks.example/x" }, "invalid_webhookUrl"],
+    [{ chainId: 8453, address: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", webhookUrl: "https://127.0.0.1/x" }, "invalid_webhookUrl"],
+  ];
+  for (const [body, code] of cases) {
+    const r = await post(body);
+    assert.equal(r.status, 400, code);
+    assert.equal((await r.json()).error, code);
+  }
+});
+
+await check("watch: status of an unknown watch is a 404, never another watch", async () => {
+  for (const id of ["w_00000000000000000000000000000000", "not-an-id"]) {
+    const r = await fetch(`${base}/watch/${id}`);
+    assert.equal(r.status, 404);
+    assert.equal((await r.json()).error, "watch_not_found");
+  }
+});
+
 await check("search: pages are indexable; API answers and query-string pages are noindex", async () => {
   const page = await fetch(`${base}/checks`, { headers: { accept: "text/html" } });
   assert.equal(page.status, 200);
