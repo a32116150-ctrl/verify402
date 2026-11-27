@@ -938,6 +938,53 @@ await check("GET /directory serves the directory page", async () => {
   assert.match(html, /directory\.js/);
 });
 
+// Raw request so the Host header can be set (fetch does not allow it).
+const rawGet = (path, headers = {}) => new Promise((resolve, reject) => {
+  const { port } = server.address();
+  const req = http.request({ host: "127.0.0.1", port, path, method: "GET", headers }, (res) => {
+    res.resume();
+    res.on("end", () => resolve({ status: res.statusCode, headers: res.headers }));
+  });
+  req.on("error", reject);
+  req.end();
+});
+
+await check("search: www, http, .html and trailing slash 301 to one clean https address", async () => {
+  const cases = [
+    ["/checks", { host: "www.vex402.online" }, "https://vex402.online/checks"],
+    ["/checks", { host: "vex402.online", "cf-visitor": '{"scheme":"http"}' }, "https://vex402.online/checks"],
+    ["/checks.html", { host: "vex402.online" }, "https://vex402.online/checks"],
+    ["/checks/", { host: "vex402.online" }, "https://vex402.online/checks"],
+    ["/inspect/?url=x", { host: "vex402.online" }, "https://vex402.online/inspect?url=x"],
+  ];
+  for (const [path, headers, location] of cases) {
+    const r = await rawGet(path, headers);
+    assert.equal(r.status, 301, `${headers.host}${path}`);
+    assert.equal(r.headers.location, location);
+  }
+  const clean = await rawGet("/checks", { host: "vex402.online", "cf-visitor": '{"scheme":"https"}' });
+  assert.equal(clean.status, 200, "the clean address is served, not redirected");
+  const local = await rawGet("/checks.html", { host: "127.0.0.1" });
+  assert.notEqual(local.status, 301, "other hosts are left alone");
+});
+
+await check("search: pages are indexable; API answers and query-string pages are noindex", async () => {
+  const page = await fetch(`${base}/checks`, { headers: { accept: "text/html" } });
+  assert.equal(page.status, 200);
+  assert.equal(page.headers.get("x-robots-tag"), null);
+  const withQuery = await fetch(`${base}/inspect?url=https%3A%2F%2Fexample.com`, { headers: { accept: "text/html" } });
+  assert.equal(withQuery.headers.get("x-robots-tag"), "noindex");
+  for (const p of ["/info", "/findings", "/openapi.json", "/llms.txt"]) {
+    const r = await fetch(`${base}${p}`);
+    assert.equal(r.headers.get("x-robots-tag"), "noindex", p);
+  }
+  for (const p of ["/robots.txt", "/sitemap.xml"]) {
+    const r = await fetch(`${base}${p}`);
+    assert.equal(r.status, 200, p);
+    assert.equal(r.headers.get("x-robots-tag"), null, p);
+  }
+});
+
 await check("GET /directory.json returns the watch shape", async () => {
   const res = await fetch(`${base}/directory.json`);
   assert.equal(res.status, 200);

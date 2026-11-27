@@ -386,6 +386,47 @@ app.use((_req, res, next) => {
   next();
 });
 
+// Search hygiene. One address per page: www., http:// , "/page.html" and
+// "/page/" all 301 to the clean https://vex402.online/page. Only GET/HEAD move;
+// an agent's POST is never redirected. Hosts other than ours (local runs,
+// tests) are left alone.
+const SITE_HOST = "vex402.online";
+app.use((req, res, next) => {
+  if (req.method !== "GET" && req.method !== "HEAD") return next();
+  const host = String(req.headers.host || "").toLowerCase().split(":")[0];
+  if (host !== SITE_HOST && host !== `www.${SITE_HOST}`) return next();
+  let scheme = "";
+  try { scheme = JSON.parse(String(req.headers["cf-visitor"] || "{}")).scheme || ""; } catch {}
+  // Cloudflare's cf-visitor carries the visitor's own scheme. X-Forwarded-Proto
+  // is not trusted here: behind the tunnel it can describe the origin hop.
+  const isHttp = scheme === "http";
+  const qs = req.originalUrl.includes("?") ? req.originalUrl.slice(req.originalUrl.indexOf("?")) : "";
+  let path = req.path;
+  if (path.endsWith(".html")) path = path.slice(0, -5) || "/";
+  if (path.length > 1 && path.endsWith("/")) path = path.replace(/\/+$/, "") || "/";
+  if (host !== SITE_HOST || isHttp || path !== req.path) {
+    return res.redirect(301, `https://${SITE_HOST}${path}${qs}`);
+  }
+  next();
+});
+
+// Only real pages belong in search. JSON, text and API answers, and any HTML
+// page reached with a query string (e.g. /inspect?url=… from the board), get
+// X-Robots-Tag: noindex. robots.txt, the sitemap and static assets are exempt.
+const INDEX_EXEMPT = new Set(["/robots.txt", "/sitemap.xml"]);
+app.use((req, res, next) => {
+  const writeHead = res.writeHead;
+  res.writeHead = function patchedWriteHead(...args) {
+    if (!res.getHeader("X-Robots-Tag") && !INDEX_EXEMPT.has(req.path) && !req.path.startsWith("/assets/")) {
+      const type = String(res.getHeader("Content-Type") || "");
+      const isHtml = type.startsWith("text/html");
+      if (!isHtml || req.originalUrl.includes("?")) res.setHeader("X-Robots-Tag", "noindex");
+    }
+    return writeHead.apply(this, args);
+  };
+  next();
+});
+
 // The public Base Sepolia demo at verify402.onrender.com was retired on
 // 2026-11-19. It served the same mainnet analysis for testnet USDC — free
 // product, no reason for an agent to ever pay. In testnet mode this instance

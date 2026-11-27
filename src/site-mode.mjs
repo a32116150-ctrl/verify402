@@ -215,15 +215,75 @@ export function withAssetFingerprint(html) {
 // served HTML page to that origin so the old Render host cannot split ranking
 // signals; pages that already declare a canonical keep their own value.
 const CANONICAL_ORIGIN = "https://vex402.online";
+// One masthead for every HTML page. Each page file still carries its own
+// <header class="site-head"> (so it renders on its own), but the server swaps
+// it for this one when it sends the page, so the menu can never drift again.
+const PRIMARY_LINKS = [
+  ["/", "Home"],
+  ["/preflight", "Free check"],
+  ["/checks", "Paid checks"],
+  ["/mcp", "MCP"],
+  ["/docs", "Docs"],
+  ["/blog", "Blog"],
+];
+const MENU_GROUPS = [
+  ["Start", [["/", "Home"], ["/preflight", "Free check"], ["/checks", "Paid checks &amp; prices"], ["/start", "Quickstart"], ["/mcp", "MCP server"]]],
+  ["Tools", [["/inspect", "402 inspector"], ["/directory", "402 directory"], ["/board", "Public board"], ["/live", "Live findings"], ["/activity", "Activity"]]],
+  ["Trust", [["/proof", "Proof &amp; receipts"], ["/audit", "Payment review"], ["/testers", "Tester kit"]]],
+  ["Project", [["/blog", "Blog"], ["/docs", "Documentation"], ["/donate", "Donate"], ["/sponsor", "Sponsor hosting"], ["https://github.com/a32116150-ctrl/verify402", "GitHub"]]],
+];
+
+function isCurrent(href, path) {
+  if (href === "/") return path === "/";
+  return path === href || path.startsWith(`${href}/`);
+}
+
+export function siteHeader(path = "/") {
+  const cur = (href) => (isCurrent(href, path) ? ' aria-current="page"' : "");
+  const primary = PRIMARY_LINKS.map(([h, t]) => `    <a href="${h}"${cur(h)}>${t}</a>`).join("\n");
+  const menu = MENU_GROUPS.map(([label, links]) => [
+    `        <p class="menu-label">${label}</p>`,
+    ...links.map(([h, t]) => `        <a href="${h}"${h.startsWith("http") ? ' rel="noopener"' : cur(h)}>${t}</a>`),
+  ].join("\n")).join("\n");
+  const status = path === "/"
+    ? '\n    <a class="site-status" href="/live"><span class="status-dot"></span><span data-block>snapshot · block —</span></a>'
+    : "";
+  return `<header class="site-head">
+  <a class="brand" href="/" aria-label="verify402 home">verify<span>[</span>402<span>]</span></a>
+  <nav class="site-nav" aria-label="Primary">
+${primary}
+  </nav>
+  <div class="site-actions">${status}
+    <a class="btn sm" href="/preflight#try">Run free check</a>
+    <details class="site-menu">
+      <summary><span class="menu-more">More</span><span class="menu-all">Menu</span></summary>
+      <nav aria-label="Menu">
+${menu}
+      </nav>
+    </details>
+  </div>
+</header>`;
+}
+
+export function withSiteHeader(html, path = "/") {
+  return html.replace(/<header class="site-head">[\s\S]*?<\/header>/, () => siteHeader(path));
+}
+
 export function withCanonical(html, path = "/") {
+  html = withSiteHeader(html, cleanPath(path));
   if (/<link\s+[^>]*rel=["']canonical["'][^>]*>/i.test(html)) return html;
   const headClose = html.indexOf("</head>");
   if (headClose < 0) return html;
+  const clean = cleanPath(path);
+  return `${html.slice(0, headClose)}  <link rel="canonical" href="${CANONICAL_ORIGIN}${clean}">\n${html.slice(headClose)}`;
+}
+
+function cleanPath(path) {
   let clean = String(path || "/").split(/[?#]/, 1)[0];
   if (!clean.startsWith("/")) clean = `/${clean}`;
   if (clean.length > 1) clean = clean.replace(/\/+$/, "");
   if (clean.endsWith(".html")) clean = clean.slice(0, -5) || "/";
-  return `${html.slice(0, headClose)}  <link rel="canonical" href="${CANONICAL_ORIGIN}${clean}">\n${html.slice(headClose)}`;
+  return clean;
 }
 
 export function renderSiteHtml(html, { mode = "testnet", path = "" } = {}) {

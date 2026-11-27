@@ -359,7 +359,7 @@ function rowHtml(row) {
   const link = `/inspect?url=${encodeURIComponent(row.resource)}`;
   const short = row.resource.replace(/^https?:\/\//, "");
   return `<tr id="${rowIds(row)}" data-verdict="${esc(row.verdict)}" data-chain="${esc(chain)}" data-text="${esc(short.toLowerCase())}">
-  <td class="board-ep"><span class="board-method">${esc(row.method)}</span><a href="${esc(link)}">${esc(short)}</a></td>
+  <td class="board-ep"><span class="board-method">${esc(row.method)}</span><a href="${esc(link)}" rel="nofollow">${esc(short)}</a></td>
   <td>${verdictChip(row)}</td>
   <td>${esc(chain || "—")}</td>
   <td class="board-num">${esc(formatPrice(row.priceUsd))}</td>
