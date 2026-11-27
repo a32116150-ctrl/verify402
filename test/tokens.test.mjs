@@ -29,7 +29,9 @@ test("every registry address is well formed for its family", () => {
 });
 
 test("the registry agrees with the USDC addresses already in config", () => {
-  for (const [chainId, chain] of Object.entries(CHAINS)) {
+  // Payment networks only: OP, BNB, Polygon and Avalanche are read by paid
+  // route checks but are not x402 payment rails here.
+  for (const [chainId, chain] of Object.entries(CHAINS).filter(([id]) => [1, 8453, 42161].includes(Number(id)))) {
     const entry = TOKEN_REGISTRY[`eip155:${chainId}`];
     assert.ok(entry, `eip155:${chainId} is missing from the registry`);
     const usdc = entry.tokens[chain.tokens.USDC.address.toLowerCase()];

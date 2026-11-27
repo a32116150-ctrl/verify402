@@ -247,7 +247,7 @@
     <div class="wrap">
       <div class="networks-head">
         <h2 data-reveal>23 networks.<br>The coins agents move.</h2>
-        <p data-reveal>The free gate checks transactions on 22 EVM networks, and x402 payment requests on Solana too. The paid checks read live data on Ethereum, Base and Arbitrum. Pay for a check in USDC on Base or on Solana, at the same price.</p>
+        <p data-reveal>The free gate checks transactions on 22 EVM networks, and x402 payment requests on Solana too. The paid checks read live prices on 7 of them: Ethereum, Base, Arbitrum, OP Mainnet, BNB Chain, Polygon and Avalanche, across Uniswap (V2, V3, V4), Curve, Aerodrome, Velodrome, PancakeSwap, Camelot, SushiSwap and QuickSwap. Pay for a check in USDC on Base or on Solana, at the same price.</p>
       </div>
       <div class="network-grid" data-ui>
         <div class="network-card" data-reveal>
@@ -284,18 +284,20 @@
             <li class="pay">Pay for checks in USDC</li>
             <li>Free check of x402 payment requests</li>
             <li>Lost payments recovered from the chain</li>
-            <li class="soon">Swap and token checks: not yet</li>
+            <li>Paid token safety check (mint, freeze, seize, fees)</li>
+            <li class="soon">Swap price checks: not yet</li>
           </ul>
         </a>
         <div class="network-card network-wide" id="more-networks" data-reveal>
           <div class="network-wide-text">
             <div class="network-name">+ 19 more</div>
+            <p class="net-note">Free gate on all of them. The dark ones also have paid token and trade checks.</p>
           </div>
           <ul class="net-chips" aria-label="More networks">
-              <li class="net-chip">OP Mainnet</li>
-              <li class="net-chip">BNB Chain</li>
-              <li class="net-chip">Polygon</li>
-              <li class="net-chip">Avalanche</li>
+              <li class="net-chip paid">OP Mainnet</li>
+              <li class="net-chip paid">BNB Chain</li>
+              <li class="net-chip paid">Polygon</li>
+              <li class="net-chip paid">Avalanche</li>
               <li class="net-chip">Unichain</li>
               <li class="net-chip">Monad</li>
               <li class="net-chip">Arc</li>

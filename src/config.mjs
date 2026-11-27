@@ -88,6 +88,97 @@ export const CHAINS = {
     gasPricePool: { fee: 500 },
     flashLoanPremiumBps: 5,
   },
+
+  // ------------------------------------------- op, bnb, polygon, avalanche
+  // Paid checks since 3.5.0 (before that, free gate only). Venue addresses
+  // live in the private engine; these entries carry what the public server
+  // validates: tokens, decimals and RPCs.
+  10: {
+    name: "optimism",
+    viemChain: "optimism",
+    rpcEnv: "OP_RPC_URL",
+    rpcDefault: "https://mainnet.optimism.io",
+    rpcFallbacks: ["https://optimism-rpc.publicnode.com", "https://optimism.drpc.org"],
+    nativeSymbol: "ETH",
+    quoterV2: "0x61fFE014bA17989E743c5F6cB21bF9697530B21e",
+    v2Routers: [],
+    v3Fees: [100, 500, 3000, 10000],
+    tokens: {
+      USDC: { address: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85", decimals: 6 },
+      WETH: { address: "0x4200000000000000000000000000000000000006", decimals: 18 },
+      OP: { address: "0x4200000000000000000000000000000000000042", decimals: 18 },
+      USDT: { address: "0x94b008aA00579c1307B0EF2c499aD98a8ce58e58", decimals: 6 },
+      WBTC: { address: "0x68f180fcCe6836688e9084f035309E29Bf0A2095", decimals: 8 },
+    },
+    gasToken: "WETH",
+    gasPricePool: { fee: 500 },
+    flashLoanPremiumBps: 5,
+  },
+  56: {
+    name: "bnb",
+    viemChain: "bsc",
+    rpcEnv: "BSC_RPC_URL",
+    rpcDefault: "https://bsc-dataseed.bnbchain.org",
+    rpcFallbacks: ["https://56.rpc.thirdweb.com", "https://bsc.drpc.org"],
+    nativeSymbol: "BNB",
+    quoterV2: "0x78D78E420Da98ad378D7799bE8f4AF69033EB077",
+    v2Routers: [{ label: "pancake-v2", address: "0x10ED43C718714eb63d5aA57B78B54704E256024E", feeBps: 25 }],
+    v3Fees: [100, 500, 3000, 10000],
+    tokens: {
+      // BNB Chain's USDC and USDT use 18 decimals.
+      USDC: { address: "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d", decimals: 18 },
+      WBNB: { address: "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c", decimals: 18 },
+      USDT: { address: "0x55d398326f99059fF775485246999027B3197955", decimals: 18 },
+      BTCB: { address: "0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c", decimals: 18 },
+      ETH: { address: "0x2170Ed0880ac9A755fd29B2688956BD959F933F8", decimals: 18 },
+      CAKE: { address: "0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82", decimals: 18 },
+    },
+    gasToken: "WBNB",
+    gasPricePool: { fee: 500 },
+    flashLoanPremiumBps: 5,
+  },
+  137: {
+    name: "polygon",
+    viemChain: "polygon",
+    rpcEnv: "POLYGON_RPC_URL",
+    rpcDefault: "https://polygon.drpc.org",
+    rpcFallbacks: ["https://polygon-bor-rpc.publicnode.com", "https://polygon-rpc.com"],
+    nativeSymbol: "POL",
+    quoterV2: "0x61fFE014bA17989E743c5F6cB21bF9697530B21e",
+    v2Routers: [{ label: "quickswap-v2", address: "0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff", feeBps: 30 }],
+    v3Fees: [100, 500, 3000, 10000],
+    tokens: {
+      USDC: { address: "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359", decimals: 6 },
+      WPOL: { address: "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270", decimals: 18 },
+      WETH: { address: "0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619", decimals: 18 },
+      USDT: { address: "0xc2132D05D31c914a87C6611C10748AEb04B58e8F", decimals: 6 },
+      WBTC: { address: "0x1BFD67037B42Cf73acF2047067bd4F2C47D9BfD6", decimals: 8 },
+    },
+    gasToken: "WPOL",
+    gasPricePool: { fee: 500 },
+    flashLoanPremiumBps: 5,
+  },
+  43114: {
+    name: "avalanche",
+    viemChain: "avalanche",
+    rpcEnv: "AVAX_RPC_URL",
+    rpcDefault: "https://avalanche-c-chain-rpc.publicnode.com",
+    rpcFallbacks: ["https://avalanche.drpc.org", "https://api.avax.network/ext/bc/C/rpc"],
+    nativeSymbol: "AVAX",
+    quoterV2: "0xbe0F5544EC67e9B3b2D979aaA43f18Fd87E6257F",
+    v2Routers: [],
+    v3Fees: [100, 500, 3000, 10000],
+    tokens: {
+      USDC: { address: "0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E", decimals: 6 },
+      WAVAX: { address: "0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7", decimals: 18 },
+      USDT: { address: "0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7", decimals: 6 },
+      "WETH.e": { address: "0x49D5c2BdFfac6CE2BFdB6640F4F80f226bc10bAB", decimals: 18 },
+      "BTC.b": { address: "0x152b9d0FdC40C096757F570A51E494bd4b943E50", decimals: 8 },
+    },
+    gasToken: "WAVAX",
+    gasPricePool: { fee: 500 },
+    flashLoanPremiumBps: 5,
+  },
 };
 
 // Readiness-only chains. This is deliberately separate from CHAINS: /ready
@@ -136,17 +227,6 @@ export const DEFAULT_MIN_NET = 0;
 // against live chain state when added (OP Mainnet 2026-11-26, the rest
 // 2026-11-27).
 export const GATE_CHAINS = Object.freeze({
-  10: {
-    name: "optimism",
-    viemChain: "optimism",
-    rpcEnv: "OP_RPC_URL",
-    rpcDefault: "https://mainnet.optimism.io",
-    rpcFallbacks: [
-      "https://optimism-rpc.publicnode.com",
-      "https://optimism.drpc.org",
-    ],
-    nativeSymbol: "ETH",
-  },
   // More EVM chains the free gate reads. Checked by hand on 2026-11-27: each
   // RPC answered a block read,
   // a code read and an eth_call; failing public endpoints were left out.
@@ -160,17 +240,6 @@ export const GATE_CHAINS = Object.freeze({
       "https://cronos-evm-rpc.publicnode.com",
     ],
     nativeSymbol: "CRO",
-  },
-  56: {
-    name: "bnb", // BNB Chain
-    viemChain: "bsc",
-    rpcEnv: "BSC_RPC_URL",
-    rpcDefault: "https://bsc-dataseed.bnbchain.org",
-    rpcFallbacks: [
-      "https://56.rpc.thirdweb.com",
-      "https://bsc.drpc.org",
-    ],
-    nativeSymbol: "BNB",
   },
   100: {
     name: "gnosis", // Gnosis
@@ -193,16 +262,6 @@ export const GATE_CHAINS = Object.freeze({
       "https://mainnet.unichain.org",
     ],
     nativeSymbol: "ETH",
-  },
-  137: {
-    name: "polygon", // Polygon
-    viemChain: "polygon",
-    rpcEnv: "POLYGON_RPC_URL",
-    rpcDefault: "https://polygon.drpc.org",
-    rpcFallbacks: [
-      "https://polygon-bor-rpc.publicnode.com",
-    ],
-    nativeSymbol: "POL",
   },
   143: {
     name: "monad", // Monad
@@ -299,17 +358,6 @@ export const GATE_CHAINS = Object.freeze({
     rpcDefault: "https://rpc.plasma.to",
     rpcFallbacks: [],
     nativeSymbol: "XPL",
-  },
-  43114: {
-    name: "avalanche", // Avalanche C-Chain
-    viemChain: "avalanche",
-    rpcEnv: "AVAX_RPC_URL",
-    rpcDefault: "https://avalanche-c-chain-rpc.publicnode.com",
-    rpcFallbacks: [
-      "https://avalanche.drpc.org",
-      "https://api.avax.network/ext/bc/C/rpc",
-    ],
-    nativeSymbol: "AVAX",
   },
   57073: {
     name: "ink", // Ink

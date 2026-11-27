@@ -64,7 +64,7 @@
   <div class="wrap page-head with-figure">
     <div class="page-copy">
       <h1>Six checks.<br>No subscription.</h1>
-      <p class="lead">Each call measures one claim against the chain at a pinned block and returns a verdict with evidence. Pay per call in USDC on Base mainnet; no account, no minimum, no monthly bill.</p>
+      <p class="lead">Each call measures one claim against the chain at a pinned block and returns a signed verdict with evidence (Ed25519, key at <a class="textlink" href="/.well-known/verify402-signing-key">/.well-known/verify402-signing-key</a>), on Ethereum, Base, Arbitrum, OP Mainnet, BNB Chain, Polygon and Avalanche. Pay per call in USDC on Base mainnet; no account, no minimum, no monthly bill.</p>
       <div class="btn-row" style="margin-top:24px">
         <a class="btn" href="/preflight#try">Run free preflight</a>
         <a class="btn ghost" href="#prices">See prices</a>
@@ -113,7 +113,7 @@
 
       <article id="safety">
         <h2>/safety — $0.02 · can this token be sold?</h2>
-        <p class="lead" style="margin-top:14px">Token safety check for AI agents before they swap: quote-based sellability, round-trip cost, TRUST / CAUTION / AVOID. $0.02 per call, free pre-signing gate included. It does not execute a transfer; transfer restrictions stay in <code class="inline">notChecked</code>, so it is not a honeypot proof. Contract facts, market liquidity, scam signals, a USD-sized sell QUOTED through the configured venues' own routers, round-trip cost at your intended size, and phantom-price detection — then TRUST, CAUTION or AVOID, with the evidence named. It does not execute a transfer, and transfer restrictions are listed in notChecked.</p>
+        <p class="lead" style="margin-top:14px">Token safety check for AI agents before they swap: quote-based sellability, round-trip cost, TRUST / CAUTION / AVOID. $0.02 per call, free pre-signing gate included. It does not execute a transfer; transfer restrictions stay in <code class="inline">notChecked</code>, so it is not a honeypot proof. Contract facts, market liquidity, scam signals, a USD-sized sell QUOTED through the configured venues' own routers, round-trip cost at your intended size, and phantom-price detection — then TRUST, CAUTION or AVOID, with the evidence named. It does not execute a transfer, and transfer restrictions are listed in notChecked. On Solana, send <code class="inline">"network":"solana"</code> and the token mint: it reads mint and freeze authority and the Token-2022 controls (permanent delegate, transfer fee, transfer hook, pause), without a swap quote.</p>
         <details class="request" data-ui>
           <summary>Request shape</summary>
 <pre><span class="c">POST</span> /safety
@@ -124,7 +124,7 @@
 
       <article id="route">
         <h2>/route — $0.03 · what would the chain pay?</h2>
-        <p class="lead" style="margin-top:14px">Best execution route for a swap, plus every quoted venue at your size. Useful when a UI shows one price and the chain would pay another.</p>
+        <p class="lead" style="margin-top:14px">Best execution route for a swap, plus every quoted venue at your size: Uniswap V2, V3 and V4, Curve, Aerodrome, Velodrome, PancakeSwap, Camelot, SushiSwap and QuickSwap, wherever each is deployed. For large orders it also estimates a split across venues and reports the price impact. Useful when a UI shows one price and the chain would pay another.</p>
         <details class="request" data-ui>
           <summary>Request shape</summary>
 <pre><span class="c">POST</span> /route

@@ -201,7 +201,7 @@ function paidOperation({ price, operationId, summary, tag, inputSchema, outputSc
 
 const chainId = {
   type: "integer",
-  description: "Required EVM chain id for paid measurement and preflight transaction intents: 1 Ethereum mainnet, 42161 Arbitrum One, 8453 Base. Preflight transaction intents also accept these chains for the free gate only (no paid route measures them): 10 OP Mainnet, 56 BNB Chain, 137 Polygon, 43114 Avalanche, 130 Unichain, 143 Monad, 5042 Arc, 999 HyperEVM, 9745 Plasma, 59144 Linea, 4326 MegaETH, 57073 Ink, 480 World Chain, 1868 Soneium, 100 Gnosis, 25 Cronos, 146 Sonic, 324 ZKsync Era, 4663 Robinhood Chain. There is no silent default; missing => 400 missing_chain. Base Sepolia (84532) is readiness-only and is not a paid-route chain.",
+  description: "Required EVM chain id for paid measurement and preflight transaction intents: 1 Ethereum mainnet, 42161 Arbitrum One, 8453 Base, 10 OP Mainnet, 56 BNB Chain, 137 Polygon, 43114 Avalanche. Preflight transaction intents also accept these chains for the free gate only (no paid route measures them): 130 Unichain, 143 Monad, 5042 Arc, 999 HyperEVM, 9745 Plasma, 59144 Linea, 4326 MegaETH, 57073 Ink, 480 World Chain, 1868 Soneium, 100 Gnosis, 25 Cronos, 146 Sonic, 324 ZKsync Era, 4663 Robinhood Chain. There is no silent default; missing => 400 missing_chain. Base Sepolia (84532) is readiness-only and is not a paid-route chain.",
 };
 
 export function buildOpenapi(prices, { mode = "testnet", baseUrl = DEMO_BASE_URL } = {}) {
@@ -456,6 +456,20 @@ export function buildOpenapi(prices, { mode = "testnet", baseUrl = DEMO_BASE_URL
           },
         },
       },
+      "/.well-known/verify402-signing-key": {
+        get: {
+          tags: ["Discovery"],
+          operationId: "getSigningKey",
+          summary: "Public key that signs every paid answer",
+          description: "Ed25519 public key (SPKI base64 and JWK) for the `signature` field on paid answers. To verify: remove `signature`, serialize the rest as canonical JSON (keys sorted, no spaces), SHA-256 it, and verify `signature.value` (base64url) over those 32 bytes. `source` is `env` for the long-lived key.",
+          responses: {
+            200: {
+              description: "Signing key.",
+              content: { "application/json": { schema: { type: "object", additionalProperties: true } } },
+            },
+          },
+        },
+      },
       "/.well-known/x402": {
         get: {
           tags: ["Discovery"],
@@ -678,6 +692,8 @@ export function buildOpenapi(prices, { mode = "testnet", baseUrl = DEMO_BASE_URL
                           pattern: { type: "string", enum: ["uups", "transparent", "beacon"] },
                           implementation: { type: ["string", "null"] },
                           controller: { type: "object", description: "kind: single_key, multisig, multisig_one_signer, timelock, contract, renounced, unknown or none; with address, threshold/signers, minDelaySeconds or delegatedTo where known." },
+                          upgradeDelaySeconds: { type: "integer", description: "A built-in waiting period before an upgrade can be applied, as reported by the proxy's own upgradeDelay() or UPGRADE_DELAY() getter. Enforcement is not verified." },
+                          upgradeDelaySource: { type: "string", description: "The getter that reported upgradeDelaySeconds." },
                           error: { type: "string" },
                         } },
                       },
@@ -882,13 +898,14 @@ export function buildOpenapi(prices, { mode = "testnet", baseUrl = DEMO_BASE_URL
           summary: "Token safety check for AI agents: quote-based sellability, TRUST / CAUTION / AVOID",
           tag: "Truth",
           guidance:
-            "Token safety check for AI agents before they swap: quote-based sellability, round-trip cost, TRUST / CAUTION / AVOID. $0.02 per call with the free pre-signing gate included. It does NOT execute or simulate a transfer, so transfer tax, blacklist, pause and max-tx restrictions are listed in notChecked, not tested; unconfigured venues are also named in notChecked.",
+            "Token safety check for AI agents before they swap: quote-based sellability, round-trip cost, TRUST / CAUTION / AVOID. $0.02 per call with the free pre-signing gate included. It does NOT execute or simulate a transfer, so transfer tax, blacklist, pause and max-tx restrictions are listed in notChecked, not tested; unconfigured venues are also named in notChecked. Solana: send {\"network\":\"solana\",\"tokenAddress\":\"<mint>\"} with no chainId to read the mint's own controls (mint and freeze authority; Token-2022 permanent delegate, transfer fee and its authority, transfer hook, non-transferable, frozen-by-default, pause). No Solana swap quote is taken, so sellability is in notChecked; issuer-run stablecoins (USDC, USDT, PYUSD, USDG) are TRUST with their controls listed for information. Every paid answer carries `signature` (Ed25519 over the SHA-256 of the canonical JSON without that field); the key is at /.well-known/verify402-signing-key.",
           inputSchema: {
             type: "object",
-            required: ["chainId", "tokenAddress"],
+            required: ["tokenAddress"],
             properties: {
-              chainId,
-              tokenAddress: { type: "string", minLength: 1, description: "ERC-20 token address or known symbol." },
+              network: { type: "string", enum: ["evm", "solana"], default: "evm", description: "\"solana\" checks a Solana token mint; chainId is then not used." },
+              chainId: { ...chainId, description: `${chainId.description} Not used when network is "solana".` },
+              tokenAddress: { type: "string", minLength: 1, description: "ERC-20 token address or known symbol; with network \"solana\", the token's mint address." },
               intendedUsd: { type: "number", exclusiveMinimum: 0, default: 500, description: "Size of intended purchase in USD." },
               offeredPriceUsd: { type: ["number", "null"], description: "Optional offered price to check for phantom price anomalies." },
               baseSymbol: { type: "string", default: "USDC" },
@@ -906,7 +923,7 @@ export function buildOpenapi(prices, { mode = "testnet", baseUrl = DEMO_BASE_URL
           summary: "Every configured venue quoting this pair at one pinned block, best first",
           tag: "Truth",
           guidance:
-            "Direct and WETH-routed quotes at one pinned block, ranked best to worst. Unbiased evidence of what configured venues would actually pay. Aggregators and unconfigured DEXs are not included; execution is not simulated.",
+            "Direct and WETH-routed quotes at one pinned block, ranked best to worst, including a 'best pools via WETH' route that picks the best venue for each leg. Unbiased evidence of what configured venues would actually pay. For a large order, `split` estimates the same order divided across the top venues (10% steps, same block; assumes the venues share no pool, gas for extra legs not included) and `priceImpactPct` shows how much the whole order moves the best venue's price. Aggregators and unconfigured DEXs are not included; execution is not simulated.",
           inputSchema: {
             type: "object",
             required: ["chainId", "tokenIn", "tokenOut", "amountIn"],
@@ -929,7 +946,7 @@ export function buildOpenapi(prices, { mode = "testnet", baseUrl = DEMO_BASE_URL
           summary: "Audit someone else's quote: fair / overpaying / too_good_to_be_true",
           tag: "Truth",
           guidance:
-            "Compares a third-party quote against the full configured venue book at one pinned block before signing. A transport/decode failure returns HTTP 503, never 'unknown'.",
+            "Compares a third-party quote against the full configured venue book at one pinned block before signing. On a large order the offer is compared with the order split across the top venues when that pays more than any single venue. When the venues read are thin at the size asked (5% or more price impact), an offer far above them is 'unknown' with an explanation, never called invented. A transport/decode failure returns HTTP 503, never 'unknown'.",
           inputSchema: {
             type: "object",
             required: ["chainId", "tokenIn", "tokenOut", "amountIn", "quotedOut"],

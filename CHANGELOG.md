@@ -3,6 +3,58 @@
 All notable changes to verify402. This file records repository changes; it does
 not imply a deploy or an npm publish.
 
+## 3.5.0 — 2026-11-27
+
+More networks, upgrade control in the free gate, more accurate paid checks,
+signed answers and a Solana token check.
+
+- Every paid answer carries `signature`: Ed25519 over the SHA-256 of the
+  canonical JSON of the answer without that field. The public key is at
+  `/.well-known/verify402-signing-key`; set `VERIFY402_SIGNING_KEY` for a key
+  that survives restarts.
+- `/safety` on Solana: `{"network":"solana","tokenAddress":"<mint>"}` reads the
+  mint's own controls (mint and freeze authority; Token-2022 permanent
+  delegate, transfer fee and who can change it, transfer hook,
+  non-transferable, frozen-by-default, pause) and returns TRUST / CAUTION /
+  AVOID. No Solana swap quote is taken, so sellability is in `notChecked`.
+  Issuer-run stablecoins (USDC, USDT, PYUSD, USDG) are TRUST with their
+  controls listed for information.
+
+- The free gate reads transactions on 22 EVM networks, with x402 payment
+  requests on Solana too.
+- Paid checks (`/verify`, `/safety`, `/route`, `/quotecheck`, `/depth`) now
+  run on OP Mainnet (Uniswap V3 and V4, Velodrome classic and Slipstream), BNB
+  Chain (PancakeSwap V2 and V3, Uniswap V3 and V4), Polygon (Uniswap V3 and V4,
+  QuickSwap V2) and Avalanche (Uniswap V3 and V4), as well as Ethereum,
+  Arbitrum and Base. Every venue address is from the protocol's own
+  deployment list and was checked on-chain. Payment rails are unchanged
+  (Base, Ethereum, Arbitrum and Solana).
+- Paid checks on Arbitrum and Base also read PancakeSwap V3, and on Arbitrum
+  Camelot V3.
+- Paid checks on Ethereum read Curve: 3pool, the three tricrypto pools and
+  the two CRV/WETH pools, a fixed list checked on-chain. Curve's registry is
+  not searched at run time because it also lists broken pools.
+- `upgradeControl`: for the contract a transaction calls, and an approval's
+  spender, the gate reports whether its code can be replaced and by whom (a
+  single key, an EIP-7702 wallet, a multisig, a timelock, a contract), plus any
+  built-in upgrade delay the proxy reports (`upgradeDelaySeconds`, read from
+  `upgradeDelay()` / `UPGRADE_DELAY()`; enforcement is not verified).
+  Informational by default; `policy.upgradeControl` set to `caution` or
+  `block` acts on a single key.
+- Paid checks on Base read Aerodrome: classic pools and all three official
+  Slipstream deployments. Pools with other owners are not read.
+- Paid checks on Ethereum, Arbitrum and Base read Uniswap V4 (hookless pools;
+  WETH legs are priced against the native ETH pool and labelled so).
+- `/route` adds a "best pools via WETH" route that takes the best venue for
+  each leg, a `split` estimate for large orders (10% steps across the top
+  venues, same block; assumes the venues share no pool, gas for extra legs not
+  included) and `priceImpactPct`.
+- `/quotecheck` compares a large order with the split when it pays more than
+  any single venue. When the venues read are thin at that size (5% or more
+  price impact), an offer far above them is `unknown` with the reason, never
+  called invented.
+- `verify402-mcp` tool help describes the above.
+
 ## 3.1.0 — 2026-11-26
 
 The free gate now explains a transaction and says how to fix it, not only

@@ -25,7 +25,8 @@ import { ExactSvmScheme } from "@x402/svm/exact/server";
 import { declareDiscoveryExtension } from "@x402/extensions/bazaar";
 
 import { measureRoundTrip, clientFor, readinessProbe, readinessClientFor, isHardQuoteFailure } from "./measure.mjs";
-import { preTradeCheck } from "./safety.mjs";
+import { preTradeCheck, solanaTokenSafety } from "./safety.mjs";
+import { createSigner } from "./signing.mjs";
 import { fairQuoteCheck, bestRouteBook, parseRawPositive } from "./quotecheck.mjs";
 import { depthProfile } from "./depth.mjs";
 import { enableHostedMode } from "./license.mjs";
@@ -431,6 +432,7 @@ const DISCOVERY_GET_PATHS = new Set([
   "/.well-known/agent-card.json",
   "/.well-known/agent-registration.json",
   "/.well-known/402index-verify.txt",
+  "/.well-known/verify402-signing-key",
 ]);
 app.use((req, res, next) => {
   if (!DISCOVERY_GET_PATHS.has(req.path)) return next();
@@ -542,7 +544,7 @@ app.use((req, res, next) => {
     }
     if (found?.hit) {
       const hit = found.hit;
-      return res.json({
+      return sendSigned(res, {
         ...hit.payload,
         recovery: {
           replayed: true,
@@ -790,6 +792,12 @@ setRecoveryPaymentChecker(async (ref) => {
   return Boolean(used);
 });
 
+// Ed25519 signer for paid answers (VERIFY402_SIGNING_KEY, else an ephemeral key).
+const signer = createSigner();
+if (signer.source === "ephemeral") {
+  console.warn("[signing] VERIFY402_SIGNING_KEY is not set: paid answers are signed with an ephemeral key that changes on restart");
+}
+
 // Shared exit path for the paid handlers: attach the honesty contract and the
 // standard evidence bundle, remember the settlement under the caller's
 // idempotency key (if provided), then send. `core` is the handler's result;
@@ -854,7 +862,13 @@ function emitPaid(req, res, core) {
       throw e;
     }
   }
-  res.json(full);
+  sendSigned(res, full);
+}
+
+// Signs the exact JSON the caller receives (after recovery metadata is added),
+// then sends it. Replays of a stored answer are signed the same way.
+function sendSigned(res, body) {
+  return res.json(signer.sign(JSON.parse(JSON.stringify(body))));
 }
 
 // A typed failure on a paid route. Never echoes the provider's message; logs
@@ -984,7 +998,7 @@ if (!BYPASS_PAYMENT) app.use(
             },
             inputSchema: {
               properties: {
-                chainId: { type: "integer", description: "1 Ethereum, 42161 Arbitrum, 8453 Base" },
+                chainId: { type: "integer", description: "1 Ethereum, 42161 Arbitrum, 8453 Base, 10 OP Mainnet, 56 BNB Chain, 137 Polygon, 43114 Avalanche" },
                 target: { type: "string", description: "Token symbol to buy and sell back, e.g. WETH" },
                 base: { type: "string", description: "Token to trade from, default USDC" },
                 size: { type: "number", description: "Amount of base to trade, in whole units" },
@@ -1019,7 +1033,7 @@ if (!BYPASS_PAYMENT) app.use(
             },
             inputSchema: {
               properties: {
-                chainId: { type: "integer", description: "1 Ethereum, 42161 Arbitrum, 8453 Base" },
+                chainId: { type: "integer", description: "1 Ethereum, 42161 Arbitrum, 8453 Base, 10 OP Mainnet, 56 BNB Chain, 137 Polygon, 43114 Avalanche" },
                 tokenAddress: { type: "string", description: "ERC-20 contract address (or a known symbol like WETH)" },
                 intendedUsd: { type: "number", description: "Size you plan to buy, in USD, default 500" },
                 offeredPriceUsd: { type: "number", description: "Price per token someone offered you, for the phantom-price check" },
@@ -1059,7 +1073,7 @@ if (!BYPASS_PAYMENT) app.use(
             },
             inputSchema: {
               properties: {
-                chainId: { type: "integer", description: "1 Ethereum, 42161 Arbitrum, 8453 Base" },
+                chainId: { type: "integer", description: "1 Ethereum, 42161 Arbitrum, 8453 Base, 10 OP Mainnet, 56 BNB Chain, 137 Polygon, 43114 Avalanche" },
                 tokenIn: { type: "string", description: "Token symbol or 0x address" },
                 tokenOut: { type: "string", description: "Token symbol or 0x address" },
                 amountIn: { type: "string", description: "Amount in RAW base units of tokenIn (wei-scale)" },
@@ -1098,7 +1112,7 @@ if (!BYPASS_PAYMENT) app.use(
             },
             inputSchema: {
               properties: {
-                chainId: { type: "integer", description: "1 Ethereum, 42161 Arbitrum, 8453 Base" },
+                chainId: { type: "integer", description: "1 Ethereum, 42161 Arbitrum, 8453 Base, 10 OP Mainnet, 56 BNB Chain, 137 Polygon, 43114 Avalanche" },
                 tokenAddress: { type: "string", description: "Target token symbol or 0x address (the thing you plan to buy)" },
                 baseSymbol: { type: "string", description: "What you pay with, default USDC" },
                 sizesUsd: { type: "array", description: "Ladder of sizes in USD, max 6, each <= 1,000,000", items: { type: "number" } },
@@ -1142,7 +1156,7 @@ if (!BYPASS_PAYMENT) app.use(
             },
             inputSchema: {
               properties: {
-                chainId: { type: "integer", description: "1 Ethereum, 42161 Arbitrum, 8453 Base" },
+                chainId: { type: "integer", description: "1 Ethereum, 42161 Arbitrum, 8453 Base, 10 OP Mainnet, 56 BNB Chain, 137 Polygon, 43114 Avalanche" },
                 safety: { type: "object", description: "Token sellability facts (tokenAddress, intendedUsd, offeredPriceUsd, baseSymbol)" },
                 route: { type: "object", description: "Best route at one pinned block (tokenIn, tokenOut, amountIn raw units)" },
                 quotecheck: { type: "object", description: "Fairness audit of a quote (tokenIn, tokenOut, amountIn, quotedOut, venueClaimed)" },
@@ -1185,7 +1199,7 @@ if (!BYPASS_PAYMENT) app.use(
             },
             inputSchema: {
               properties: {
-                chainId: { type: "integer", description: "1 Ethereum, 42161 Arbitrum, 8453 Base" },
+                chainId: { type: "integer", description: "1 Ethereum, 42161 Arbitrum, 8453 Base, 10 OP Mainnet, 56 BNB Chain, 137 Polygon, 43114 Avalanche" },
                 tokenIn: { type: "string", description: "Token symbol or 0x address" },
                 tokenOut: { type: "string", description: "Token symbol or 0x address" },
                 amountIn: { type: "string", description: "RAW units of tokenIn (wei-scale)" },
@@ -1273,6 +1287,11 @@ app.get(["/.well-known/agent-registration.json", "/.well-known/agent-card.json"]
 // listings. The token itself stays in ~/.config/verify402/ (mode 600).
 app.get("/.well-known/402index-verify.txt", (_req, res) => {
   res.type("text/plain").send("83f1c578d78d2b9645a4640bcc77939bdfbae84a86b7798d4d753e18085f3b14");
+});
+
+// Public key for the Ed25519 signature on every paid answer (src/signing.mjs).
+app.get("/.well-known/verify402-signing-key", (_req, res) => {
+  res.json(signer.publicKeyInfo());
 });
 
 // Browsers and discovery crawlers both ask for /favicon.ico before anything
@@ -2748,6 +2767,16 @@ app.post("/safety", async (req, res) => {
   const started = Date.now();
   try {
     const body = req.body || {};
+    // Solana tokens: {"network":"solana","tokenAddress":"<mint>"}. The mint's
+    // own controls are read; there is no Solana swap quote yet (notChecked).
+    if (String(body.network ?? "").toLowerCase() === "solana") {
+      const mint = String(body.tokenAddress ?? body.mint ?? "").trim();
+      if (!mint) return badRequest(req, res, "missing_tokenAddress", 'tokenAddress (the token mint) is required, e.g. {"network":"solana","tokenAddress":"DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263"}');
+      const result = await solanaTokenSafety({ mint });
+      if (hardFailureResponse(req, res, result)) return;
+      if (result?.ok === false) return badRequest(req, res, "bad_request", result.error || "invalid Solana mint");
+      return emitPaid(req, res, { ...result, elapsedMs: Date.now() - started });
+    }
     const chainId = requireChainId(body);
     const tokenAddress = String(body.tokenAddress ?? "").trim();
     const baseSymbol = String(body.baseSymbol ?? "USDC").toUpperCase();
@@ -2808,6 +2837,23 @@ app.post("/safety", async (req, res) => {
   }
 });
 
+// One venue in a route book. A multi-leg venue also names the pool used on each leg.
+function routeBookEntry(q) {
+  return { venue: q.venue, kind: q.kind, amountOut: String(q.amountOut), ...(Array.isArray(q.legs) ? { legs: q.legs } : {}) };
+}
+
+// The split estimate for a large order, or null (also null from an engine that does not send one).
+function routeSplit(split) {
+  if (!split || split.amountOut == null) return null;
+  return {
+    amountOut: String(split.amountOut),
+    gainBps: split.gainBps,
+    legs: (split.legs ?? []).map((l) => ({ venue: l.venue, sharePct: l.sharePct, amountIn: String(l.amountIn), amountOut: String(l.amountOut) })),
+    method: split.method,
+    caveat: split.caveat,
+  };
+}
+
 // Route book + fairness audit: the two calls that bracket every swap.
 app.post("/route", async (req, res) => {
   const started = Date.now();
@@ -2865,7 +2911,9 @@ app.post("/route", async (req, res) => {
       blockNumber: Number(blockNumber),
       amountIn: amountIn.toString(),
       best: best ? { venue: best.venue, kind: best.kind, amountOut: best.amountOut.toString() } : null,
-      book: book.quoted.map((q) => ({ venue: q.venue, kind: q.kind, amountOut: q.amountOut.toString() })),
+      book: book.quoted.map(routeBookEntry),
+      split: routeSplit(book.split),
+      priceImpactPct: book.impactPct ?? null,
       // Backward-compatible names plus typed reasons.
       unavailable: book.unavailable.map((u) => u.venue),
       unavailable_reasons: book.unavailable,
@@ -3106,7 +3154,9 @@ app.post("/assure", async (req, res) => {
         blockNumber: Number(blockNumber),
         amountIn: amountIn.toString(),
         best: best ? { venue: best.venue, kind: best.kind, amountOut: best.amountOut.toString() } : null,
-        book: book.quoted.map((q) => ({ venue: q.venue, kind: q.kind, amountOut: q.amountOut.toString() })),
+        book: book.quoted.map(routeBookEntry),
+        split: routeSplit(book.split),
+        priceImpactPct: book.impactPct ?? null,
         unavailable: book.unavailable.map((u) => u.venue),
         unavailable_reasons: book.unavailable,
         note: best ? null : "no configured venue quoted this pair at this size",

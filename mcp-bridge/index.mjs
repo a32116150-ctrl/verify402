@@ -253,7 +253,10 @@ const DESCRIPTIONS = {
     "If the transaction came with a quote from a swap API, pass it as `quote`: any difference between the decoded transaction and the quote is BLOCK. " +
     "For kind=transaction the response also carries `advice`: `explanation` (one plain sentence to show your user), `preview.effects` " +
     "(what leaves and enters the wallet, the minimum received, and the network fee when `from` is given), `fixes` (how to repair each flagged problem, " +
-    "with suggested values) and `upgrades` (optional paid checks that fit this transaction). Advice never changes the verdict.",
+    "with suggested values) and `upgrades` (optional paid checks that fit this transaction). Advice never changes the verdict. " +
+    "It also reports `upgradeControl`: whether the contract called (or an approval's spender) can have its code replaced, by whom " +
+    "(a single key, a multisig, a timelock) and any built-in upgrade delay the contract reports. Set policy.upgradeControl to caution or block to act on a single key. " +
+    "Transactions are read on 22 EVM networks; payment requests also on Solana.",
   inspect_402:
     "Read an x402 402 challenge BEFORE paying it. Pass a public endpoint URL (or the challenge you already have) " +
     "and get back the price, token, network, payee, the bound resource, and a PASS / CAUTION / BLOCK verdict " +
@@ -276,14 +279,22 @@ const DESCRIPTIONS = {
     "the configured venues' own routers (direct and WETH-routed), round-trip cost at your " +
     "intended size, and phantom-price detection. It does NOT execute or simulate a transfer: " +
     "transfer tax, blacklist, pause, and max-tx restrictions are listed in notChecked, not " +
-    "tested. Unconfigured venues are also named in notChecked; this is not a honeypot proof.",
+    "tested. Unconfigured venues are also named in notChecked; this is not a honeypot proof. " +
+    "Solana: pass network \"solana\" and the token's mint as tokenAddress (no chainId) to read " +
+    "the mint's own controls: mint and freeze authority, permanent delegate, transfer fee and who " +
+    "can change it, transfer hook, non-transferable, frozen-by-default, pause. No Solana swap " +
+    "quote is taken, so sellability is listed in notChecked. Every paid answer is signed (Ed25519, " +
+    "key at /.well-known/verify402-signing-key).",
   get_best_route:
     "Ask verify402 what the chain would ACTUALLY pay for a swap: the full book from every " +
-    "configured venue (direct and WETH-routed) at one pinned block, best first. Aggregators and " +
-    "unconfigured DEXs are not included. Costs $0.03 per call.",
+    "configured venue (direct, WETH-routed, and the best pool for each leg) at one pinned block, best first. " +
+    "For a large order it also estimates the order split across the top venues, and shows the price impact. " +
+    "Aggregators and unconfigured DEXs are not included. Costs $0.03 per call.",
   verify_quote_fairness:
     "Audit a swap quote someone else gave you (aggregator, broker, bot) BEFORE signing. " +
     "Returns fair / overpaying / too_good_to_be_true with the configured-venue book as evidence. " +
+    "A large order is compared with the order split across the top venues. When the venues read are too thin " +
+    "at that size, a much better quote is 'unknown' with the reason, not called invented. " +
     "Ask this before accepting ANY number you did not produce yourself. Costs $0.05 per call.",
   get_trade_depth:
     "Position sizing: measure how much of a token the chain ACTUALLY lets you trade - " +
@@ -339,7 +350,7 @@ async function main() {
     DESCRIPTIONS.preflight_gate,
     {
       kind: z.enum(["payment", "transaction", "sign-in"]).describe("payment = an x402 402 challenge; transaction = a chain transaction; sign-in = an EIP-4361 / CAIP-122 message"),
-      chainId: z.number().optional().describe("EVM chain id: 1 Ethereum, 42161 Arbitrum, 8453 Base. For payment, cross-checks the network."),
+      chainId: z.number().optional().describe("EVM chain id for kind=transaction: 22 EVM networks, e.g. 1 Ethereum, 42161 Arbitrum, 8453 Base, 10 OP Mainnet, 56 BNB Chain, 137 Polygon, 43114 Avalanche. For payment, cross-checks the network."),
       from: z.string().optional().describe("The wallet that will sign. Strongly recommended: enables simulation and balance checks."),
       payment: z.object({
         scheme: z.string().optional().describe('x402 scheme, normally "exact"'),
@@ -524,7 +535,7 @@ async function main() {
     DESCRIPTIONS.verify_arbitrage,
     {
       target: z.string().describe('Token to buy and sell back, e.g. "WETH"'),
-      chainId: z.number().int().describe("REQUIRED. 1 Ethereum, 42161 Arbitrum, 8453 Base. There is no default; omitting it returns 400 missing_chain."),
+      chainId: z.number().int().describe("REQUIRED. 1 Ethereum, 42161 Arbitrum, 8453 Base, 10 OP Mainnet, 56 BNB Chain, 137 Polygon, 43114 Avalanche. There is no default; omitting it returns 400 missing_chain."),
       base: z.string().optional().describe('Token to trade from, e.g. "USDC" (default USDC)'),
       size: z.number().optional().describe("Trade size in whole base units, e.g. 100000 (default 100000)"),
     },
@@ -554,8 +565,9 @@ async function main() {
     "check_token_safety",
     DESCRIPTIONS.check_token_safety,
     {
-      tokenAddress: z.string().describe("ERC-20 contract address, or a known symbol like WETH"),
-      chainId: z.number().int().describe("REQUIRED. 1 Ethereum, 42161 Arbitrum, 8453 Base. There is no default; omitting it returns 400 missing_chain."),
+      tokenAddress: z.string().describe("ERC-20 contract address, a known symbol like WETH, or (with network \"solana\") the token's Solana mint"),
+      network: z.enum(["evm", "solana"]).optional().describe("\"solana\" checks a Solana token mint and needs no chainId; default EVM"),
+      chainId: z.number().int().optional().describe("REQUIRED for EVM. 1 Ethereum, 42161 Arbitrum, 8453 Base, 10 OP Mainnet, 56 BNB Chain, 137 Polygon, 43114 Avalanche. There is no default; omitting it returns 400 missing_chain."),
       intendedUsd: z.number().optional().describe("Size the agent plans to buy, in USD (default 500)"),
       offeredPriceUsd: z.number().optional().describe("Optional price per token someone offered you"),
     },
@@ -565,12 +577,14 @@ async function main() {
         res = await runPaidTool({
         tool: "check_token_safety",
         client: await ensurePaidApi(),
-        body: {
-          chainId: args.chainId,
-          tokenAddress: String(args.tokenAddress ?? "").trim(),
-          intendedUsd: args.intendedUsd ?? 500,
-          offeredPriceUsd: args.offeredPriceUsd ?? null,
-        },
+        body: args.network === "solana"
+          ? { network: "solana", tokenAddress: String(args.tokenAddress ?? "").trim() }
+          : {
+              chainId: args.chainId,
+              tokenAddress: String(args.tokenAddress ?? "").trim(),
+              intendedUsd: args.intendedUsd ?? 500,
+              offeredPriceUsd: args.offeredPriceUsd ?? null,
+            },
       });
         pingUsage("check_token_safety", true);
       } catch (err) {
@@ -588,7 +602,7 @@ async function main() {
       tokenIn: z.string().describe("Token symbol (e.g. USDC) or 0x address"),
       tokenOut: z.string().describe("Token symbol (e.g. WETH) or 0x address"),
       amountIn: z.string().describe("RAW base units of tokenIn, wei-scale, as a string"),
-      chainId: z.number().int().describe("REQUIRED. 1 Ethereum, 42161 Arbitrum, 8453 Base. There is no default; omitting it returns 400 missing_chain."),
+      chainId: z.number().int().describe("REQUIRED. 1 Ethereum, 42161 Arbitrum, 8453 Base, 10 OP Mainnet, 56 BNB Chain, 137 Polygon, 43114 Avalanche. There is no default; omitting it returns 400 missing_chain."),
     },
     async (args) => {
       let res;
@@ -621,7 +635,7 @@ async function main() {
       amountIn: z.string().describe("RAW units of tokenIn, as in the offer"),
       quotedOut: z.string().describe("RAW units of tokenOut you were OFFERED"),
       venueClaimed: z.string().optional().describe("Optional: who gave you the offer"),
-      chainId: z.number().int().describe("REQUIRED. 1 Ethereum, 42161 Arbitrum, 8453 Base. There is no default; omitting it returns 400 missing_chain."),
+      chainId: z.number().int().describe("REQUIRED. 1 Ethereum, 42161 Arbitrum, 8453 Base, 10 OP Mainnet, 56 BNB Chain, 137 Polygon, 43114 Avalanche. There is no default; omitting it returns 400 missing_chain."),
     },
     async (args) => {
       let res;
@@ -652,7 +666,7 @@ async function main() {
     DESCRIPTIONS.get_trade_depth,
     {
       tokenAddress: z.string().describe("Token you plan to buy (symbol or 0x address)"),
-      chainId: z.number().int().describe("REQUIRED. 1 Ethereum, 42161 Arbitrum, 8453 Base. There is no default; omitting it returns 400 missing_chain."),
+      chainId: z.number().int().describe("REQUIRED. 1 Ethereum, 42161 Arbitrum, 8453 Base, 10 OP Mainnet, 56 BNB Chain, 137 Polygon, 43114 Avalanche. There is no default; omitting it returns 400 missing_chain."),
       baseSymbol: z.string().optional().describe("What you pay with (default USDC)"),
       sizesUsd: z.array(z.number()).optional().describe("Ladder of sizes in USD, max 6 (default 100, 1000, 10000, 100000)"),
       maxRoundTripPct: z.number().optional().describe("Your round-trip cost tolerance, default 1%"),
@@ -684,7 +698,7 @@ async function main() {
     "get_assurance",
     DESCRIPTIONS.get_assurance,
     {
-      chainId: z.number().int().describe("REQUIRED. 1 Ethereum, 42161 Arbitrum, 8453 Base. There is no default; omitting it returns 400 missing_chain."),
+      chainId: z.number().int().describe("REQUIRED. 1 Ethereum, 42161 Arbitrum, 8453 Base, 10 OP Mainnet, 56 BNB Chain, 137 Polygon, 43114 Avalanche. There is no default; omitting it returns 400 missing_chain."),
       safety: z.object({
         tokenAddress: z.string().optional().describe("Token you plan to buy, symbol or 0x address"),
         intendedUsd: z.number().optional().describe("Size of intended purchase in USD (default 500)"),

@@ -471,6 +471,8 @@ a.network-card:hover, a.network-card:focus-visible { background: var(--accent); 
 .network-card .net-chips { list-style: none; margin-top: 0; display: flex; flex-wrap: wrap; gap: 8px; align-content: center; }
 .net-chips .net-chip { display: inline-flex; align-items: center; padding: 8px 14px; border-radius: 999px; background: var(--paper); font-size: 14px; font-weight: 600; line-height: 1.2; }
 .net-chips .net-chip::before { display: none; }
+.net-chips .net-chip.paid { background: var(--ink); color: #fff; }
+.net-note { margin-top: 10px; color: var(--muted); font-size: 13.5px; line-height: 1.45; }
 @media (max-width: 820px) { .network-wide { grid-template-columns: 1fr; } }
 .coin-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 28px; }
 .coin-label { margin-right: 8px; font-size: 13px; font-weight: 600; color: var(--muted); }

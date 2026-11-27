@@ -52,6 +52,21 @@ test("UUPS owned by a plain wallet: single key", async () => {
   assert.match(describeUpgradeControl(r, "spender"), /^The spender 0x0000…00aa can have its code replaced at any time by a single key \(0x0000…00cc\)\.$/);
 });
 
+test("UUPS owned by a single key with a built-in upgrade delay: the delay is reported", async () => {
+  const r = await readUpgradeControl(uups(KEY, { calls: { [`${PROXY}:0x7e48d4ea`]: num(172800) } }), PROXY);
+  assert.equal(r.controller.kind, "single_key");
+  assert.equal(r.upgradeDelaySeconds, 172800);
+  assert.equal(r.upgradeDelaySource, "upgradeDelay()");
+  assert.ok(isSingleKey(r), "still one key: the delay is extra information, not a different controller");
+  assert.match(describeUpgradeControl(r, "spender"), /^The spender 0x0000…00aa can have its code replaced by a single key \(0x0000…00cc\), but only after a 2-day waiting period that the contract reports \(upgradeDelay\(\); enforcement not verified\)\.$/);
+});
+
+test("an implausible delay value is ignored, never shown", async () => {
+  const r = await readUpgradeControl(uups(KEY, { calls: { [`${PROXY}:0x7e48d4ea`]: num(2n ** 200n) } }), PROXY);
+  assert.equal(r.upgradeDelaySeconds, undefined);
+  assert.match(describeUpgradeControl(r), /at any time by a single key/);
+});
+
 test("UUPS owned by an EIP-7702 wallet: still a single key", async () => {
   const r = await readUpgradeControl(uups(KEY, { code: { [KEY]: `0xef0100${"12".repeat(20)}` } }), PROXY);
   assert.equal(r.controller.kind, "single_key");

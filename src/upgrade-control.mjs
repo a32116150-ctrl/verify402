@@ -7,7 +7,8 @@
 // guesses: anything it cannot read is reported as unknown.
 //
 // Covered: EIP-1967 proxies (UUPS, transparent, beacon) and the older
-// ZeppelinOS slots. Not covered: diamonds (EIP-2535), custom or minimal
+// ZeppelinOS slots, plus a built-in upgrade delay exposed by the proxy as
+// upgradeDelay() or UPGRADE_DELAY(). Not covered: diamonds (EIP-2535), custom or minimal
 // proxies with hardcoded targets, and contracts whose own logic can be swapped
 // by other means. Those are listed in notChecked.
 
@@ -25,6 +26,8 @@ const SEL = {
   getOwners: "0xa0e67e2b",
   getMinDelay: "0xf27a0c92",
   implementation: "0x5c60da1b",
+  upgradeDelay: "0x7e48d4ea",
+  UPGRADE_DELAY: "0x47fe8b1d",
 };
 const ZERO = `0x${"0".repeat(40)}`;
 const DELEGATION_PREFIX = "0xef0100"; // EIP-7702: a key-held wallet with delegated code
@@ -49,6 +52,20 @@ async function tryCall(client, to, data) {
   } catch {
     return null;
   }
+}
+
+// A built-in waiting period that some upgradeable contracts expose on the proxy
+// itself (upgrades are proposed, then can only be applied after the delay).
+// Read from the contract's own getter; enforcement is not verified from here.
+const MAX_PLAUSIBLE_DELAY = 10 * 365 * 24 * 3600;
+async function readBuiltInDelay(client, address) {
+  for (const [name, sel] of [["upgradeDelay()", SEL.upgradeDelay], ["UPGRADE_DELAY()", SEL.UPGRADE_DELAY]]) {
+    const raw = await tryCall(client, address, sel);
+    if (!raw || raw.length !== 66) continue;
+    const v = BigInt(raw);
+    if (v > 0n && v <= BigInt(MAX_PLAUSIBLE_DELAY)) return { upgradeDelaySeconds: Number(v), upgradeDelaySource: name };
+  }
+  return {};
 }
 
 /** What kind of account controls upgrades: one key, a multisig, a timelock, or another contract. */
@@ -111,14 +128,15 @@ export async function readUpgradeControl(client, address, { timeoutMs = 4000 } =
       }
       if (!implementation) return { address: a, upgradeable: false };
       if (adminAddr) {
-        return { address: a, upgradeable: true, pattern: "transparent", implementation, controller: await classifyController(client, adminAddr) };
+        return { address: a, upgradeable: true, pattern: "transparent", implementation, controller: await classifyController(client, adminAddr), ...(await readBuiltInDelay(client, a)) };
       }
       // UUPS: the implementation authorises upgrades, usually through owner().
       const owner = await tryCall(client, a, SEL.owner);
       if (owner) {
         const ownerAddr = addrOfWord(owner);
         return { address: a, upgradeable: true, pattern: "uups", implementation,
-          controller: ownerAddr ? await classifyController(client, ownerAddr) : { kind: "renounced", address: null } };
+          controller: ownerAddr ? await classifyController(client, ownerAddr) : { kind: "renounced", address: null },
+          ...(await readBuiltInDelay(client, a)) };
       }
       return { address: a, upgradeable: true, pattern: "uups", implementation, controller: { kind: "unknown", address: null } };
     })(), timeoutMs);
@@ -126,6 +144,9 @@ export async function readUpgradeControl(client, address, { timeoutMs = 4000 } =
     return { address: a, upgradeable: null, error: e?.shortMessage || e?.message || String(e) };
   }
 }
+
+// Used as an adjective: "a 2-day waiting period".
+const duration = (s) => (s % 86400 === 0 ? `${s / 86400}-day` : s % 3600 === 0 ? `${s / 3600}-hour` : `${s}-second`);
 
 const short = (x) => (typeof x === "string" && x.length > 12 ? `${x.slice(0, 6)}…${x.slice(-4)}` : String(x));
 
@@ -136,10 +157,13 @@ export function describeUpgradeControl(r, role = "contract") {
   const kind = effectiveKind(c);
   const who = c.kind === "contract" && c.owner ? c.owner : c;
   const head = `The ${role} ${short(r.address)} can have its code replaced`;
+  const wait = r.upgradeDelaySeconds
+    ? `, but only after a ${duration(r.upgradeDelaySeconds)} waiting period that the contract reports (${r.upgradeDelaySource}; enforcement not verified)`
+    : "";
   switch (kind) {
-    case "single_key": return `${head} at any time by a single key (${short(who.address)}).`;
-    case "multisig_one_signer": return `${head} by a multisig that needs only 1 signature (${short(who.address)}), in effect a single key.`;
-    case "multisig": return `${head} by a ${who.threshold}-of-${who.signers ?? "?"} multisig (${short(who.address)}).`;
+    case "single_key": return wait ? `${head} by a single key (${short(who.address)})${wait}.` : `${head} at any time by a single key (${short(who.address)}).`;
+    case "multisig_one_signer": return `${head} by a multisig that needs only 1 signature (${short(who.address)}), in effect a single key${wait}.`;
+    case "multisig": return `${head} by a ${who.threshold}-of-${who.signers ?? "?"} multisig (${short(who.address)})${wait}.`;
     case "timelock": return `${head} after a ${who.minDelaySeconds}s timelock (${short(who.address)}).`;
     case "renounced": return `${short(r.address)} is a proxy whose owner was renounced; upgrades look disabled, but the implementation's own rules were not read.`;
     case "contract": return `${head} by the contract ${short(who.address)}; what controls that contract was not read.`;

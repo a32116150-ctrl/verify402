@@ -15,6 +15,13 @@ export async function callPaidEngine(name, chainId, opts = {}) {
   const remote = await remoteEngine(name, chainId, opts);
   if (remote !== null) return remote;
 
+  if (chainId == null) {
+    // Not an EVM check (Solana): there is no chain client to probe here.
+    const error = new Error(`private paid-engine service is not configured for ${name}`);
+    error.code = "engine_service_unavailable";
+    throw error;
+  }
+
   try {
     const client = typeof opts.clientFactory === "function"
       ? opts.clientFactory(chainId)

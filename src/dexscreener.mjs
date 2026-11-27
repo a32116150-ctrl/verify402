@@ -12,7 +12,7 @@
 const DS = "https://api.dexscreener.com";
 
 // Dexscreener uses chain-id strings; ours are numeric CAIP ids.
-const DS_CHAIN = { 1: "ethereum", 42161: "arbitrum", 8453: "base" };
+const DS_CHAIN = { 1: "ethereum", 42161: "arbitrum", 8453: "base", 10: "optimism", 56: "bsc", 137: "polygon", 43114: "avalanche" };
 
 async function j(url, timeoutMs = 12_000) {
   const ctl = new AbortController();

@@ -6,9 +6,13 @@
 // AUDIT.md section 4.3, not marketing copy.
 
 export const UNCONFIGURED_VENUES = {
-  1: "Curve, Balancer, PancakeSwap, and other venues not in config",
-  42161: "Camelot, Trader Joe, and other venues not in config",
-  8453: "Aerodrome, Uniswap V4, PancakeSwap, and other Base-native venues not in config (Base has no configured V2 router)",
+  1: "Curve pools outside the main 3pool/tricrypto/CRV set, Balancer, PancakeSwap, Uniswap V4 pools with hooks, private market makers, and other venues not in config",
+  42161: "Camelot V4, Trader Joe, DODO, WOOFi, Uniswap V4 pools with hooks, and other venues not in config",
+  10: "Curve, Uniswap V4 pools with hooks, and other venues not in config (Velodrome classic and Slipstream pools are read)",
+  56: "THENA, Biswap, Uniswap V4 pools with hooks, PancakeSwap pools other than V2 and V3, and other venues not in config",
+  137: "SushiSwap, Balancer, Curve, QuickSwap V3, Uniswap V4 pools with hooks, and other venues not in config",
+  43114: "LFJ (Trader Joe), Pangolin, Pharaoh, Uniswap V4 pools with hooks, and other venues not in config",
+  8453: "Curve, Uniswap V4 pools with hooks, private market makers, and other Base-native venues not in config (Aerodrome classic and Slipstream pools are read)",
 };
 
 export function unconfiguredVenues(chainId) {

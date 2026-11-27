@@ -1027,17 +1027,21 @@ test("OP Mainnet (10): a transaction intent is read and simulated on chain 10", 
   assert.ok(!out.reasons.some((r) => r.code === "unsupported_chain"));
 });
 
-test("OP Mainnet (10) stays gate-only: paid routes and payment rails refuse it", async () => {
+test("OP, BNB, Polygon, Avalanche: paid routes and the gate accept them, payment rails still refuse them", async () => {
   const { requireChainId, gateChain, GATE_CHAINS, CHAINS } = await import("../src/config.mjs");
   const { clientFor, gateClientFor } = await import("../src/measure.mjs");
-  assert.ok(gateChain(10), "the gate can read OP Mainnet");
-  assert.throws(() => requireChainId({ chainId: 10 }), (e) => e.code === "unsupported_chain", "paid routes refuse chain 10");
-  assert.throws(() => clientFor(10), /unsupported chainId 10/, "no measurement client for chain 10");
-  assert.equal(gateClientFor(10).chain.id, 10, "the gate client targets chain 10");
+  for (const [id, native] of [[10, "ETH"], [56, "BNB"], [137, "POL"], [43114, "AVAX"]]) {
+    assert.ok(gateChain(id), `the gate can read chain ${id}`);
+    assert.equal(gateChain(id).nativeSymbol, native, `chain ${id} names its native coin`);
+    assert.equal(requireChainId({ chainId: id }), id, `paid routes accept chain ${id}`);
+    assert.equal(clientFor(id).chain.id, id, `the measurement client targets chain ${id}`);
+    assert.equal(gateClientFor(id).chain.id, id, `the gate client targets chain ${id}`);
+    assert.ok(!GATE_CHAINS[id], `chain ${id} is listed once`);
+    const out = await run(payment({ payment: { network: `eip155:${id}` } }));
+    assert.equal(out.verdict, "BLOCK");
+    assert.ok(out.reasons.some((r) => r.code === "unsupported_network"), `chain ${id} is not an x402 payment rail`);
+  }
   for (const id of Object.keys(GATE_CHAINS)) assert.ok(!CHAINS[id], `gate-only chain ${id} is not a measurement venue`);
-  const out = await run(payment({ payment: { network: "eip155:10" } }));
-  assert.equal(out.verdict, "BLOCK");
-  assert.ok(out.reasons.some((r) => r.code === "unsupported_network"), "chain 10 is not an x402 payment rail");
 });
 
 test("every gate-only chain: right viem chain, a client, tokens, and refused by paid routes", async () => {
@@ -1045,7 +1049,7 @@ test("every gate-only chain: right viem chain, a client, tokens, and refused by 
   const { gateClientFor } = await import("../src/measure.mjs");
   const { TOKEN_REGISTRY, knownNetworks } = await import("../src/tokens.mjs");
   const payment = new Set(knownNetworks().map((n) => n.id));
-  assert.equal(Object.keys(GATE_CHAINS).length, 19, "OP Mainnet plus 18 more");
+  assert.equal(Object.keys(GATE_CHAINS).length, 15, "15 gate-only chains (OP, BNB, Polygon, Avalanche moved to paid checks in 3.5.0)");
   for (const [id, c] of Object.entries(GATE_CHAINS)) {
     const n = Number(id);
     assert.equal(gateClientFor(n).chain.id, n, `${c.name}: the client targets chain ${id}`);

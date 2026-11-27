@@ -79,6 +79,12 @@ const SELLER_MANIFEST_MAX_BYTES = 64 * 1024;
 const SELLER_MANIFEST_TIMEOUT_MS = 3000;
 const SELLER_MANIFEST_FUTURE_SKEW_MS = 5 * 60 * 1000;
 
+// x402 payment networks this instance checks. Kept separate from CHAINS: paid
+// route checks also read OP, BNB, Polygon and Avalanche, but payment checks
+// assume Circle USDC with 6 decimals and EIP-3009, which those chains'
+// configured USDC does not all have (BNB Chain's is 18 decimals).
+const X402_EVM_CHAINS = new Set([1, 8453, 42161]);
+
 // Testnet payment rails are accepted structurally even though the measurement
 // registry only carries mainnet. No block is pinned there; the receipt says so.
 const EXTRA_EVM = {
@@ -118,7 +124,7 @@ const NETWORK_ALIASES = {
 // "eip155:56" is a real x402 chain, but this instance does not measure it.
 // Saying "not a known x402 network" sends the caller to fix the wrong thing.
 const SUPPORTED_NETWORK_HINTS = [
-  ...Object.entries(CHAINS).map(([id, c]) => `eip155:${id} (${c.name})`),
+  ...Object.entries(CHAINS).filter(([id]) => X402_EVM_CHAINS.has(Number(id))).map(([id, c]) => `eip155:${id} (${c.name})`),
   ...Object.entries(EXTRA_EVM).map(([id, x]) => `eip155:${id} (${x.name})`),
   "Solana mainnet/devnet",
 ].join(", ");
@@ -474,7 +480,7 @@ export function parseNetwork(raw) {
     if (!Number.isInteger(chainId) || chainId <= 0) {
       return { family: "evm", chainId, supported: false, name: null, usdc: null, decimals: null, measurement: false };
     }
-    const c = CHAINS[chainId];
+    const c = X402_EVM_CHAINS.has(chainId) ? CHAINS[chainId] : null;
     const x = EXTRA_EVM[chainId];
     if (!c && !x) {
       return { family: "evm", chainId, supported: false, name: null, usdc: null, decimals: null, measurement: false };
