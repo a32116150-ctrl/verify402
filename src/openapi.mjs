@@ -201,7 +201,7 @@ function paidOperation({ price, operationId, summary, tag, inputSchema, outputSc
 
 const chainId = {
   type: "integer",
-  description: "Required EVM chain id for paid measurement and preflight transaction intents: 1 Ethereum mainnet, 42161 Arbitrum One, 8453 Base. Preflight transaction intents also accept 10 OP Mainnet (free gate only; no paid route measures it). There is no silent default; missing => 400 missing_chain. Base Sepolia (84532) is readiness-only and is not a paid-route chain.",
+  description: "Required EVM chain id for paid measurement and preflight transaction intents: 1 Ethereum mainnet, 42161 Arbitrum One, 8453 Base. Preflight transaction intents also accept these chains for the free gate only (no paid route measures them): 10 OP Mainnet, 56 BNB Chain, 137 Polygon, 43114 Avalanche, 130 Unichain, 143 Monad, 5042 Arc, 999 HyperEVM, 9745 Plasma, 59144 Linea, 4326 MegaETH, 57073 Ink, 480 World Chain, 1868 Soneium, 100 Gnosis, 25 Cronos, 146 Sonic, 324 ZKsync Era, 4663 Robinhood Chain. There is no silent default; missing => 400 missing_chain. Base Sepolia (84532) is readiness-only and is not a paid-route chain.",
 };
 
 export function buildOpenapi(prices, { mode = "testnet", baseUrl = DEMO_BASE_URL } = {}) {
@@ -577,6 +577,7 @@ export function buildOpenapi(prices, { mode = "testnet", baseUrl = DEMO_BASE_URL
                         maxAmountUsd: { type: "number", description: "Maximum allowed payment amount in USD." },
                         forbidUnlimitedApproval: { type: "boolean", description: "If true, approve(..., 2^256-1) yields BLOCK instead of CAUTION." },
                         maxRiskUsd: { type: "number", exclusiveMinimum: 0, description: "kind=transaction: the owner's dollar risk limit. More at risk (what leaves the wallet, or what an approved spender could take) is BLOCK risk_over_limit; risk that cannot be priced is CAUTION risk_unmeasured. Prices are estimates; this is a signing limit, not insurance." },
+                        upgradeControl: { type: "string", enum: ["caution", "block"], description: "kind=transaction: when the contract being called, or an approval's spender, can have its code replaced by a single key (a plain wallet, an EIP-7702 wallet, or a 1-signer multisig), raise upgradeable_single_key at this severity. Unreadable upgrade control is CAUTION upgrade_control_unreadable. Without this policy the reading is informational only." },
                         allowedNetworks: { type: "array", items: { type: "string" } },
                         allowedPayTo: { type: "array", items: { type: "string" } },
                         allowedTo: { type: "array", items: { type: "string" } },
@@ -667,6 +668,19 @@ export function buildOpenapi(prices, { mode = "testnet", baseUrl = DEMO_BASE_URL
                       },
                       checked: { type: "array", items: { type: "string" }, description: "Specific checks that were executed." },
                       notChecked: { type: "array", items: { type: "string" }, description: "Limitations and checks that were skipped." },
+                      upgradeControl: {
+                        type: "array",
+                        description: "kind=transaction only: who can replace the code of the contract being called (role target, or token when the call is a token transfer/approval) and of an approval's spender (role spender). Reads EIP-1967 and ZeppelinOS proxy slots; other upgrade patterns are listed in notChecked. upgradeable is null when it could not be read.",
+                        items: { type: "object", properties: {
+                          role: { type: "string", enum: ["target", "token", "spender"] },
+                          address: { type: "string" },
+                          upgradeable: { type: ["boolean", "null"] },
+                          pattern: { type: "string", enum: ["uups", "transparent", "beacon"] },
+                          implementation: { type: ["string", "null"] },
+                          controller: { type: "object", description: "kind: single_key, multisig, multisig_one_signer, timelock, contract, renounced, unknown or none; with address, threshold/signers, minDelaySeconds or delegatedTo where known." },
+                          error: { type: "string" },
+                        } },
+                      },
                       advice: {
                         type: "object",
                         description: "kind=transaction only. Explains the transaction and how to repair it. Apart from policy.maxRiskUsd it never changes the verdict, and it is not covered by the receipt.",
@@ -677,6 +691,7 @@ export function buildOpenapi(prices, { mode = "testnet", baseUrl = DEMO_BASE_URL
                           upgrades: { type: "array", items: { type: "object", properties: { tool: { type: "string" }, route: { type: "string" }, price: { type: "string" }, why: { type: "string" }, input: { type: "object" } } } },
                           involved: { type: "array", items: { type: "object" }, description: "Hosted service only: addresses the transaction touches, with labels and flags." },
                           risk: { type: "object", description: "Hosted service only: dollar figures such as worstCaseLossUsd or exposureUsd, and a summary." },
+                          control: { type: "array", items: { type: "string" }, description: "Plain sentences on who can replace the code of the contract called or the spender approved (not the token itself)." },
                           riskLimit: { type: "object", description: "Present when policy.maxRiskUsd was set.", properties: { limitUsd: { type: "number" }, atRiskUsd: { type: ["number", "null"] }, basis: { type: ["string", "null"] }, within: { type: ["boolean", "null"] } } },
                           note: { type: "string" },
                         },

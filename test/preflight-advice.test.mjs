@@ -109,6 +109,24 @@ test("fixes: recipient and missing from", async () => {
   assert.equal(n.advice.preview.networkFee, undefined, "no fee without a simulated signer");
 });
 
+test("native coin: each chain names its own coin (BNB, POL, ETH)", async () => {
+  const send = (chainId) => run({ transaction: { chainId, to: OTHER, data: "0x", value: "1000000000000000000" }, from: FROM });
+  const bnb = await send(56);
+  assert.match(bnb.advice.explanation, /^Send 1 BNB to 0x9999…9999\./);
+  assert.equal(bnb.advice.preview.networkFee.symbol, "BNB");
+  assert.equal(bnb.advice.preview.networkFee.eth, undefined, "no ETH field for a BNB fee");
+  assert.match((await send(137)).advice.explanation, /^Send 1 POL /);
+  const base = await send(8453);
+  assert.match(base.advice.explanation, /^Send 1 ETH /);
+  assert.equal(base.advice.preview.networkFee.eth, base.advice.preview.networkFee.amount, "ETH chains keep the eth field");
+});
+
+test("gate-only chain: known dollar coins are priced (Polygon USDC)", async () => {
+  const r = await run({ transaction: { chainId: 137, to: "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359", data: transfer(OTHER, 2_500_000n), value: "0" }, from: FROM });
+  assert.match(r.advice.explanation, /^Send 2\.5 USDC to 0x9999…9999\./);
+  assert.equal(r.advice.preview.effects[0].usd, 2.5);
+});
+
 test("approve: unlimited allowance is spelled out", async () => {
   const r = await run({ transaction: { chainId: 8453, to: USDC, data: approve(OTHER, 2n ** 256n - 1n), value: "0" }, from: FROM });
   const allow = r.advice.preview.effects[0];

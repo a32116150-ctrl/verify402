@@ -10,11 +10,16 @@
 import { formatUnits } from "viem";
 import { PRICE_DEFAULTS } from "./contract.mjs";
 import { findToken, STABLE } from "./tokens.mjs";
+import { gateChain } from "./config.mjs";
 import { enrichers } from "./routers.mjs";
 
 const ENRICHER_TIMEOUT_MS = 2500;
 const UNLIMITED = 2n ** 255n;
-const NATIVE = { address: null, symbol: "ETH", decimals: 18, native: true };
+// The chain's native coin (ETH, BNB, POL...). Measurement chains carry no
+// nativeSymbol and are all ETH-native.
+function nativeFor(chainId) {
+  return { address: null, symbol: gateChain(chainId)?.nativeSymbol ?? "ETH", decimals: 18, native: true };
+}
 const DEFAULT_SLIPPAGE_BPS = 50n;
 
 const lc = (a) => (typeof a === "string" ? a.toLowerCase() : null);
@@ -97,6 +102,7 @@ function line(kind, raw, token, extra = {}) {
 // ------------------------------------------------------------------ preview --
 
 async function buildPreview({ decoded, to, data, value, from, chainId, client, quote, simulation, cache, now }) {
+  const NATIVE = nativeFor(chainId);
   const effects = [];
   let sentence = null;
   const router = decoded?.router?.name;
@@ -104,7 +110,7 @@ async function buildPreview({ decoded, to, data, value, from, chainId, client, q
   if (!decoded || decoded.action === "native" || (!decoded.action && value > 0n)) {
     if (value > 0n) {
       effects.push(line("send", value, NATIVE, { to }));
-      sentence = `Send ${formatAmount(value, NATIVE)} ETH to ${short(to)}.`;
+      sentence = `Send ${formatAmount(value, NATIVE)} ${NATIVE.symbol} to ${short(to)}.`;
     }
   } else if (decoded.action === "transfer") {
     const token = await tokenInfo(to, { chainId, client, cache });
@@ -165,7 +171,8 @@ async function buildPreview({ decoded, to, data, value, from, chainId, client, q
         client.getGasPrice(),
       ]), 2500);
       const wei = BigInt(gas) * BigInt(price);
-      fee = { gas: String(gas), wei: wei.toString(), eth: formatAmount(wei, NATIVE) };
+      const amount = formatAmount(wei, NATIVE);
+      fee = { gas: String(gas), wei: wei.toString(), symbol: NATIVE.symbol, amount, ...(NATIVE.symbol === "ETH" ? { eth: amount } : {}) };
     } catch { /* fee stays unknown */ }
   }
   return { effects, sentence, fee };
@@ -180,7 +187,7 @@ function suggestedMinimum(quote, tokenOut) {
   return { raw: raw.toString(), amount: formatAmount(raw, tokenOut), basis: "quoted output minus 0.5%" };
 }
 
-function buildFixes(reasons, { decoded, from, quote, tokens, to }) {
+function buildFixes(reasons, { decoded, from, quote, tokens, to, nativeSymbol = "ETH" }) {
   const fixes = [];
   const add = (code, action, extra = {}) => fixes.push({ for: code, action, ...extra });
   for (const r of reasons) {
@@ -194,7 +201,7 @@ function buildFixes(reasons, { decoded, from, quote, tokens, to }) {
         break;
       }
       case "insufficient_funds":
-        add(r.code, "Add enough native token (ETH) to cover the value plus the network fee, then check again.");
+        add(r.code, `Add enough native token (${nativeSymbol}) to cover the value plus the network fee, then check again.`);
         break;
       case "zero_min_out":
       case "minimal_min_out": {
@@ -245,7 +252,7 @@ function buildFixes(reasons, { decoded, from, quote, tokens, to }) {
         add(r.code, "The `to` address is not a contract, so this call does nothing. Check the address.");
         break;
       case "value_with_token_swap":
-        add(r.code, "Set `value` to 0 unless the router's docs say this swap takes native ETH.");
+        add(r.code, `Set \`value\` to 0 unless the router's docs say this swap takes native ${nativeSymbol}.`);
         break;
       case "stale_block":
         add(r.code, "The chain data was old. Check again in a moment.");
@@ -345,6 +352,7 @@ export function valueAtRiskUsd(prepared) {
 /** Phase 2: wording that depends on the final verdict and reasons. */
 export function finishAdvice(prepared, { verdict, reasons }) {
   const { decoded, chainId, from, to, quote, cache, effects, sentence, fee, enrichment } = prepared;
+  const NATIVE = nativeFor(chainId);
   const swapIn = effects.find((e) => e.kind === "send" && e.token);
   const swapOut = effects.find((e) => e.kind === "receive_at_least");
   const tokens = {
@@ -365,7 +373,7 @@ export function finishAdvice(prepared, { verdict, reasons }) {
   const advice = {
     explanation,
     preview: { effects, ...(fee ? { networkFee: fee } : {}) },
-    fixes: buildFixes(reasons, { decoded, from, quote, tokens, to }),
+    fixes: buildFixes(reasons, { decoded, from, quote, tokens, to, nativeSymbol: NATIVE.symbol }),
     upgrades: buildUpgrades({ decoded, tokens, quote, chainId }),
     ...(enrichment.involved ? { involved: enrichment.involved } : {}),
     ...(enrichment.risk ? { risk: enrichment.risk } : {}),

@@ -68,6 +68,166 @@ const EVM_CHAINS = {
       "0x4200000000000000000000000000000000000006": { symbol: "WETH", decimals: 18, kind: VOLATILE },
     },
   },
+  // Gate-only chains added 2026-11-27. Every address was read on-chain
+  // (symbol and decimals). Stable means a dollar coin; the $1 parity is an
+  // assumption, as for every stable here.
+  "eip155:25": {
+    name: "cronos",
+    gateOnly: true,
+    tokens: {
+      "0xc21223249ca28397b4b6541dffaecc539bff0c59": { symbol: "USDC", decimals: 6, kind: STABLE },
+      "0x66e428c3f67a68878562e79a0234c1f83c208770": { symbol: "USDT", decimals: 6, kind: STABLE },
+      "0x5c7f8a570d578ed84e63fdfa7b1ee72deae1ae23": { symbol: "WCRO", decimals: 18, kind: VOLATILE },
+    },
+  },
+  "eip155:56": {
+    name: "bnb",
+    gateOnly: true,
+    tokens: {
+      "0x55d398326f99059ff775485246999027b3197955": { symbol: "USDT", decimals: 18, kind: STABLE },
+      "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d": { symbol: "USDC", decimals: 18, kind: STABLE },
+      "0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c": { symbol: "WBNB", decimals: 18, kind: VOLATILE },
+    },
+  },
+  "eip155:100": {
+    name: "gnosis",
+    gateOnly: true,
+    tokens: {
+      "0xe91d153e0b41518a2ce8dd3d7944fa863463a97d": { symbol: "WXDAI", decimals: 18, kind: STABLE },
+      "0x2a22f9c3b484c3629090feed35f17ff8f88f76f0": { symbol: "USDC.e", decimals: 6, kind: STABLE },
+      "0xddafbb505ad214d7b80b1f830fccc89b60fb7a83": { symbol: "USDC", decimals: 6, kind: STABLE },
+      "0x4ecaba5870353805a9f068101a40e0f32ed605c6": { symbol: "USDT", decimals: 6, kind: STABLE },
+    },
+  },
+  "eip155:130": {
+    name: "unichain",
+    gateOnly: true,
+    tokens: {
+      "0x078d782b760474a361dda0af3839290b0ef57ad6": { symbol: "USDC", decimals: 6, kind: STABLE },
+      "0x4200000000000000000000000000000000000006": { symbol: "WETH", decimals: 18, kind: VOLATILE },
+    },
+  },
+  "eip155:137": {
+    name: "polygon",
+    gateOnly: true,
+    tokens: {
+      "0x3c499c542cef5e3811e1192ce70d8cc03d5c3359": { symbol: "USDC", decimals: 6, kind: STABLE },
+      "0x2791bca1f2de4661ed88a30c99a7a9449aa84174": { symbol: "USDC.e", decimals: 6, kind: STABLE },
+      "0xc2132d05d31c914a87c6611c10748aeb04b58e8f": { symbol: "USDT0", decimals: 6, kind: STABLE },
+      "0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270": { symbol: "WPOL", decimals: 18, kind: VOLATILE },
+      "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619": { symbol: "WETH", decimals: 18, kind: VOLATILE },
+    },
+  },
+  "eip155:143": {
+    name: "monad",
+    gateOnly: true,
+    tokens: {
+      "0x754704bc059f8c67012fed69bc8a327a5aafb603": { symbol: "USDC", decimals: 6, kind: STABLE },
+      "0x3bd359c1119da7da1d913d1c4d2b7c461115433a": { symbol: "WMON", decimals: 18, kind: VOLATILE },
+    },
+  },
+  "eip155:146": {
+    name: "sonic",
+    gateOnly: true,
+    tokens: {
+      "0x29219dd400f2bf60e5a23d13be72b486d4038894": { symbol: "USDC", decimals: 6, kind: STABLE },
+      "0x039e2fb66102314ce7b64ce5ce3e5183bc94ad38": { symbol: "wS", decimals: 18, kind: VOLATILE },
+      "0x50c42deacd8fc9773493ed674b675be577f2634b": { symbol: "WETH", decimals: 18, kind: VOLATILE },
+    },
+  },
+  "eip155:324": {
+    name: "zksync",
+    gateOnly: true,
+    tokens: {
+      "0x3355df6d4c9c3035724fd0e3914de96a5a83aaf4": { symbol: "USDC.e", decimals: 6, kind: STABLE },
+      "0x1d17cbcf0d6d143135ae902365d2e5e2a16538d4": { symbol: "USDC", decimals: 6, kind: STABLE },
+      "0x493257fd37edb34451f62edf8d2a0c418852ba4c": { symbol: "USDT", decimals: 6, kind: STABLE },
+      "0x5aea5775959fbc2557cc8789bc1bf90a239d9a91": { symbol: "WETH", decimals: 18, kind: VOLATILE },
+    },
+  },
+  "eip155:480": {
+    name: "worldchain",
+    gateOnly: true,
+    tokens: {
+      "0x79a02482a880bce3f13e09da970dc34db4cd24d1": { symbol: "USDC", decimals: 6, kind: STABLE },
+      "0x4200000000000000000000000000000000000006": { symbol: "WETH", decimals: 18, kind: VOLATILE },
+    },
+  },
+  "eip155:999": {
+    name: "hyperevm",
+    gateOnly: true,
+    tokens: {
+      "0xb88339cb7199b77e23db6e890353e22632ba630f": { symbol: "USDC", decimals: 6, kind: STABLE },
+      "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb": { symbol: "USDT0", decimals: 6, kind: STABLE },
+      "0x5555555555555555555555555555555555555555": { symbol: "WHYPE", decimals: 18, kind: VOLATILE },
+    },
+  },
+  "eip155:1868": {
+    name: "soneium",
+    gateOnly: true,
+    tokens: {
+      "0xba9986d2381edf1da03b0b9c1f8b00dc4aacc369": { symbol: "USDC.e", decimals: 6, kind: STABLE },
+      "0x4200000000000000000000000000000000000006": { symbol: "WETH", decimals: 18, kind: VOLATILE },
+    },
+  },
+  "eip155:4326": {
+    name: "megaeth",
+    gateOnly: true,
+    tokens: {
+      "0xfafddbb3fc7688494971a79cc65dca3ef82079e7": { symbol: "USDm", decimals: 18, kind: STABLE },
+      "0x4200000000000000000000000000000000000006": { symbol: "WETH", decimals: 18, kind: VOLATILE },
+    },
+  },
+  "eip155:4663": {
+    name: "robinhood",
+    gateOnly: true,
+    tokens: {
+      "0x5fc5360d0400a0fd4f2af552add042d716f1d168": { symbol: "USDG", decimals: 6, kind: STABLE },
+      "0x0bd7d308f8e1639fab988df18a8011f41eacad73": { symbol: "WETH", decimals: 18, kind: VOLATILE },
+    },
+  },
+  "eip155:5042": {
+    name: "arc",
+    gateOnly: true,
+    tokens: {
+      "0x3600000000000000000000000000000000000000": { symbol: "USDC", decimals: 6, kind: STABLE },
+    },
+  },
+  "eip155:9745": {
+    name: "plasma",
+    gateOnly: true,
+    tokens: {
+      "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb": { symbol: "USDT0", decimals: 6, kind: STABLE },
+      "0x6100e367285b01f48d07953803a2d8dca5d19873": { symbol: "WXPL", decimals: 18, kind: VOLATILE },
+    },
+  },
+  "eip155:43114": {
+    name: "avalanche",
+    gateOnly: true,
+    tokens: {
+      "0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e": { symbol: "USDC", decimals: 6, kind: STABLE },
+      "0x9702230a8ea53601f5cd2dc00fdbc13d4df4a8c7": { symbol: "USDt", decimals: 6, kind: STABLE },
+      "0xb31f66aa3c1e785363f0875a1b74e27b85fd66c7": { symbol: "WAVAX", decimals: 18, kind: VOLATILE },
+    },
+  },
+  "eip155:57073": {
+    name: "ink",
+    gateOnly: true,
+    tokens: {
+      "0x2d270e6886d130d724215a266106e6832161eaed": { symbol: "USDC", decimals: 6, kind: STABLE },
+      "0x0200c29006150606b650577bbe7b6248f58470c1": { symbol: "USDT0", decimals: 6, kind: STABLE },
+      "0x4200000000000000000000000000000000000006": { symbol: "WETH", decimals: 18, kind: VOLATILE },
+    },
+  },
+  "eip155:59144": {
+    name: "linea",
+    gateOnly: true,
+    tokens: {
+      "0x176211869ca2b568f2a7d4ee941e073a821ee1ff": { symbol: "USDC", decimals: 6, kind: STABLE },
+      "0xa219439258ca9da29e9cc4ce5596924745e12b93": { symbol: "USDT", decimals: 6, kind: STABLE },
+      "0xe5d7c2a44ffddf6b295a15c148167daaaf5cf34f": { symbol: "WETH", decimals: 18, kind: VOLATILE },
+    },
+  },
   "eip155:84532": {
     name: "base-sepolia",
     tokens: {

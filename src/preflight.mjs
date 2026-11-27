@@ -40,6 +40,7 @@ import { gateClientFor } from "./measure.mjs";
 import { canonicalStable, sha256Hex } from "./recovery.mjs";
 import { findToken, STABLE } from "./tokens.mjs";
 import { knownRouter, loadRouterPlugins, bindQuote } from "./routers.mjs";
+import { readUpgradeControl, describeUpgradeControl, isSingleKey, UPGRADE_CONTROL_NOT_CHECKED } from "./upgrade-control.mjs";
 import { prepareAdvice, finishAdvice, valueAtRiskUsd } from "./preflight-advice.mjs";
 
 export const PREFLIGHT_SPEC = "verify402/preflight@1";
@@ -580,6 +581,10 @@ function normalizePolicy(p) {
     const n = Number(p.maxRiskUsd);
     if (!Number.isFinite(n) || n <= 0) throw new PreflightError(400, "invalid_policy", "policy.maxRiskUsd must be a positive number of US dollars");
     out.maxRiskUsd = n;
+  }
+  if (p.upgradeControl != null) {
+    if (!["caution", "block"].includes(p.upgradeControl)) throw new PreflightError(400, "invalid_policy", "policy.upgradeControl must be \"caution\" or \"block\"");
+    out.upgradeControl = p.upgradeControl;
   }
   if (p.maxTimeoutSeconds != null) {
     const n = Number(p.maxTimeoutSeconds);
@@ -2671,6 +2676,7 @@ async function transactionPreflight(body, { clientFactory, now }) {
   let chainBlock = null;
   let client = null;
   let simulation = null;
+  let upgradeControl = null;
 
   if (c) {
     client = getClient(chainId, clientFactory);
@@ -2688,6 +2694,31 @@ async function transactionPreflight(body, { clientFactory, now }) {
         reasons.push(block("target_not_contract", `to ${to} has no bytecode; calldata sent to an EOA does nothing`));
       } else {
         checked.push("contract_code");
+      }
+    }
+
+    // Upgrade control: who can replace the code of the contract being called
+    // and, for an approval, of the spender. Informational unless the caller
+    // sets policy.upgradeControl. When the target is the token itself (a
+    // transfer or an approval), its issuer's upgrade key is recorded as role
+    // "token" but raises no advice line or policy reason: it applies to every
+    // holder, not to this transaction.
+    const TOKEN_ACTIONS = ["transfer", "transferFrom", "approve", "permit"];
+    const targets = [];
+    if (codeResult?.code && codeResult.code !== "0x") targets.push({ role: TOKEN_ACTIONS.includes(decoded?.action) ? "token" : "target", address: to });
+    if (decoded?.action === "approve" && decoded.spender) targets.push({ role: "spender", address: decoded.spender });
+    if (targets.length) {
+      const readings = await Promise.all(targets.map(async (t) => ({ role: t.role, ...(await readUpgradeControl(client, t.address)) })));
+      upgradeControl = readings;
+      if (readings.every((r) => r.upgradeable !== null)) checked.push("upgrade_control");
+      else notChecked.push("upgrade_control");
+      notChecked.push(UPGRADE_CONTROL_NOT_CHECKED);
+      if (policy.upgradeControl) {
+        const add = policy.upgradeControl === "block" ? block : caution;
+        for (const r of readings.filter((x) => x.role !== "token")) {
+          if (isSingleKey(r)) reasons.push(add("upgradeable_single_key", describeUpgradeControl(r, r.role === "spender" ? "spender" : "contract")));
+          else if (r.upgradeable === null) reasons.push(caution("upgrade_control_unreadable", `policy.upgradeControl is set, but who can upgrade ${r.address} could not be read: ${r.error}`));
+        }
       }
     }
 
@@ -2790,11 +2821,14 @@ async function transactionPreflight(body, { clientFactory, now }) {
     ttlSeconds: ttlOf(body),
     now,
   });
+  if (upgradeControl) result.upgradeControl = upgradeControl;
   // Advice, phase 2: wording from the final verdict. Best effort.
   if (prepared) {
     try {
       result.advice = finishAdvice(prepared, { verdict: result.verdict, reasons: result.reasons });
       if (riskLimit) result.advice.riskLimit = riskLimit;
+      const control = (upgradeControl ?? []).filter((r) => r.role !== "token").map((r) => describeUpgradeControl(r, r.role === "spender" ? "spender" : "contract")).filter(Boolean);
+      if (control.length) result.advice.control = control;
     } catch {
       // The verdict stands without advice.
     }

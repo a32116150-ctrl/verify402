@@ -133,7 +133,8 @@ export const DEFAULT_MIN_NET = 0;
 // no venues, no paid route accepts them. Kept apart from CHAINS on purpose,
 // like READINESS_CHAINS, so adding a chain here never makes a paid route
 // pretend to quote on it. RPCs and token addresses were checked by hand
-// against live chain state when added (OP Mainnet: 2026-11-26).
+// against live chain state when added (OP Mainnet 2026-11-26, the rest
+// 2026-11-27).
 export const GATE_CHAINS = Object.freeze({
   10: {
     name: "optimism",
@@ -143,6 +144,192 @@ export const GATE_CHAINS = Object.freeze({
     rpcFallbacks: [
       "https://optimism-rpc.publicnode.com",
       "https://optimism.drpc.org",
+    ],
+    nativeSymbol: "ETH",
+  },
+  // More EVM chains the free gate reads. Checked by hand on 2026-11-27: each
+  // RPC answered a block read,
+  // a code read and an eth_call; failing public endpoints were left out.
+  25: {
+    name: "cronos", // Cronos
+    viemChain: "cronos",
+    rpcEnv: "CRONOS_RPC_URL",
+    rpcDefault: "https://evm.cronos.org",
+    rpcFallbacks: [
+      "https://cronos.drpc.org",
+      "https://cronos-evm-rpc.publicnode.com",
+    ],
+    nativeSymbol: "CRO",
+  },
+  56: {
+    name: "bnb", // BNB Chain
+    viemChain: "bsc",
+    rpcEnv: "BSC_RPC_URL",
+    rpcDefault: "https://bsc-dataseed.bnbchain.org",
+    rpcFallbacks: [
+      "https://56.rpc.thirdweb.com",
+      "https://bsc.drpc.org",
+    ],
+    nativeSymbol: "BNB",
+  },
+  100: {
+    name: "gnosis", // Gnosis
+    viemChain: "gnosis",
+    rpcEnv: "GNOSIS_RPC_URL",
+    rpcDefault: "https://gnosis-rpc.publicnode.com",
+    rpcFallbacks: [
+      "https://gnosis.drpc.org",
+      "https://rpc.gnosischain.com",
+    ],
+    nativeSymbol: "XDAI",
+  },
+  130: {
+    name: "unichain", // Unichain
+    viemChain: "unichain",
+    rpcEnv: "UNICHAIN_RPC_URL",
+    rpcDefault: "https://unichain.drpc.org",
+    rpcFallbacks: [
+      "https://unichain-rpc.publicnode.com",
+      "https://mainnet.unichain.org",
+    ],
+    nativeSymbol: "ETH",
+  },
+  137: {
+    name: "polygon", // Polygon
+    viemChain: "polygon",
+    rpcEnv: "POLYGON_RPC_URL",
+    rpcDefault: "https://polygon.drpc.org",
+    rpcFallbacks: [
+      "https://polygon-bor-rpc.publicnode.com",
+    ],
+    nativeSymbol: "POL",
+  },
+  143: {
+    name: "monad", // Monad
+    viemChain: "monad",
+    rpcEnv: "MONAD_RPC_URL",
+    rpcDefault: "https://rpc.monad.xyz",
+    rpcFallbacks: [
+      "https://monad-mainnet.drpc.org",
+      "https://rpc1.monad.xyz",
+    ],
+    nativeSymbol: "MON",
+  },
+  146: {
+    name: "sonic", // Sonic
+    viemChain: "sonic",
+    rpcEnv: "SONIC_RPC_URL",
+    rpcDefault: "https://rpc.soniclabs.com",
+    rpcFallbacks: [
+      "https://sonic.drpc.org",
+      "https://sonic-rpc.publicnode.com",
+    ],
+    nativeSymbol: "S",
+  },
+  324: {
+    name: "zksync", // ZKsync Era
+    viemChain: "zksync",
+    rpcEnv: "ZKSYNC_RPC_URL",
+    rpcDefault: "https://zksync.drpc.org",
+    rpcFallbacks: [
+      "https://mainnet.era.zksync.io",
+    ],
+    nativeSymbol: "ETH",
+  },
+  480: {
+    name: "worldchain", // World Chain
+    viemChain: "worldchain",
+    rpcEnv: "WORLDCHAIN_RPC_URL",
+    rpcDefault: "https://worldchain-mainnet.g.alchemy.com/public",
+    rpcFallbacks: [],
+    nativeSymbol: "ETH",
+  },
+  999: {
+    name: "hyperevm", // HyperEVM
+    viemChain: "hyperEvm",
+    rpcEnv: "HYPEREVM_RPC_URL",
+    rpcDefault: "https://hyperliquid.drpc.org",
+    rpcFallbacks: [
+      "https://rpc.hyperliquid.xyz/evm",
+    ],
+    nativeSymbol: "HYPE",
+  },
+  1868: {
+    name: "soneium", // Soneium
+    viemChain: "soneium",
+    rpcEnv: "SONEIUM_RPC_URL",
+    rpcDefault: "https://soneium.drpc.org",
+    rpcFallbacks: [
+      "https://soneium-rpc.publicnode.com",
+      "https://rpc.soneium.org",
+    ],
+    nativeSymbol: "ETH",
+  },
+  4326: {
+    name: "megaeth", // MegaETH
+    viemChain: "megaeth",
+    rpcEnv: "MEGAETH_RPC_URL",
+    rpcDefault: "https://mainnet.megaeth.com/rpc",
+    rpcFallbacks: [],
+    nativeSymbol: "ETH",
+  },
+  4663: {
+    name: "robinhood", // Robinhood Chain
+    viemChain: "robinhood",
+    rpcEnv: "ROBINHOOD_RPC_URL",
+    rpcDefault: "https://rpc.mainnet.chain.robinhood.com",
+    rpcFallbacks: [],
+    nativeSymbol: "ETH",
+  },
+  5042: {
+    name: "arc", // Arc
+    viemChain: "arc",
+    rpcEnv: "ARC_RPC_URL",
+    rpcDefault: "https://rpc.quicknode.mainnet.arc.io",
+    rpcFallbacks: [
+      "https://rpc.blockdaemon.mainnet.arc.io",
+      "https://rpc.drpc.mainnet.arc.io",
+    ],
+    nativeSymbol: "USDC",
+  },
+  9745: {
+    name: "plasma", // Plasma
+    viemChain: "plasma",
+    rpcEnv: "PLASMA_RPC_URL",
+    rpcDefault: "https://rpc.plasma.to",
+    rpcFallbacks: [],
+    nativeSymbol: "XPL",
+  },
+  43114: {
+    name: "avalanche", // Avalanche C-Chain
+    viemChain: "avalanche",
+    rpcEnv: "AVAX_RPC_URL",
+    rpcDefault: "https://avalanche-c-chain-rpc.publicnode.com",
+    rpcFallbacks: [
+      "https://avalanche.drpc.org",
+      "https://api.avax.network/ext/bc/C/rpc",
+    ],
+    nativeSymbol: "AVAX",
+  },
+  57073: {
+    name: "ink", // Ink
+    viemChain: "ink",
+    rpcEnv: "INK_RPC_URL",
+    rpcDefault: "https://ink.drpc.org",
+    rpcFallbacks: [
+      "https://rpc-qnd.inkonchain.com",
+      "https://rpc-gel.inkonchain.com",
+    ],
+    nativeSymbol: "ETH",
+  },
+  59144: {
+    name: "linea", // Linea
+    viemChain: "linea",
+    rpcEnv: "LINEA_RPC_URL",
+    rpcDefault: "https://linea-rpc.publicnode.com",
+    rpcFallbacks: [
+      "https://linea.drpc.org",
+      "https://rpc.linea.build",
     ],
     nativeSymbol: "ETH",
   },

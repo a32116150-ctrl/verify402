@@ -990,7 +990,7 @@ test("H-4: numeric-string chainId is rejected as invalid_chain", async () => {
 
 test("H-4: unsupported chainId is 400 unsupported_chain, not a guessed simulation", async () => {
   await assert.rejects(
-    () => run(tx("0x", { chainId: 999 })),
+    () => run(tx("0x", { chainId: 999999 })),
     (err) => err.status === 400 && err.code === "unsupported_chain",
   );
 });
@@ -1038,6 +1038,33 @@ test("OP Mainnet (10) stays gate-only: paid routes and payment rails refuse it",
   const out = await run(payment({ payment: { network: "eip155:10" } }));
   assert.equal(out.verdict, "BLOCK");
   assert.ok(out.reasons.some((r) => r.code === "unsupported_network"), "chain 10 is not an x402 payment rail");
+});
+
+test("every gate-only chain: right viem chain, a client, tokens, and refused by paid routes", async () => {
+  const { requireChainId, GATE_CHAINS } = await import("../src/config.mjs");
+  const { gateClientFor } = await import("../src/measure.mjs");
+  const { TOKEN_REGISTRY, knownNetworks } = await import("../src/tokens.mjs");
+  const payment = new Set(knownNetworks().map((n) => n.id));
+  assert.equal(Object.keys(GATE_CHAINS).length, 19, "OP Mainnet plus 18 more");
+  for (const [id, c] of Object.entries(GATE_CHAINS)) {
+    const n = Number(id);
+    assert.equal(gateClientFor(n).chain.id, n, `${c.name}: the client targets chain ${id}`);
+    assert.ok(c.nativeSymbol, `${c.name}: native coin named`);
+    assert.ok(c.rpcEnv.endsWith("_RPC_URL") && c.rpcDefault.startsWith("https://"), `${c.name}: rpc config`);
+    assert.throws(() => requireChainId({ chainId: n }), (e) => e.code === "unsupported_chain", `${c.name}: paid routes refuse it`);
+    const reg = TOKEN_REGISTRY[`eip155:${id}`];
+    assert.ok(reg?.gateOnly, `${c.name}: gate-only token entry`);
+    assert.ok(Object.values(reg.tokens).some((t) => t.kind === "stable"), `${c.name}: at least one dollar coin`);
+    assert.ok(!payment.has(`eip155:${id}`), `${c.name}: not listed as a payment network`);
+  }
+});
+
+test("a gate-only chain transaction is read on that chain (BNB Chain 56)", async () => {
+  const data = encodeFunctionData({ abi: ABI_TRANSFER, functionName: "transfer", args: [RECIPIENT, 1n] });
+  const asked = [];
+  const out = await preflight(tx(data, { chainId: 56 }), { clientFactory: (id) => { asked.push(id); return fakeClient(); }, now: NOW });
+  assert.deepEqual([...new Set(asked)], [56]);
+  assert.ok(out.checked.includes("contract_code"));
 });
 
 // --- M-5: payment PASS must disclose that it is structural-only -------------
