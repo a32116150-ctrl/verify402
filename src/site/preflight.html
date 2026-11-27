@@ -259,7 +259,7 @@
         <div class="pcard2">
           <p class="tag"><span class="dot"></span>Intent · transaction</p>
           <h3>Simulate the call, decode the calldata.</h3>
-          <p>Decodes <code class="inline">transfer</code>, <code class="inline">approve</code>, <code class="inline">transferFrom</code>, <code class="inline">permit</code>, and common V2/V3 swap selectors. Checks unlimited approvals, spenders, swap deadlines, zero minimum output and the output recipient. Then simulates the call from your wallet at the current block. <b>EVM only today</b> (Ethereum, Arbitrum, Base).</p>
+          <p>Decodes <code class="inline">transfer</code>, <code class="inline">approve</code>, <code class="inline">transferFrom</code>, <code class="inline">permit</code>, and common V2/V3 swap selectors. Checks unlimited approvals, spenders, swap deadlines, zero minimum output and the output recipient. Then simulates the call from your wallet at the current block, and says who can change the code of the contract being called. <b>EVM only today</b>: 22 networks, including Ethereum, Base, Arbitrum, OP Mainnet, BNB Chain, Polygon and Avalanche. The full list with chain ids is in <a href="/openapi.json">openapi.json</a>.</p>
         </div>
       </div>
     </div>
@@ -368,7 +368,7 @@
       <article id="transaction">
         <p class="eyebrow">02 · Transaction</p>
         <h2 style="margin-top:14px">Check the calldata and the simulation.</h2>
-        <p class="lead" style="margin-top:14px">EVM only today (Ethereum, Arbitrum, Base). If <code class="inline">from</code> is present, the gate simulates the call at the current block. Without it, simulation is skipped and the verdict is at most <b>CAUTION</b> — because a call from the zero address proves nothing.</p>
+        <p class="lead" style="margin-top:14px">EVM only today, on 22 networks (Ethereum, Base, Arbitrum and 19 more). If <code class="inline">from</code> is present, the gate simulates the call at the current block. Without it, simulation is skipped and the verdict is at most <b>CAUTION</b> — because a call from the zero address proves nothing.</p>
         <div style="margin-top:24px">
           <p class="code-cap">Request</p>
 <pre><span class="c">POST</span> /preflight

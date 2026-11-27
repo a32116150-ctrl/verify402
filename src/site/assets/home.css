@@ -467,6 +467,10 @@ a.network-card:hover, a.network-card:focus-visible { background: var(--accent); 
 .network-card li.pay::before { background: #0b8a3f; }
 .network-card li.soon { color: var(--muted); }
 .network-card li.soon::before { background: transparent; border: 1px solid var(--muted); }
+.network-wide { grid-column: 1 / -1; }
+.network-list { margin-top: 12px; max-width: 90ch; font-size: 15px; line-height: 1.5; color: var(--muted); }
+.network-wide ul { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 700px) { .network-wide ul { grid-template-columns: 1fr; } }
 .coin-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 28px; }
 .coin-label { margin-right: 8px; font-size: 13px; font-weight: 600; color: var(--muted); }
 .coin { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px 6px 6px; border-radius: 999px; background: #fff; font-size: 14px; font-weight: 600; }

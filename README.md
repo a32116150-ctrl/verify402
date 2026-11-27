@@ -288,7 +288,12 @@ It accepts one of two intents:
 - **payment** — an x402 402 challenge (EVM or Solana): scheme, CAIP-2 network,
   asset, raw amount, `payTo`, resource, timeout, authorization window.
 - **transaction** — `chainId`, `to`, `data`, `value`, optional `from` (EVM:
-  Ethereum 1, Arbitrum 42161, Base 8453).
+  Ethereum 1, Arbitrum 42161, Base 8453, plus 19 gate-only networks: OP Mainnet 10,
+  BNB Chain 56, Polygon 137, Avalanche 43114, Unichain 130, Monad 143, Arc 5042,
+  HyperEVM 999, Plasma 9745, Linea 59144, MegaETH 4326, Ink 57073, World Chain 480,
+  Soneium 1868, Gnosis 100, Cronos 25, Sonic 146, ZKsync Era 324, Robinhood Chain 4663).
+  Paid checks and payment rails stay on Ethereum, Arbitrum and Base.
+  The response also says who can upgrade the contract being called (`upgradeControl`).
 
 Response: `PASS` / `CAUTION` / `BLOCK`, `reasons[]`, `checked[]`,
 `notChecked[]`, and a receipt:
