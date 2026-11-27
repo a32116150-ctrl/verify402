@@ -1394,6 +1394,7 @@ app.get("/sitemap.xml", (_req, res) => {
   <url><loc>https://vex402.online/testers</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
   <url><loc>https://vex402.online/audit</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://vex402.online/blog</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://vex402.online/blog/price-accuracy-vs-an-aggregator</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://vex402.online/blog/x402-attack-shapes</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://vex402.online/blog/verify402-is-live-on-mainnet</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://vex402.online/blog/what-a-pre-signing-gate-can-check</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>

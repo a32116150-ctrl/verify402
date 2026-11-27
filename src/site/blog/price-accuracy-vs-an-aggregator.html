@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>We publish how far our prices are from an aggregator’s, every day · verify402</title>
+<meta name="description" content="A daily public check: 28 trades on 7 networks quoted through verify402 and through an independent DEX aggregator at the same moment, with every gap published.">
+<link rel="canonical" href="https://vex402.online/blog/price-accuracy-vs-an-aggregator">
+<meta property="og:type" content="article">
+<meta property="og:title" content="We publish how far our prices are from an aggregator’s, every day">
+<meta property="og:description" content="A daily public check: 28 trades on 7 networks quoted through verify402 and through an independent DEX aggregator at the same moment, with every gap published.">
+<meta property="og:url" content="https://vex402.online/blog/price-accuracy-vs-an-aggregator">
+<meta property="og:image" content="https://vex402.online/assets/logo-400.png">
+<meta name="twitter:card" content="summary">
+<meta name="google-site-verification" content="iGmI2QL110IkjnW0thU3DRZrdgQe_7mZsPWgkZVte7o">
+<link rel="alternate" type="application/rss+xml" title="verify402 blog" href="/blog/rss.xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/site.css">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"We publish how far our prices are from an aggregator’s, every day","description":"A daily public check: 28 trades on 7 networks quoted through verify402 and through an independent DEX aggregator at the same moment, with every gap published.","datePublished":"2026-11-27","dateModified":"2026-11-27","author":{"@type":"Organization","name":"verify402","url":"https://vex402.online"},"publisher":{"@type":"Organization","name":"verify402","url":"https://vex402.online"},"mainEntityOfPage":"https://vex402.online/blog/price-accuracy-vs-an-aggregator","image":"https://vex402.online/assets/logo-400.png"}</script>
+</head>
+<body>
+
+<header class="site-head">
+  <a class="brand" href="/" aria-label="verify402 home">verify<span>[</span>402<span>]</span></a>
+  <nav class="site-nav" aria-label="Primary">
+    <a href="/checks">Checks</a>
+    <a href="/preflight">Preflight</a>
+    <a href="/inspect">Inspect</a>
+    <a href="/directory">Directory</a>
+    <a href="/mcp">MCP</a>
+    <a href="/proof">Proof</a>
+    <a href="/activity">Activity</a>
+    <a href="/blog">Blog</a>
+    <a href="/board">Board</a>
+    <a href="/docs">Docs</a>
+  </nav>
+  <div class="site-actions">
+    <a class="site-status" href="/live"><span class="status-dot"></span><span data-block>snapshot · block —</span></a>
+    <a class="btn sm" href="/preflight#try">Run free check</a>
+    <details class="site-menu">
+      <summary>Menu</summary>
+      <nav aria-label="Menu">
+        <p class="menu-label">Start</p>
+        <a href="/preflight">Free gate</a>
+        <a href="/checks">Paid checks &amp; prices</a>
+        <a href="/start">Quickstart</a>
+        <a href="/mcp">MCP server</a>
+        <p class="menu-label">Explore</p>
+        <a href="/inspect">402 inspector</a>
+        <a href="/directory">402 directory</a>
+        <a href="/live">Live findings</a>
+        <a href="/activity">Activity</a>
+        <p class="menu-label">Trust</p>
+        <a href="/proof">Proof &amp; receipts</a>
+        <a href="/board">Public board</a>
+        <a href="/audit">Payment review</a>
+        <a href="/testers">Tester kit</a>
+        <p class="menu-label">Project</p>
+        <a href="/blog">Blog</a>
+        <a href="/docs">Documentation</a>
+        <a href="/donate">Donate</a>
+        <a href="/sponsor">Sponsor hosting</a>
+        <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">GitHub</a>
+      </nav>
+    </details>
+  </div>
+</header>
+
+<main>
+  <div class="wrap page-head">
+    <p class="eyebrow">Field notes · 4 min read · Nov 27, 2026</p>
+    <h1>We publish how far our prices are from an aggregator's, every day</h1>
+    <p class="lead">28 trades, 7 networks, one independent reference, and every gap on a public page, including the ones that make us look bad.</p>
+  </div>
+
+  <article class="wrap prose">
+    <p>verify402's paid route check answers one question: what would the chain actually pay for this swap right now? It reads the pools directly at a pinned block and returns the best venue it found. An agent uses that number to decide whether a quote it was offered is fair. If our number is off, the agent's decision is off, so we should be able to show how good it is.</p>
+
+    <p>Saying "accurate" is cheap. So there is now a page that measures it: <a class="textlink" href="/accuracy">vex402.online/accuracy</a>.</p>
+
+    <h2>How it works</h2>
+    <p>Once a day, a scan quotes the same trades two ways at the same moment: through verify402's route check, and through KyberSwap's public route API, an independent DEX aggregator. The trades are a dollar stablecoin to the network's main coin and back, at $1,000 and $25,000, on Ethereum, Base, Arbitrum, OP Mainnet, BNB Chain, Polygon and Avalanche. That is 28 trades a day.</p>
+    <p>For each trade the page shows our best venue, both amounts, and the gap: <code>(ours / aggregator − 1)</code>, as a percentage. Positive means our quote pays more. Negative means the aggregator found more. The raw data is at <a class="textlink" href="/accuracy.json">/accuracy.json</a>, and a 90-day history builds up as the scan runs.</p>
+
+    <h2>What the first run showed</h2>
+    <p>All 28 trades were measured. All 14 trades at $1,000 were within 0.5% of the aggregator, most within a few hundredths of a percent. The typical gap across all trades was about 0.13%.</p>
+    <p>Large trades were the honest weak spot. On Polygon, a $25,000 trade was about 4.5% behind the aggregator, and BNB Chain was about 0.5% behind. The cause was simple: for a trade like USDC to WPOL we only looked at direct pools, while the aggregator also went through USDT first, where the book is deeper. We added that path. In our own test after the change, the Polygon gap fell to about 0.24% and BNB Chain to about 0.08%. The daily page will show whether that holds.</p>
+
+    <h2>What it does not show</h2>
+    <p>An aggregator can split one order across many pools and sources we do not read, including private market makers that quote off-chain. On large trades it is expected to pay somewhat more than a quote read from public pools, and we show that gap rather than hide it. The aggregator's number is its own route estimate, not a filled trade, and neither number includes gas. Each trade is quoted once a day; prices move between runs.</p>
+    <p>This is a measurement, not a promise about any future quote and not financial advice.</p>
+
+    <div class="post-cta">
+      <p class="eyebrow">See the numbers</p>
+      <h2>Every trade, every day, good or bad.</h2>
+      <p>The page updates once a day. If a number looks wrong to you, the raw data is there to check it.</p>
+      <div class="btn-row">
+        <a class="btn" href="/accuracy">Open the accuracy page</a>
+        <a class="btn ghost" href="/checks">See the paid checks</a>
+      </div>
+    </div>
+
+    <p class="post-foot">Previous: <a class="textlink" href="/blog/x402-attack-shapes">What a pre-signing gate can see in three x402 attack shapes.</a> · <a class="textlink" href="/blog">All notes</a></p>
+  </article>
+</main>
+
+<footer class="site-foot">
+  <div class="foot-mark" aria-hidden="true">verify<span>[402]</span></div>
+  <div class="foot-links">
+    <div>
+      <h2>Product</h2>
+      <a href="/preflight">Preflight gate</a>
+      <a href="/checks">The five checks</a>
+      <a href="/mcp">MCP server</a>
+      <a href="/live">Live findings</a>
+      <a href="/activity">Activity</a>
+      <a href="/testers">Tester kit</a>
+      <a href="/blog">Blog</a>
+      <a href="/start">Quickstart</a>
+    </div>
+    <div>
+      <h2>Project</h2>
+      <a href="/proof">Proof &amp; receipts</a>
+      <a href="/docs">Documentation</a>
+      <a href="/donate">Donate</a>
+      <a href="/sponsor">Sponsor hosting</a>
+      <a href="https://github.com/a32116150-ctrl/verify402" rel="noopener">the free pre-signing gate is open source (Apache-2.0); the paid check engines are hosted</a>
+      <a href="https://github.com/x402-foundation/x402/issues/3847" rel="noopener">x402 proposal</a>
+    </div>
+    <div>
+      <h2>For machines</h2>
+      <a href="/.well-known/verify402.json">Service manifest</a>
+      <a href="/openapi.json">OpenAPI 3.1</a>
+      <a href="/llms.txt">llms.txt</a>
+      <a href="/findings">/findings</a>
+      <a href="/blog/rss.xml">RSS</a>
+    </div>
+    <div>
+      <h2>For teams</h2>
+      <p class="foot-note">Embedding a pre-signing check in a wallet, agent, or treasury workflow?</p>
+      <a href="mailto:a32116150@gmail.com?subject=verify402%20walkthrough">Talk to the builder</a>
+      <a href="https://www.npmjs.com/package/verify402-mcp" target="_blank" rel="noopener">npm package</a>
+    </div>
+  </div>
+  <p class="foot-legal">verify402 is a measurement service, not financial advice. It does not promise profit, find trades, or manage money. Analysis reads mainnet chain data. This instance settles real USDC on Base mainnet / Solana mainnet over x402. Real USDC has settled on Base mainnet, including payments from outside agents. Prices are per call, paid in USDC over x402; /preflight is free.</p>
+</footer>
+
+<script src="/assets/site.js"></script>
+</body>
+</html>

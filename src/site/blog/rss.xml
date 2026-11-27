@@ -6,7 +6,14 @@
     <atom:link href="https://vex402.online/blog/rss.xml" rel="self" type="application/rss+xml" />
     <description>Scope, receipts, and field notes from building a pre-signing gate for agent payments.</description>
     <language>en</language>
-    <lastBuildDate>Mon, 23 Nov 2026 12:00:00 GMT</lastBuildDate>
+    <lastBuildDate>Fri, 27 Nov 2026 17:00:00 GMT</lastBuildDate>
+    <item>
+      <title>We publish how far our prices are from an aggregator&#8217;s, every day</title>
+      <link>https://vex402.online/blog/price-accuracy-vs-an-aggregator</link>
+      <guid isPermaLink="true">https://vex402.online/blog/price-accuracy-vs-an-aggregator</guid>
+      <pubDate>Fri, 27 Nov 2026 17:00:00 GMT</pubDate>
+      <description>A daily public check: 28 trades on 7 networks quoted through verify402 and through an independent DEX aggregator at the same moment, with every gap published.</description>
+    </item>
     <item>
       <title>What a pre-signing gate can see in three x402 attack shapes</title>
       <link>https://vex402.online/blog/x402-attack-shapes</link>
