@@ -65,6 +65,7 @@ import {
 } from "./settlement-stats.mjs";
 import { inspectUrl, inspectPaymentChallenge, extractChallenge, InspectError } from "./inspect.mjs";
 import { loadBoard, renderBoardPage, renderBadgeSvg, badgeFor, BOARD_SOURCE } from "./board.mjs";
+import { loadAccuracy, renderAccuracyPage } from "./accuracy.mjs";
 import { renderFindingPage, findingPermalink } from "./finding-page.mjs";
 import { cdpAuthHeaders, isCdpFacilitatorUrl } from "./cdp-auth.mjs";
 import { createDirectory } from "./directory.mjs";
@@ -1406,6 +1407,7 @@ app.get("/sitemap.xml", (_req, res) => {
   <url><loc>https://vex402.online/blog/what-public-402s-look-like</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://vex402.online/checks</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://vex402.online/proof</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://vex402.online/accuracy</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
   <url><loc>https://vex402.online/live</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
 ${Object.keys(CHAINS[1].tokens)
   .filter((t) => t !== "USDC")
@@ -2342,6 +2344,21 @@ app.get("/badge", async (req, res) => {
   res.set("X-Robots-Tag", "noindex");
   res.set("Content-Type", "image/svg+xml; charset=utf-8");
   res.send(renderBadgeSvg(badge));
+});
+
+// Public price accuracy: the daily scan (scripts/accuracy-scan.mjs) writes the
+// data file; this only reads and renders it. No data yet is a plain notice.
+app.get("/accuracy", (_req, res) => {
+  const page = renderAccuracyPage(readFileSync(`${SITE_DIR}/accuracy.html`, "utf8"), loadAccuracy());
+  res.set("Cache-Control", "public, max-age=300");
+  res.type("text/html").send(withCanonical(withAssetFingerprint(renderSiteHtml(page, { mode: MODE, path: "/accuracy" })), "/accuracy"));
+});
+
+app.get("/accuracy.json", (_req, res) => {
+  const doc = loadAccuracy();
+  res.set("Cache-Control", "public, max-age=300");
+  if (!doc) return res.json({ rows: [], note: "The first daily accuracy scan has not run yet." });
+  res.json(doc);
 });
 
 // The blog index and its post directory share a prefix: /blog is a page,

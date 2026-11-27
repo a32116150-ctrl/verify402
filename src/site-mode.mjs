@@ -229,7 +229,7 @@ const PRIMARY_LINKS = [
 const MENU_GROUPS = [
   ["Start", [["/", "Home"], ["/preflight", "Free check"], ["/checks", "Paid checks &amp; prices"], ["/start", "Quickstart"], ["/mcp", "MCP server"]]],
   ["Tools", [["/inspect", "402 inspector"], ["/directory", "402 directory"], ["/board", "Public board"], ["/live", "Live findings"], ["/activity", "Activity"]]],
-  ["Trust", [["/proof", "Proof &amp; receipts"], ["/audit", "Payment review"], ["/testers", "Tester kit"]]],
+  ["Trust", [["/accuracy", "Price accuracy"], ["/proof", "Proof &amp; receipts"], ["/audit", "Payment review"], ["/testers", "Tester kit"]]],
   ["Project", [["/blog", "Blog"], ["/docs", "Documentation"], ["/donate", "Donate"], ["/sponsor", "Sponsor hosting"], ["https://github.com/a32116150-ctrl/verify402", "GitHub"]]],
 ];
 
