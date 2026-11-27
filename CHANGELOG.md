@@ -3,6 +3,33 @@
 All notable changes to verify402. This file records repository changes; it does
 not imply a deploy or an npm publish.
 
+## 3.6.0 — 2026-11-27
+
+Contract watch, a public price-accuracy page, and better large-trade quotes.
+
+- `POST /watch` ($0.50) watches one contract for 30 days. About once an hour
+  it re-reads the bytecode hash, the EIP-1967 / ZeppelinOS proxy
+  implementation and its bytecode hash, the upgrade controller, `owner()` and
+  `paused()`. On any change it POSTs one `contract_changed` event, signed like
+  every paid answer, to the caller's public https webhook (one retry). The
+  request and webhook are validated before payment, and a watch is switched on
+  only after its payment settles. `GET /watch/{watchId}` is the free status
+  view and never shows the webhook URL. Not watched: role grants, timelock or
+  governance queues before execution, multisig signer changes, diamonds and
+  custom proxies.
+- MCP bridge: new `watch_contract` tool. It costs $0.50, above the default
+  per-payment cap of $0.25, so it asks for `MAX_PAYMENT_USD=0.50` and pays
+  nothing until that is set.
+- `/accuracy`: a daily public comparison of 28 trades (7 networks, both
+  directions, $1,000 and $25,000) between the route check and an independent
+  DEX aggregator, every gap published. Raw data at `/accuracy.json`.
+- Route quotes for major pairs also go through the other dollar stablecoin
+  when the network's main coin is one side of the trade (USDC → USDT → WPOL),
+  closing most of the large-trade gap on Polygon and BNB Chain.
+- Site: one shared menu with Home on every page; www, http, `.html` and
+  trailing-slash addresses redirect to one clean address; API answers and
+  query-string pages are marked noindex.
+
 ## 3.5.0 — 2026-11-27
 
 More networks, upgrade control in the free gate, more accurate paid checks,

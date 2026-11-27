@@ -183,6 +183,12 @@ export function buildServiceManifest({
             priceUsd: numPrice(prices.assure ?? PRICE_DEFAULTS.assure),
             description: "Support bundle: runs the supplied paid checks at one pinned block and returns one evidence bundle with a recomputable sha256. Accepted only when the supplied checks cost at least $0.10 separately (parts total $0.12), so the bundle is cheaper than buying them one by one.",
           },
+          {
+            name: "watch_contract",
+            type: "paid",
+            priceUsd: numPrice(prices.watch ?? PRICE_DEFAULTS.watch),
+            description: "Watch one contract for 30 days: code, proxy implementation, upgrade controller, owner() and paused() re-read about hourly; any change is POSTed to your https webhook as a signed event. Needs MAX_PAYMENT_USD >= 0.50 in the bridge.",
+          },
         ],
         environmentVariables: [
           {

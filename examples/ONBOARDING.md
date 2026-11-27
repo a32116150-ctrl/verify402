@@ -143,10 +143,10 @@ Receipts expire after 90 seconds by default (15–300 configurable via
 Warm the `npx` cache once:
 
 ```bash
-npx -y verify402-mcp@3.5.0 --help
+npx -y verify402-mcp@3.6.0 --help
 ```
 
-This pins the published `3.5.0` package. Paid tools default to real USDC on Base mainnet at https://vex402.online; the public testnet demo was retired on 2026-11-19.
+This pins the published `3.6.0` package. Paid tools default to real USDC on Base mainnet at https://vex402.online; the public testnet demo was retired on 2026-11-19.
 
 Then add it to Claude Desktop / Cursor (`.cursor/mcp.json`):
 
@@ -155,17 +155,17 @@ Then add it to Claude Desktop / Cursor (`.cursor/mcp.json`):
   "mcpServers": {
     "verify402": {
       "command": "npx",
-      "args": ["-y", "verify402-mcp@3.5.0"],
+      "args": ["-y", "verify402-mcp@3.6.0"],
       "env": { "VERIFY402_URL": "https://vex402.online" }
     }
   }
 }
 ```
 
-With no `EVM_PRIVATE_KEY`, the server lists all nine tools; the three free ones
+With no `EVM_PRIVATE_KEY`, the server lists all ten tools; the three free ones
 (`preflight_gate`, `inspect_402`, `directory_402`) work as before and the six
 paid ones refuse with a clear error. Nothing
-can be charged. The six paid checks stay off.
+can be charged. The seven paid checks stay off.
 
 ## 5. Enforce it where the signing happens
 

@@ -184,12 +184,18 @@ export function openWatchStore(path = ":memory:") {
     );
     CREATE INDEX IF NOT EXISTS watch_events_by_watch ON watch_events (watch_id, at);
   `);
+  // A watch starts "pending" and is switched on only when its payment has
+  // settled; a watch whose payment never settles is never checked.
+  const cols = db.prepare("PRAGMA table_info(watches)").all().map((c) => c.name);
+  if (!cols.includes("pending")) db.exec("ALTER TABLE watches ADD COLUMN pending INTEGER NOT NULL DEFAULT 0");
+  if (!cols.includes("payment_tx")) db.exec("ALTER TABLE watches ADD COLUMN payment_tx TEXT");
   const q = {
-    insert: db.prepare(`INSERT INTO watches (id, chain_id, address, webhook, label, created_at, expires_at, last_check_at, last_block, facts)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`),
+    insert: db.prepare(`INSERT INTO watches (id, chain_id, address, webhook, label, created_at, expires_at, last_check_at, last_block, facts, pending)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`),
+    activate: db.prepare("UPDATE watches SET pending = 0, payment_tx = ? WHERE id = ? AND pending = 1"),
     get: db.prepare("SELECT * FROM watches WHERE id = ?"),
     activeCount: db.prepare("SELECT COUNT(*) AS n FROM watches WHERE expires_at > ?"),
-    due: db.prepare("SELECT * FROM watches WHERE expires_at > ? AND (last_check_at IS NULL OR last_check_at <= ?) ORDER BY last_check_at LIMIT ?"),
+    due: db.prepare("SELECT * FROM watches WHERE pending = 0 AND expires_at > ? AND (last_check_at IS NULL OR last_check_at <= ?) ORDER BY last_check_at LIMIT ?"),
     checked: db.prepare("UPDATE watches SET last_check_at = ?, last_block = ?, facts = ?, last_error = NULL, changes = changes + ? WHERE id = ?"),
     failed: db.prepare("UPDATE watches SET last_check_at = ?, last_error = ? WHERE id = ?"),
     deliveryFailed: db.prepare("UPDATE watches SET deliveries_failed = deliveries_failed + 1 WHERE id = ?"),
@@ -200,13 +206,16 @@ export function openWatchStore(path = ":memory:") {
     id: r.id, chainId: r.chain_id, address: r.address, webhook: r.webhook, label: r.label,
     createdAt: r.created_at, expiresAt: r.expires_at, lastCheckAt: r.last_check_at, lastBlock: r.last_block,
     facts: r.facts ? JSON.parse(r.facts) : null, lastError: r.last_error, changes: r.changes, deliveriesFailed: r.deliveries_failed,
+    pending: Boolean(r.pending), paymentTx: r.payment_tx ?? null,
   });
   return {
-    add({ chainId, address, webhook, label = null, now = Date.now(), snapshot }) {
+    add({ chainId, address, webhook, label = null, now = Date.now(), snapshot, pending = false }) {
       const id = `w_${randomBytes(16).toString("hex")}`;
-      q.insert.run(id, chainId, address, webhook, label, now, now + WATCH_DAYS * 86_400_000, now, snapshot.blockNumber, JSON.stringify(snapshot.facts));
+      q.insert.run(id, chainId, address, webhook, label, now, now + WATCH_DAYS * 86_400_000, now, snapshot.blockNumber, JSON.stringify(snapshot.facts), pending ? 1 : 0);
       return row(q.get.get(id));
     },
+    /** Switch a pending watch on once its payment settled. True if it changed. */
+    activate: (id, paymentTx = null) => q.activate.run(paymentTx, String(id)).changes === 1,
     get: (id) => row(q.get.get(String(id))),
     activeCount: (now = Date.now()) => q.activeCount.get(now).n,
     due: (now = Date.now(), intervalMs = WATCH_INTERVAL_MS, limit = 200) => q.due.all(now, now - intervalMs, limit).map(row),
@@ -269,6 +278,23 @@ export async function runWatchCycle({ store, clientFor, signer, deliver = delive
   return { checked: due.length, changed };
 }
 
+/**
+ * Settlement hook: the paid answer of a successful /watch is the response
+ * body; switch on the watch it names. Anything else is ignored.
+ */
+export function activateFromSettlement(store, ctx) {
+  if (ctx?.phase !== "after-handler" || ctx?.result?.success !== true) return false;
+  let body = ctx?.transportContext?.responseBody ?? null;
+  try {
+    if (body && typeof Buffer !== "undefined" && Buffer.isBuffer(body)) body = JSON.parse(body.toString("utf8"));
+    else if (typeof body === "string") body = JSON.parse(body);
+  } catch {
+    return false;
+  }
+  if (!body || body.spec !== WATCH_SPEC || typeof body.watchId !== "string") return false;
+  return store.activate(body.watchId, ctx?.result?.transaction ?? null);
+}
+
 /** Public status view of one watch: no webhook URL (it may carry a secret). */
 export function publicWatch(w, events = []) {
   if (!w) return null;
@@ -283,7 +309,8 @@ export function publicWatch(w, events = []) {
     webhookHost: host,
     createdAt: new Date(w.createdAt).toISOString(),
     expiresAt: new Date(w.expiresAt).toISOString(),
-    active: w.expiresAt > Date.now(),
+    active: !w.pending && w.expiresAt > Date.now(),
+    status: w.pending ? "pending_payment" : (w.expiresAt > Date.now() ? "active" : "expired"),
     checkEveryMinutes: Math.round(WATCH_INTERVAL_MS / 60000),
     lastCheckAt: w.lastCheckAt ? new Date(w.lastCheckAt).toISOString() : null,
     lastBlock: w.lastBlock,

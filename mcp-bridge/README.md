@@ -13,9 +13,9 @@ wallet. The analysis reads mainnet chain data. The public Base Sepolia testnet d
 retired on 2026-11-19 — the live service at https://vex402.online is the only
 public endpoint. The bridge never signs or sends a trade.
 
-> **Published package note:** `verify402-mcp@3.5.0` is published to npm. The
+> **Published package note:** `verify402-mcp@3.6.0` is published to npm. The
 > full tool surface is listed for every install (free tools work immediately;
-> the six paid tools refuse with a clear error until `EVM_PRIVATE_KEY` is
+> the seven paid tools refuse with a clear error until `EVM_PRIVATE_KEY` is
 > set). The public testnet demo was retired on 2026-11-19; the live service is
 > the only endpoint. All published versions are immutable. Do not republish or
 > overwrite any published version.
@@ -28,7 +28,7 @@ results, wallet data, or IPs. Off by default; set `VERIFY402_TELEMETRY=1` to
 turn it on. A failed ping never changes the tool's answer, and only these
 tool names are accepted: `preflight_gate`, `inspect_402`, `directory_402`,
 `verify_arbitrage`, `check_token_safety`, `get_best_route`,
-`verify_quote_fairness`, `get_trade_depth`, `get_assurance`.
+`verify_quote_fairness`, `get_trade_depth`, `get_assurance`, `watch_contract`.
 
 ## Tools
 
@@ -109,7 +109,7 @@ node index.mjs --help
 ## AI Agent Integration (Step-by-Step)
 
 ### Step 1: Free Mode (Zero Config, No Wallet)
-The bridge lists all nine tools. With no wallet, the free **`preflight_gate`** works immediately (checks transaction calldata, payment challenges, payee/amount, approvals, and block freshness before signing) and the six paid tools refuse with a clear error. Paste this into your client configuration. The paid `check_token_safety` check adds a quote-based sellability check; it does not execute a transfer and is not a honeypot guarantee.
+The bridge lists all ten tools. With no wallet, the free **`preflight_gate`** works immediately (checks transaction calldata, payment challenges, payee/amount, approvals, and block freshness before signing) and the seven paid tools refuse with a clear error. Paste this into your client configuration. The paid `check_token_safety` check adds a quote-based sellability check; it does not execute a transfer and is not a honeypot guarantee.
 
 **Claude Desktop** (`claude_desktop_config.json`) or **Cursor** (`.cursor/mcp.json`):
 ```json
@@ -127,7 +127,7 @@ The bridge lists all nine tools. With no wallet, the free **`preflight_gate`** w
 ```
 
 ### Step 2: Paid Mode (Setting Up the Hot Wallet)
-To enable the six paid x402 checks (`verify_arbitrage`, `check_token_safety`, `get_best_route`, `verify_quote_fairness`, `get_trade_depth`, `get_assurance`), configure a dedicated hot wallet that pays per call in USDC via x402:
+To enable the seven paid x402 checks (`verify_arbitrage`, `check_token_safety`, `get_best_route`, `verify_quote_fairness`, `get_trade_depth`, `get_assurance`, `watch_contract`), configure a dedicated hot wallet that pays per call in USDC via x402:
 
 1. **Create a Dedicated Hot Wallet**:
    - Create a brand new wallet in MetaMask, Rabby, or via `cast wallet new`.

@@ -68,7 +68,7 @@ test("discovery: canonical service manifest matches implemented tools and runtim
   assert.equal(manifest.canonicalUrl, "https://vex402.online");
 
   const tools = manifest.integrations.mcp.tools;
-  assert.equal(tools.length, 9, "Must advertise exactly 9 MCP tools");
+  assert.equal(tools.length, 10, "Must advertise exactly 10 MCP tools");
 
   const freeTools = tools.filter((t) => t.type === "free");
   assert.equal(freeTools.length, 3);
@@ -79,7 +79,7 @@ test("discovery: canonical service manifest matches implemented tools and runtim
   );
 
   const paidTools = tools.filter((t) => t.type === "paid");
-  assert.equal(paidTools.length, 6);
+  assert.equal(paidTools.length, 7);
 
   const toolNames = new Set(tools.map((t) => t.name));
   const expectedTools = [
@@ -92,6 +92,7 @@ test("discovery: canonical service manifest matches implemented tools and runtim
     "verify_quote_fairness",
     "get_trade_depth",
     "get_assurance",
+    "watch_contract",
   ];
   for (const expected of expectedTools) {
     assert.ok(toolNames.has(expected), `Manifest must include tool ${expected}`);

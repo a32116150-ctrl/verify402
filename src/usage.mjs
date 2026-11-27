@@ -33,6 +33,7 @@ export const PINGABLE_TOOLS = Object.freeze([
   "verify_quote_fairness",
   "get_trade_depth",
   "get_assurance",
+  "watch_contract",
 ]);
 
 const SPEC = "verify402/usage@1";

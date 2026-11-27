@@ -557,13 +557,13 @@ or any MCP client.
   separate MCP bridge calls from generic HTTP. Labels are self-declared and
   spoofable, not identities.
 - **Install:** `npx -y verify402-mcp@latest` from the public npm registry
-  (currently `3.5.0`). For a pinned install of the published package, use
-  `npx -y verify402-mcp@3.5.0`; its npm tarball is
-  `https://registry.npmjs.org/verify402-mcp/-/verify402-mcp-3.5.0.tgz`. `1.1.6`
+  (currently `3.6.0`). For a pinned install of the published package, use
+  `npx -y verify402-mcp@3.6.0`; its npm tarball is
+  `https://registry.npmjs.org/verify402-mcp/-/verify402-mcp-3.6.0.tgz`. `1.1.6`
   moved the paid-call default to the live Base mainnet rail (`eip155:8453`,
   real USDC), with the same spend caps; the retired Base Sepolia testnet demo
   (`eip155:84532`) is an explicit opt-in via `VERIFY402_URL` and
-  `VERIFY402_NETWORKS`. `3.5.0` describes the 22 networks, upgrade control and the improved route and quote checks in its tool help; `3.1.0` adds `advice` (explanation, wallet preview, fixes) to preflight_gate; `3.0.1` adds optional quote binding to preflight_gate and ships with Solana payment recovery on the live service; `2.6.1` aligns the bridge's price defaults and public copy with the live service; `2.6.0` lists all nine tools for every install — paid tools refuse without a wallet; `2.5.0` retired the testnet demo — paid calls are mainnet-only (real USDC); `2.0.0` added the paid assurance endpoint and the hash-bound evidence bundle; `1.1.7` was a metadata-only correction so the MCP
+  `VERIFY402_NETWORKS`. `3.6.0` adds the `watch_contract` tool ($0.50 watches one contract for 30 days; set `MAX_PAYMENT_USD=0.50` to use it); `3.5.0` describes the 22 networks, upgrade control and the improved route and quote checks in its tool help; `3.1.0` adds `advice` (explanation, wallet preview, fixes) to preflight_gate; `3.0.1` adds optional quote binding to preflight_gate and ships with Solana payment recovery on the live service; `2.6.1` aligns the bridge's price defaults and public copy with the live service; `2.6.0` lists all nine tools for every install — paid tools refuse without a wallet; `2.5.0` retired the testnet demo — paid calls are mainnet-only (real USDC); `2.0.0` added the paid assurance endpoint and the hash-bound evidence bundle; `1.1.7` was a metadata-only correction so the MCP
   Registry advertises that same mainnet default. No npm account is required to
   run the published package. Client configs, the exact OpenCode V2 shape, and
   the release command are at [`/mcp`](https://vex402.online/mcp). The immutable

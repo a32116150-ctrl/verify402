@@ -145,3 +145,52 @@ test("webhook: https and a public address only", async () => {
   await assert.rejects(validateWebhook("https://hooks.example/a", { resolveHost: priv }), { code: "invalid_webhookUrl" });
   await assert.rejects(validateWebhook("not a url"), { code: "invalid_webhookUrl" });
 });
+
+test("payment: a pending watch is never checked; settlement switches it on once", async () => {
+  const { activateFromSettlement, WATCH_SPEC } = await import("../src/watch.mjs");
+  const state = baseState();
+  const store = openWatchStore();
+  const snap = await readSnapshot(fakeChain(state), ADDR);
+  const T0 = Date.now();
+  const w = store.add({ chainId: 1, address: ADDR, webhook: "https://hooks.example/x", now: T0, snapshot: snap, pending: true });
+  assert.equal(publicWatch(store.get(w.id)).status, "pending_payment");
+
+  state.paused = true;
+  let r = await runWatchCycle({ store, clientFor: () => fakeChain(state), signer: null, deliver: async () => ({ ok: true }), now: T0 + 120_000, intervalMs: 60_000 });
+  assert.equal(r.checked, 0, "pending watches are not checked");
+
+  const body = Buffer.from(JSON.stringify({ ok: true, spec: WATCH_SPEC, watchId: w.id }));
+  // A failed settlement, another route's answer, or a non-final phase: no change.
+  assert.equal(activateFromSettlement(store, { phase: "after-handler", result: { success: false }, transportContext: { responseBody: body } }), false);
+  assert.equal(activateFromSettlement(store, { phase: "after-handler", result: { success: true }, transportContext: { responseBody: Buffer.from('{"ok":true}') } }), false);
+  assert.equal(activateFromSettlement(store, { phase: "before-handler", result: { success: true }, transportContext: { responseBody: body } }), false);
+  assert.equal(store.get(w.id).pending, true);
+
+  assert.equal(activateFromSettlement(store, { phase: "after-handler", result: { success: true, transaction: "0xabc" }, transportContext: { responseBody: body } }), true);
+  assert.equal(activateFromSettlement(store, { phase: "after-handler", result: { success: true, transaction: "0xabc" }, transportContext: { responseBody: body } }), false, "only once");
+  const after = store.get(w.id);
+  assert.deepEqual([after.pending, after.paymentTx], [false, "0xabc"]);
+  assert.equal(publicWatch(after).status, "active");
+
+  r = await runWatchCycle({ store, clientFor: () => fakeChain(state), signer: null, deliver: async () => ({ ok: true }), now: T0 + 120_000, intervalMs: 60_000 });
+  assert.equal(r.checked, 1);
+});
+
+test("storage: an older watch database gains the pending columns, existing watches stay active", async () => {
+  const { DatabaseSync } = await import("node:sqlite");
+  const { mkdtempSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const path = join(mkdtempSync(join(tmpdir(), "watch-")), "watch.sqlite");
+  const old = new DatabaseSync(path);
+  old.exec(`CREATE TABLE watches (id TEXT PRIMARY KEY, chain_id INTEGER NOT NULL, address TEXT NOT NULL, webhook TEXT NOT NULL, label TEXT,
+    created_at INTEGER NOT NULL, expires_at INTEGER NOT NULL, last_check_at INTEGER, last_block TEXT, facts TEXT, last_error TEXT,
+    changes INTEGER NOT NULL DEFAULT 0, deliveries_failed INTEGER NOT NULL DEFAULT 0)`);
+  old.prepare("INSERT INTO watches (id, chain_id, address, webhook, created_at, expires_at, facts) VALUES (?, 1, ?, ?, 0, ?, '{}')")
+    .run("w_old", ADDR, "https://hooks.example/x", Date.now() + 86_400_000);
+  old.close();
+  const store = openWatchStore(path);
+  assert.equal(store.get("w_old").pending, false);
+  assert.equal(store.due(Date.now(), 0).length, 1);
+  store.close();
+});

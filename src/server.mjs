@@ -67,7 +67,7 @@ import { inspectUrl, inspectPaymentChallenge, extractChallenge, InspectError } f
 import { loadBoard, renderBoardPage, renderBadgeSvg, badgeFor, BOARD_SOURCE } from "./board.mjs";
 import { loadAccuracy, renderAccuracyPage } from "./accuracy.mjs";
 import {
-  openWatchStore, readSnapshot, validateWebhook, runWatchCycle, publicWatch, WatchError,
+  openWatchStore, readSnapshot, validateWebhook, runWatchCycle, publicWatch, activateFromSettlement, WatchError,
   WATCH_DAYS, WATCH_MAX_ACTIVE, WATCH_CHECKED, WATCH_NOT_CHECKED, WATCH_SPEC,
 } from "./watch.mjs";
 import { renderFindingPage, findingPermalink } from "./finding-page.mjs";
@@ -1276,7 +1276,8 @@ if (!BYPASS_PAYMENT) app.use(
                 ok: true,
                 spec: WATCH_SPEC,
                 watchId: "w_0123456789abcdef0123456789abcdef",
-                status: "https://vex402.online/watch/w_0123456789abcdef0123456789abcdef",
+                status: "active",
+                statusUrl: "https://vex402.online/watch/w_0123456789abcdef0123456789abcdef",
                 expiresAt: "2026-12-27T12:00:00.000Z",
                 facts: { upgradeable: true, pattern: "transparent", implementation: "0x…", owner: null, paused: false },
                 checked: [...WATCH_CHECKED],
@@ -1345,7 +1346,14 @@ if (!BYPASS_PAYMENT) app.use(
         .register(NETWORKS.evm, new ExactEvmScheme())
         .register(NETWORKS.svm, new ExactSvmScheme()),
       { logError },
-    ),
+    ).onAfterSettle(async (ctx) => {
+      // A /watch is switched on only once its payment has settled.
+      try {
+        if (activateFromSettlement(watchStore, ctx)) logInfo("watch: payment settled, watch activated");
+      } catch (e) {
+        logError("[watch] activation after settlement failed", e);
+      }
+    }),
   ),
 );
 
@@ -2795,7 +2803,7 @@ app.get("/info", (_req, res) => {
       transport: "stdio",
       install: `${PUBLIC_BASE_URL}/mcp`,
       freeTool: "preflight_gate",
-      paidTools: ["verify_arbitrage", "check_token_safety", "get_best_route", "verify_quote_fairness", "get_trade_depth", "get_assurance"],
+      paidTools: ["verify_arbitrage", "check_token_safety", "get_best_route", "verify_quote_fairness", "get_trade_depth", "get_assurance", "watch_contract"],
       freeOnlyWithoutWallet: false,
       note: "All nine tools are listed for every install. The three free tools work with no wallet; the six paid tools refuse with a clear error unless EVM_PRIVATE_KEY is configured. The bridge caps each payment at MAX_PAYMENT_USD and only pays an allowlisted network, payee and resource. It signs x402 payments only, never a trade.",
     },
@@ -3207,12 +3215,15 @@ app.post("/watch", async (req, res) => {
     if (!snapshot.ok) {
       return badRequest(req, res, "not_a_contract", "there is no contract code at this address on this chain; nothing to watch");
     }
-    const w = watchStore.add({ chainId, address, webhook, label, snapshot });
-    const view = publicWatch(w, []);
+    // Pending until the payment settles (the onAfterSettle hook switches it
+    // on), so a payment that fails at the last step never buys a watch. In
+    // local bypass mode there is no settlement, so it starts active.
+    const w = watchStore.add({ chainId, address, webhook, label, snapshot, pending: !BYPASS_PAYMENT });
+    const view = publicWatch({ ...w, pending: false }, []);
     return emitPaid(req, res, {
       ok: true,
       ...view,
-      status: `${PUBLIC_BASE_URL}/watch/${w.id}`,
+      statusUrl: `${PUBLIC_BASE_URL}/watch/${w.id}`,
       blockNumber: snapshot.blockNumber,
       delivery: "On any change, one POST to webhookUrl with a JSON event of type contract_changed, signed like every paid answer (verify with /.well-known/verify402-signing-key). One retry on failure.",
     });

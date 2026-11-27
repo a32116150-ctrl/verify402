@@ -98,6 +98,7 @@ export const PAID_TOOL_ROUTES = Object.freeze({
   verify_quote_fairness: "/quotecheck",
   get_trade_depth: "/depth",
   get_assurance: "/assure",
+  watch_contract: "/watch",
 });
 
 // Carries the current tool's expected resource from the tool handler to the
@@ -140,7 +141,7 @@ Environment:
   VERIFY402_RESOURCE_PREFIX  resource origin/prefix the 402 must match (default VERIFY402_URL)
 
 The free tools are preflight_gate, inspect_402 and directory_402. The paid tools are verify_arbitrage, check_token_safety, get_best_route, verify_quote_fairness, get_trade_depth and
-get_assurance. All nine tools are always listed; without EVM_PRIVATE_KEY the paid tools return a clear error and the free tools still work.
+get_assurance and watch_contract. All ten tools are always listed; without EVM_PRIVATE_KEY the paid tools return a clear error and the free tools still work.
 The bridge signs x402 payments only; it never signs or sends a trade.
 `);
   process.exit(0);
@@ -306,6 +307,13 @@ const DESCRIPTIONS = {
     "safety, route, quotecheck, depth, or any combination. Cheaper than buying each separately. " +
     "Pass you only what you need: an unsupplied check is reported as notChecked, not guessed. " +
     "Costs $0.10 per call; the supplied parts total $0.12.",
+  watch_contract:
+    "Watch one contract for 30 days and get told when it changes. About once an hour verify402 re-reads " +
+    "its code, its proxy implementation (and that code), who can upgrade it, owner() and paused(); on any change " +
+    "it POSTs one signed JSON event (type contract_changed, old and new value per field) to YOUR public https " +
+    "webhookUrl. Use it for a contract your agent depends on: a token, a vault, a router, a bridge. " +
+    "Detection after the fact, not prevention; role grants, timelock queues and multisig changes are not watched. " +
+    "Costs $0.50 per watch (30 days). The default per-payment cap is $0.25, so set MAX_PAYMENT_USD=0.50 to use it.",
 };
 
 const INSTRUCTIONS = `verify402 leads with a $0.02 token safety check for AI agents before they swap: quote-based sellability, round-trip cost, TRUST / CAUTION / AVOID. The free pre-signing gate is included; the other paid x402 checks are supporting measurements.
@@ -319,6 +327,7 @@ Free tools (no wallet needed, nothing can be charged):
 Paid tools (each costs a small fixed USDC price via x402):
 - check_token_safety ($0.02) is the lead check: quote-based sellability, round-trip cost, TRUST / CAUTION / AVOID. Free pre-signing gate included.
 - Supporting checks: verify_arbitrage ($0.05), get_best_route ($0.03), verify_quote_fairness ($0.05), get_trade_depth ($0.05), get_assurance ($0.10).
+- watch_contract ($0.50 for 30 days): a signed webhook when a contract's code, upgrade controller, owner or paused flag changes. Needs MAX_PAYMENT_USD >= 0.50.
 
 Paid tools are always listed. Without EVM_PRIVATE_KEY they return a clear error and never move money; the free tools still work.
 
@@ -741,6 +750,38 @@ async function main() {
         pingUsage("get_assurance", true);
       } catch (err) {
         pingUsage("get_assurance", false);
+        throw err;
+      }
+      return { content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }] };
+    },
+  );
+
+  server.tool(
+    "watch_contract",
+    DESCRIPTIONS.watch_contract,
+    {
+      chainId: z.number().int().describe("REQUIRED. 1 Ethereum, 42161 Arbitrum, 8453 Base, 10 OP Mainnet, 56 BNB Chain, 137 Polygon, 43114 Avalanche."),
+      address: z.string().describe("The contract to watch (0x address)"),
+      webhookUrl: z.string().describe("Your public https URL; change events are POSTed here, signed with the key at /.well-known/verify402-signing-key"),
+      label: z.string().max(80).optional().describe("Optional name echoed back in events"),
+    },
+    async (args) => {
+      if (MAX_PAYMENT_USD < 0.5) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: `watch_contract costs $0.50, above this bridge's per-payment cap of $${MAX_PAYMENT_USD}. Nothing was paid. To use it, set MAX_PAYMENT_USD=0.50 (and MAX_DAILY_USD to at least 0.50 if you set one).` }],
+        };
+      }
+      let res;
+      try {
+        res = await runPaidTool({
+          tool: "watch_contract",
+          client: await ensurePaidApi(),
+          body: { chainId: args.chainId, address: args.address, webhookUrl: args.webhookUrl, ...(args.label ? { label: args.label } : {}) },
+        });
+        pingUsage("watch_contract", true);
+      } catch (err) {
+        pingUsage("watch_contract", false);
         throw err;
       }
       return { content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }] };
