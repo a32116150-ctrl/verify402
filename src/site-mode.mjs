@@ -254,13 +254,13 @@ export function siteHeader(path = "/") {
 ${primary}
   </nav>
   <div class="site-actions">${status}
-    <a class="btn sm" href="/preflight#try">Run free check</a>
     <details class="site-menu">
-      <summary><span class="menu-more">More</span><span class="menu-all">Menu</span></summary>
+      <summary><span class="menu-more">More pages</span><span class="menu-all">Menu</span></summary>
       <nav aria-label="Menu">
 ${menu}
       </nav>
     </details>
+    <a class="btn sm" href="/preflight#try">Run free check</a>
   </div>
 </header>`;
 }
